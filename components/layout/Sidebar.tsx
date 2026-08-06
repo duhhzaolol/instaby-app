@@ -76,10 +76,7 @@ function ConteudoSidebar({ nome, email, onNavigate }: { nome: string; email: str
   return (
     <>
       <div className="mb-8 flex items-center gap-2 px-2">
-        <span className="text-xl font-semibold tracking-tight">
-          <span className="text-text">insta</span>
-          <span className="text-accent">by</span>
-        </span>
+        <img src="/logo.png" alt="Instaby" className="h-6 w-auto" />
       </div>
 
       <nav className="flex flex-1 flex-col gap-6">
@@ -99,7 +96,7 @@ function ConteudoSidebar({ nome, email, onNavigate }: { nome: string; email: str
       </nav>
 
       <div className="flex items-center gap-3 rounded-xl border border-border bg-card/60 px-3 py-2.5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-xs font-semibold text-black">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-xs font-semibold text-white">
           {iniciais}
         </div>
         <div className="min-w-0 flex-1">

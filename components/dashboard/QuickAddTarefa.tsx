@@ -53,7 +53,7 @@ export function QuickAddTarefa({ clientes }: { clientes: Cliente[] }) {
         <button
           type="submit"
           disabled={enviando || !titulo.trim()}
-          className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-accent px-4 text-sm font-semibold text-black transition-transform hover:scale-[1.01] disabled:opacity-40"
+          className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-accent px-4 text-sm font-semibold text-white transition-transform hover:scale-[1.01] disabled:opacity-40"
         >
           <Plus size={15} /> Adicionar
         </button>

@@ -63,7 +63,7 @@ export default function NovaTarefaForm({ clienteId }: { clienteId: string }) {
         <button
           type="submit"
           disabled={enviando}
-          className="h-9 rounded-lg bg-accent px-4 text-sm font-medium text-black transition-transform hover:scale-[1.02] disabled:opacity-60"
+          className="h-9 rounded-lg bg-accent px-4 text-sm font-medium text-white transition-transform hover:scale-[1.02] disabled:opacity-60"
         >
           Salvar
         </button>

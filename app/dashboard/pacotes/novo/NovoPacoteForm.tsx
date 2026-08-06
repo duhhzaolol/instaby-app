@@ -99,7 +99,7 @@ export default function NovoPacoteForm({
                       type="button"
                       onClick={() => alternar(s)}
                       className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
-                        ativo ? "bg-accent text-black" : "border border-border bg-card/60 text-muted hover:text-text"
+                        ativo ? "bg-accent text-white" : "border border-border bg-card/60 text-muted hover:text-text"
                       }`}
                     >
                       {s.nome}

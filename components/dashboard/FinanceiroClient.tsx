@@ -101,7 +101,7 @@ export default function FinanceiroClient({
                 nome === "entradas" ? "Entradas" : "Saídas",
               ]}
             />
-            <Bar dataKey="entradas" fill="#FACC15" radius={[4, 4, 0, 0]} animationDuration={1000} />
+            <Bar dataKey="entradas" fill="#E63946" radius={[4, 4, 0, 0]} animationDuration={1000} />
             <Bar dataKey="saidas" fill="#374151" radius={[4, 4, 0, 0]} animationDuration={1000} />
           </BarChart>
         </ResponsiveContainer>
@@ -126,9 +126,9 @@ export default function FinanceiroClient({
             <Line
               type="monotone"
               dataKey="lucro"
-              stroke="#FACC15"
+              stroke="#E63946"
               strokeWidth={2}
-              dot={{ fill: "#FACC15", r: 3 }}
+              dot={{ fill: "#E63946", r: 3 }}
               animationDuration={1200}
             />
           </LineChart>

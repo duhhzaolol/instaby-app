@@ -45,10 +45,7 @@ export default function LoginPage() {
         className="w-full max-w-sm"
       >
         <div className="mb-8 text-center">
-          <span className="inline-block text-2xl font-semibold tracking-tight">
-            <span className="text-text">insta</span>
-            <span className="text-accent">by</span>
-          </span>
+          <img src="/logo.png" alt="Instaby" className="mx-auto h-8 w-auto" />
           <p className="mt-5 text-lg font-medium text-text">Bem-vindo de volta</p>
           <p className="mt-1 text-sm text-muted">Entre para acessar o painel</p>
         </div>

@@ -135,7 +135,7 @@ export default function OrcamentoBuilder({
                       onClick={() => alternar(s)}
                       className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
                         ativo
-                          ? "bg-accent text-black"
+                          ? "bg-accent text-white"
                           : "border border-border bg-card/60 text-muted hover:text-text"
                       }`}
                     >
@@ -188,15 +188,12 @@ export default function OrcamentoBuilder({
       <div className="lg:sticky lg:top-20 lg:self-start">
         <p className="mb-2 text-xs uppercase tracking-wide text-muted">Preview em tempo real</p>
         <div className="rounded-2xl border border-white/[0.06] bg-[#09090B] p-6">
-          <div className="mb-4 flex items-center gap-2">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#FACC15]" />
-            <span className="font-mono text-[10px] uppercase tracking-wide text-[#9CA3AF]">
-              instaby · proposta
-            </span>
+          <div className="mb-4">
+            <img src="/logo.png" alt="Instaby" className="h-5 w-auto" />
           </div>
 
           <p className="text-2xl font-medium leading-tight text-[#F9FAFB]">gestão pensada</p>
-          <p className="mb-3 text-2xl font-medium leading-tight text-[#FACC15]">
+          <p className="mb-3 text-2xl font-medium leading-tight text-[#E63946]">
             pra {clienteNome} crescer.
           </p>
 
@@ -214,7 +211,7 @@ export default function OrcamentoBuilder({
                 <div key={servico.id} className="rounded-xl bg-[#111827] p-3.5">
                   <div className="flex items-start justify-between">
                     <p className="text-sm font-medium text-[#F9FAFB]">{servico.nome}</p>
-                    <span className="text-sm font-medium text-[#FACC15]">R$ {valor.toFixed(0)}</span>
+                    <span className="text-sm font-medium text-[#E63946]">R$ {valor.toFixed(0)}</span>
                   </div>
                   {servico.descricao && (
                     <p className="mt-1 text-xs leading-relaxed text-[#9CA3AF]">{servico.descricao}</p>
@@ -230,7 +227,7 @@ export default function OrcamentoBuilder({
           {itensSelecionados.length > 0 && (
             <div className="flex items-center justify-between border-t border-white/[0.06] pt-3">
               <span className="text-sm font-medium text-[#F9FAFB]">Total mensal</span>
-              <span className="text-lg font-medium text-[#FACC15]">R$ {total.toFixed(0)}</span>
+              <span className="text-lg font-medium text-[#E63946]">R$ {total.toFixed(0)}</span>
             </div>
           )}
         </div>

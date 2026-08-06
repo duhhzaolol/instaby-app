@@ -25,7 +25,7 @@ export default function AceitarButton({ slug, status }: { slug: string; status: 
     <button
       onClick={aceitar}
       disabled={enviando}
-      className="w-full rounded-lg bg-[#FACC15] py-3 text-sm font-semibold text-black transition-transform hover:scale-[1.01] disabled:opacity-60"
+      className="w-full rounded-lg bg-[#E63946] py-3 text-sm font-semibold text-white transition-transform hover:scale-[1.01] disabled:opacity-60"
     >
       {enviando ? "Enviando..." : "Aceitar proposta"}
     </button>

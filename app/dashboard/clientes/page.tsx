@@ -58,7 +58,7 @@ export default async function ClientesPage({
             href={`/dashboard/clientes?status=${a.valor}`}
             className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors ${
               filtro === a.valor
-                ? "bg-accent text-black"
+                ? "bg-accent text-white"
                 : "border border-border bg-card/60 text-muted hover:text-text"
             }`}
           >
