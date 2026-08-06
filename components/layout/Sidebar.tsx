@@ -11,6 +11,7 @@ import {
   FileText,
   FileSignature,
   Package,
+  Package2,
   Settings,
   Menu,
   X,
@@ -24,6 +25,7 @@ const menuPrincipal = [
 
 const menuOrcamento = [
   { label: "Catálogo de serviços", href: "/dashboard/servicos", icon: Package },
+  { label: "Pacotes", href: "/dashboard/pacotes", icon: Package2 },
   { label: "Orçamentos", href: "/dashboard/orcamentos", icon: FileText },
   { label: "Contratos", href: "/dashboard/contratos", icon: FileSignature },
 ];

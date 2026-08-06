@@ -53,7 +53,26 @@ model Servico {
   unidade       String? // ex: "mês", "reel"
   valorUnitario Decimal
 
-  itens ItemOrcamento[]
+  itens        ItemOrcamento[]
+  pacoteItens  PacoteItem[]
+}
+
+model Pacote {
+  id        String   @id @default(uuid())
+  nome      String
+  descricao String?
+  createdAt DateTime @default(now())
+
+  itens PacoteItem[]
+}
+
+model PacoteItem {
+  id         String @id @default(uuid())
+  pacoteId   String
+  pacote     Pacote  @relation(fields: [pacoteId], references: [id])
+  servicoId  String
+  servico    Servico @relation(fields: [servicoId], references: [id])
+  quantidade Int     @default(1)
 }
 
 model Orcamento {

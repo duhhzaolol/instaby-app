@@ -15,19 +15,32 @@ type Servico = {
 };
 
 type Selecionado = { servicoId: string; quantidade: number };
+type Pacote = { id: string; nome: string; itens: { servicoId: string; quantidade: number }[] };
 
 export default function OrcamentoBuilder({
   clienteId,
   clienteNome,
   servicos,
+  pacotes,
 }: {
   clienteId: string;
   clienteNome: string;
   servicos: Servico[];
+  pacotes: Pacote[];
 }) {
   const router = useRouter();
   const [selecionados, setSelecionados] = useState<Record<string, Selecionado>>({});
   const [enviando, setEnviando] = useState(false);
+
+  function aplicarPacote(pacote: Pacote) {
+    setSelecionados((atual) => {
+      const copia = { ...atual };
+      pacote.itens.forEach((i) => {
+        copia[i.servicoId] = { servicoId: i.servicoId, quantidade: i.quantidade };
+      });
+      return copia;
+    });
+  }
 
   const categorias = useMemo(
     () => Array.from(new Set(servicos.map((s) => s.categoria))),
@@ -90,6 +103,23 @@ export default function OrcamentoBuilder({
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       {/* Edição */}
       <Card hoverable={false} className="p-5">
+        {pacotes.length > 0 && (
+          <div className="mb-5 border-b border-border pb-4">
+            <p className="mb-2 text-xs uppercase tracking-wide text-muted">Aplicar pacote</p>
+            <div className="flex flex-wrap gap-2">
+              {pacotes.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => aplicarPacote(p)}
+                  className="rounded-full border border-accent/20 bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent"
+                >
+                  {p.nome}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {categorias.map((cat) => (
           <div key={cat} className="mb-4">
             <p className="mb-2 text-xs uppercase tracking-wide text-muted">{cat}</p>

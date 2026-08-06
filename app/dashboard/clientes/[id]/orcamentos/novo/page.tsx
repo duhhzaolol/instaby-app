@@ -12,9 +12,10 @@ export default async function NovoOrcamentoPage({
   const cliente = await prisma.cliente.findUnique({ where: { id: params.id } });
   if (!cliente) notFound();
 
-  const servicos = await prisma.servico.findMany({
-    orderBy: [{ categoria: "asc" }, { nome: "asc" }],
-  });
+  const [servicos, pacotes] = await Promise.all([
+    prisma.servico.findMany({ orderBy: [{ categoria: "asc" }, { nome: "asc" }] }),
+    prisma.pacote.findMany({ include: { itens: true }, orderBy: { createdAt: "desc" } }),
+  ]);
 
   return (
     <div>
@@ -41,6 +42,11 @@ export default async function NovoOrcamentoPage({
           clienteId={cliente.id}
           clienteNome={cliente.nome}
           servicos={servicos.map((s) => ({ ...s, valorUnitario: Number(s.valorUnitario) }))}
+          pacotes={pacotes.map((p) => ({
+            id: p.id,
+            nome: p.nome,
+            itens: p.itens.map((i) => ({ servicoId: i.servicoId, quantidade: i.quantidade })),
+          }))}
         />
       )}
     </div>

@@ -1,28 +1,39 @@
 # Instaby App
 
-Painel interno da Instaby Agência — v7.
+Painel interno da Instaby Agência — v8.
 
 ## O que entrou nesta versão
 
-- **Construtor de orçamento em duas colunas**, estilo Notion: edição à
-  esquerda (pílulas de serviço), preview em tempo real à direita — a
-  proposta vai ganhando forma conforme você seleciona
-- **Cadastro de depoimentos** (`/dashboard/configuracoes`): adicione os
-  depoimentos dos clientes uma vez, eles aparecem sozinhos em toda proposta
-  que você enviar
-- **Página pública do orçamento completa**: agora tem a seção "Como vamos
-  trabalhar" (as 5 etapas) e "Quem confia, recomenda" (os depoimentos
-  cadastrados), além dos serviços e do total — exatamente como desenhamos
-  no esboço lá no início
-- **Lista global de Contratos** (`/dashboard/contratos`), espelhando a de
-  Orçamentos
+- **Catálogo de serviços populado de uma vez**: rota `/api/seed-servicos`
+  (mesmo padrão do `/api/setup`) que adiciona os 14 serviços específicos que
+  você definiu, já organizados nas categorias certas (📱 Social Media, 🎥
+  Produção de Conteúdo, 🎯 Tráfego Pago, 📊 Relatórios, 🛠️ Ferramentas).
+  Pode rodar de novo sem duplicar — ela pula os que já existem pelo nome.
 
-## O que falta
+  Acesse uma vez, trocando pelo seu `SETUP_SECRET`:
+  ```
+  https://SEU-DOMINIO/api/seed-servicos?secret=SEU_SETUP_SECRET
+  ```
 
-Com isso, todos os itens que faltavam da lista anterior estão prontos. Os
-únicos pontos em aberto são os que ficaram sem definição sua:
+- **Pacotes** (`/dashboard/pacotes`): combine vários serviços do catálogo
+  num pacote com nome (ex: "Plano Crescimento"). Cadastre uma vez.
+- **Aplicar pacote no orçamento**: dentro do construtor de orçamento, se
+  houver pacotes cadastrados, aparece um atalho no topo — clicar nele já
+  marca todas as pílulas daquele pacote de uma vez, com as quantidades
+  certas. Você ainda pode ajustar item por item depois.
 
-- A "parte de conteúdos" (calendário de postagens? aprovação de peças?) —
-  aguardando você descrever melhor
-- Acompanhamento de Instagram dos clientes — fase futura, você mesmo
-  decidiu deixar pra depois de usar o app por uns dias
+## Como você pode expandir o catálogo depois
+
+A lista de serviços que você mandou (Desenvolvimento Web, Design, Captação,
+etc.) cabe toda no mesmo catálogo — é só ir cadastrando em
+`/dashboard/servicos/novo` conforme for oferecendo. As categorias não são
+fixas: qualquer texto que você digitar no campo Categoria vira uma seção
+nova automaticamente.
+
+## Ideia registrada pra mais pra frente (ainda não construída)
+
+Usar os itens do orçamento pra gerar tarefas automaticamente e acompanhar
+se cada entrega do mês foi cumprida (ex: orçamento tem "Reels 8/mês" →
+o sistema cria/acompanha 8 tarefas de reel naquele mês). Isso conecta com a
+ideia de "conteúdos" que você mencionou — se for isso, me confirma que eu
+desenho certo.
