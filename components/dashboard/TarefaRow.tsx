@@ -19,7 +19,15 @@ const tarefaStatusLabel: Record<string, string> = {
 
 export type TarefaRowData = { id: string; titulo: string; tipo: string; status: string };
 
-export function TarefaRow({ tarefa, index }: { tarefa: TarefaRowData; index: number }) {
+export function TarefaRow({
+  tarefa,
+  index,
+  clienteNome,
+}: {
+  tarefa: TarefaRowData;
+  index: number;
+  clienteNome?: string | null;
+}) {
   const router = useRouter();
   const [excluindo, setExcluindo] = useState(false);
 
@@ -43,7 +51,12 @@ export function TarefaRow({ tarefa, index }: { tarefa: TarefaRowData; index: num
     <Card index={index} hoverable={false} className="flex items-center justify-between px-4 py-3">
       <div>
         <p className="text-sm text-text">{tarefa.titulo}</p>
-        <p className="text-xs text-muted">{tarefa.tipo === "ideia" ? "Ideia" : "Tarefa"}</p>
+        <p className="flex items-center gap-1.5 text-xs text-muted">
+          {tarefa.tipo === "ideia" ? "Ideia" : "Tarefa"}
+          {clienteNome && (
+            <span className="rounded-full bg-white/5 px-1.5 py-0.5 text-[10px] text-muted">{clienteNome}</span>
+          )}
+        </p>
       </div>
       <div className="flex items-center gap-3">
         <select

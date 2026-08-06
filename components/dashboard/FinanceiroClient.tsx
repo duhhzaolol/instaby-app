@@ -180,6 +180,7 @@ function NovaDespesaForm({ clientes, onSalvo }: { clientes: Cliente[]; onSalvo: 
   const [descricao, setDescricao] = useState("");
   const [valor, setValor] = useState(0);
   const [clienteId, setClienteId] = useState("");
+  const [data, setData] = useState(new Date().toISOString().slice(0, 10));
   const [enviando, setEnviando] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -189,7 +190,7 @@ function NovaDespesaForm({ clientes, onSalvo }: { clientes: Cliente[]; onSalvo: 
     const resposta = await fetch("/api/despesas", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ descricao, valor, clienteId: clienteId || null }),
+      body: JSON.stringify({ descricao, valor, clienteId: clienteId || null, data }),
     });
 
     setEnviando(false);
@@ -198,6 +199,7 @@ function NovaDespesaForm({ clientes, onSalvo }: { clientes: Cliente[]; onSalvo: 
       setDescricao("");
       setValor(0);
       setClienteId("");
+      setData(new Date().toISOString().slice(0, 10));
       onSalvo();
       router.refresh();
     }
@@ -215,19 +217,25 @@ function NovaDespesaForm({ clientes, onSalvo }: { clientes: Cliente[]; onSalvo: 
       />
       <div className="mb-2 grid grid-cols-2 gap-2">
         <CurrencyInput value={valor} onChange={setValor} />
-        <select
-          value={clienteId}
-          onChange={(e) => setClienteId(e.target.value)}
+        <input
+          type="date"
+          value={data}
+          onChange={(e) => setData(e.target.value)}
           className="h-10 rounded-xl border border-border bg-card/60 px-3 text-sm text-text"
-        >
-          <option value="">Sem cliente</option>
-          {clientes.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.nome}
-            </option>
-          ))}
-        </select>
+        />
       </div>
+      <select
+        value={clienteId}
+        onChange={(e) => setClienteId(e.target.value)}
+        className="mb-2 h-10 w-full rounded-xl border border-border bg-card/60 px-3 text-sm text-text"
+      >
+        <option value="">Sem cliente</option>
+        {clientes.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.nome}
+          </option>
+        ))}
+      </select>
       <Button type="submit" size="sm" disabled={enviando || valor <= 0} className="w-full">
         {enviando ? "Salvando..." : "Salvar despesa"}
       </Button>
