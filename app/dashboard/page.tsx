@@ -5,7 +5,7 @@ import { authOptions } from "@/lib/auth";
 const modulos = [
   { nome: "Clientes", desc: "Tarefas, financeiro e orçamento por cliente", href: "/dashboard/clientes" },
   { nome: "Financeiro", desc: "Em breve", href: null },
-  { nome: "Orçamento", desc: "Em breve", href: null },
+  { nome: "Orçamento", desc: "Catálogo de serviços da agência", href: "/dashboard/servicos" },
 ];
 
 export default async function DashboardPage() {

@@ -1,6 +1,6 @@
 # Instaby App
 
-Painel interno da Instaby Agência — v2.
+Painel interno da Instaby Agência — v3.
 
 ## O que já está pronto nesta versão
 
@@ -8,16 +8,27 @@ Painel interno da Instaby Agência — v2.
 - Schema completo do banco (`prisma/schema.prisma`): Cliente, Tarefa, Serviço,
   Orçamento, ItemOrcamento, Contrato, Cobrança, Despesa, Depoimento
 - Login funcional (e-mail + senha) protegendo a rota `/dashboard`
-- Módulo de Cliente completo: lista com filtro por status (Lead/Ativo/Inativo),
-  cadastro de cliente, tela de detalhe com abas (Tarefas já funcional — criar e
-  listar; Financeiro/Orçamentos/Contratos como placeholder "em breve")
+- Módulo de Cliente completo: lista com filtro por status, cadastro,
+  detalhe com abas (Tarefas funcional)
+- Catálogo de serviços (`/dashboard/servicos`) — cadastre os serviços da
+  agência uma vez, com nome, descrição, categoria e valor
+- Construtor de orçamento por cliente: seleciona os serviços em pílula,
+  ajusta quantidade, calcula o total e gera a página pública
+- Página pública `/orcamento/[slug]` — sem login, mostra os serviços com
+  descrição e valor, e um botão "Aceitar proposta" que já: marca o orçamento
+  como aceito, cria a cobrança automaticamente e muda o status do cliente
+  pra Ativo
 
 ## O que falta (próximas entregas)
 
-- Construtor de orçamento (seleção de serviços em pílula)
-- Página pública do orçamento (`/orcamento/[slug]`), estilo editorial
-- Financeiro (cobranças + despesas)
-- Contrato (rascunho gerado do orçamento)
+- Seções "Nosso processo" e depoimentos na página pública (refinamento visual)
+- Financeiro (cobranças + despesas, visão de lucro)
+- Contrato (rascunho gerado do orçamento aceito)
+
+## Antes de usar
+
+Cadastre pelo menos um serviço em `/dashboard/servicos` antes de tentar
+gerar um orçamento pra um cliente — sem isso não tem o que selecionar.
 
 ## Como publicar (mesmo fluxo do Juninho App)
 

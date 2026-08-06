@@ -24,7 +24,10 @@ export default async function ClienteDetalhePage({
 }) {
   const cliente = await prisma.cliente.findUnique({
     where: { id: params.id },
-    include: { tarefas: { orderBy: { createdAt: "desc" } } },
+    include: {
+      tarefas: { orderBy: { createdAt: "desc" } },
+      orcamentos: { include: { itens: true }, orderBy: { createdAt: "desc" } },
+    },
   });
 
   if (!cliente) notFound();
@@ -91,7 +94,46 @@ export default async function ClienteDetalhePage({
         <p className="text-sm text-muted">Módulo Financeiro chega na próxima entrega.</p>
       )}
       {aba === "orcamentos" && (
-        <p className="text-sm text-muted">Construtor de orçamento chega na próxima entrega.</p>
+        <div>
+          <div className="flex flex-col gap-2">
+            {cliente.orcamentos.length === 0 && (
+              <p className="text-sm text-muted">Nenhum orçamento enviado ainda.</p>
+            )}
+            {cliente.orcamentos.map((o) => {
+              const total = o.itens.reduce((soma, item) => soma + Number(item.valor), 0);
+              return (
+                <a
+                  key={o.id}
+                  href={`/orcamento/${o.slug}`}
+                  target="_blank"
+                  className="flex items-center justify-between rounded-lg bg-card px-3.5 py-3"
+                >
+                  <div>
+                    <p className="text-sm text-white">/orcamento/{o.slug}</p>
+                    <p className="text-xs text-muted">R$ {total.toFixed(0)}</p>
+                  </div>
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-xs ${
+                      o.status === "aceito"
+                        ? "bg-[#1f3a1f] text-[#7ed17e]"
+                        : o.status === "recusado"
+                        ? "bg-[#3a1f1f] text-[#e08a8a]"
+                        : "bg-[#2a2a2a] text-muted"
+                    }`}
+                  >
+                    {o.status === "aceito" ? "Aceito" : o.status === "recusado" ? "Recusado" : "Pendente"}
+                  </span>
+                </a>
+              );
+            })}
+          </div>
+          <Link
+            href={`/dashboard/clientes/${cliente.id}/orcamentos/novo`}
+            className="mt-3 block w-full rounded-lg border border-border bg-card py-2.5 text-center text-sm text-white"
+          >
+            + Novo orçamento
+          </Link>
+        </div>
       )}
       {aba === "contratos" && (
         <p className="text-sm text-muted">Módulo de Contrato chega na próxima entrega.</p>
