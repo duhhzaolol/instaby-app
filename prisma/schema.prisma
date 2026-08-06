@@ -1,0 +1,119 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Login único (você) — mesmo padrão do JM Team
+model Usuario {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  senha     String
+  nome      String
+  createdAt DateTime @default(now())
+}
+
+model Cliente {
+  id        String   @id @default(uuid())
+  nome      String
+  whatsapp  String?
+  status    String   @default("lead") // lead | ativo | inativo
+  createdAt DateTime @default(now())
+
+  tarefas    Tarefa[]
+  orcamentos Orcamento[]
+  contratos  Contrato[]
+  cobrancas  Cobranca[]
+  despesas   Despesa[]
+}
+
+model Tarefa {
+  id        String   @id @default(uuid())
+  clienteId String?
+  cliente   Cliente? @relation(fields: [clienteId], references: [id])
+  titulo    String
+  tipo      String   @default("tarefa") // tarefa | ideia
+  status    String   @default("a_fazer") // a_fazer | em_andamento | feito
+  link      String?
+  createdAt DateTime @default(now())
+}
+
+// Catálogo reutilizável de serviços — a "esteira de produto"
+model Servico {
+  id            String   @id @default(uuid())
+  nome          String
+  descricao     String
+  categoria     String
+  unidade       String? // ex: "mês", "reel"
+  valorUnitario Decimal
+
+  itens ItemOrcamento[]
+}
+
+model Orcamento {
+  id        String   @id @default(uuid())
+  clienteId String
+  cliente   Cliente  @relation(fields: [clienteId], references: [id])
+  slug      String   @unique
+  status    String   @default("pendente") // pendente | aceito | recusado
+  enviadoEm DateTime?
+  createdAt DateTime @default(now())
+
+  itens     ItemOrcamento[]
+  contratos Contrato[]
+  cobrancas Cobranca[]
+}
+
+model ItemOrcamento {
+  id          String    @id @default(uuid())
+  orcamentoId String
+  orcamento   Orcamento @relation(fields: [orcamentoId], references: [id])
+  servicoId   String
+  servico     Servico   @relation(fields: [servicoId], references: [id])
+  quantidade  Int       @default(1)
+  valor       Decimal
+}
+
+model Contrato {
+  id          String     @id @default(uuid())
+  clienteId   String
+  cliente     Cliente    @relation(fields: [clienteId], references: [id])
+  orcamentoId String?
+  orcamento   Orcamento? @relation(fields: [orcamentoId], references: [id])
+  conteudo    String
+  status      String     @default("rascunho") // rascunho | enviado | assinado
+  createdAt   DateTime   @default(now())
+}
+
+model Cobranca {
+  id          String     @id @default(uuid())
+  clienteId   String
+  cliente     Cliente    @relation(fields: [clienteId], references: [id])
+  orcamentoId String?
+  orcamento   Orcamento? @relation(fields: [orcamentoId], references: [id])
+  valor       Decimal
+  tipo        String     @default("recorrente") // recorrente | unica
+  vencimento  DateTime?
+  status      String     @default("pendente") // pendente | pago | atrasado
+  createdAt   DateTime   @default(now())
+}
+
+model Despesa {
+  id        String   @id @default(uuid())
+  clienteId String?
+  cliente   Cliente? @relation(fields: [clienteId], references: [id])
+  descricao String
+  valor     Decimal
+  data      DateTime @default(now())
+}
+
+// Depoimentos fixos — aparecem em toda página de orçamento
+model Depoimento {
+  id          String  @id @default(uuid())
+  nomeCliente String
+  texto       String
+  ativo       Boolean @default(true)
+}
