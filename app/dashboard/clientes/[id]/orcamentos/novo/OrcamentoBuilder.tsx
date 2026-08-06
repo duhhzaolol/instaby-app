@@ -97,10 +97,10 @@ export default function OrcamentoBuilder({
                     key={s.id}
                     type="button"
                     onClick={() => alternar(s)}
-                    className={`rounded-full px-3 py-1.5 text-xs ${
+                    className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
                       ativo
-                        ? "bg-accent text-white"
-                        : "border border-border bg-card text-muted"
+                        ? "bg-accent text-black"
+                        : "border border-border bg-card/60 text-muted hover:text-text"
                     }`}
                   >
                     {s.nome}
@@ -118,18 +118,18 @@ export default function OrcamentoBuilder({
             return (
               <div
                 key={sel.servicoId}
-                className="flex items-center justify-between rounded-lg bg-card px-3.5 py-2.5"
+                className="flex items-center justify-between rounded-xl bg-card/60 px-3.5 py-2.5"
               >
-                <p className="text-sm text-white">{servico.nome}</p>
+                <p className="text-sm text-text">{servico.nome}</p>
                 <div className="flex items-center gap-3">
                   <input
                     type="number"
                     min={1}
                     value={sel.quantidade}
                     onChange={(e) => mudarQuantidade(sel.servicoId, parseInt(e.target.value) || 1)}
-                    className="h-8 w-14 rounded-md border border-border bg-base px-2 text-center text-sm text-white"
+                    className="h-8 w-14 rounded-lg border border-border bg-base px-2 text-center text-sm text-text"
                   />
-                  <span className="w-16 text-right text-sm text-white">
+                  <span className="w-16 text-right text-sm text-text">
                     R$ {(Number(servico.valorUnitario) * sel.quantidade).toFixed(0)}
                   </span>
                 </div>
@@ -140,14 +140,14 @@ export default function OrcamentoBuilder({
       )}
 
       <div className="flex items-center justify-between border-t border-border pt-3">
-        <span className="text-sm font-medium text-white">Total</span>
+        <span className="text-sm font-medium text-text">Total</span>
         <span className="text-lg font-medium text-accent">R$ {total.toFixed(0)}</span>
       </div>
 
       <button
         onClick={gerar}
         disabled={enviando || Object.keys(selecionados).length === 0}
-        className="mt-4 h-11 w-full rounded-lg bg-accent text-sm font-medium text-white disabled:opacity-40"
+        className="mt-4 h-11 w-full rounded-xl bg-accent text-sm font-semibold text-black transition-transform hover:scale-[1.01] disabled:opacity-40"
       >
         {enviando ? "Gerando..." : "Gerar página do orçamento"}
       </button>

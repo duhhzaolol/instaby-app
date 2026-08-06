@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Card } from "@/components/ui/Card";
+import { Input, Label } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 
 export default function NovoClientePage() {
   const router = useRouter();
@@ -29,45 +32,38 @@ export default function NovoClientePage() {
   }
 
   return (
-    <div className="min-h-screen bg-base px-6 py-8">
-      <p className="mb-5 text-base font-medium text-white">Novo cliente</p>
+    <div className="max-w-md">
+      <p className="mb-5 text-lg font-medium text-text">Novo cliente</p>
 
-      <form onSubmit={handleSubmit} className="max-w-sm">
-        <label className="text-xs text-muted">Nome</label>
-        <input
-          required
-          value={nome}
-          onChange={(e) => setNome(e.target.value)}
-          className="mb-4 mt-1 h-10 w-full rounded-lg border border-border bg-card px-3 text-sm text-white outline-none focus:border-accent"
-        />
+      <Card hoverable={false} className="p-5">
+        <form onSubmit={handleSubmit}>
+          <Label>Nome</Label>
+          <Input required value={nome} onChange={(e) => setNome(e.target.value)} className="mb-4" />
 
-        <label className="text-xs text-muted">WhatsApp</label>
-        <input
-          value={whatsapp}
-          onChange={(e) => setWhatsapp(e.target.value)}
-          placeholder="(19) 99999-9999"
-          className="mb-4 mt-1 h-10 w-full rounded-lg border border-border bg-card px-3 text-sm text-white outline-none focus:border-accent"
-        />
+          <Label>WhatsApp</Label>
+          <Input
+            value={whatsapp}
+            onChange={(e) => setWhatsapp(e.target.value)}
+            placeholder="(19) 99999-9999"
+            className="mb-4"
+          />
 
-        <label className="text-xs text-muted">Status</label>
-        <select
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          className="mb-6 mt-1 h-10 w-full rounded-lg border border-border bg-card px-3 text-sm text-white outline-none focus:border-accent"
-        >
-          <option value="lead">Lead</option>
-          <option value="ativo">Ativo</option>
-          <option value="inativo">Inativo</option>
-        </select>
+          <Label>Status</Label>
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className="mb-6 h-10 w-full rounded-xl border border-border bg-card/60 px-3 text-sm text-text outline-none focus:border-accent/50"
+          >
+            <option value="lead">Lead</option>
+            <option value="ativo">Ativo</option>
+            <option value="inativo">Inativo</option>
+          </select>
 
-        <button
-          type="submit"
-          disabled={enviando}
-          className="h-11 w-full rounded-lg bg-accent text-sm font-medium text-white disabled:opacity-60"
-        >
-          {enviando ? "Salvando..." : "Salvar cliente"}
-        </button>
-      </form>
+          <Button type="submit" disabled={enviando} className="w-full">
+            {enviando ? "Salvando..." : "Salvar cliente"}
+          </Button>
+        </form>
+      </Card>
     </div>
   );
 }

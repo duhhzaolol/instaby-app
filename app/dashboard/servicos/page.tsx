@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { Plus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 
 export default async function ServicosPage() {
   const servicos = await prisma.servico.findMany({
@@ -9,17 +12,16 @@ export default async function ServicosPage() {
   const categorias = Array.from(new Set(servicos.map((s) => s.categoria)));
 
   return (
-    <div className="min-h-screen bg-base px-6 py-8">
-      <div className="mb-5 flex items-center justify-between">
+    <div>
+      <div className="mb-6 flex items-center justify-between">
         <div>
-          <p className="text-base font-medium text-white">Catálogo de serviços</p>
-          <p className="text-xs text-muted">A base pra montar qualquer orçamento em pílulas</p>
+          <p className="text-lg font-medium text-text">Catálogo de serviços</p>
+          <p className="text-sm text-muted">A base pra montar qualquer orçamento em pílulas</p>
         </div>
-        <Link
-          href="/dashboard/servicos/novo"
-          className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white"
-        >
-          + Novo serviço
+        <Link href="/dashboard/servicos/novo">
+          <Button size="sm">
+            <Plus size={14} /> Novo serviço
+          </Button>
         </Link>
       </div>
 
@@ -32,23 +34,20 @@ export default async function ServicosPage() {
       {categorias.map((cat) => (
         <div key={cat} className="mb-6">
           <p className="mb-2 text-xs uppercase tracking-wide text-muted">{cat}</p>
-          <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {servicos
               .filter((s) => s.categoria === cat)
-              .map((s) => (
-                <div
-                  key={s.id}
-                  className="flex items-center justify-between rounded-lg bg-card px-4 py-3"
-                >
+              .map((s, i) => (
+                <Card key={s.id} index={i} className="flex items-center justify-between p-4">
                   <div>
-                    <p className="text-sm text-white">{s.nome}</p>
+                    <p className="text-sm text-text">{s.nome}</p>
                     <p className="text-xs text-muted">{s.descricao}</p>
                   </div>
-                  <span className="text-sm text-white">
+                  <span className="whitespace-nowrap text-sm text-text">
                     R$ {Number(s.valorUnitario).toFixed(0)}
                     <span className="text-xs text-muted">/{s.unidade}</span>
                   </span>
-                </div>
+                </Card>
               ))}
           </div>
         </div>

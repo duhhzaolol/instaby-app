@@ -2,7 +2,41 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  background-color: #0a0a0a;
-  color: #ffffff;
+@layer base {
+  body {
+    background-color: #09090B;
+    color: #F9FAFB;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background-color: rgba(250, 204, 21, 0.25);
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+  }
+}
+
+@layer utilities {
+  .glass {
+    background: rgba(17, 24, 39, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
 }

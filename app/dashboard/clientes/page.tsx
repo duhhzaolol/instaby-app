@@ -1,16 +1,20 @@
 import Link from "next/link";
+import { Plus, Phone } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+
+const statusTone: Record<string, "yellow" | "green" | "gray"> = {
+  lead: "yellow",
+  ativo: "green",
+  inativo: "gray",
+};
 
 const statusLabel: Record<string, string> = {
   lead: "Lead",
   ativo: "Ativo",
   inativo: "Inativo",
-};
-
-const statusStyle: Record<string, string> = {
-  lead: "bg-[#3a2f1f] text-[#e0b87a]",
-  ativo: "bg-[#1f3a1f] text-[#7ed17e]",
-  inativo: "bg-[#2a2a2a] text-muted",
 };
 
 export default async function ClientesPage({
@@ -23,6 +27,7 @@ export default async function ClientesPage({
   const clientes = await prisma.cliente.findMany({
     where: filtro !== "todos" ? { status: filtro } : undefined,
     orderBy: { createdAt: "desc" },
+    include: { cobrancas: true },
   });
 
   const abas = [
@@ -33,26 +38,28 @@ export default async function ClientesPage({
   ];
 
   return (
-    <div className="min-h-screen bg-base px-6 py-8">
-      <div className="mb-5 flex items-center justify-between">
-        <p className="text-base font-medium text-white">Clientes</p>
-        <Link
-          href="/dashboard/clientes/novo"
-          className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white"
-        >
-          + Novo cliente
+    <div>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <p className="text-lg font-medium text-text">Clientes</p>
+          <p className="text-sm text-muted">{clientes.length} no total</p>
+        </div>
+        <Link href="/dashboard/clientes/novo">
+          <Button size="sm">
+            <Plus size={14} /> Novo cliente
+          </Button>
         </Link>
       </div>
 
-      <div className="mb-4 flex gap-2">
+      <div className="mb-6 flex gap-2">
         {abas.map((a) => (
           <Link
             key={a.valor}
             href={`/dashboard/clientes?status=${a.valor}`}
-            className={`rounded-full px-3 py-1 text-xs ${
+            className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors ${
               filtro === a.valor
-                ? "bg-accent text-white"
-                : "border border-border bg-card text-muted"
+                ? "bg-accent text-black"
+                : "border border-border bg-card/60 text-muted hover:text-text"
             }`}
           >
             {a.label}
@@ -60,25 +67,54 @@ export default async function ClientesPage({
         ))}
       </div>
 
-      <div className="flex flex-col gap-2">
-        {clientes.length === 0 && (
-          <p className="text-sm text-muted">Nenhum cliente por aqui ainda.</p>
-        )}
-        {clientes.map((c) => (
-          <Link
-            key={c.id}
-            href={`/dashboard/clientes/${c.id}`}
-            className="flex items-center justify-between rounded-xl bg-card px-4 py-3"
-          >
-            <div>
-              <p className="text-sm font-medium text-white">{c.nome}</p>
-              {c.whatsapp && <p className="text-xs text-muted">{c.whatsapp}</p>}
-            </div>
-            <span className={`rounded-full px-2.5 py-1 text-xs ${statusStyle[c.status]}`}>
-              {statusLabel[c.status]}
-            </span>
-          </Link>
-        ))}
+      {clientes.length === 0 && (
+        <p className="text-sm text-muted">Nenhum cliente por aqui ainda.</p>
+      )}
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {clientes.map((c, i) => {
+          const mensalidade = c.cobrancas
+            .filter((cb) => cb.tipo === "recorrente")
+            .reduce((soma, cb) => soma + Number(cb.valor), 0);
+          const iniciais = c.nome
+            .split(" ")
+            .map((p) => p[0])
+            .slice(0, 2)
+            .join("")
+            .toUpperCase();
+
+          return (
+            <Link key={c.id} href={`/dashboard/clientes/${c.id}`}>
+              <Card index={i} className="p-4">
+                <div className="mb-4 flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-sm font-semibold text-accent">
+                      {iniciais}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-text">{c.nome}</p>
+                      {c.whatsapp && (
+                        <p className="flex items-center gap-1 text-xs text-muted">
+                          <Phone size={11} /> {c.whatsapp}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <Badge tone={statusTone[c.status]}>{statusLabel[c.status]}</Badge>
+                </div>
+
+                {mensalidade > 0 && (
+                  <div className="border-t border-border pt-3">
+                    <p className="text-xs text-muted">Mensalidade</p>
+                    <p className="text-base font-medium text-text">
+                      R$ {mensalidade.toLocaleString("pt-BR")}
+                    </p>
+                  </div>
+                )}
+              </Card>
+            </Link>
+          );
+        })}
       </div>
     </div>
   );
