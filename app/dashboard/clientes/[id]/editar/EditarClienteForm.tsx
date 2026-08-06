@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Input, Label } from "@/components/ui/Input";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
@@ -14,6 +15,8 @@ type Cliente = {
   cnpj: string;
   contatoNome: string;
   endereco: string;
+  logoUrl: string;
+  linkDrive: string;
   status: string;
 };
 
@@ -24,10 +27,13 @@ export default function EditarClienteForm({ cliente }: { cliente: Cliente }) {
   const [cnpj, setCnpj] = useState(cliente.cnpj);
   const [contatoNome, setContatoNome] = useState(cliente.contatoNome);
   const [endereco, setEndereco] = useState(cliente.endereco);
+  const [logoUrl, setLogoUrl] = useState(cliente.logoUrl);
+  const [linkDrive, setLinkDrive] = useState(cliente.linkDrive);
   const [status, setStatus] = useState(cliente.status);
   const [mensalidade, setMensalidade] = useState(0);
   const [proximoVencimento, setProximoVencimento] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const [excluindo, setExcluindo] = useState(false);
 
   const viroAtivoAgora = status === "ativo" && cliente.status !== "ativo";
 
@@ -44,6 +50,8 @@ export default function EditarClienteForm({ cliente }: { cliente: Cliente }) {
         cnpj,
         contatoNome,
         endereco,
+        logoUrl,
+        linkDrive,
         status,
         ...(status === "ativo" && mensalidade > 0 && proximoVencimento && { mensalidade, proximoVencimento }),
       }),
@@ -51,6 +59,14 @@ export default function EditarClienteForm({ cliente }: { cliente: Cliente }) {
 
     setEnviando(false);
     router.push(`/dashboard/clientes/${cliente.id}`);
+    router.refresh();
+  }
+
+  async function excluir() {
+    if (!confirm(`Excluir ${cliente.nome}? Isso apaga também as tarefas, cobranças, despesas, orçamentos e contratos dele. Não dá pra desfazer.`)) return;
+    setExcluindo(true);
+    await fetch(`/api/clientes/${cliente.id}`, { method: "DELETE" });
+    router.push("/dashboard/clientes");
     router.refresh();
   }
 
@@ -76,6 +92,22 @@ export default function EditarClienteForm({ cliente }: { cliente: Cliente }) {
             <Input value={endereco} onChange={(e) => setEndereco(e.target.value)} />
           </div>
         </div>
+
+        <Label>Link do logo (cole a URL de uma imagem, ex: link do Drive/Imgur)</Label>
+        <Input
+          value={logoUrl}
+          onChange={(e) => setLogoUrl(e.target.value)}
+          placeholder="https://..."
+          className="mb-4"
+        />
+
+        <Label>Pasta no Google Drive</Label>
+        <Input
+          value={linkDrive}
+          onChange={(e) => setLinkDrive(e.target.value)}
+          placeholder="https://drive.google.com/..."
+          className="mb-4"
+        />
 
         <Label>Status</Label>
         <select
@@ -110,9 +142,18 @@ export default function EditarClienteForm({ cliente }: { cliente: Cliente }) {
           </div>
         )}
 
-        <Button type="submit" disabled={enviando} className="w-full">
+        <Button type="submit" disabled={enviando} className="mb-3 w-full">
           {enviando ? "Salvando..." : "Salvar alterações"}
         </Button>
+
+        <button
+          type="button"
+          onClick={excluir}
+          disabled={excluindo}
+          className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-red-500/20 bg-red-500/5 py-2.5 text-sm text-red-400 hover:bg-red-500/10 disabled:opacity-50"
+        >
+          <Trash2 size={14} /> {excluindo ? "Excluindo..." : "Excluir cliente"}
+        </button>
       </form>
     </Card>
   );

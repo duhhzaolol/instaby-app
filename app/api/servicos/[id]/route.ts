@@ -20,3 +20,18 @@ export async function PATCH(
 
   return NextResponse.json(servico);
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    await prisma.servico.delete({ where: { id: params.id } });
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json(
+      { erro: "Esse serviço já foi usado num orçamento ou pacote, não dá pra excluir. Edite o valor em vez disso." },
+      { status: 400 }
+    );
+  }
+}

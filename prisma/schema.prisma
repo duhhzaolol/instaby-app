@@ -23,6 +23,8 @@ model Cliente {
   cnpj         String?
   contatoNome  String?
   endereco     String?
+  logoUrl      String?
+  linkDrive    String?
   status       String   @default("lead") // lead | ativo | inativo
   createdAt    DateTime @default(now())
 

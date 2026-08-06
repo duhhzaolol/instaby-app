@@ -19,3 +19,11 @@ export async function PATCH(
 
   return NextResponse.json(cobranca);
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  await prisma.cobranca.delete({ where: { id: params.id } });
+  return NextResponse.json({ ok: true });
+}

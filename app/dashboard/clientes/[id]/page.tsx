@@ -1,36 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Phone, Plus, Pencil, Building2, MapPin, User } from "lucide-react";
+import { ArrowLeft, Phone, Plus, Pencil, Building2, MapPin, User, FolderOpen } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
 import NovaTarefaForm from "./NovaTarefaForm";
 import ContratosTab from "./ContratosTab";
 import FinanceiroTab from "./FinanceiroTab";
-
-const tarefaTone: Record<string, "gray" | "yellow" | "green"> = {
-  a_fazer: "gray",
-  em_andamento: "yellow",
-  feito: "green",
-};
-
-const tarefaStatusLabel: Record<string, string> = {
-  a_fazer: "A fazer",
-  em_andamento: "Em andamento",
-  feito: "Feito",
-};
-
-const orcamentoTone: Record<string, "green" | "red" | "gray"> = {
-  aceito: "green",
-  recusado: "red",
-  pendente: "gray",
-};
-
-const orcamentoLabel: Record<string, string> = {
-  aceito: "Aceito",
-  recusado: "Recusado",
-  pendente: "Pendente",
-};
+import { TarefaRow } from "@/components/dashboard/TarefaRow";
+import { OrcamentoRow } from "@/components/dashboard/OrcamentoRow";
 
 export default async function ClienteDetalhePage({
   params,
@@ -69,29 +45,53 @@ export default async function ClienteDetalhePage({
       </Link>
 
       <div className="mb-6 flex items-start justify-between">
-        <div>
-          <p className="text-lg font-medium text-text">{cliente.nome}</p>
-          <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
-            {cliente.whatsapp && (
-              <p className="flex items-center gap-1 text-xs text-muted">
-                <Phone size={11} /> {cliente.whatsapp}
-              </p>
-            )}
-            {cliente.contatoNome && (
-              <p className="flex items-center gap-1 text-xs text-muted">
-                <User size={11} /> {cliente.contatoNome}
-              </p>
-            )}
-            {cliente.cnpj && (
-              <p className="flex items-center gap-1 text-xs text-muted">
-                <Building2 size={11} /> {cliente.cnpj}
-              </p>
-            )}
-            {cliente.endereco && (
-              <p className="flex items-center gap-1 text-xs text-muted">
-                <MapPin size={11} /> {cliente.endereco}
-              </p>
-            )}
+        <div className="flex items-start gap-3">
+          {cliente.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={cliente.logoUrl} alt={cliente.nome} className="h-12 w-12 rounded-xl object-cover" />
+          ) : (
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10 text-sm font-semibold text-accent">
+              {cliente.nome
+                .split(" ")
+                .map((p) => p[0])
+                .slice(0, 2)
+                .join("")
+                .toUpperCase()}
+            </div>
+          )}
+          <div>
+            <p className="text-lg font-medium text-text">{cliente.nome}</p>
+            <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
+              {cliente.whatsapp && (
+                <p className="flex items-center gap-1 text-xs text-muted">
+                  <Phone size={11} /> {cliente.whatsapp}
+                </p>
+              )}
+              {cliente.contatoNome && (
+                <p className="flex items-center gap-1 text-xs text-muted">
+                  <User size={11} /> {cliente.contatoNome}
+                </p>
+              )}
+              {cliente.cnpj && (
+                <p className="flex items-center gap-1 text-xs text-muted">
+                  <Building2 size={11} /> {cliente.cnpj}
+                </p>
+              )}
+              {cliente.endereco && (
+                <p className="flex items-center gap-1 text-xs text-muted">
+                  <MapPin size={11} /> {cliente.endereco}
+                </p>
+              )}
+              {cliente.linkDrive && (
+                <a
+                  href={cliente.linkDrive}
+                  target="_blank"
+                  className="flex items-center gap-1 text-xs text-accent hover:underline"
+                >
+                  <FolderOpen size={11} /> Pasta no Drive
+                </a>
+              )}
+            </div>
           </div>
         </div>
         <Link
@@ -125,13 +125,7 @@ export default async function ClienteDetalhePage({
               <p className="text-sm text-muted">Nenhuma tarefa ainda.</p>
             )}
             {cliente.tarefas.map((t, i) => (
-              <Card key={t.id} index={i} hoverable={false} className="flex items-center justify-between px-4 py-3">
-                <div>
-                  <p className="text-sm text-text">{t.titulo}</p>
-                  <p className="text-xs text-muted">{t.tipo === "ideia" ? "Ideia" : "Tarefa"}</p>
-                </div>
-                <Badge tone={tarefaTone[t.status]}>{tarefaStatusLabel[t.status]}</Badge>
-              </Card>
+              <TarefaRow key={t.id} index={i} tarefa={{ id: t.id, titulo: t.titulo, tipo: t.tipo, status: t.status }} />
             ))}
           </div>
           <NovaTarefaForm clienteId={cliente.id} />
@@ -165,17 +159,7 @@ export default async function ClienteDetalhePage({
             )}
             {cliente.orcamentos.map((o, i) => {
               const total = o.itens.reduce((soma, item) => soma + Number(item.valor), 0);
-              return (
-                <a key={o.id} href={`/orcamento/${o.slug}`} target="_blank">
-                  <Card index={i} className="flex items-center justify-between px-4 py-3">
-                    <div>
-                      <p className="text-sm text-text">/orcamento/{o.slug}</p>
-                      <p className="text-xs text-muted">R$ {total.toFixed(0)}</p>
-                    </div>
-                    <Badge tone={orcamentoTone[o.status]}>{orcamentoLabel[o.status]}</Badge>
-                  </Card>
-                </a>
-              );
+              return <OrcamentoRow key={o.id} slug={o.slug} status={o.status} total={total} index={i} />;
             })}
           </div>
           <Link

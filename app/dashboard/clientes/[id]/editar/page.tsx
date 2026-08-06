@@ -17,6 +17,8 @@ export default async function EditarClientePage({ params }: { params: { id: stri
           cnpj: cliente.cnpj || "",
           contatoNome: cliente.contatoNome || "",
           endereco: cliente.endereco || "",
+          logoUrl: cliente.logoUrl || "",
+          linkDrive: cliente.linkDrive || "",
           status: cliente.status,
         }}
       />

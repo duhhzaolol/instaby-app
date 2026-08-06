@@ -14,6 +14,8 @@ export default function NovoClientePage() {
   const [cnpj, setCnpj] = useState("");
   const [contatoNome, setContatoNome] = useState("");
   const [endereco, setEndereco] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [linkDrive, setLinkDrive] = useState("");
   const [status, setStatus] = useState("lead");
   const [mensalidade, setMensalidade] = useState(0);
   const [proximoVencimento, setProximoVencimento] = useState("");
@@ -32,6 +34,8 @@ export default function NovoClientePage() {
         cnpj,
         contatoNome,
         endereco,
+        logoUrl,
+        linkDrive,
         status,
         ...(status === "ativo" && { mensalidade, proximoVencimento }),
       }),
@@ -80,6 +84,17 @@ export default function NovoClientePage() {
               <Input value={endereco} onChange={(e) => setEndereco(e.target.value)} />
             </div>
           </div>
+
+          <Label>Link do logo (opcional — URL de uma imagem)</Label>
+          <Input value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://..." className="mb-4" />
+
+          <Label>Pasta no Google Drive (opcional)</Label>
+          <Input
+            value={linkDrive}
+            onChange={(e) => setLinkDrive(e.target.value)}
+            placeholder="https://drive.google.com/..."
+            className="mb-4"
+          />
 
           <Label>Status</Label>
           <select

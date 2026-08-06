@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
@@ -65,6 +65,12 @@ export function CobrancaRow({
     router.refresh();
   }
 
+  async function excluir() {
+    if (!confirm("Excluir essa cobrança?")) return;
+    await fetch(`/api/cobrancas/${cobranca.id}`, { method: "DELETE" });
+    router.refresh();
+  }
+
   if (editando) {
     return (
       <Card index={index} hoverable={false} className="p-3.5">
@@ -117,6 +123,9 @@ export function CobrancaRow({
         )}
         <button onClick={() => setEditando(true)} className="text-muted hover:text-text">
           <Pencil size={13} />
+        </button>
+        <button onClick={excluir} className="text-muted hover:text-red-400">
+          <Trash2 size={13} />
         </button>
       </div>
     </Card>

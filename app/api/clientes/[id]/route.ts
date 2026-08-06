@@ -31,6 +31,8 @@ export async function PATCH(
       ...(body.cnpj !== undefined && { cnpj: body.cnpj }),
       ...(body.contatoNome !== undefined && { contatoNome: body.contatoNome }),
       ...(body.endereco !== undefined && { endereco: body.endereco }),
+      ...(body.logoUrl !== undefined && { logoUrl: body.logoUrl }),
+      ...(body.linkDrive !== undefined && { linkDrive: body.linkDrive }),
       ...(body.status !== undefined && { status: body.status }),
     },
   });
@@ -48,4 +50,26 @@ export async function PATCH(
   }
 
   return NextResponse.json(cliente);
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const id = params.id;
+
+  const orcamentos = await prisma.orcamento.findMany({ where: { clienteId: id }, select: { id: true } });
+  const orcamentoIds = orcamentos.map((o) => o.id);
+
+  await prisma.$transaction([
+    prisma.itemOrcamento.deleteMany({ where: { orcamentoId: { in: orcamentoIds } } }),
+    prisma.contrato.deleteMany({ where: { clienteId: id } }),
+    prisma.cobranca.deleteMany({ where: { clienteId: id } }),
+    prisma.despesa.deleteMany({ where: { clienteId: id } }),
+    prisma.tarefa.deleteMany({ where: { clienteId: id } }),
+    prisma.orcamento.deleteMany({ where: { clienteId: id } }),
+    prisma.cliente.delete({ where: { id } }),
+  ]);
+
+  return NextResponse.json({ ok: true });
 }

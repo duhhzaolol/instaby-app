@@ -14,3 +14,11 @@ export async function PATCH(
 
   return NextResponse.json(tarefa);
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  await prisma.tarefa.delete({ where: { id: params.id } });
+  return NextResponse.json({ ok: true });
+}

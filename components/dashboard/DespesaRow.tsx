@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { Input } from "@/components/ui/Input";
@@ -33,6 +33,12 @@ export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index:
     });
     setSalvando(false);
     setEditando(false);
+    router.refresh();
+  }
+
+  async function excluir() {
+    if (!confirm("Excluir essa despesa?")) return;
+    await fetch(`/api/despesas/${despesa.id}`, { method: "DELETE" });
     router.refresh();
   }
 
@@ -74,6 +80,9 @@ export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index:
         <span className="text-sm text-text">R$ {despesa.valor.toFixed(0)}</span>
         <button onClick={() => setEditando(true)} className="text-muted hover:text-text">
           <Pencil size={13} />
+        </button>
+        <button onClick={excluir} className="text-muted hover:text-red-400">
+          <Trash2 size={13} />
         </button>
       </div>
     </Card>

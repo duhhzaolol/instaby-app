@@ -73,8 +73,12 @@ export default async function ClientesPage({
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {clientes.map((c, i) => {
-          const mensalidade = c.cobrancas
+          const recorrentes = c.cobrancas
             .filter((cb) => cb.tipo === "recorrente")
+            .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+          const mensalidade = recorrentes.length > 0 ? Number(recorrentes[0].valor) : 0;
+          const totalRecebido = c.cobrancas
+            .filter((cb) => cb.status === "pago")
             .reduce((soma, cb) => soma + Number(cb.valor), 0);
           const iniciais = c.nome
             .split(" ")
@@ -88,9 +92,18 @@ export default async function ClientesPage({
               <Card index={i} className="p-4">
                 <div className="mb-4 flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-sm font-semibold text-accent">
-                      {iniciais}
-                    </div>
+                    {c.logoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={c.logoUrl}
+                        alt={c.nome}
+                        className="h-10 w-10 rounded-xl object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-sm font-semibold text-accent">
+                        {iniciais}
+                      </div>
+                    )}
                     <div>
                       <p className="text-sm font-medium text-text">{c.nome}</p>
                       {c.whatsapp && (
@@ -103,12 +116,20 @@ export default async function ClientesPage({
                   <Badge tone={statusTone[c.status]}>{statusLabel[c.status]}</Badge>
                 </div>
 
-                {mensalidade > 0 && (
-                  <div className="border-t border-border pt-3">
-                    <p className="text-xs text-muted">Mensalidade</p>
-                    <p className="text-base font-medium text-text">
-                      R$ {mensalidade.toLocaleString("pt-BR")}
-                    </p>
+                {(mensalidade > 0 || totalRecebido > 0) && (
+                  <div className="grid grid-cols-2 gap-2 border-t border-border pt-3">
+                    <div>
+                      <p className="text-xs text-muted">Mensalidade</p>
+                      <p className="text-sm font-medium text-text">
+                        {mensalidade > 0 ? `R$ ${mensalidade.toLocaleString("pt-BR")}` : "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted">Recebido até agora</p>
+                      <p className="text-sm font-medium text-text">
+                        R$ {totalRecebido.toLocaleString("pt-BR")}
+                      </p>
+                    </div>
                   </div>
                 )}
               </Card>

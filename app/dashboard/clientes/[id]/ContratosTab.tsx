@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { FileSignature } from "lucide-react";
+import { FileSignature, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -71,6 +71,12 @@ export default function ContratosTab({
     navigator.clipboard.writeText(texto);
   }
 
+  async function excluir(id: string) {
+    if (!confirm("Excluir esse contrato?")) return;
+    await fetch(`/api/contratos/${id}`, { method: "DELETE" });
+    router.refresh();
+  }
+
   return (
     <div>
       {orcamentosAceitos.length > 0 && (
@@ -121,6 +127,9 @@ export default function ContratosTab({
                   </button>
                   <button onClick={() => copiar(c.conteudo)} className="font-medium text-accent hover:underline">
                     Copiar
+                  </button>
+                  <button onClick={() => excluir(c.id)} className="text-muted hover:text-red-400">
+                    <Trash2 size={13} />
                   </button>
                 </div>
               </div>
