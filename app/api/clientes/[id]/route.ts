@@ -26,11 +26,26 @@ export async function PATCH(
   const cliente = await prisma.cliente.update({
     where: { id: params.id },
     data: {
-      nome: body.nome,
-      whatsapp: body.whatsapp,
-      status: body.status,
+      ...(body.nome !== undefined && { nome: body.nome }),
+      ...(body.whatsapp !== undefined && { whatsapp: body.whatsapp }),
+      ...(body.cnpj !== undefined && { cnpj: body.cnpj }),
+      ...(body.contatoNome !== undefined && { contatoNome: body.contatoNome }),
+      ...(body.endereco !== undefined && { endereco: body.endereco }),
+      ...(body.status !== undefined && { status: body.status }),
     },
   });
+
+  if (body.status === "ativo" && body.mensalidade && body.proximoVencimento) {
+    await prisma.cobranca.create({
+      data: {
+        clienteId: cliente.id,
+        valor: parseFloat(body.mensalidade),
+        tipo: "recorrente",
+        status: "pendente",
+        vencimento: new Date(body.proximoVencimento),
+      },
+    });
+  }
 
   return NextResponse.json(cliente);
 }

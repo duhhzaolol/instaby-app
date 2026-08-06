@@ -2,10 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 
 type Servico = {
   id: string;
   nome: string;
+  descricao: string;
   categoria: string;
   unidade: string | null;
   valorUnitario: number;
@@ -31,6 +34,16 @@ export default function OrcamentoBuilder({
     [servicos]
   );
 
+  const itensSelecionados = Object.values(selecionados)
+    .map((sel) => {
+      const servico = servicos.find((s) => s.id === sel.servicoId);
+      if (!servico) return null;
+      return { servico, quantidade: sel.quantidade, valor: servico.valorUnitario * sel.quantidade };
+    })
+    .filter(Boolean) as { servico: Servico; quantidade: number; valor: number }[];
+
+  const total = itensSelecionados.reduce((soma, i) => soma + i.valor, 0);
+
   function alternar(servico: Servico) {
     setSelecionados((atual) => {
       const copia = { ...atual };
@@ -50,23 +63,14 @@ export default function OrcamentoBuilder({
     }));
   }
 
-  const total = Object.values(selecionados).reduce((soma, sel) => {
-    const servico = servicos.find((s) => s.id === sel.servicoId);
-    if (!servico) return soma;
-    return soma + Number(servico.valorUnitario) * sel.quantidade;
-  }, 0);
-
   async function gerar() {
     setEnviando(true);
 
-    const itens = Object.values(selecionados).map((sel) => {
-      const servico = servicos.find((s) => s.id === sel.servicoId)!;
-      return {
-        servicoId: sel.servicoId,
-        quantidade: sel.quantidade,
-        valor: Number(servico.valorUnitario) * sel.quantidade,
-      };
-    });
+    const itens = itensSelecionados.map((i) => ({
+      servicoId: i.servico.id,
+      quantidade: i.quantidade,
+      valor: i.valor,
+    }));
 
     const resposta = await fetch(`/api/clientes/${clienteId}/orcamentos`, {
       method: "POST",
@@ -83,41 +87,41 @@ export default function OrcamentoBuilder({
   }
 
   return (
-    <div>
-      {categorias.map((cat) => (
-        <div key={cat} className="mb-4">
-          <p className="mb-2 text-xs uppercase tracking-wide text-muted">{cat}</p>
-          <div className="flex flex-wrap gap-2">
-            {servicos
-              .filter((s) => s.categoria === cat)
-              .map((s) => {
-                const ativo = !!selecionados[s.id];
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => alternar(s)}
-                    className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
-                      ativo
-                        ? "bg-accent text-black"
-                        : "border border-border bg-card/60 text-muted hover:text-text"
-                    }`}
-                  >
-                    {s.nome}
-                  </button>
-                );
-              })}
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      {/* Edição */}
+      <Card hoverable={false} className="p-5">
+        {categorias.map((cat) => (
+          <div key={cat} className="mb-4">
+            <p className="mb-2 text-xs uppercase tracking-wide text-muted">{cat}</p>
+            <div className="flex flex-wrap gap-2">
+              {servicos
+                .filter((s) => s.categoria === cat)
+                .map((s) => {
+                  const ativo = !!selecionados[s.id];
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => alternar(s)}
+                      className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
+                        ativo
+                          ? "bg-accent text-black"
+                          : "border border-border bg-card/60 text-muted hover:text-text"
+                      }`}
+                    >
+                      {s.nome}
+                    </button>
+                  );
+                })}
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
 
-      {Object.keys(selecionados).length > 0 && (
-        <div className="mb-4 flex flex-col gap-2">
-          {Object.values(selecionados).map((sel) => {
-            const servico = servicos.find((s) => s.id === sel.servicoId)!;
-            return (
+        {itensSelecionados.length > 0 && (
+          <div className="mb-4 flex flex-col gap-2">
+            {itensSelecionados.map(({ servico, quantidade, valor }) => (
               <div
-                key={sel.servicoId}
+                key={servico.id}
                 className="flex items-center justify-between rounded-xl bg-card/60 px-3.5 py-2.5"
               >
                 <p className="text-sm text-text">{servico.nome}</p>
@@ -125,32 +129,82 @@ export default function OrcamentoBuilder({
                   <input
                     type="number"
                     min={1}
-                    value={sel.quantidade}
-                    onChange={(e) => mudarQuantidade(sel.servicoId, parseInt(e.target.value) || 1)}
+                    value={quantidade}
+                    onChange={(e) => mudarQuantidade(servico.id, parseInt(e.target.value) || 1)}
                     className="h-8 w-14 rounded-lg border border-border bg-base px-2 text-center text-sm text-text"
                   />
-                  <span className="w-16 text-right text-sm text-text">
-                    R$ {(Number(servico.valorUnitario) * sel.quantidade).toFixed(0)}
-                  </span>
+                  <span className="w-16 text-right text-sm text-text">R$ {valor.toFixed(0)}</span>
                 </div>
               </div>
-            );
-          })}
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-center justify-between border-t border-border pt-3">
+          <span className="text-sm font-medium text-text">Total</span>
+          <span className="text-lg font-medium text-accent">R$ {total.toFixed(0)}</span>
         </div>
-      )}
 
-      <div className="flex items-center justify-between border-t border-border pt-3">
-        <span className="text-sm font-medium text-text">Total</span>
-        <span className="text-lg font-medium text-accent">R$ {total.toFixed(0)}</span>
+        <Button
+          onClick={gerar}
+          disabled={enviando || itensSelecionados.length === 0}
+          className="mt-4 w-full"
+        >
+          {enviando ? "Gerando..." : "Gerar página do orçamento"}
+        </Button>
+      </Card>
+
+      {/* Preview ao vivo */}
+      <div className="lg:sticky lg:top-20 lg:self-start">
+        <p className="mb-2 text-xs uppercase tracking-wide text-muted">Preview em tempo real</p>
+        <div className="rounded-2xl border border-white/[0.06] bg-[#09090B] p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#FACC15]" />
+            <span className="font-mono text-[10px] uppercase tracking-wide text-[#9CA3AF]">
+              instaby · proposta
+            </span>
+          </div>
+
+          <p className="text-2xl font-medium leading-tight text-[#F9FAFB]">gestão pensada</p>
+          <p className="mb-3 text-2xl font-medium leading-tight text-[#FACC15]">
+            pra {clienteNome} crescer.
+          </p>
+
+          <p className="mb-3 mt-6 font-mono text-[10px] uppercase tracking-wide text-[#9CA3AF]">
+            o que está incluso
+          </p>
+
+          {itensSelecionados.length === 0 ? (
+            <p className="text-sm text-[#9CA3AF]">
+              Selecione serviços ao lado pra ver a proposta ganhar forma aqui.
+            </p>
+          ) : (
+            <div className="mb-5 flex flex-col gap-2">
+              {itensSelecionados.map(({ servico, quantidade, valor }) => (
+                <div key={servico.id} className="rounded-xl bg-[#111827] p-3.5">
+                  <div className="flex items-start justify-between">
+                    <p className="text-sm font-medium text-[#F9FAFB]">{servico.nome}</p>
+                    <span className="text-sm font-medium text-[#FACC15]">R$ {valor.toFixed(0)}</span>
+                  </div>
+                  {servico.descricao && (
+                    <p className="mt-1 text-xs leading-relaxed text-[#9CA3AF]">{servico.descricao}</p>
+                  )}
+                  {quantidade > 1 && (
+                    <p className="mt-1 text-xs text-[#9CA3AF]">Quantidade: {quantidade}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {itensSelecionados.length > 0 && (
+            <div className="flex items-center justify-between border-t border-white/[0.06] pt-3">
+              <span className="text-sm font-medium text-[#F9FAFB]">Total mensal</span>
+              <span className="text-lg font-medium text-[#FACC15]">R$ {total.toFixed(0)}</span>
+            </div>
+          )}
+        </div>
       </div>
-
-      <button
-        onClick={gerar}
-        disabled={enviando || Object.keys(selecionados).length === 0}
-        className="mt-4 h-11 w-full rounded-xl bg-accent text-sm font-semibold text-black transition-transform hover:scale-[1.01] disabled:opacity-40"
-      >
-        {enviando ? "Gerando..." : "Gerar página do orçamento"}
-      </button>
     </div>
   );
 }

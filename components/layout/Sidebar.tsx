@@ -9,6 +9,7 @@ import {
   Users,
   Wallet,
   FileText,
+  FileSignature,
   Package,
   Settings,
   Menu,
@@ -24,6 +25,7 @@ const menuPrincipal = [
 const menuOrcamento = [
   { label: "Catálogo de serviços", href: "/dashboard/servicos", icon: Package },
   { label: "Orçamentos", href: "/dashboard/orcamentos", icon: FileText },
+  { label: "Contratos", href: "/dashboard/contratos", icon: FileSignature },
 ];
 
 function ItemMenu({

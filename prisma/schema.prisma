@@ -17,11 +17,14 @@ model Usuario {
 }
 
 model Cliente {
-  id        String   @id @default(uuid())
-  nome      String
-  whatsapp  String?
-  status    String   @default("lead") // lead | ativo | inativo
-  createdAt DateTime @default(now())
+  id           String   @id @default(uuid())
+  nome         String
+  whatsapp     String?
+  cnpj         String?
+  contatoNome  String?
+  endereco     String?
+  status       String   @default("lead") // lead | ativo | inativo
+  createdAt    DateTime @default(now())
 
   tarefas    Tarefa[]
   orcamentos Orcamento[]

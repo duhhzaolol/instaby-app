@@ -2,18 +2,23 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import AceitarButton from "./AceitarButton";
 
+const etapas = ["Briefing", "Análise", "Estratégia", "Execução", "Resultados"];
+
 export default async function OrcamentoPublicoPage({
   params,
 }: {
   params: { slug: string };
 }) {
-  const orcamento = await prisma.orcamento.findUnique({
-    where: { slug: params.slug },
-    include: {
-      cliente: true,
-      itens: { include: { servico: true } },
-    },
-  });
+  const [orcamento, depoimentos] = await Promise.all([
+    prisma.orcamento.findUnique({
+      where: { slug: params.slug },
+      include: {
+        cliente: true,
+        itens: { include: { servico: true } },
+      },
+    }),
+    prisma.depoimento.findMany({ where: { ativo: true }, orderBy: { id: "desc" }, take: 4 }),
+  ]);
 
   if (!orcamento) notFound();
 
@@ -50,7 +55,7 @@ export default async function OrcamentoPublicoPage({
           o que está incluso
         </p>
 
-        <div className="mb-6 flex flex-col gap-2.5">
+        <div className="mb-8 flex flex-col gap-2.5">
           {orcamento.itens.map((item) => (
             <div key={item.id} className="rounded-xl bg-[#111827] p-4">
               <div className="flex items-start justify-between">
@@ -70,6 +75,36 @@ export default async function OrcamentoPublicoPage({
             </div>
           ))}
         </div>
+
+        <p className="mb-3 font-mono text-[11px] uppercase tracking-wide text-[#9CA3AF]">
+          como vamos trabalhar
+        </p>
+        <div className="mb-8 grid grid-cols-5 gap-2">
+          {etapas.map((etapa, i) => (
+            <div key={etapa}>
+              <p className="mb-1.5 font-mono text-[10px] text-[#FACC15]">
+                0{i + 1}
+              </p>
+              <p className="text-[11px] font-medium leading-tight text-[#F9FAFB]">{etapa}</p>
+            </div>
+          ))}
+        </div>
+
+        {depoimentos.length > 0 && (
+          <>
+            <p className="mb-3 font-mono text-[11px] uppercase tracking-wide text-[#9CA3AF]">
+              quem confia, recomenda
+            </p>
+            <div className="mb-8 flex flex-col gap-2.5">
+              {depoimentos.map((d) => (
+                <div key={d.id} className="rounded-xl border border-white/[0.06] p-4">
+                  <p className="mb-2 text-xs leading-relaxed text-[#c2c0b6]">"{d.texto}"</p>
+                  <p className="text-xs font-medium text-[#F9FAFB]">{d.nomeCliente}</p>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
 
         <div className="mb-6 flex items-center justify-between border-t border-white/[0.06] pt-4">
           <span className="text-sm font-medium text-[#F9FAFB]">Total mensal</span>

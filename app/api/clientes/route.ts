@@ -23,9 +23,24 @@ export async function POST(request: NextRequest) {
     data: {
       nome: body.nome,
       whatsapp: body.whatsapp || null,
+      cnpj: body.cnpj || null,
+      contatoNome: body.contatoNome || null,
+      endereco: body.endereco || null,
       status: body.status || "lead",
     },
   });
+
+  if (body.status === "ativo" && body.mensalidade && body.proximoVencimento) {
+    await prisma.cobranca.create({
+      data: {
+        clienteId: cliente.id,
+        valor: parseFloat(body.mensalidade),
+        tipo: "recorrente",
+        status: "pendente",
+        vencimento: new Date(body.proximoVencimento),
+      },
+    });
+  }
 
   return NextResponse.json(cliente, { status: 201 });
 }

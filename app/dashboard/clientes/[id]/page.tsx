@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Phone, Plus } from "lucide-react";
+import { ArrowLeft, Phone, Plus, Pencil, Building2, MapPin, User } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -68,15 +68,38 @@ export default async function ClienteDetalhePage({
         <ArrowLeft size={13} /> Clientes
       </Link>
 
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex items-start justify-between">
         <div>
           <p className="text-lg font-medium text-text">{cliente.nome}</p>
-          {cliente.whatsapp && (
-            <p className="mt-1 flex items-center gap-1 text-xs text-muted">
-              <Phone size={11} /> {cliente.whatsapp}
-            </p>
-          )}
+          <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
+            {cliente.whatsapp && (
+              <p className="flex items-center gap-1 text-xs text-muted">
+                <Phone size={11} /> {cliente.whatsapp}
+              </p>
+            )}
+            {cliente.contatoNome && (
+              <p className="flex items-center gap-1 text-xs text-muted">
+                <User size={11} /> {cliente.contatoNome}
+              </p>
+            )}
+            {cliente.cnpj && (
+              <p className="flex items-center gap-1 text-xs text-muted">
+                <Building2 size={11} /> {cliente.cnpj}
+              </p>
+            )}
+            {cliente.endereco && (
+              <p className="flex items-center gap-1 text-xs text-muted">
+                <MapPin size={11} /> {cliente.endereco}
+              </p>
+            )}
+          </div>
         </div>
+        <Link
+          href={`/dashboard/clientes/${cliente.id}/editar`}
+          className="flex items-center gap-1.5 rounded-lg border border-border bg-card/60 px-3 py-1.5 text-xs text-text hover:bg-hover"
+        >
+          <Pencil size={12} /> Editar
+        </Link>
       </div>
 
       <div className="mb-6 flex gap-1 border-b border-border">
@@ -117,6 +140,7 @@ export default async function ClienteDetalhePage({
 
       {aba === "financeiro" && (
         <FinanceiroTab
+          clienteId={cliente.id}
           cobrancas={cliente.cobrancas.map((c) => ({
             id: c.id,
             valor: Number(c.valor),

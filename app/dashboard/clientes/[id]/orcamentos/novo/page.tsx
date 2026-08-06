@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { Card } from "@/components/ui/Card";
 import OrcamentoBuilder from "./OrcamentoBuilder";
 
 export default async function NovoOrcamentoPage({
@@ -18,7 +17,7 @@ export default async function NovoOrcamentoPage({
   });
 
   return (
-    <div className="max-w-2xl">
+    <div>
       <Link
         href={`/dashboard/clientes/${cliente.id}`}
         className="mb-4 inline-flex items-center gap-1.5 text-xs text-muted hover:text-text"
@@ -27,7 +26,7 @@ export default async function NovoOrcamentoPage({
       </Link>
 
       <p className="mb-1 text-lg font-medium text-text">Novo orçamento — {cliente.nome}</p>
-      <p className="mb-5 text-sm text-muted">Selecione os serviços do catálogo</p>
+      <p className="mb-5 text-sm text-muted">Selecione os serviços do catálogo — a página vai ganhando forma ao lado</p>
 
       {servicos.length === 0 ? (
         <p className="text-sm text-muted">
@@ -38,13 +37,11 @@ export default async function NovoOrcamentoPage({
           .
         </p>
       ) : (
-        <Card hoverable={false} className="p-5">
-          <OrcamentoBuilder
-            clienteId={cliente.id}
-            clienteNome={cliente.nome}
-            servicos={servicos.map((s) => ({ ...s, valorUnitario: Number(s.valorUnitario) }))}
-          />
-        </Card>
+        <OrcamentoBuilder
+          clienteId={cliente.id}
+          clienteNome={cliente.nome}
+          servicos={servicos.map((s) => ({ ...s, valorUnitario: Number(s.valorUnitario) }))}
+        />
       )}
     </div>
   );
