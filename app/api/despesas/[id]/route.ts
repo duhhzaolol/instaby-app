@@ -7,15 +7,14 @@ export async function PATCH(
 ) {
   const body = await request.json();
 
-  const cobranca = await prisma.cobranca.update({
+  const despesa = await prisma.despesa.update({
     where: { id: params.id },
     data: {
-      ...(body.status !== undefined && { status: body.status }),
+      ...(body.descricao !== undefined && { descricao: body.descricao }),
       ...(body.valor !== undefined && { valor: body.valor }),
-      ...(body.tipo !== undefined && { tipo: body.tipo }),
-      ...(body.vencimento !== undefined && { vencimento: body.vencimento ? new Date(body.vencimento) : null }),
+      ...(body.data !== undefined && { data: new Date(body.data) }),
     },
   });
 
-  return NextResponse.json(cobranca);
+  return NextResponse.json(despesa);
 }

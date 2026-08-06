@@ -3,25 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
-import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
+import { CobrancaRow, CobrancaRowData } from "@/components/dashboard/CobrancaRow";
+import { DespesaRow, DespesaRowData } from "@/components/dashboard/DespesaRow";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { Input, Label } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-
-type Cobranca = { id: string; valor: number; status: string; tipo: string; vencimento: string | null };
-type Despesa = { id: string; descricao: string; valor: number; data: string };
-
-const tone: Record<string, "green" | "red" | "yellow"> = {
-  pago: "green",
-  atrasado: "red",
-  pendente: "yellow",
-};
-
-const label: Record<string, string> = {
-  pago: "Pago",
-  atrasado: "Atrasado",
-  pendente: "Pendente",
-};
 
 export default function FinanceiroTab({
   clienteId,
@@ -29,20 +15,10 @@ export default function FinanceiroTab({
   despesas,
 }: {
   clienteId: string;
-  cobrancas: Cobranca[];
-  despesas: Despesa[];
+  cobrancas: CobrancaRowData[];
+  despesas: DespesaRowData[];
 }) {
-  const router = useRouter();
   const [formAberto, setFormAberto] = useState(false);
-
-  async function marcarPago(id: string) {
-    await fetch(`/api/cobrancas/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "pago" }),
-    });
-    router.refresh();
-  }
 
   return (
     <div>
@@ -56,30 +32,12 @@ export default function FinanceiroTab({
         </button>
       </div>
 
-      {formAberto && (
-        <NovaCobrancaForm clienteId={clienteId} onSalvo={() => setFormAberto(false)} />
-      )}
+      {formAberto && <NovaCobrancaForm clienteId={clienteId} onSalvo={() => setFormAberto(false)} />}
 
       <div className="mb-6 flex flex-col gap-2">
         {cobrancas.length === 0 && <p className="text-sm text-muted">Nenhuma cobrança ainda.</p>}
         {cobrancas.map((c, i) => (
-          <Card key={c.id} index={i} hoverable={false} className="flex items-center justify-between px-4 py-3">
-            <div>
-              <p className="text-sm text-text">R$ {c.valor.toFixed(0)}</p>
-              <p className="text-xs text-muted">
-                {c.tipo === "recorrente" ? "Recorrente" : "Única"}
-                {c.vencimento && ` · vence ${new Date(c.vencimento).toLocaleDateString("pt-BR")}`}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge tone={tone[c.status]}>{label[c.status]}</Badge>
-              {c.status !== "pago" && (
-                <button onClick={() => marcarPago(c.id)} className="text-xs font-medium text-accent hover:underline">
-                  Marcar pago
-                </button>
-              )}
-            </div>
-          </Card>
+          <CobrancaRow key={c.id} cobranca={c} index={i} />
         ))}
       </div>
 
@@ -87,13 +45,7 @@ export default function FinanceiroTab({
       <div className="flex flex-col gap-2">
         {despesas.length === 0 && <p className="text-sm text-muted">Nenhuma despesa ainda.</p>}
         {despesas.map((d, i) => (
-          <Card key={d.id} index={i} hoverable={false} className="flex items-center justify-between px-4 py-3">
-            <div>
-              <p className="text-sm text-text">{d.descricao}</p>
-              <p className="text-xs text-muted">{new Date(d.data).toLocaleDateString("pt-BR")}</p>
-            </div>
-            <span className="text-sm text-text">R$ {d.valor.toFixed(0)}</span>
-          </Card>
+          <DespesaRow key={d.id} despesa={d} index={i} />
         ))}
       </div>
     </div>
@@ -102,7 +54,7 @@ export default function FinanceiroTab({
 
 function NovaCobrancaForm({ clienteId, onSalvo }: { clienteId: string; onSalvo: () => void }) {
   const router = useRouter();
-  const [valor, setValor] = useState("");
+  const [valor, setValor] = useState(0);
   const [tipo, setTipo] = useState("recorrente");
   const [status, setStatus] = useState("pago");
   const [data, setData] = useState("");
@@ -116,7 +68,7 @@ function NovaCobrancaForm({ clienteId, onSalvo }: { clienteId: string; onSalvo: 
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        valor: parseFloat(valor),
+        valor,
         tipo,
         status,
         vencimento: data || undefined,
@@ -136,8 +88,8 @@ function NovaCobrancaForm({ clienteId, onSalvo }: { clienteId: string; onSalvo: 
       </p>
       <div className="mb-2 grid grid-cols-2 gap-2">
         <div>
-          <Label>Valor (R$)</Label>
-          <Input required type="number" step="0.01" value={valor} onChange={(e) => setValor(e.target.value)} />
+          <Label>Valor</Label>
+          <CurrencyInput value={valor} onChange={setValor} />
         </div>
         <div>
           <Label>Data</Label>
@@ -168,7 +120,7 @@ function NovaCobrancaForm({ clienteId, onSalvo }: { clienteId: string; onSalvo: 
           </select>
         </div>
       </div>
-      <Button type="submit" size="sm" disabled={enviando} className="w-full">
+      <Button type="submit" size="sm" disabled={enviando || valor <= 0} className="w-full">
         {enviando ? "Salvando..." : "Lançar cobrança"}
       </Button>
     </form>

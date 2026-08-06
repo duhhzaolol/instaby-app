@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Input, Textarea, Label } from "@/components/ui/Input";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { Button } from "@/components/ui/Button";
 
 export default function NovoServicoPage() {
@@ -12,7 +13,7 @@ export default function NovoServicoPage() {
   const [descricao, setDescricao] = useState("");
   const [categoria, setCategoria] = useState("Social media");
   const [unidade, setUnidade] = useState("mês");
-  const [valor, setValor] = useState("");
+  const [valor, setValor] = useState(0);
   const [enviando, setEnviando] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -27,7 +28,7 @@ export default function NovoServicoPage() {
         descricao,
         categoria,
         unidade,
-        valorUnitario: parseFloat(valor),
+        valorUnitario: valor,
       }),
     });
 
@@ -78,15 +79,8 @@ export default function NovoServicoPage() {
             </div>
           </div>
 
-          <Label>Valor unitário (R$)</Label>
-          <Input
-            required
-            type="number"
-            step="0.01"
-            value={valor}
-            onChange={(e) => setValor(e.target.value)}
-            className="mb-6"
-          />
+          <Label>Valor unitário</Label>
+          <CurrencyInput value={valor} onChange={setValor} className="mb-6" />
 
           <Button type="submit" disabled={enviando} className="w-full">
             {enviando ? "Salvando..." : "Salvar serviço"}

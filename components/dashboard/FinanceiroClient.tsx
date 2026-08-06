@@ -15,20 +15,15 @@ import {
 } from "recharts";
 import { Plus, TrendingUp, TrendingDown, Wallet } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input, Label } from "@/components/ui/Input";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { CountUp } from "@/components/ui/CountUp";
+import { CobrancaRow, CobrancaRowData } from "@/components/dashboard/CobrancaRow";
+import { DespesaRow, DespesaRowData } from "@/components/dashboard/DespesaRow";
 
 type Cliente = { id: string; nome: string };
-type CobrancaPendente = {
-  id: string;
-  cliente: string;
-  valor: number;
-  status: string;
-  vencimento: string | null;
-};
-type Despesa = { id: string; descricao: string; valor: number; cliente: string | null; data: string };
+type CobrancaPendente = CobrancaRowData & { cliente: string };
 
 export default function FinanceiroClient({
   resumo,
@@ -40,20 +35,10 @@ export default function FinanceiroClient({
   resumo: { entradas: number; saidas: number; lucro: number };
   grafico: { mes: string; entradas: number; saidas: number; lucro: number }[];
   cobrancasPendentes: CobrancaPendente[];
-  despesasRecentes: Despesa[];
+  despesasRecentes: DespesaRowData[];
   clientes: Cliente[];
 }) {
-  const router = useRouter();
   const [formAberto, setFormAberto] = useState(false);
-
-  async function marcarPago(id: string) {
-    await fetch(`/api/cobrancas/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "pago" }),
-    });
-    router.refresh();
-  }
 
   return (
     <div>
@@ -157,27 +142,8 @@ export default function FinanceiroClient({
             {cobrancasPendentes.length === 0 && (
               <p className="text-sm text-muted">Nada pendente — tudo em dia.</p>
             )}
-            {cobrancasPendentes.map((c) => (
-              <div key={c.id} className="flex items-center justify-between rounded-xl bg-base/60 px-3.5 py-2.5">
-                <div>
-                  <p className="text-sm text-text">{c.cliente}</p>
-                  <p className="text-xs text-muted">
-                    R$ {c.valor.toFixed(0)}
-                    {c.vencimento && ` · vence ${new Date(c.vencimento).toLocaleDateString("pt-BR")}`}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge tone={c.status === "atrasado" ? "red" : "yellow"}>
-                    {c.status === "atrasado" ? "Atrasado" : "Pendente"}
-                  </Badge>
-                  <button
-                    onClick={() => marcarPago(c.id)}
-                    className="text-xs font-medium text-accent hover:underline"
-                  >
-                    Marcar pago
-                  </button>
-                </div>
-              </div>
+            {cobrancasPendentes.map((c, i) => (
+              <CobrancaRow key={c.id} cobranca={c} index={i} clienteNome={c.cliente} />
             ))}
           </div>
         </Card>
@@ -199,17 +165,8 @@ export default function FinanceiroClient({
             {despesasRecentes.length === 0 && (
               <p className="text-sm text-muted">Nenhuma despesa registrada ainda.</p>
             )}
-            {despesasRecentes.map((d) => (
-              <div key={d.id} className="flex items-center justify-between rounded-xl bg-base/60 px-3.5 py-2.5">
-                <div>
-                  <p className="text-sm text-text">{d.descricao}</p>
-                  <p className="text-xs text-muted">
-                    {d.cliente ? `${d.cliente} · ` : ""}
-                    {new Date(d.data).toLocaleDateString("pt-BR")}
-                  </p>
-                </div>
-                <span className="text-sm text-text">R$ {d.valor.toFixed(0)}</span>
-              </div>
+            {despesasRecentes.map((d, i) => (
+              <DespesaRow key={d.id} despesa={d} index={i} />
             ))}
           </div>
         </Card>
@@ -221,7 +178,7 @@ export default function FinanceiroClient({
 function NovaDespesaForm({ clientes, onSalvo }: { clientes: Cliente[]; onSalvo: () => void }) {
   const router = useRouter();
   const [descricao, setDescricao] = useState("");
-  const [valor, setValor] = useState("");
+  const [valor, setValor] = useState(0);
   const [clienteId, setClienteId] = useState("");
   const [enviando, setEnviando] = useState(false);
 
@@ -232,18 +189,14 @@ function NovaDespesaForm({ clientes, onSalvo }: { clientes: Cliente[]; onSalvo: 
     const resposta = await fetch("/api/despesas", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        descricao,
-        valor: parseFloat(valor),
-        clienteId: clienteId || null,
-      }),
+      body: JSON.stringify({ descricao, valor, clienteId: clienteId || null }),
     });
 
     setEnviando(false);
 
     if (resposta.ok) {
       setDescricao("");
-      setValor("");
+      setValor(0);
       setClienteId("");
       onSalvo();
       router.refresh();
@@ -261,14 +214,7 @@ function NovaDespesaForm({ clientes, onSalvo }: { clientes: Cliente[]; onSalvo: 
         className="mb-2"
       />
       <div className="mb-2 grid grid-cols-2 gap-2">
-        <Input
-          required
-          type="number"
-          step="0.01"
-          value={valor}
-          onChange={(e) => setValor(e.target.value)}
-          placeholder="Valor"
-        />
+        <CurrencyInput value={valor} onChange={setValor} />
         <select
           value={clienteId}
           onChange={(e) => setClienteId(e.target.value)}
@@ -282,7 +228,7 @@ function NovaDespesaForm({ clientes, onSalvo }: { clientes: Cliente[]; onSalvo: 
           ))}
         </select>
       </div>
-      <Button type="submit" size="sm" disabled={enviando} className="w-full">
+      <Button type="submit" size="sm" disabled={enviando || valor <= 0} className="w-full">
         {enviando ? "Salvando..." : "Salvar despesa"}
       </Button>
     </form>

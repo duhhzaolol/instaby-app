@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Input, Label } from "@/components/ui/Input";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { Button } from "@/components/ui/Button";
 
 export default function NovoClientePage() {
@@ -14,7 +15,7 @@ export default function NovoClientePage() {
   const [contatoNome, setContatoNome] = useState("");
   const [endereco, setEndereco] = useState("");
   const [status, setStatus] = useState("lead");
-  const [mensalidade, setMensalidade] = useState("");
+  const [mensalidade, setMensalidade] = useState(0);
   const [proximoVencimento, setProximoVencimento] = useState("");
   const [enviando, setEnviando] = useState(false);
 
@@ -98,14 +99,8 @@ export default function NovoClientePage() {
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label>Mensalidade (R$)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={mensalidade}
-                    onChange={(e) => setMensalidade(e.target.value)}
-                    placeholder="800"
-                  />
+                  <Label>Mensalidade</Label>
+                  <CurrencyInput value={mensalidade} onChange={setMensalidade} />
                 </div>
                 <div>
                   <Label>Próximo vencimento</Label>

@@ -38,16 +38,18 @@ export default async function ServicosPage() {
             {servicos
               .filter((s) => s.categoria === cat)
               .map((s, i) => (
-                <Card key={s.id} index={i} className="flex items-center justify-between p-4">
-                  <div>
-                    <p className="text-sm text-text">{s.nome}</p>
-                    <p className="text-xs text-muted">{s.descricao}</p>
-                  </div>
-                  <span className="whitespace-nowrap text-sm text-text">
-                    R$ {Number(s.valorUnitario).toFixed(0)}
-                    <span className="text-xs text-muted">/{s.unidade}</span>
-                  </span>
-                </Card>
+                <Link key={s.id} href={`/dashboard/servicos/${s.id}/editar`}>
+                  <Card index={i} className="flex items-center justify-between p-4">
+                    <div>
+                      <p className="text-sm text-text">{s.nome}</p>
+                      <p className="text-xs text-muted">{s.descricao}</p>
+                    </div>
+                    <span className="whitespace-nowrap text-sm text-text">
+                      R$ {Number(s.valorUnitario).toFixed(0)}
+                      <span className="text-xs text-muted">/{s.unidade}</span>
+                    </span>
+                  </Card>
+                </Link>
               ))}
           </div>
         </div>

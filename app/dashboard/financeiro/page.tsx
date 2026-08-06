@@ -70,6 +70,7 @@ export default async function FinanceiroPage() {
         cliente: c.cliente.nome,
         valor: Number(c.valor),
         status: c.status,
+        tipo: c.tipo,
         vencimento: c.vencimento?.toISOString() || null,
       }))}
       despesasRecentes={despesas.slice(0, 8).map((d) => ({
