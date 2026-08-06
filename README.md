@@ -1,6 +1,6 @@
 # Instaby App
 
-Painel interno da Instaby Agência — v1 (esqueleto inicial).
+Painel interno da Instaby Agência — v2.
 
 ## O que já está pronto nesta versão
 
@@ -8,13 +8,14 @@ Painel interno da Instaby Agência — v1 (esqueleto inicial).
 - Schema completo do banco (`prisma/schema.prisma`): Cliente, Tarefa, Serviço,
   Orçamento, ItemOrcamento, Contrato, Cobrança, Despesa, Depoimento
 - Login funcional (e-mail + senha) protegendo a rota `/dashboard`
-- Dashboard inicial mostrando os 3 módulos
+- Módulo de Cliente completo: lista com filtro por status (Lead/Ativo/Inativo),
+  cadastro de cliente, tela de detalhe com abas (Tarefas já funcional — criar e
+  listar; Financeiro/Orçamentos/Contratos como placeholder "em breve")
 
 ## O que falta (próximas entregas)
 
-- Telas de Cliente (lista + detalhe com abas)
 - Construtor de orçamento (seleção de serviços em pílula)
-- Página pública do orçamento (`/orcamento/[slug]`)
+- Página pública do orçamento (`/orcamento/[slug]`), estilo editorial
 - Financeiro (cobranças + despesas)
 - Contrato (rascunho gerado do orçamento)
 
