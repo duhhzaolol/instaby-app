@@ -1,57 +1,47 @@
 # Instaby App
 
-Painel interno da Instaby Agência — v19.
+Painel interno da Instaby Agência — v20 (faxina completa).
 
-## O que entrou nesta versão
+## O que aconteceu
 
-### 1. Botão "Novo orçamento" de volta (dessa vez em mais lugares)
+O print mostrou que a v19 não resolveu — os serviços antigos (de várias
+fases diferentes: cadastro manual, seed v8, e a tentativa v19) continuaram
+lá porque muitos já tinham sido usados em orçamentos ou pacotes de teste,
+e minha proteção contra exclusão bloqueava a remoção deles. Resultado:
+catálogo bagunçado com duplicatas.
 
-- Lista global de Orçamentos ganhou o botão direto na tela (igual Pacotes
-  já tinha)
-- Esse botão leva pra uma tela de "escolher o cliente" primeiro, já que
-  todo orçamento pertence a um
-- O botão do header também aponta pra essa tela quando você está em
-  `/dashboard/orcamentos`
+## A solução — rota de faxina total
 
-### 2. Catálogo reorganizado — do zero
+Nova rota `/api/reset-catalogo-total`, bem mais agressiva: apaga **todos**
+os orçamentos, pacotes e serviços contratados existentes (removendo o que
+travava a exclusão), depois apaga o catálogo inteiro e recria do zero, já
+limpo, com os 26 serviços na estrutura que você descreveu.
 
-O catálogo antigo tinha o problema que você notou: "Reels" cadastrado 4
-vezes (4un, 6un, 8un, avulso) em vez de um serviço só com preço por
-unidade. Isso é o que já existe no seu app — o construtor de orçamento já
-deixa você escolher a quantidade e multiplica pelo valor sozinho. O
-catálogo não estava usando esse recurso direito.
+**O que ISSO apaga:** orçamentos (todos, inclusive os que já foram
+aceitos), pacotes, serviços contratados de cada cliente, e o catálogo de
+serviços inteiro.
 
-Reescrevi a lista toda seguindo a estrutura que você descreveu — 26
-serviços, organizados por categoria, cada um com a unidade certa (mês,
-vídeo, hora, evento, criação, dia). Alguns pontos de como resolvi as
-partes mais complicadas:
+**O que ISSO NÃO toca:** Cliente, Tarefa, Cobrança, Despesa, Contrato (o
+texto salvo continua existindo, só perde o vínculo com o orçamento de
+origem), Horas, Depoimentos.
 
-- **Serviços "escaláveis"** (edição de vídeo, captação bruta) — viram só
-  1 serviço com preço por vídeo. Quando você monta o orçamento, escolhe a
-  quantidade e o valor multiplica sozinho — não precisa de "tier" separado.
-- **Formato muda o preço** (Reels/TikTok/YouTube) — como cada formato tem
-  valor diferente, virou 3 serviços separados: "Captação e edição — Reels",
-  "— TikTok", "— YouTube".
-- **Taxas extras** (plataforma de agendamento, investimento em anúncios,
-  deslocamento, tempo real) — viraram itens próprios do catálogo, que você
-  soma junto com o serviço principal na hora de montar o orçamento/contrato
-  (ex: "Gestão de Instagram" + "Taxa de plataforma" juntos).
-- **Foco de campanha** (leads, remarketing, eventos, lançamentos) — deixei
-  como texto dentro da descrição do serviço de tráfego pago, já que isso
-  parece mais uma conversa de briefing do que um item com preço à parte.
-  Se quiser cada foco com preço próprio, me avisa que separo em serviços
-  distintos.
+Como você ainda está em fase de teste (vi que era um orçamento de teste
+pro "Victor Coelho" no print), presumi que tudo bem apagar os
+orçamentos/pacotes de teste pra sanear o catálogo. Se algum desses já era
+de verdade e você precisa recuperar, me avisa antes de rodar.
 
-**Todos os valores entram com R$ 0** — a estrutura e os nomes eu defini,
-mas o preço é seu. Depois de rodar a rota abaixo, entra em
-`/dashboard/servicos` e edita cada um com o valor real.
+### Como rodar
 
-### Como rodar a limpeza (uma vez só)
-
-Essa rota apaga o catálogo confuso antigo e cria o novo. Serviços antigos
-que já estão em uso em algum orçamento/pacote/cliente **não são apagados**
-(ficam protegidos) — a resposta te avisa quais não puderam ser removidos.
+Por segurança, essa rota exige uma confirmação explícita na URL:
 
 ```
-https://SEU-DOMINIO/api/reset-catalogo?secret=SEU_SETUP_SECRET
+https://SEU-DOMINIO/api/reset-catalogo-total?secret=SEU_SETUP_SECRET&confirmar=sim
 ```
+
+Se você acessar sem o `&confirmar=sim`, ela só avisa o que vai acontecer
+e não apaga nada.
+
+### Depois de rodar
+
+Vá em `/dashboard/servicos` e preencha o valor real de cada um dos 26
+serviços (todos entram com R$ 0).
