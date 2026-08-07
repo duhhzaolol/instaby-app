@@ -1,6 +1,8 @@
-import { FileText } from "lucide-react";
+import Link from "next/link";
+import { FileText, Plus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Button } from "@/components/ui/Button";
 import { OrcamentoRow } from "@/components/dashboard/OrcamentoRow";
 
 export default async function OrcamentosPage() {
@@ -11,13 +13,20 @@ export default async function OrcamentosPage() {
 
   return (
     <div>
-      <p className="mb-6 text-lg font-medium text-text">Orçamentos</p>
+      <div className="mb-6 flex items-center justify-between">
+        <p className="text-lg font-medium text-text">Orçamentos</p>
+        <Link href="/dashboard/orcamentos/novo">
+          <Button size="sm">
+            <Plus size={14} /> Novo orçamento
+          </Button>
+        </Link>
+      </div>
 
       {orcamentos.length === 0 ? (
         <EmptyState
           icon={FileText}
           title="Nenhum orçamento enviado ainda"
-          description="Entre no cliente e crie um orçamento pela aba Orçamentos."
+          description="Clique em 'Novo orçamento' pra escolher o cliente e montar um."
         />
       ) : (
         <div className="flex flex-col gap-2">

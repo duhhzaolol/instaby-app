@@ -26,6 +26,7 @@ function linkNovo(pathname: string, aba: string | null): { href: string; label: 
   if (pathname === "/dashboard/clientes") return { href: "/dashboard/clientes/novo", label: "Novo cliente" };
   if (pathname === "/dashboard/servicos") return { href: "/dashboard/servicos/novo", label: "Novo serviço" };
   if (pathname === "/dashboard/pacotes") return { href: "/dashboard/pacotes/novo", label: "Novo pacote" };
+  if (pathname === "/dashboard/orcamentos") return { href: "/dashboard/orcamentos/novo", label: "Novo orçamento" };
   if (pathname === "/dashboard/horas") return null; // já tem o próprio botão de registrar
 
   const matchCliente = pathname.match(/^\/dashboard\/clientes\/([^/]+)$/);
