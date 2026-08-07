@@ -1,15 +1,24 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { ShieldCheck } from "lucide-react";
 import OrcamentoInterativo from "./OrcamentoInterativo";
 
 const etapas = ["Briefing", "Análise", "Estratégia", "Execução", "Resultados"];
+
+function gerarCodigo(id: string, data: Date) {
+  return `PC-${data.getFullYear()}-${id.slice(0, 3).toUpperCase()}`;
+}
+
+function formatarData(d: Date) {
+  return d.toLocaleDateString("pt-BR");
+}
 
 export default async function OrcamentoPublicoPage({
   params,
 }: {
   params: { slug: string };
 }) {
-  const [orcamento, depoimentos] = await Promise.all([
+  const [orcamento, depoimentos, logos, config] = await Promise.all([
     prisma.orcamento.findUnique({
       where: { slug: params.slug },
       include: {
@@ -18,73 +27,126 @@ export default async function OrcamentoPublicoPage({
       },
     }),
     prisma.depoimento.findMany({ where: { ativo: true }, orderBy: { id: "desc" }, take: 4 }),
+    prisma.cliente.findMany({
+      where: { exibirLogoPublico: true, logoUrl: { not: null } },
+      select: { nome: true, logoUrl: true },
+    }),
+    prisma.configuracao.findUnique({ where: { id: "config" } }),
   ]);
 
   if (!orcamento) notFound();
 
+  const validoAte = new Date(orcamento.createdAt);
+  validoAte.setDate(validoAte.getDate() + 15);
+  const codigo = gerarCodigo(orcamento.id, orcamento.createdAt);
+
   return (
-    <div className="min-h-screen bg-[#09090B] px-4 py-10">
-      <div className="mx-auto max-w-lg rounded-2xl border border-white/[0.06] bg-[#09090B] p-7">
-        <div className="mb-5">
+    <div className="min-h-screen bg-[#0B0D12]">
+      {/* Topo */}
+      <div className="border-b border-white/[0.06] px-4 py-4">
+        <div className="mx-auto flex max-w-4xl items-center justify-between">
           <img src="/logo.png" alt="Instaby" className="h-6 w-auto" />
+          <div className="hidden items-center gap-2 sm:flex">
+            <span className="text-xs text-[#9CA3AF]">Proposta Comercial</span>
+            <span className="rounded-full border border-white/10 px-2.5 py-1 font-mono text-[10px] text-[#F9FAFB]">
+              #{codigo}
+            </span>
+            <span className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] text-[#9CA3AF]">
+              Válido até {formatarData(validoAte)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Hero */}
+      <div className="relative overflow-hidden border-b border-white/[0.06] bg-gradient-to-br from-[#0B0D12] via-[#151822] to-[#1a0e10] px-4 py-12">
+        <div className="mx-auto grid max-w-4xl grid-cols-1 items-center gap-8 lg:grid-cols-2">
+          <div>
+            <div className="mb-4 flex items-center gap-2">
+              <span className="inline-block h-[1.5px] w-5 bg-[#E63946]" />
+              <span className="font-mono text-[11px] uppercase tracking-wide text-[#E63946]">
+                proposta comercial
+              </span>
+            </div>
+            <p className="text-4xl font-medium leading-tight text-[#F9FAFB]">gestão estratégica</p>
+            <p className="mb-4 text-4xl font-medium leading-tight">
+              <span className="text-[#E63946]">pra {orcamento.cliente.nome}</span>{" "}
+              <span className="text-[#F9FAFB]">crescer.</span>
+            </p>
+            <p className="max-w-md text-sm leading-relaxed text-[#9CA3AF]">
+              Conteúdo, tráfego e produção trabalhando juntos, com clareza de valor em cada etapa.
+            </p>
+          </div>
+
+          <div className="relative hidden aspect-[4/3] items-center justify-center rounded-2xl border border-white/[0.06] bg-[#111827]/60 lg:flex">
+            <svg viewBox="0 0 300 180" className="h-full w-full p-6">
+              <defs>
+                <linearGradient id="linhaChart" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#E63946" stopOpacity="0.35" />
+                  <stop offset="100%" stopColor="#E63946" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              <text x="0" y="16" fill="#9CA3AF" fontSize="10" fontFamily="monospace">
+                PERFORMANCE
+              </text>
+              <path
+                d="M0 120 L40 100 L80 110 L120 70 L160 85 L200 40 L240 55 L300 15 L300 180 L0 180 Z"
+                fill="url(#linhaChart)"
+              />
+              <path
+                d="M0 120 L40 100 L80 110 L120 70 L160 85 L200 40 L240 55 L300 15"
+                fill="none"
+                stroke="#E63946"
+                strokeWidth="2"
+              />
+            </svg>
+          </div>
         </div>
 
-        <div className="mb-4 flex items-center gap-2">
-          <span className="inline-block h-[1.5px] w-5 bg-[#E63946]" />
-          <span className="font-mono text-[11px] uppercase tracking-wide text-[#E63946]">
-            proposta comercial
-          </span>
-        </div>
-
-        <p className="text-3xl font-medium leading-tight text-[#F9FAFB]">gestão pensada</p>
-        <p className="mb-3 text-3xl font-medium leading-tight text-[#E63946]">
-          pra {orcamento.cliente.nome} crescer.
-        </p>
-        <p className="mb-8 max-w-[95%] text-sm leading-relaxed text-[#9CA3AF]">
-          Conteúdo, tráfego e produção trabalhando juntos, com clareza de valor em cada etapa.
-        </p>
-
-        <p className="mb-3 mt-6 font-mono text-[11px] uppercase tracking-wide text-[#9CA3AF]">
-          como vamos trabalhar
-        </p>
-        <div className="mb-8 grid grid-cols-5 gap-2">
+        {/* Etapas */}
+        <div className="relative mx-auto mt-10 grid max-w-4xl grid-cols-5 gap-2">
           {etapas.map((etapa, i) => (
             <div key={etapa}>
-              <p className="mb-1.5 font-mono text-[10px] text-[#E63946]">
-                0{i + 1}
-              </p>
-              <p className="text-[11px] font-medium leading-tight text-[#F9FAFB]">{etapa}</p>
+              <p className="mb-1.5 font-mono text-[10px] text-[#E63946]">0{i + 1}</p>
+              <p className="mb-2 text-xs font-medium text-[#F9FAFB]">{etapa}</p>
+              <div className="h-[2px] w-full rounded-full bg-[#E63946]/70" />
             </div>
           ))}
         </div>
+      </div>
 
-        {depoimentos.length > 0 && (
-          <>
-            <p className="mb-3 font-mono text-[11px] uppercase tracking-wide text-[#9CA3AF]">
-              quem confia, recomenda
-            </p>
-            <div className="mb-8 flex flex-col gap-2.5">
-              {depoimentos.map((d) => (
-                <div key={d.id} className="rounded-xl border border-white/[0.06] p-4">
-                  <p className="mb-2 text-xs leading-relaxed text-[#c2c0b6]">"{d.texto}"</p>
-                  <p className="text-xs font-medium text-[#F9FAFB]">{d.nomeCliente}</p>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
+      <OrcamentoInterativo
+        slug={orcamento.slug}
+        status={orcamento.status}
+        clienteNome={orcamento.cliente.nome}
+        validoAte={formatarData(validoAte)}
+        whatsappAgencia={config?.whatsappAgencia || null}
+        depoimentos={depoimentos.map((d) => ({ nomeCliente: d.nomeCliente, texto: d.texto }))}
+        itensIniciais={orcamento.itens.map((item) => ({
+          id: item.id,
+          nome: item.servico.nome,
+          descricao: item.servico.descricao,
+          categoria: item.servico.categoria,
+          unidade: item.servico.unidade,
+          quantidade: item.quantidade,
+          valor: Number(item.valor),
+        }))}
+      />
 
-        <OrcamentoInterativo
-          slug={orcamento.slug}
-          status={orcamento.status}
-          itensIniciais={orcamento.itens.map((item) => ({
-            id: item.id,
-            nome: item.servico.nome,
-            descricao: item.servico.descricao,
-            quantidade: item.quantidade,
-            valor: Number(item.valor),
-          }))}
-        />
+      {logos.length > 0 && (
+        <div className="border-t border-white/[0.06] px-4 py-10">
+          <p className="mb-6 text-center text-xs text-[#9CA3AF]">Empresas que confiam no nosso trabalho</p>
+          <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-center gap-x-10 gap-y-4">
+            {logos.map((l) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={l.nome} src={l.logoUrl!} alt={l.nome} className="h-7 w-auto object-contain grayscale opacity-70" />
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center justify-center gap-1.5 pb-8 pt-2 text-[10px] text-[#6B7280]">
+        <ShieldCheck size={11} /> Proposta segura e confidencial
       </div>
     </div>
   );

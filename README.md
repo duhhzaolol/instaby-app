@@ -1,40 +1,43 @@
 # Instaby App
 
-Painel interno da Instaby Agência — v21.
+Painel interno da Instaby Agência — v22 (repaginação da proposta pública).
 
 ## O que entrou nesta versão
 
-### 1. Valor final editável no construtor de orçamento
-Cada item selecionado agora tem, além da quantidade, um campo de valor
-editável — pode digitar o valor final que quiser, não fica preso ao
-cálculo automático (quantidade × valor de tabela).
+### Página pública do orçamento, redesenhada do zero
+Baseado na referência que você mandou:
+- Cabeçalho com código da proposta (#PC-2026-XXX) e "Válido até" (15 dias
+  a partir da criação, automático)
+- Hero com gradiente e um gráfico decorativo de performance
+- Etapas do processo com barra de progresso visual
+- Cada serviço ganhou um ícone colorido por categoria (Social Media =
+  azul, Produção de Conteúdo = vermelho, Captação = roxo, Tráfego Pago =
+  verde, Desenvolvimento Web = ciano, Eventos = âmbar) — é a paleta extra
+  que você pediu, sem perder a identidade preto/vermelho
+- Sidebar fixa com "Resumo do investimento" (lista + total), "Por que a
+  Instaby?" (checklist) e um card de contato
+- Banner final "Vamos crescer juntos?" com dois botões
 
-### 2. Deslocamento com cálculo automático de distância
-Quando você adiciona o serviço "Deslocamento" a um orçamento, aparece uma
-calculadora: digita a cidade de destino, clica em "Calcular" e ele busca
-a distância rodoviária desde Araras/SP automaticamente (usando serviços
-gratuitos de mapa, sem precisar de chave de API paga). O KM vem editável
-(caso queira ajustar), tem um campo de "Valor por KM" (você define, já
-que vai pesquisar quanto cobrar), e um checkbox de "ida e volta" que
-dobra o KM. O valor final calculado já entra automaticamente no item,
-mas continua editável se quiser ajustar na mão.
+### Remover item da proposta (já existia, ficou mais claro)
+O botão "−" já deixava o item em 0 desde a v21 (o cliente pode "zerar" um
+serviço que não quer, tipo Deslocamento) — só deixei mais visível: quando
+zera, o card fica esmaecido.
 
-**Se a cidade não for encontrada** (nome mal escrito, cidade pequena
-demais pro mapa gratuito reconhecer), ele avisa e você digita o KM
-manualmente — nada trava.
+### Botão extra: "Marcar uma conversa" (WhatsApp)
+Junto do "Aceitar proposta", agora tem um segundo botão que abre o
+WhatsApp da agência com uma mensagem pronta. Só aparece se você
+cadastrar o número em Configurações.
 
-### 3. Página pública agora é interativa — cliente ajusta quantidade
-Na proposta que o cliente recebe, cada item tem botões de **+ e −** pra
-ele mesmo calibrar quanto quer (ex: "quero 6 reels em vez de 4"). O total
-recalcula na hora, ao vivo. Quando ele clica em "Aceitar proposta", as
-quantidades e valores finais que ELE escolheu são salvos de verdade no
-orçamento — a cobrança gerada automaticamente já reflete a escolha final
-dele, não o que você mandou originalmente.
+### Logo dos seus clientes na vitrine
+Em Configurações, nova seção "Logos na proposta": lista todo cliente que
+tem um link de logo cadastrado, com um botão pra ativar/desativar se ele
+aparece na vitrine "Empresas que confiam" no fim de toda proposta pública.
+O logo aparece sempre em cinza (grayscale via CSS), mesmo que o original
+seja colorido — não precisa editar a imagem.
 
-## Como usar o deslocamento
+## Antes de usar
 
-1. No orçamento, selecione o serviço "Deslocamento" do catálogo
-2. Digita a cidade, clica em "Calcular"
-3. Preenche o "Valor por KM" (pesquisa quanto cobram na sua região)
-4. Confirma se é ida e volta (vem marcado por padrão)
-5. O valor final já aparece no item — ajusta na mão se quiser
+1. Configurações → cole o WhatsApp da agência (só números, com DDI+DDD,
+   ex: 5519999999999)
+2. Configurações → ative os logos dos clientes que quiser na vitrine
+   (precisa ter um link de logo cadastrado no cliente primeiro)

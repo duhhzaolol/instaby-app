@@ -29,6 +29,7 @@ model Cliente {
   descontoMensal     Decimal   @default(0) // abatido do total dos serviços contratados
   prazoContratoMeses Int?
   valorRenovacao     Decimal?
+  exibirLogoPublico  Boolean   @default(false) // aparece na vitrine "empresas que confiam" das propostas
   createdAt          DateTime  @default(now())
 
   tarefas             Tarefa[]
@@ -173,4 +174,10 @@ model Depoimento {
   nomeCliente String
   texto       String
   ativo       Boolean @default(true)
+}
+
+// Configurações gerais da agência — sempre 1 registro só (id fixo "config")
+model Configuracao {
+  id              String  @id @default("config")
+  whatsappAgencia String? // formato: 5519999999999 (DDI+DDD+número, só dígitos)
 }
