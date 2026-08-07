@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Search, Bell, Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
@@ -21,9 +22,28 @@ const rotulos: Record<string, string> = {
   configuracoes: "Configurações",
 };
 
+function linkNovo(pathname: string, aba: string | null): { href: string; label: string } | null {
+  if (pathname === "/dashboard/clientes") return { href: "/dashboard/clientes/novo", label: "Novo cliente" };
+  if (pathname === "/dashboard/servicos") return { href: "/dashboard/servicos/novo", label: "Novo serviço" };
+  if (pathname === "/dashboard/pacotes") return { href: "/dashboard/pacotes/novo", label: "Novo pacote" };
+  if (pathname === "/dashboard/horas") return null; // já tem o próprio botão de registrar
+
+  const matchCliente = pathname.match(/^\/dashboard\/clientes\/([^/]+)$/);
+  if (matchCliente) {
+    const id = matchCliente[1];
+    if (aba === "orcamentos") return { href: `/dashboard/clientes/${id}/orcamentos/novo`, label: "Novo orçamento" };
+    return null;
+  }
+
+  return null;
+}
+
 export function Header({ nomePrimeiro }: { nomePrimeiro: string }) {
-  const pathname = usePathname();
-  const partes = (pathname || "").split("/").filter(Boolean).filter((p) => p !== "dashboard");
+  const pathname = usePathname() || "";
+  const searchParams = useSearchParams();
+  const aba = searchParams.get("aba");
+  const partes = pathname.split("/").filter(Boolean).filter((p) => p !== "dashboard");
+  const novo = linkNovo(pathname, aba);
 
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border bg-base/80 pl-16 pr-6 backdrop-blur-xs md:pl-6">
@@ -54,9 +74,13 @@ export function Header({ nomePrimeiro }: { nomePrimeiro: string }) {
           <Bell size={16} />
           <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-accent" />
         </button>
-        <Button size="sm" className="hidden sm:inline-flex">
-          <Plus size={14} /> Novo
-        </Button>
+        {novo && (
+          <Link href={novo.href}>
+            <Button size="sm" className="hidden sm:inline-flex">
+              <Plus size={14} /> {novo.label}
+            </Button>
+          </Link>
+        )}
       </div>
     </header>
   );
