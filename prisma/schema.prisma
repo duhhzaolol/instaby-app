@@ -28,11 +28,12 @@ model Cliente {
   status       String   @default("lead") // lead | ativo | inativo
   createdAt    DateTime @default(now())
 
-  tarefas    Tarefa[]
-  orcamentos Orcamento[]
-  contratos  Contrato[]
-  cobrancas  Cobranca[]
-  despesas   Despesa[]
+  tarefas             Tarefa[]
+  orcamentos          Orcamento[]
+  contratos           Contrato[]
+  cobrancas           Cobranca[]
+  despesas            Despesa[]
+  servicosContratados ServicoContratado[]
 }
 
 model Tarefa {
@@ -57,6 +58,21 @@ model Servico {
 
   itens        ItemOrcamento[]
   pacoteItens  PacoteItem[]
+  contratacoes ServicoContratado[]
+}
+
+// Serviços que o cliente contratou de fato — o que compõe a mensalidade dele.
+// O valor aqui é o valor combinado (pode ter desconto em relação ao catálogo).
+model ServicoContratado {
+  id         String   @id @default(uuid())
+  clienteId  String
+  cliente    Cliente  @relation(fields: [clienteId], references: [id])
+  servicoId  String
+  servico    Servico  @relation(fields: [servicoId], references: [id])
+  quantidade Int      @default(1)
+  valor      Decimal
+  ativo      Boolean  @default(true)
+  createdAt  DateTime @default(now())
 }
 
 model Pacote {

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import NovaTarefaForm from "./NovaTarefaForm";
 import ContratosTab from "./ContratosTab";
 import FinanceiroTab from "./FinanceiroTab";
+import ServicosContratadosTab from "./ServicosContratadosTab";
 import { TarefaRow } from "@/components/dashboard/TarefaRow";
 import { OrcamentoRow } from "@/components/dashboard/OrcamentoRow";
 
@@ -15,28 +16,34 @@ export default async function ClienteDetalhePage({
   params: { id: string };
   searchParams: { aba?: string };
 }) {
-  const cliente = await prisma.cliente.findUnique({
-    where: { id: params.id },
-    include: {
-      tarefas: { orderBy: { createdAt: "desc" } },
-      orcamentos: { include: { itens: true }, orderBy: { createdAt: "desc" } },
-      contratos: { orderBy: { createdAt: "desc" } },
-      cobrancas: { orderBy: { createdAt: "desc" } },
-      despesas: { orderBy: { data: "desc" } },
-    },
-  });
+  const [cliente, catalogo] = await Promise.all([
+    prisma.cliente.findUnique({
+      where: { id: params.id },
+      include: {
+        tarefas: { orderBy: { createdAt: "desc" } },
+        orcamentos: { include: { itens: true }, orderBy: { createdAt: "desc" } },
+        contratos: { orderBy: { createdAt: "desc" } },
+        cobrancas: { orderBy: { createdAt: "desc" } },
+        despesas: { orderBy: { data: "desc" } },
+        servicosContratados: { where: { ativo: true }, include: { servico: true }, orderBy: { createdAt: "asc" } },
+      },
+    }),
+    prisma.servico.findMany({ orderBy: [{ categoria: "asc" }, { nome: "asc" }] }),
+  ]);
 
   if (!cliente) notFound();
 
   const aba = searchParams.aba || "tarefas";
   const abas = [
     { valor: "tarefas", label: "Tarefas" },
+    { valor: "servicos", label: "Serviços" },
     { valor: "financeiro", label: "Financeiro" },
     { valor: "orcamentos", label: "Orçamentos" },
     { valor: "contratos", label: "Contratos" },
   ];
 
   const orcamentosAceitos = cliente.orcamentos.filter((o) => o.status === "aceito");
+  const mensalidade = cliente.servicosContratados.reduce((soma, sc) => soma + Number(sc.valor), 0);
 
   return (
     <div>
@@ -94,12 +101,20 @@ export default async function ClienteDetalhePage({
             </div>
           </div>
         </div>
-        <Link
-          href={`/dashboard/clientes/${cliente.id}/editar`}
-          className="flex items-center gap-1.5 rounded-lg border border-border bg-card/60 px-3 py-1.5 text-xs text-text hover:bg-hover"
-        >
-          <Pencil size={12} /> Editar
-        </Link>
+        <div className="flex items-center gap-3">
+          {mensalidade > 0 && (
+            <div className="rounded-lg border border-accent/20 bg-accent/5 px-3 py-1.5 text-right">
+              <p className="text-[10px] text-muted">Mensalidade</p>
+              <p className="text-sm font-medium text-accent">R$ {mensalidade.toFixed(0)}</p>
+            </div>
+          )}
+          <Link
+            href={`/dashboard/clientes/${cliente.id}/editar`}
+            className="flex items-center gap-1.5 rounded-lg border border-border bg-card/60 px-3 py-1.5 text-xs text-text hover:bg-hover"
+          >
+            <Pencil size={12} /> Editar
+          </Link>
+        </div>
       </div>
 
       <div className="mb-6 flex gap-1 border-b border-border">
@@ -130,6 +145,25 @@ export default async function ClienteDetalhePage({
           </div>
           <NovaTarefaForm clienteId={cliente.id} />
         </div>
+      )}
+
+      {aba === "servicos" && (
+        <ServicosContratadosTab
+          clienteId={cliente.id}
+          contratados={cliente.servicosContratados.map((c) => ({
+            id: c.id,
+            servicoId: c.servicoId,
+            quantidade: c.quantidade,
+            valor: Number(c.valor),
+            servico: { nome: c.servico.nome, valorUnitario: Number(c.servico.valorUnitario) },
+          }))}
+          catalogo={catalogo.map((s) => ({
+            id: s.id,
+            nome: s.nome,
+            categoria: s.categoria,
+            valorUnitario: Number(s.valorUnitario),
+          }))}
+        />
       )}
 
       {aba === "financeiro" && (

@@ -27,7 +27,7 @@ export default async function ClientesPage({
   const clientes = await prisma.cliente.findMany({
     where: filtro !== "todos" ? { status: filtro } : undefined,
     orderBy: { createdAt: "desc" },
-    include: { cobrancas: true },
+    include: { cobrancas: true, servicosContratados: { where: { ativo: true } } },
   });
 
   const abas = [
@@ -73,10 +73,11 @@ export default async function ClientesPage({
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {clientes.map((c, i) => {
+          const somaServicos = c.servicosContratados.reduce((soma, sc) => soma + Number(sc.valor), 0);
           const recorrentes = c.cobrancas
             .filter((cb) => cb.tipo === "recorrente")
             .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-          const mensalidade = recorrentes.length > 0 ? Number(recorrentes[0].valor) : 0;
+          const mensalidade = somaServicos > 0 ? somaServicos : recorrentes.length > 0 ? Number(recorrentes[0].valor) : 0;
           const totalRecebido = c.cobrancas
             .filter((cb) => cb.status === "pago")
             .reduce((soma, cb) => soma + Number(cb.valor), 0);
