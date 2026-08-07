@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { FileSignature, Trash2 } from "lucide-react";
+import { FileSignature, Trash2, ExternalLink } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -135,6 +135,13 @@ export default function ContratosTab({
               <div className="mb-2 flex items-center justify-between">
                 <Badge tone={tone[c.status]}>{label[c.status]}</Badge>
                 <div className="flex gap-3 text-xs">
+                  <a
+                    href={`/contrato/${c.id}`}
+                    target="_blank"
+                    className="flex items-center gap-1 font-medium text-accent hover:underline"
+                  >
+                    <ExternalLink size={11} /> Ver página
+                  </a>
                   <button
                     onClick={() => {
                       if (expandido === c.id) {

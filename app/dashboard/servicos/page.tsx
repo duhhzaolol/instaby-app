@@ -3,6 +3,7 @@ import { Plus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { visualDaCategoria } from "@/lib/categoriaVisual";
 
 export default async function ServicosPage() {
   const servicos = await prisma.servico.findMany({
@@ -31,29 +32,40 @@ export default async function ServicosPage() {
         </p>
       )}
 
-      {categorias.map((cat) => (
-        <div key={cat} className="mb-6">
-          <p className="mb-2 text-xs uppercase tracking-wide text-muted">{cat}</p>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {servicos
-              .filter((s) => s.categoria === cat)
-              .map((s, i) => (
-                <Link key={s.id} href={`/dashboard/servicos/${s.id}/editar`}>
-                  <Card index={i} className="flex items-center justify-between p-4">
-                    <div>
-                      <p className="text-sm text-text">{s.nome}</p>
-                      <p className="text-xs text-muted">{s.descricao}</p>
-                    </div>
-                    <span className="whitespace-nowrap text-sm text-text">
-                      R$ {Number(s.valorUnitario).toFixed(0)}
-                      <span className="text-xs text-muted">/{s.unidade}</span>
-                    </span>
-                  </Card>
-                </Link>
-              ))}
+      {categorias.map((cat) => {
+        const { icone: Icon, cor } = visualDaCategoria(cat);
+        return (
+          <div key={cat} className="mb-6">
+            <p className="mb-2 flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted">
+              {cat}
+            </p>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {servicos
+                .filter((s) => s.categoria === cat)
+                .map((s, i) => (
+                  <Link key={s.id} href={`/dashboard/servicos/${s.id}/editar`}>
+                    <Card index={i} className="flex items-center gap-3 p-4">
+                      <div
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+                        style={{ backgroundColor: `${cor}1A`, color: cor }}
+                      >
+                        <Icon size={16} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm text-text">{s.nome}</p>
+                        <p className="truncate text-xs text-muted">{s.descricao}</p>
+                      </div>
+                      <span className="shrink-0 whitespace-nowrap text-sm text-text">
+                        R$ {Number(s.valorUnitario).toFixed(0)}
+                        <span className="text-xs text-muted">/{s.unidade}</span>
+                      </span>
+                    </Card>
+                  </Link>
+                ))}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

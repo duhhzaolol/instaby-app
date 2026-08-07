@@ -4,18 +4,12 @@ import { useState } from "react";
 import {
   Minus,
   Plus,
-  Video,
-  Camera,
-  Instagram,
-  Target,
-  Globe,
-  Sparkles,
   Award,
   Star,
-  Zap,
   BarChart3,
   MessageCircle,
 } from "lucide-react";
+import { visualDaCategoria } from "@/lib/categoriaVisual";
 import AceitarButton from "./AceitarButton";
 
 type Item = {
@@ -27,19 +21,6 @@ type Item = {
   quantidade: number;
   valor: number;
 };
-
-const ICONE_POR_CATEGORIA: Record<string, { Icon: any; cor: string }> = {
-  "📱 Social Media": { Icon: Instagram, cor: "#3B82F6" },
-  "🎥 Produção de Conteúdo": { Icon: Video, cor: "#E63946" },
-  "📸 Captação": { Icon: Camera, cor: "#A855F7" },
-  "🎯 Tráfego Pago": { Icon: Target, cor: "#22C55E" },
-  "🌐 Desenvolvimento Web": { Icon: Globe, cor: "#06B6D4" },
-  "🎬 Cobertura de Eventos": { Icon: Sparkles, cor: "#F59E0B" },
-};
-
-function iconePara(categoria: string) {
-  return ICONE_POR_CATEGORIA[categoria] || { Icon: Zap, cor: "#E63946" };
-}
 
 const PORQUES = [
   "Estratégias personalizadas",
@@ -107,7 +88,7 @@ export default function OrcamentoInterativo({
 
           <div className="flex flex-col gap-3">
             {itens.map((item) => {
-              const { Icon, cor } = iconePara(item.categoria);
+              const { icone: Icon, cor } = visualDaCategoria(item.categoria);
               return (
                 <div
                   key={item.id}

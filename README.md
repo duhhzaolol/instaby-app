@@ -1,43 +1,41 @@
 # Instaby App
 
-Painel interno da Instaby Agência — v22 (repaginação da proposta pública).
+Painel interno da Instaby Agência — v23.
+
+## Sobre a sua pergunta: vale a pena levar esse estilo pro resto do sistema?
+
+Sim, acho que faz muito sentido — o ícone colorido por categoria ajuda a
+escanear visualmente mais rápido, tanto pra você internamente quanto pro
+cliente. Criei um arquivo só (`lib/categoriaVisual.ts`) com o mapeamento
+categoria → ícone/cor, e já uso ele em três lugares agora (orçamento
+público, contrato público, catálogo interno). Da próxima vez que
+quisermos levar pra mais uma tela (Financeiro, Dashboard, etc.), é só
+importar esse arquivo — não precisa redesenhar do zero.
 
 ## O que entrou nesta versão
 
-### Página pública do orçamento, redesenhada do zero
-Baseado na referência que você mandou:
-- Cabeçalho com código da proposta (#PC-2026-XXX) e "Válido até" (15 dias
-  a partir da criação, automático)
-- Hero com gradiente e um gráfico decorativo de performance
-- Etapas do processo com barra de progresso visual
-- Cada serviço ganhou um ícone colorido por categoria (Social Media =
-  azul, Produção de Conteúdo = vermelho, Captação = roxo, Tráfego Pago =
-  verde, Desenvolvimento Web = ciano, Eventos = âmbar) — é a paleta extra
-  que você pediu, sem perder a identidade preto/vermelho
-- Sidebar fixa com "Resumo do investimento" (lista + total), "Por que a
-  Instaby?" (checklist) e um card de contato
-- Banner final "Vamos crescer juntos?" com dois botões
+### Página pública do contrato (`/contrato/[id]`)
+No mesmo estilo visual da proposta: cabeçalho com código (#CT-2026-XXX) e
+status, hero com gradiente, cada serviço contratado como um card com
+ícone colorido por categoria + o texto da cláusula daquele serviço,
+sidebar com o valor mensal, vigência e renovação (quando preenchidos).
 
-### Remover item da proposta (já existia, ficou mais claro)
-O botão "−" já deixava o item em 0 desde a v21 (o cliente pode "zerar" um
-serviço que não quer, tipo Deslocamento) — só deixei mais visível: quando
-zera, o card fica esmaecido.
+Ela puxa os dados de duas formas, na ordem:
+1. Se o contrato foi gerado a partir de um orçamento, usa os itens
+   daquele orçamento
+2. Senão, usa os Serviços Contratados atuais do cliente
+3. Se não tiver nenhum dos dois (contrato escrito na mão), mostra o texto
+   corrido normal, sem os cards
 
-### Botão extra: "Marcar uma conversa" (WhatsApp)
-Junto do "Aceitar proposta", agora tem um segundo botão que abre o
-WhatsApp da agência com uma mensagem pronta. Só aparece se você
-cadastrar o número em Configurações.
+Link pra essa página aparece em cada contrato, na aba Contratos do
+cliente ("Ver página").
 
-### Logo dos seus clientes na vitrine
-Em Configurações, nova seção "Logos na proposta": lista todo cliente que
-tem um link de logo cadastrado, com um botão pra ativar/desativar se ele
-aparece na vitrine "Empresas que confiam" no fim de toda proposta pública.
-O logo aparece sempre em cinza (grayscale via CSS), mesmo que o original
-seja colorido — não precisa editar a imagem.
+### Catálogo interno com ícone colorido
+A lista de Serviços (`/dashboard/servicos`) agora mostra o mesmo ícone
+colorido por categoria que já aparece na proposta pública — mais fácil de
+escanear visualmente qual é qual.
 
-## Antes de usar
-
-1. Configurações → cole o WhatsApp da agência (só números, com DDI+DDD,
-   ex: 5519999999999)
-2. Configurações → ative os logos dos clientes que quiser na vitrine
-   (precisa ter um link de logo cadastrado no cliente primeiro)
+## Próximos passos possíveis (não pedidos ainda, só sugestão)
+- Levar o mesmo ícone/cor pra aba Serviços Contratados do cliente e pro
+  construtor de orçamento (pílulas com ícone em vez de só texto)
+- Aplicar em Financeiro e no Dashboard também
