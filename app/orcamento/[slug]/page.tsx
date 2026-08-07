@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import AceitarButton from "./AceitarButton";
+import OrcamentoInterativo from "./OrcamentoInterativo";
 
 const etapas = ["Briefing", "Análise", "Estratégia", "Execução", "Resultados"];
 
@@ -21,8 +21,6 @@ export default async function OrcamentoPublicoPage({
   ]);
 
   if (!orcamento) notFound();
-
-  const total = orcamento.itens.reduce((soma, item) => soma + Number(item.valor), 0);
 
   return (
     <div className="min-h-screen bg-[#09090B] px-4 py-10">
@@ -46,32 +44,7 @@ export default async function OrcamentoPublicoPage({
           Conteúdo, tráfego e produção trabalhando juntos, com clareza de valor em cada etapa.
         </p>
 
-        <p className="mb-3 font-mono text-[11px] uppercase tracking-wide text-[#9CA3AF]">
-          o que está incluso
-        </p>
-
-        <div className="mb-8 flex flex-col gap-2.5">
-          {orcamento.itens.map((item) => (
-            <div key={item.id} className="rounded-xl bg-[#111827] p-4">
-              <div className="flex items-start justify-between">
-                <p className="text-sm font-medium text-[#F9FAFB]">{item.servico.nome}</p>
-                <span className="text-sm font-medium text-[#E63946]">
-                  R$ {Number(item.valor).toFixed(0)}
-                </span>
-              </div>
-              {item.servico.descricao && (
-                <p className="mt-1.5 text-xs leading-relaxed text-[#9CA3AF]">
-                  {item.servico.descricao}
-                </p>
-              )}
-              {item.quantidade > 1 && (
-                <p className="mt-1 text-xs text-[#9CA3AF]">Quantidade: {item.quantidade}</p>
-              )}
-            </div>
-          ))}
-        </div>
-
-        <p className="mb-3 font-mono text-[11px] uppercase tracking-wide text-[#9CA3AF]">
+        <p className="mb-3 mt-6 font-mono text-[11px] uppercase tracking-wide text-[#9CA3AF]">
           como vamos trabalhar
         </p>
         <div className="mb-8 grid grid-cols-5 gap-2">
@@ -101,12 +74,17 @@ export default async function OrcamentoPublicoPage({
           </>
         )}
 
-        <div className="mb-6 flex items-center justify-between border-t border-white/[0.06] pt-4">
-          <span className="text-sm font-medium text-[#F9FAFB]">Total mensal</span>
-          <span className="text-xl font-medium text-[#E63946]">R$ {total.toFixed(0)}</span>
-        </div>
-
-        <AceitarButton slug={orcamento.slug} status={orcamento.status} />
+        <OrcamentoInterativo
+          slug={orcamento.slug}
+          status={orcamento.status}
+          itensIniciais={orcamento.itens.map((item) => ({
+            id: item.id,
+            nome: item.servico.nome,
+            descricao: item.servico.descricao,
+            quantidade: item.quantidade,
+            valor: Number(item.valor),
+          }))}
+        />
       </div>
     </div>
   );

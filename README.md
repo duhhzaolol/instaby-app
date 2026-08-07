@@ -1,47 +1,40 @@
 # Instaby App
 
-Painel interno da Instaby Agência — v20 (faxina completa).
+Painel interno da Instaby Agência — v21.
 
-## O que aconteceu
+## O que entrou nesta versão
 
-O print mostrou que a v19 não resolveu — os serviços antigos (de várias
-fases diferentes: cadastro manual, seed v8, e a tentativa v19) continuaram
-lá porque muitos já tinham sido usados em orçamentos ou pacotes de teste,
-e minha proteção contra exclusão bloqueava a remoção deles. Resultado:
-catálogo bagunçado com duplicatas.
+### 1. Valor final editável no construtor de orçamento
+Cada item selecionado agora tem, além da quantidade, um campo de valor
+editável — pode digitar o valor final que quiser, não fica preso ao
+cálculo automático (quantidade × valor de tabela).
 
-## A solução — rota de faxina total
+### 2. Deslocamento com cálculo automático de distância
+Quando você adiciona o serviço "Deslocamento" a um orçamento, aparece uma
+calculadora: digita a cidade de destino, clica em "Calcular" e ele busca
+a distância rodoviária desde Araras/SP automaticamente (usando serviços
+gratuitos de mapa, sem precisar de chave de API paga). O KM vem editável
+(caso queira ajustar), tem um campo de "Valor por KM" (você define, já
+que vai pesquisar quanto cobrar), e um checkbox de "ida e volta" que
+dobra o KM. O valor final calculado já entra automaticamente no item,
+mas continua editável se quiser ajustar na mão.
 
-Nova rota `/api/reset-catalogo-total`, bem mais agressiva: apaga **todos**
-os orçamentos, pacotes e serviços contratados existentes (removendo o que
-travava a exclusão), depois apaga o catálogo inteiro e recria do zero, já
-limpo, com os 26 serviços na estrutura que você descreveu.
+**Se a cidade não for encontrada** (nome mal escrito, cidade pequena
+demais pro mapa gratuito reconhecer), ele avisa e você digita o KM
+manualmente — nada trava.
 
-**O que ISSO apaga:** orçamentos (todos, inclusive os que já foram
-aceitos), pacotes, serviços contratados de cada cliente, e o catálogo de
-serviços inteiro.
+### 3. Página pública agora é interativa — cliente ajusta quantidade
+Na proposta que o cliente recebe, cada item tem botões de **+ e −** pra
+ele mesmo calibrar quanto quer (ex: "quero 6 reels em vez de 4"). O total
+recalcula na hora, ao vivo. Quando ele clica em "Aceitar proposta", as
+quantidades e valores finais que ELE escolheu são salvos de verdade no
+orçamento — a cobrança gerada automaticamente já reflete a escolha final
+dele, não o que você mandou originalmente.
 
-**O que ISSO NÃO toca:** Cliente, Tarefa, Cobrança, Despesa, Contrato (o
-texto salvo continua existindo, só perde o vínculo com o orçamento de
-origem), Horas, Depoimentos.
+## Como usar o deslocamento
 
-Como você ainda está em fase de teste (vi que era um orçamento de teste
-pro "Victor Coelho" no print), presumi que tudo bem apagar os
-orçamentos/pacotes de teste pra sanear o catálogo. Se algum desses já era
-de verdade e você precisa recuperar, me avisa antes de rodar.
-
-### Como rodar
-
-Por segurança, essa rota exige uma confirmação explícita na URL:
-
-```
-https://SEU-DOMINIO/api/reset-catalogo-total?secret=SEU_SETUP_SECRET&confirmar=sim
-```
-
-Se você acessar sem o `&confirmar=sim`, ela só avisa o que vai acontecer
-e não apaga nada.
-
-### Depois de rodar
-
-Vá em `/dashboard/servicos` e preencha o valor real de cada um dos 26
-serviços (todos entram com R$ 0).
+1. No orçamento, selecione o serviço "Deslocamento" do catálogo
+2. Digita a cidade, clica em "Calcular"
+3. Preenche o "Valor por KM" (pesquisa quanto cobram na sua região)
+4. Confirma se é ida e volta (vem marcado por padrão)
+5. O valor final já aparece no item — ajusta na mão se quiser

@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
+import DeslocamentoCalc from "./DeslocamentoCalc";
 
 type Servico = {
   id: string;
@@ -14,7 +16,7 @@ type Servico = {
   valorUnitario: number;
 };
 
-type Selecionado = { servicoId: string; quantidade: number };
+type Selecionado = { servicoId: string; quantidade: number; valor: number };
 type Pacote = { id: string; nome: string; itens: { servicoId: string; quantidade: number }[] };
 
 export default function OrcamentoBuilder({
@@ -28,11 +30,16 @@ export default function OrcamentoBuilder({
   clienteNome: string;
   servicos: Servico[];
   pacotes: Pacote[];
-  selecaoInicial?: Selecionado[];
+  selecaoInicial?: { servicoId: string; quantidade: number }[];
 }) {
   const router = useRouter();
   const [selecionados, setSelecionados] = useState<Record<string, Selecionado>>(
-    Object.fromEntries((selecaoInicial || []).map((s) => [s.servicoId, s]))
+    Object.fromEntries(
+      (selecaoInicial || []).map((s) => {
+        const servico = servicos.find((sv) => sv.id === s.servicoId);
+        return [s.servicoId, { servicoId: s.servicoId, quantidade: s.quantidade, valor: (servico?.valorUnitario || 0) * s.quantidade }];
+      })
+    )
   );
   const [enviando, setEnviando] = useState(false);
 
@@ -40,7 +47,12 @@ export default function OrcamentoBuilder({
     setSelecionados((atual) => {
       const copia = { ...atual };
       pacote.itens.forEach((i) => {
-        copia[i.servicoId] = { servicoId: i.servicoId, quantidade: i.quantidade };
+        const servico = servicos.find((sv) => sv.id === i.servicoId);
+        copia[i.servicoId] = {
+          servicoId: i.servicoId,
+          quantidade: i.quantidade,
+          valor: (servico?.valorUnitario || 0) * i.quantidade,
+        };
       });
       return copia;
     });
@@ -55,7 +67,7 @@ export default function OrcamentoBuilder({
     .map((sel) => {
       const servico = servicos.find((s) => s.id === sel.servicoId);
       if (!servico) return null;
-      return { servico, quantidade: sel.quantidade, valor: servico.valorUnitario * sel.quantidade };
+      return { servico, quantidade: sel.quantidade, valor: sel.valor };
     })
     .filter(Boolean) as { servico: Servico; quantidade: number; valor: number }[];
 
@@ -67,16 +79,25 @@ export default function OrcamentoBuilder({
       if (copia[servico.id]) {
         delete copia[servico.id];
       } else {
-        copia[servico.id] = { servicoId: servico.id, quantidade: 1 };
+        copia[servico.id] = { servicoId: servico.id, quantidade: 1, valor: servico.valorUnitario };
       }
       return copia;
     });
   }
 
   function mudarQuantidade(servicoId: string, quantidade: number) {
+    const servico = servicos.find((s) => s.id === servicoId);
+    const qtd = Math.max(1, quantidade);
     setSelecionados((atual) => ({
       ...atual,
-      [servicoId]: { ...atual[servicoId], quantidade: Math.max(1, quantidade) },
+      [servicoId]: { ...atual[servicoId], quantidade: qtd, valor: (servico?.valorUnitario || 0) * qtd },
+    }));
+  }
+
+  function mudarValor(servicoId: string, valor: number) {
+    setSelecionados((atual) => ({
+      ...atual,
+      [servicoId]: { ...atual[servicoId], valor },
     }));
   }
 
@@ -154,21 +175,30 @@ export default function OrcamentoBuilder({
         {itensSelecionados.length > 0 && (
           <div className="mb-4 flex flex-col gap-2">
             {itensSelecionados.map(({ servico, quantidade, valor }) => (
-              <div
-                key={servico.id}
-                className="flex items-center justify-between rounded-xl bg-card/60 px-3.5 py-2.5"
-              >
-                <p className="text-sm text-text">{servico.nome}</p>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="number"
-                    min={1}
-                    value={quantidade}
-                    onChange={(e) => mudarQuantidade(servico.id, parseInt(e.target.value) || 1)}
-                    className="h-8 w-14 rounded-lg border border-border bg-base px-2 text-center text-sm text-text"
-                  />
-                  <span className="w-16 text-right text-sm text-text">R$ {valor.toFixed(0)}</span>
+              <div key={servico.id} className="rounded-xl bg-card/60 p-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-text">{servico.nome}</p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      value={quantidade}
+                      onChange={(e) => mudarQuantidade(servico.id, parseInt(e.target.value) || 1)}
+                      title="Quantidade"
+                      className="h-8 w-14 rounded-lg border border-border bg-base px-2 text-center text-sm text-text"
+                    />
+                    <div className="w-28">
+                      <CurrencyInput value={valor} onChange={(v) => mudarValor(servico.id, v)} />
+                    </div>
+                  </div>
                 </div>
+
+                {servico.nome === "Deslocamento" && (
+                  <DeslocamentoCalc
+                    valorAtual={valor}
+                    onCalcular={(novoValor) => mudarValor(servico.id, novoValor)}
+                  />
+                )}
               </div>
             ))}
           </div>

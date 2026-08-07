@@ -2,13 +2,27 @@
 
 import { useState } from "react";
 
-export default function AceitarButton({ slug, status }: { slug: string; status: string }) {
+type ItemParaSalvar = { id: string; quantidade: number; valor: number };
+
+export default function AceitarButton({
+  slug,
+  status,
+  itensParaSalvar,
+}: {
+  slug: string;
+  status: string;
+  itensParaSalvar?: ItemParaSalvar[];
+}) {
   const [statusAtual, setStatusAtual] = useState(status);
   const [enviando, setEnviando] = useState(false);
 
   async function aceitar() {
     setEnviando(true);
-    const resposta = await fetch(`/api/orcamento/${slug}/aceitar`, { method: "POST" });
+    const resposta = await fetch(`/api/orcamento/${slug}/aceitar`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ itens: itensParaSalvar || [] }),
+    });
     setEnviando(false);
     if (resposta.ok) setStatusAtual("aceito");
   }
