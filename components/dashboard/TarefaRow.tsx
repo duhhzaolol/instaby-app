@@ -73,7 +73,7 @@ export function TarefaRow({
             tarefa.status === "feito"
               ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
               : tarefa.status === "em_andamento"
-              ? "border-accent/20 bg-accent/10 text-accent"
+              ? "border-sky-500/20 bg-sky-500/10 text-sky-400"
               : "border-white/10 bg-white/5 text-muted"
           }`}
         >

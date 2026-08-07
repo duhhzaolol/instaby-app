@@ -13,7 +13,7 @@ function inicioHoje() {
 }
 
 export default async function HorasPage() {
-  const [clientes, registrosHoje, registrosMes] = await Promise.all([
+  const [clientes, registrosHoje, registrosMes, tarefasAbertas] = await Promise.all([
     prisma.cliente.findMany({
       where: { status: { not: "inativo" } },
       select: { id: true, nome: true },
@@ -27,6 +27,10 @@ export default async function HorasPage() {
     prisma.registroTempo.findMany({
       where: { inicio: { gte: inicioMes() } },
       include: { cliente: { select: { nome: true } } },
+    }),
+    prisma.tarefa.findMany({
+      where: { status: { not: "feito" } },
+      select: { id: true, titulo: true, clienteId: true },
     }),
   ]);
 
@@ -52,7 +56,7 @@ export default async function HorasPage() {
       <p className="mb-1 text-lg font-medium text-text">Horas</p>
       <p className="mb-6 text-sm text-muted">Dado interno — o cliente nunca vê isso</p>
 
-      <NovoRegistroTempoForm clientes={clientes} />
+      <NovoRegistroTempoForm clientes={clientes} tarefasAbertas={tarefasAbertas} />
 
       <div className="mb-6 rounded-xl border border-accent/20 bg-accent/5 p-4">
         <p className="mb-3 text-xs uppercase tracking-wide text-muted">Este mês, por cliente</p>

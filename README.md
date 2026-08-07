@@ -1,20 +1,22 @@
 # Instaby App
 
-Painel interno da Instaby Agência — v15.
+Painel interno da Instaby Agência — v16.
 
 ## O que entrou nesta versão
 
-- **Agenda** (`/dashboard/agenda`, novo item na sidebar): visão de
-  calendário mensal, com dois tipos de evento:
-  - Cobranças vencendo (vermelho) — puxa direto do vencimento que já
-    existe em cada cobrança
-  - Prazos de tarefa (azul) — tarefa ganhou um campo de prazo opcional
-  - Navega entre os meses com as setinhas ao lado do nome do mês
-- **Tarefa ganhou prazo opcional**: ao criar uma tarefa (na Visão Geral ou
-  dentro do cliente), agora dá pra marcar uma data — ela aparece na lista
-  normal (com aviso em vermelho se já passou do prazo) e também na Agenda.
+- **Registrar horas agora pode concluir a tarefa relacionada**: ao
+  escolher o cliente no formulário de "Registrar horas", se ele tiver
+  tarefas pendentes, aparece um campo "Isso conclui alguma tarefa
+  pendente?" — escolhe a tarefa (ex: "Gravação") e ela é marcada como
+  Feito junto com o registro das horas. Antes isso não existia — tarefa e
+  horas eram completamente separadas, por isso ficava pendência mesmo
+  depois de registrar o trabalho.
+- **Cores dos status de tarefa, bem mais distintas**: A fazer (cinza), Em
+  andamento (azul), Feito (verde) — antes "Em andamento" usava a mesma cor
+  de destaque do app (vermelho), o que confundia com o aviso de prazo
+  vencido (que também é vermelho). Agora só o "vencido" usa vermelho.
 
-## Nada obrigatório mudou
+## Importante
 
-O prazo é opcional em tudo — quem não usar, continua funcionando exatamente
-como antes.
+Vincular a tarefa é opcional — se você não selecionar nada, o registro de
+horas funciona exatamente como antes, sem mexer em tarefa nenhuma.

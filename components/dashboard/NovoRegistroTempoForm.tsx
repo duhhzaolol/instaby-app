@@ -2,27 +2,37 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Plus, CheckCircle2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Label } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 
 type Cliente = { id: string; nome: string };
+type TarefaAberta = { id: string; titulo: string; clienteId: string | null };
 
 function horaAtual() {
   const d = new Date();
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
-export function NovoRegistroTempoForm({ clientes }: { clientes: Cliente[] }) {
+export function NovoRegistroTempoForm({
+  clientes,
+  tarefasAbertas,
+}: {
+  clientes: Cliente[];
+  tarefasAbertas: TarefaAberta[];
+}) {
   const router = useRouter();
   const [aberto, setAberto] = useState(false);
   const [atividade, setAtividade] = useState("");
   const [clienteId, setClienteId] = useState("");
+  const [tarefaId, setTarefaId] = useState("");
   const [data, setData] = useState(new Date().toISOString().slice(0, 10));
   const [inicio, setInicio] = useState("");
   const [fim, setFim] = useState(horaAtual());
   const [enviando, setEnviando] = useState(false);
+
+  const tarefasDoCliente = clienteId ? tarefasAbertas.filter((t) => t.clienteId === clienteId) : [];
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -40,8 +50,17 @@ export function NovoRegistroTempoForm({ clientes }: { clientes: Cliente[] }) {
       }),
     });
 
+    if (tarefaId) {
+      await fetch(`/api/tarefas/${tarefaId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "feito" }),
+      });
+    }
+
     setAtividade("");
     setInicio("");
+    setTarefaId("");
     setEnviando(false);
     setAberto(false);
     router.refresh();
@@ -82,7 +101,10 @@ export function NovoRegistroTempoForm({ clientes }: { clientes: Cliente[] }) {
         <Label>Cliente</Label>
         <select
           value={clienteId}
-          onChange={(e) => setClienteId(e.target.value)}
+          onChange={(e) => {
+            setClienteId(e.target.value);
+            setTarefaId("");
+          }}
           className="mb-3 h-10 w-full rounded-xl border border-border bg-card/60 px-3 text-sm text-text"
         >
           <option value="">Sem cliente / interno</option>
@@ -92,6 +114,29 @@ export function NovoRegistroTempoForm({ clientes }: { clientes: Cliente[] }) {
             </option>
           ))}
         </select>
+
+        {tarefasDoCliente.length > 0 && (
+          <div className="mb-3">
+            <Label>Isso conclui alguma tarefa pendente? (opcional)</Label>
+            <select
+              value={tarefaId}
+              onChange={(e) => setTarefaId(e.target.value)}
+              className="h-10 w-full rounded-xl border border-accent/20 bg-accent/5 px-3 text-sm text-text"
+            >
+              <option value="">Nenhuma — só registrar as horas</option>
+              {tarefasDoCliente.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.titulo}
+                </option>
+              ))}
+            </select>
+            {tarefaId && (
+              <p className="mt-1.5 flex items-center gap-1 text-[11px] text-accent">
+                <CheckCircle2 size={11} /> Essa tarefa vai ser marcada como Feito junto
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="mb-4 grid grid-cols-3 gap-2">
           <div>
