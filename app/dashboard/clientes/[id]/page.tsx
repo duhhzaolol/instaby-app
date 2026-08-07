@@ -8,6 +8,8 @@ import FinanceiroTab from "./FinanceiroTab";
 import ServicosContratadosTab from "./ServicosContratadosTab";
 import { TarefaRow } from "@/components/dashboard/TarefaRow";
 import { OrcamentoRow } from "@/components/dashboard/OrcamentoRow";
+import { RegistroTempoRow } from "@/components/dashboard/RegistroTempoRow";
+import { Clock } from "lucide-react";
 
 export default async function ClienteDetalhePage({
   params,
@@ -26,6 +28,7 @@ export default async function ClienteDetalhePage({
         cobrancas: { orderBy: { createdAt: "desc" } },
         despesas: { orderBy: { data: "desc" } },
         servicosContratados: { where: { ativo: true }, include: { servico: true }, orderBy: { createdAt: "asc" } },
+        registrosTempo: { orderBy: { inicio: "desc" }, take: 60 },
       },
     }),
     prisma.servico.findMany({ orderBy: [{ categoria: "asc" }, { nome: "asc" }] }),
@@ -40,6 +43,7 @@ export default async function ClienteDetalhePage({
     { valor: "financeiro", label: "Financeiro" },
     { valor: "orcamentos", label: "Orçamentos" },
     { valor: "contratos", label: "Contratos" },
+    { valor: "horas", label: "Horas" },
   ];
 
   const orcamentosAceitos = cliente.orcamentos.filter((o) => o.status === "aceito");
@@ -216,6 +220,47 @@ export default async function ClienteDetalhePage({
           }))}
           orcamentosAceitos={orcamentosAceitos.map((o) => ({ id: o.id, slug: o.slug }))}
         />
+      )}
+      {aba === "horas" && (
+        <div>
+          {(() => {
+            const inicioMes = new Date();
+            inicioMes.setDate(1);
+            inicioMes.setHours(0, 0, 0, 0);
+            const totalMes = cliente.registrosTempo
+              .filter((r) => r.fim && r.inicio >= inicioMes)
+              .reduce((soma, r) => soma + (r.fim!.getTime() - r.inicio.getTime()) / 1000 / 60 / 60, 0);
+            return (
+              <div className="mb-4 flex items-center justify-between rounded-xl border border-accent/20 bg-accent/5 px-4 py-3">
+                <span className="text-sm font-medium text-text">Horas trabalhadas este mês</span>
+                <span className="text-lg font-medium text-accent">{totalMes.toFixed(1)}h</span>
+              </div>
+            );
+          })()}
+          <div className="flex flex-col gap-2">
+            {cliente.registrosTempo.length === 0 && (
+              <p className="text-sm text-muted">Nenhum registro ainda.</p>
+            )}
+            {cliente.registrosTempo.map((r, i) => (
+              <RegistroTempoRow
+                key={r.id}
+                index={i}
+                registro={{
+                  id: r.id,
+                  atividade: r.atividade,
+                  inicio: r.inicio.toISOString(),
+                  fim: r.fim?.toISOString() || null,
+                }}
+              />
+            ))}
+          </div>
+          <Link
+            href="/dashboard/horas"
+            className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl border border-border bg-card/60 py-2.5 text-sm text-text transition-colors hover:bg-hover"
+          >
+            <Clock size={14} /> Registrar horas
+          </Link>
+        </div>
       )}
     </div>
   );

@@ -34,6 +34,7 @@ model Cliente {
   cobrancas           Cobranca[]
   despesas            Despesa[]
   servicosContratados ServicoContratado[]
+  registrosTempo      RegistroTempo[]
 }
 
 model Tarefa {
@@ -59,6 +60,17 @@ model Servico {
   itens        ItemOrcamento[]
   pacoteItens  PacoteItem[]
   contratacoes ServicoContratado[]
+}
+
+// Registro de horas trabalhadas — dado 100% interno, nunca aparece pro cliente.
+model RegistroTempo {
+  id        String    @id @default(uuid())
+  clienteId String?
+  cliente   Cliente?  @relation(fields: [clienteId], references: [id])
+  atividade String // ex: "Captação", "Edição", "Reunião"
+  inicio    DateTime
+  fim       DateTime?
+  createdAt DateTime  @default(now())
 }
 
 // Serviços que o cliente contratou de fato — o que compõe a mensalidade dele.

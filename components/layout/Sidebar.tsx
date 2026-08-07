@@ -12,6 +12,7 @@ import {
   FileSignature,
   Package,
   Package2,
+  Clock,
   Settings,
   Menu,
   X,
@@ -20,6 +21,7 @@ import {
 const menuPrincipal = [
   { label: "Visão geral", href: "/dashboard", icon: LayoutGrid },
   { label: "Clientes", href: "/dashboard/clientes", icon: Users },
+  { label: "Horas", href: "/dashboard/horas", icon: Clock },
   { label: "Financeiro", href: "/dashboard/financeiro", icon: Wallet },
 ];
 
