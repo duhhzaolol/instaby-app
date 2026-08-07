@@ -11,6 +11,7 @@ export function QuickAddTarefa({ clientes }: { clientes: Cliente[] }) {
   const router = useRouter();
   const [titulo, setTitulo] = useState("");
   const [clienteId, setClienteId] = useState("");
+  const [prazo, setPrazo] = useState("");
   const [enviando, setEnviando] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -21,10 +22,11 @@ export function QuickAddTarefa({ clientes }: { clientes: Cliente[] }) {
     await fetch("/api/tarefas", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ titulo, clienteId: clienteId || null }),
+      body: JSON.stringify({ titulo, clienteId: clienteId || null, prazo: prazo || null }),
     });
 
     setTitulo("");
+    setPrazo("");
     setEnviando(false);
     router.refresh();
   }
@@ -50,6 +52,13 @@ export function QuickAddTarefa({ clientes }: { clientes: Cliente[] }) {
             </option>
           ))}
         </select>
+        <input
+          type="date"
+          value={prazo}
+          onChange={(e) => setPrazo(e.target.value)}
+          title="Prazo (opcional)"
+          className="h-11 rounded-xl border border-border bg-base/60 px-3 text-sm text-text sm:w-36"
+        />
         <button
           type="submit"
           disabled={enviando || !titulo.trim()}

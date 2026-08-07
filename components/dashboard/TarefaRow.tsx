@@ -17,7 +17,7 @@ const tarefaStatusLabel: Record<string, string> = {
   feito: "Feito",
 };
 
-export type TarefaRowData = { id: string; titulo: string; tipo: string; status: string };
+export type TarefaRowData = { id: string; titulo: string; tipo: string; status: string; prazo?: string | null };
 
 export function TarefaRow({
   tarefa,
@@ -30,6 +30,8 @@ export function TarefaRow({
 }) {
   const router = useRouter();
   const [excluindo, setExcluindo] = useState(false);
+
+  const prazoVencido = tarefa.prazo && tarefa.status !== "feito" && new Date(tarefa.prazo) < new Date();
 
   async function mudarStatus(status: string) {
     await fetch(`/api/tarefas/${tarefa.id}`, {
@@ -55,6 +57,11 @@ export function TarefaRow({
           {tarefa.tipo === "ideia" ? "Ideia" : "Tarefa"}
           {clienteNome && (
             <span className="rounded-full bg-white/5 px-1.5 py-0.5 text-[10px] text-muted">{clienteNome}</span>
+          )}
+          {tarefa.prazo && (
+            <span className={prazoVencido ? "text-red-400" : "text-muted"}>
+              · prazo {new Date(tarefa.prazo).toLocaleDateString("pt-BR")}
+            </span>
           )}
         </p>
       </div>

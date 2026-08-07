@@ -1,23 +1,20 @@
 # Instaby App
 
-Painel interno da Instaby Agência — v14.
+Painel interno da Instaby Agência — v15.
 
 ## O que entrou nesta versão
 
-- **Horas** (`/dashboard/horas`, novo item na sidebar): registro de tempo
-  trabalhado, 100% interno — o cliente nunca vê isso em lugar nenhum.
-  - Registra: o que fez (com sugestões: Captação, Edição, Reunião...),
-    cliente (ou "sem cliente/interno"), início e fim
-  - Lista de hoje, em ordem, editável e com exclusão
-  - Resumo do mês por cliente — soma quantas horas você trabalhou pra cada
-    um, atualizado sozinho conforme você registra
-- **Aba "Horas" dentro do cliente**: mesma lógica, só que filtrado pra
-  aquele cliente específico — total do mês e a lista de registros dele.
+- **Agenda** (`/dashboard/agenda`, novo item na sidebar): visão de
+  calendário mensal, com dois tipos de evento:
+  - Cobranças vencendo (vermelho) — puxa direto do vencimento que já
+    existe em cada cobrança
+  - Prazos de tarefa (azul) — tarefa ganhou um campo de prazo opcional
+  - Navega entre os meses com as setinhas ao lado do nome do mês
+- **Tarefa ganhou prazo opcional**: ao criar uma tarefa (na Visão Geral ou
+  dentro do cliente), agora dá pra marcar uma data — ela aparece na lista
+  normal (com aviso em vermelho se já passou do prazo) e também na Agenda.
 
-## Como usar no dia a dia
+## Nada obrigatório mudou
 
-Ao começar uma atividade (ou depois de terminar), abre `/dashboard/horas`,
-clica em "Registrar horas", escreve o que fez, escolhe o cliente e marca o
-horário de início e fim. No fim do mês, o card "Este mês, por cliente" já
-mostra o total de horas de cada um, pronto pra você usar como quiser
-(mostrar valor do seu trabalho, cobrar avulso, o que for).
+O prazo é opcional em tudo — quem não usar, continua funcionando exatamente
+como antes.

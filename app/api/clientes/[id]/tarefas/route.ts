@@ -17,6 +17,7 @@ export async function POST(
       titulo: body.titulo,
       tipo: body.tipo || "tarefa",
       link: body.link || null,
+      prazo: body.prazo ? new Date(body.prazo) : null,
     },
   });
 

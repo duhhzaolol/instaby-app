@@ -144,7 +144,11 @@ export default async function ClienteDetalhePage({
               <p className="text-sm text-muted">Nenhuma tarefa ainda.</p>
             )}
             {cliente.tarefas.map((t, i) => (
-              <TarefaRow key={t.id} index={i} tarefa={{ id: t.id, titulo: t.titulo, tipo: t.tipo, status: t.status }} />
+              <TarefaRow
+                key={t.id}
+                index={i}
+                tarefa={{ id: t.id, titulo: t.titulo, tipo: t.tipo, status: t.status, prazo: t.prazo?.toISOString() || null }}
+              />
             ))}
           </div>
           <NovaTarefaForm clienteId={cliente.id} />

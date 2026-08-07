@@ -9,7 +9,11 @@ export async function PATCH(
 
   const tarefa = await prisma.tarefa.update({
     where: { id: params.id },
-    data: { status: body.status },
+    data: {
+      ...(body.status !== undefined && { status: body.status }),
+      ...(body.titulo !== undefined && { titulo: body.titulo }),
+      ...(body.prazo !== undefined && { prazo: body.prazo ? new Date(body.prazo) : null }),
+    },
   });
 
   return NextResponse.json(tarefa);

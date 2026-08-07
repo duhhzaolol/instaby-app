@@ -13,6 +13,7 @@ import {
   Package,
   Package2,
   Clock,
+  Calendar,
   Settings,
   Menu,
   X,
@@ -21,6 +22,7 @@ import {
 const menuPrincipal = [
   { label: "Visão geral", href: "/dashboard", icon: LayoutGrid },
   { label: "Clientes", href: "/dashboard/clientes", icon: Users },
+  { label: "Agenda", href: "/dashboard/agenda", icon: Calendar },
   { label: "Horas", href: "/dashboard/horas", icon: Clock },
   { label: "Financeiro", href: "/dashboard/financeiro", icon: Wallet },
 ];

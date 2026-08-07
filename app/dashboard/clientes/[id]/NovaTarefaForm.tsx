@@ -9,6 +9,7 @@ export default function NovaTarefaForm({ clienteId }: { clienteId: string }) {
   const [aberto, setAberto] = useState(false);
   const [titulo, setTitulo] = useState("");
   const [tipo, setTipo] = useState("tarefa");
+  const [prazo, setPrazo] = useState("");
   const [enviando, setEnviando] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -18,13 +19,14 @@ export default function NovaTarefaForm({ clienteId }: { clienteId: string }) {
     const resposta = await fetch(`/api/clientes/${clienteId}/tarefas`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ titulo, tipo }),
+      body: JSON.stringify({ titulo, tipo, prazo: prazo || null }),
     });
 
     setEnviando(false);
 
     if (resposta.ok) {
       setTitulo("");
+      setPrazo("");
       setAberto(false);
       router.refresh();
     }
@@ -60,6 +62,13 @@ export default function NovaTarefaForm({ clienteId }: { clienteId: string }) {
           <option value="tarefa">Tarefa</option>
           <option value="ideia">Ideia</option>
         </select>
+        <input
+          type="date"
+          value={prazo}
+          onChange={(e) => setPrazo(e.target.value)}
+          title="Prazo (opcional)"
+          className="h-9 rounded-lg border border-border bg-base px-2 text-sm text-text"
+        />
         <button
           type="submit"
           disabled={enviando}

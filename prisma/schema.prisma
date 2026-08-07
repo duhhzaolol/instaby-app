@@ -44,6 +44,7 @@ model Tarefa {
   titulo    String
   tipo      String   @default("tarefa") // tarefa | ideia
   status    String   @default("a_fazer") // a_fazer | em_andamento | feito
+  prazo     DateTime?
   link      String?
   createdAt DateTime @default(now())
 }

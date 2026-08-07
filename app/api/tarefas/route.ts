@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
       tipo: body.tipo || "tarefa",
       clienteId: body.clienteId || null,
       link: body.link || null,
+      prazo: body.prazo ? new Date(body.prazo) : null,
     },
   });
 

@@ -55,6 +55,7 @@ export default async function DashboardPage() {
         titulo: t.titulo,
         tipo: t.tipo,
         status: t.status,
+        prazo: t.prazo?.toISOString() || null,
         clienteNome: t.cliente?.nome || null,
       }))}
       clientes={clientes}
