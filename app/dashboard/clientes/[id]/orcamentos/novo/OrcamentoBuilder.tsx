@@ -22,14 +22,18 @@ export default function OrcamentoBuilder({
   clienteNome,
   servicos,
   pacotes,
+  selecaoInicial,
 }: {
   clienteId: string;
   clienteNome: string;
   servicos: Servico[];
   pacotes: Pacote[];
+  selecaoInicial?: Selecionado[];
 }) {
   const router = useRouter();
-  const [selecionados, setSelecionados] = useState<Record<string, Selecionado>>({});
+  const [selecionados, setSelecionados] = useState<Record<string, Selecionado>>(
+    Object.fromEntries((selecaoInicial || []).map((s) => [s.servicoId, s]))
+  );
   const [enviando, setEnviando] = useState(false);
 
   function aplicarPacote(pacote: Pacote) {

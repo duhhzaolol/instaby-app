@@ -47,7 +47,8 @@ export default async function ClienteDetalhePage({
   ];
 
   const orcamentosAceitos = cliente.orcamentos.filter((o) => o.status === "aceito");
-  const mensalidade = cliente.servicosContratados.reduce((soma, sc) => soma + Number(sc.valor), 0);
+  const totalServicos = cliente.servicosContratados.reduce((soma, sc) => soma + Number(sc.valor), 0);
+  const mensalidade = Math.max(0, totalServicos - Number(cliente.descontoMensal));
 
   return (
     <div>
@@ -171,6 +172,9 @@ export default async function ClienteDetalhePage({
             categoria: s.categoria,
             valorUnitario: Number(s.valorUnitario),
           }))}
+          descontoMensal={Number(cliente.descontoMensal)}
+          prazoContratoMeses={cliente.prazoContratoMeses}
+          valorRenovacao={cliente.valorRenovacao ? Number(cliente.valorRenovacao) : null}
         />
       )}
 
@@ -223,6 +227,7 @@ export default async function ClienteDetalhePage({
             orcamentoId: c.orcamentoId,
           }))}
           orcamentosAceitos={orcamentosAceitos.map((o) => ({ id: o.id, slug: o.slug }))}
+          temServicosContratados={cliente.servicosContratados.length > 0}
         />
       )}
       {aba === "horas" && (

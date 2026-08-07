@@ -17,16 +17,19 @@ model Usuario {
 }
 
 model Cliente {
-  id           String   @id @default(uuid())
-  nome         String
-  whatsapp     String?
-  cnpj         String?
-  contatoNome  String?
-  endereco     String?
-  logoUrl      String?
-  linkDrive    String?
-  status       String   @default("lead") // lead | ativo | inativo
-  createdAt    DateTime @default(now())
+  id                 String    @id @default(uuid())
+  nome               String
+  whatsapp           String?
+  cnpj               String?
+  contatoNome        String?
+  endereco           String?
+  logoUrl            String?
+  linkDrive          String?
+  status             String    @default("lead") // lead | ativo | inativo
+  descontoMensal     Decimal   @default(0) // abatido do total dos serviços contratados
+  prazoContratoMeses Int?
+  valorRenovacao     Decimal?
+  createdAt          DateTime  @default(now())
 
   tarefas             Tarefa[]
   orcamentos          Orcamento[]
@@ -51,12 +54,13 @@ model Tarefa {
 
 // Catálogo reutilizável de serviços — a "esteira de produto"
 model Servico {
-  id            String   @id @default(uuid())
-  nome          String
-  descricao     String
-  categoria     String
-  unidade       String? // ex: "mês", "reel"
-  valorUnitario Decimal
+  id              String   @id @default(uuid())
+  nome            String
+  descricao       String // texto usado na proposta (orçamento público)
+  clausulaContrato String? // texto usado no contrato — se vazio, usa a descrição
+  categoria       String
+  unidade         String? // ex: "mês", "reel"
+  valorUnitario   Decimal
 
   itens        ItemOrcamento[]
   pacoteItens  PacoteItem[]

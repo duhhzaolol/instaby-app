@@ -14,6 +14,7 @@ export default function NovoServicoPage() {
   const [categoria, setCategoria] = useState("Social media");
   const [unidade, setUnidade] = useState("mês");
   const [valor, setValor] = useState(0);
+  const [clausulaContrato, setClausulaContrato] = useState("");
   const [enviando, setEnviando] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -29,6 +30,7 @@ export default function NovoServicoPage() {
         categoria,
         unidade,
         valorUnitario: valor,
+        clausulaContrato,
       }),
     });
 
@@ -80,7 +82,16 @@ export default function NovoServicoPage() {
           </div>
 
           <Label>Valor unitário</Label>
-          <CurrencyInput value={valor} onChange={setValor} className="mb-6" />
+          <CurrencyInput value={valor} onChange={setValor} className="mb-4" />
+
+          <Label>Texto pro contrato (opcional — se deixar em branco, usa a descrição acima)</Label>
+          <Textarea
+            value={clausulaContrato}
+            onChange={(e) => setClausulaContrato(e.target.value)}
+            rows={3}
+            placeholder="Ex: A Instaby ficará responsável pela gestão de conteúdo do Instagram do cliente, incluindo planejamento e publicação."
+            className="mb-6"
+          />
 
           <Button type="submit" disabled={enviando} className="w-full">
             {enviando ? "Salvando..." : "Salvar serviço"}

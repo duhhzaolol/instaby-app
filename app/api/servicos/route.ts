@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
       categoria: body.categoria || "Outros",
       unidade: body.unidade || "mês",
       valorUnitario: body.valorUnitario,
+      clausulaContrato: body.clausulaContrato || null,
     },
   });
 

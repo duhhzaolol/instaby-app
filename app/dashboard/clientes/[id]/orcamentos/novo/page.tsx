@@ -9,7 +9,10 @@ export default async function NovoOrcamentoPage({
 }: {
   params: { id: string };
 }) {
-  const cliente = await prisma.cliente.findUnique({ where: { id: params.id } });
+  const cliente = await prisma.cliente.findUnique({
+    where: { id: params.id },
+    include: { servicosContratados: { where: { ativo: true } } },
+  });
   if (!cliente) notFound();
 
   const [servicos, pacotes] = await Promise.all([
@@ -27,7 +30,11 @@ export default async function NovoOrcamentoPage({
       </Link>
 
       <p className="mb-1 text-lg font-medium text-text">Novo orçamento — {cliente.nome}</p>
-      <p className="mb-5 text-sm text-muted">Selecione os serviços do catálogo — a página vai ganhando forma ao lado</p>
+      <p className="mb-5 text-sm text-muted">
+        {cliente.servicosContratados.length > 0
+          ? "Já veio com os serviços contratados dele marcados — ajuste se precisar"
+          : "Selecione os serviços do catálogo — a página vai ganhando forma ao lado"}
+      </p>
 
       {servicos.length === 0 ? (
         <p className="text-sm text-muted">
@@ -46,6 +53,10 @@ export default async function NovoOrcamentoPage({
             id: p.id,
             nome: p.nome,
             itens: p.itens.map((i) => ({ servicoId: i.servicoId, quantidade: i.quantidade })),
+          }))}
+          selecaoInicial={cliente.servicosContratados.map((sc) => ({
+            servicoId: sc.servicoId,
+            quantidade: sc.quantidade,
           }))}
         />
       )}

@@ -15,6 +15,7 @@ export async function PATCH(
       ...(body.categoria !== undefined && { categoria: body.categoria }),
       ...(body.unidade !== undefined && { unidade: body.unidade }),
       ...(body.valorUnitario !== undefined && { valorUnitario: body.valorUnitario }),
+      ...(body.clausulaContrato !== undefined && { clausulaContrato: body.clausulaContrato }),
     },
   });
 

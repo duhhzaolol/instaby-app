@@ -34,6 +34,13 @@ export async function PATCH(
       ...(body.logoUrl !== undefined && { logoUrl: body.logoUrl }),
       ...(body.linkDrive !== undefined && { linkDrive: body.linkDrive }),
       ...(body.status !== undefined && { status: body.status }),
+      ...(body.descontoMensal !== undefined && { descontoMensal: body.descontoMensal }),
+      ...(body.prazoContratoMeses !== undefined && {
+        prazoContratoMeses: body.prazoContratoMeses ? parseInt(body.prazoContratoMeses) : null,
+      }),
+      ...(body.valorRenovacao !== undefined && {
+        valorRenovacao: body.valorRenovacao || null,
+      }),
     },
   });
 

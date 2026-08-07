@@ -1,22 +1,40 @@
 # Instaby App
 
-Painel interno da Instaby Agência — v16.
+Painel interno da Instaby Agência — v17.
 
 ## O que entrou nesta versão
 
-- **Registrar horas agora pode concluir a tarefa relacionada**: ao
-  escolher o cliente no formulário de "Registrar horas", se ele tiver
-  tarefas pendentes, aparece um campo "Isso conclui alguma tarefa
-  pendente?" — escolhe a tarefa (ex: "Gravação") e ela é marcada como
-  Feito junto com o registro das horas. Antes isso não existia — tarefa e
-  horas eram completamente separadas, por isso ficava pendência mesmo
-  depois de registrar o trabalho.
-- **Cores dos status de tarefa, bem mais distintas**: A fazer (cinza), Em
-  andamento (azul), Feito (verde) — antes "Em andamento" usava a mesma cor
-  de destaque do app (vermelho), o que confundia com o aviso de prazo
-  vencido (que também é vermelho). Agora só o "vencido" usa vermelho.
+- **Novo orçamento já vem com os serviços contratados marcados**: se o
+  cliente já tem serviços contratados cadastrados, ao clicar em "Novo
+  orçamento" o construtor já abre com as pílulas certas selecionadas —
+  não precisa escolher tudo de novo do zero.
 
-## Importante
+- **Desconto, prazo e renovação no cliente** (aba Serviços): agora mostra
+  Total dos serviços (valor de tabela somado), um campo de Desconto mensal
+  que você define (ex: vendeu R$ 4.000 em serviços por R$ 2.000 — desconto
+  de R$ 2.000), e a Mensalidade final já calculada. Também dá pra marcar
+  Prazo do contrato (em meses) e Valor após renovação — tudo isso já
+  aparece resumido ali mesmo.
 
-Vincular a tarefa é opcional — se você não selecionar nada, o registro de
-horas funciona exatamente como antes, sem mexer em tarefa nenhuma.
+- **Cada serviço do catálogo ganhou um "texto pro contrato"**: campo
+  separado da descrição da proposta (que é mais de venda). Esse texto é
+  o que vai literalmente pro contrato. Se deixar em branco, usa a
+  descrição normal.
+
+- **Gerar contrato a partir dos Serviços Contratados**: na aba Contratos,
+  agora tem um botão "Gerar contrato dos serviços contratados" — ele
+  junta a cláusula de cada serviço contratado, mais o valor com desconto,
+  mais o prazo e a renovação (se você tiver preenchido), tudo automático.
+  Você só edita se quiser ajustar alguma coisa depois — não precisa
+  escrever nada do zero.
+
+## Como usar (fluxo completo)
+
+1. Cadastre os serviços no catálogo, com a descrição (pra proposta) e o
+   texto de contrato (opcional, se for diferente)
+2. No cliente → aba Serviços → marca tudo que ele contratou
+3. Se negociou um valor diferente da soma, ajusta o "Desconto mensal" —
+   e já dá pra ver quanto está deixando de cobrar
+4. Preenche prazo do contrato e valor de renovação, se tiver
+5. Na aba Contratos, clica em "Gerar contrato dos serviços contratados" —
+   pronto, texto todo montado

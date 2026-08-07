@@ -27,10 +27,12 @@ export default function ContratosTab({
   clienteId,
   contratos,
   orcamentosAceitos,
+  temServicosContratados,
 }: {
   clienteId: string;
   contratos: Contrato[];
   orcamentosAceitos: OrcamentoAceito[];
+  temServicosContratados: boolean;
 }) {
   const router = useRouter();
   const [gerando, setGerando] = useState(false);
@@ -43,6 +45,17 @@ export default function ContratosTab({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ orcamentoId }),
+    });
+    setGerando(false);
+    router.refresh();
+  }
+
+  async function gerarDosServicos() {
+    setGerando(true);
+    await fetch(`/api/clientes/${clienteId}/contratos`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fonte: "servicos" }),
     });
     setGerando(false);
     router.refresh();
@@ -79,17 +92,27 @@ export default function ContratosTab({
 
   return (
     <div>
-      {orcamentosAceitos.length > 0 && (
+      {(orcamentosAceitos.length > 0 || temServicosContratados) && (
         <div className="mb-5 flex flex-wrap gap-2">
+          {temServicosContratados && (
+            <button
+              onClick={gerarDosServicos}
+              disabled={gerando}
+              className="flex items-center gap-1.5 rounded-full border border-accent/20 bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent disabled:opacity-50"
+            >
+              <FileSignature size={12} />
+              {gerando ? "Gerando..." : "Gerar contrato dos serviços contratados"}
+            </button>
+          )}
           {orcamentosAceitos.map((o) => (
             <button
               key={o.id}
               onClick={() => gerarDoOrcamento(o.id)}
               disabled={gerando}
-              className="flex items-center gap-1.5 rounded-full border border-accent/20 bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-full border border-border bg-card/60 px-3 py-1.5 text-xs font-medium text-muted disabled:opacity-50"
             >
               <FileSignature size={12} />
-              {gerando ? "Gerando..." : `Gerar contrato do orçamento ${o.slug}`}
+              {gerando ? "Gerando..." : `Gerar do orçamento ${o.slug}`}
             </button>
           ))}
         </div>
@@ -100,9 +123,9 @@ export default function ContratosTab({
           icon={FileSignature}
           title="Nenhum contrato ainda"
           description={
-            orcamentosAceitos.length > 0
-              ? "Use o botão acima pra gerar um a partir de um orçamento aceito."
-              : "Assim que um orçamento for aceito, você pode gerar o contrato automaticamente a partir dele."
+            temServicosContratados || orcamentosAceitos.length > 0
+              ? "Use um dos botões acima pra gerar automaticamente."
+              : "Adicione serviços contratados ou aceite um orçamento pra poder gerar o contrato."
           }
         />
       ) : (
