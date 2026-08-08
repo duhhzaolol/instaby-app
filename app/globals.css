@@ -55,3 +55,42 @@
     transform: translateX(50%);
   }
 }
+
+@keyframes shutter-left {
+  0%, 12% { transform: translateX(0); }
+  38%, 74% { transform: translateX(-100%); }
+  96%, 100% { transform: translateX(0); }
+}
+
+@keyframes shutter-right {
+  0%, 12% { transform: translateX(0); }
+  38%, 74% { transform: translateX(100%); }
+  96%, 100% { transform: translateX(0); }
+}
+
+@keyframes shutter-number {
+  0%, 30% { opacity: 0; transform: scale(0.8); }
+  45% { opacity: 1; transform: scale(1); }
+  68% { opacity: 1; transform: scale(1); }
+  80%, 100% { opacity: 0; transform: scale(0.9); }
+}
+
+@keyframes shutter-flash {
+  0%, 90% { opacity: 0; }
+  94% { opacity: 0.18; }
+  99% { opacity: 0; }
+  100% { opacity: 0; }
+}
+
+.animate-shutter-left {
+  animation: shutter-left 1.6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+.animate-shutter-right {
+  animation: shutter-right 1.6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+.animate-shutter-number {
+  animation: shutter-number 1.6s ease-in-out infinite;
+}
+.animate-shutter-flash {
+  animation: shutter-flash 1.6s ease-in-out infinite;
+}
