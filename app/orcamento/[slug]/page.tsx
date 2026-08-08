@@ -139,7 +139,7 @@ export default async function OrcamentoPublicoPage({
           <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-center gap-x-10 gap-y-4">
             {logos.map((l) => (
               // eslint-disable-next-line @next/next/no-img-element
-              <img key={l.nome} src={l.logoUrl!} alt={l.nome} className="h-7 w-auto object-contain grayscale opacity-70" />
+              <img key={l.nome} src={l.logoUrl!} alt={l.nome} className="h-11 w-auto max-w-[140px] object-contain grayscale opacity-80" />
             ))}
           </div>
         </div>
