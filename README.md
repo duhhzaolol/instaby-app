@@ -1,41 +1,23 @@
 # Instaby App
 
-Painel interno da Instaby Agência — v23.
-
-## Sobre a sua pergunta: vale a pena levar esse estilo pro resto do sistema?
-
-Sim, acho que faz muito sentido — o ícone colorido por categoria ajuda a
-escanear visualmente mais rápido, tanto pra você internamente quanto pro
-cliente. Criei um arquivo só (`lib/categoriaVisual.ts`) com o mapeamento
-categoria → ícone/cor, e já uso ele em três lugares agora (orçamento
-público, contrato público, catálogo interno). Da próxima vez que
-quisermos levar pra mais uma tela (Financeiro, Dashboard, etc.), é só
-importar esse arquivo — não precisa redesenhar do zero.
+Painel interno da Instaby Agência — v25.
 
 ## O que entrou nesta versão
 
-### Página pública do contrato (`/contrato/[id]`)
-No mesmo estilo visual da proposta: cabeçalho com código (#CT-2026-XXX) e
-status, hero com gradiente, cada serviço contratado como um card com
-ícone colorido por categoria + o texto da cláusula daquele serviço,
-sidebar com o valor mensal, vigência e renovação (quando preenchidos).
+- **Logos bem maiores**: de 44px pra 64px de altura, mais próximo do
+  tamanho da referência que você mandou.
+- **Carrossel infinito**: os logos agora deslizam sozinhos, lentamente,
+  da esquerda pra direita, em loop contínuo — não precisa mais caber tudo
+  na tela de uma vez. Quando você cadastrar mais clientes (os ~10 que
+  mencionou), eles entram na fileira automaticamente, sem quebrar o
+  layout.
+- **Ordem embaralhada**: a cada vez que a página carrega, a ordem dos
+  logos é sorteada de novo — não fica sempre a mesma sequência.
+- **Pausa ao passar o mouse**: se alguém parar o cursor em cima (no
+  computador), o carrossel pausa, pra dar tempo de ver um logo específico.
 
-Ela puxa os dados de duas formas, na ordem:
-1. Se o contrato foi gerado a partir de um orçamento, usa os itens
-   daquele orçamento
-2. Senão, usa os Serviços Contratados atuais do cliente
-3. Se não tiver nenhum dos dois (contrato escrito na mão), mostra o texto
-   corrido normal, sem os cards
+## Sobre o logo com fundo branco
 
-Link pra essa página aparece em cada contrato, na aba Contratos do
-cliente ("Ver página").
-
-### Catálogo interno com ícone colorido
-A lista de Serviços (`/dashboard/servicos`) agora mostra o mesmo ícone
-colorido por categoria que já aparece na proposta pública — mais fácil de
-escanear visualmente qual é qual.
-
-## Próximos passos possíveis (não pedidos ainda, só sugestão)
-- Levar o mesmo ícone/cor pra aba Serviços Contratados do cliente e pro
-  construtor de orçamento (pílulas com ícone em vez de só texto)
-- Aplicar em Financeiro e no Dashboard também
+Isso é o arquivo salvo, não o código — segue valendo a orientação de
+resalvar como PNG com fundo transparente. O carrossel já está pronto pra
+ficar bonito assim que os arquivos estiverem certos.

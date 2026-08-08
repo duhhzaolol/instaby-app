@@ -36,6 +36,8 @@ export default async function OrcamentoPublicoPage({
 
   if (!orcamento) notFound();
 
+  const logosEmbaralhados = [...logos].sort(() => Math.random() - 0.5);
+
   const validoAte = new Date(orcamento.createdAt);
   validoAte.setDate(validoAte.getDate() + 15);
   const codigo = gerarCodigo(orcamento.id, orcamento.createdAt);
@@ -133,14 +135,30 @@ export default async function OrcamentoPublicoPage({
         }))}
       />
 
-      {logos.length > 0 && (
-        <div className="border-t border-white/[0.06] px-4 py-10">
-          <p className="mb-6 text-center text-xs text-[#9CA3AF]">Empresas que confiam no nosso trabalho</p>
-          <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-center gap-x-10 gap-y-4">
-            {logos.map((l) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img key={l.nome} src={l.logoUrl!} alt={l.nome} className="h-11 w-auto max-w-[140px] object-contain grayscale opacity-80" />
-            ))}
+      {logosEmbaralhados.length > 0 && (
+        <div className="border-t border-white/[0.06] py-10">
+          <p className="mb-7 text-center text-xs text-[#9CA3AF]">Empresas que confiam no nosso trabalho</p>
+          <div
+            className="group relative overflow-hidden"
+            style={{
+              maskImage: "linear-gradient(90deg, transparent, black 8%, black 92%, transparent)",
+              WebkitMaskImage: "linear-gradient(90deg, transparent, black 8%, black 92%, transparent)",
+            }}
+          >
+            <div
+              className="flex w-max items-center gap-16 animate-marquee group-hover:[animation-play-state:paused]"
+              style={{ animationDuration: `${Math.max(logosEmbaralhados.length * 4, 16)}s` }}
+            >
+              {[...logosEmbaralhados, ...logosEmbaralhados].map((l, i) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={`${l.nome}-${i}`}
+                  src={l.logoUrl!}
+                  alt={l.nome}
+                  className="h-16 w-auto max-w-[190px] shrink-0 object-contain grayscale opacity-80 transition-opacity hover:opacity-100"
+                />
+              ))}
+            </div>
           </div>
         </div>
       )}
