@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Users, UserPlus, Wallet, Clock, ChevronDown } from "lucide-react";
+import Link from "next/link";
+import { Users, UserPlus, Wallet, Clock, ChevronDown, CalendarClock, ArrowRight } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { CountUp } from "@/components/ui/CountUp";
-import { QuickAddTarefa } from "@/components/dashboard/QuickAddTarefa";
+import { QuickCommandCenter } from "@/components/dashboard/QuickCommandCenter";
 import { TarefaRow, TarefaRowData } from "@/components/dashboard/TarefaRow";
+import { visualDaCategoriaTarefa } from "@/lib/categoriaTarefaVisual";
 import { useOcultarValores, BotaoOcultarValores, ValorSensivel } from "@/components/ui/OcultarValores";
 
 type Metrics = {
@@ -17,17 +19,23 @@ type Metrics = {
   tarefasAbertas: number;
 };
 
-type Cliente = { id: string; nome: string };
-type Tarefa = TarefaRowData & { clienteNome: string | null };
+type Cliente = { id: string; nome: string; cor: string | null };
+type ClienteResumo = { id: string; nome: string; cor: string | null; totalTarefas: number; pendentes: number };
+type Tarefa = TarefaRowData & { clienteNome: string | null; clienteCor: string | null };
+type TarefaHoje = { id: string; titulo: string; categoria: string | null; prazo: string; clienteNome: string | null; clienteCor: string | null };
 
 export default function DashboardClient({
   metrics,
   tarefas,
   clientes,
+  clientesResumo,
+  tarefasHoje,
 }: {
   metrics: Metrics;
   tarefas: Tarefa[];
   clientes: Cliente[];
+  clientesResumo: ClienteResumo[];
+  tarefasHoje: TarefaHoje[];
 }) {
   const { oculto, alternar } = useOcultarValores();
   const [verConcluidas, setVerConcluidas] = useState(false);
@@ -58,7 +66,7 @@ export default function DashboardClient({
         {cards.map((c, i) => {
           const Icon = c.icon;
           return (
-            <Card key={c.label} index={i} className="p-4">
+            <Card key={c.label} index={i} className="p-4 transition-shadow hover:shadow-glow">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-xs text-muted">{c.label}</p>
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent/10 text-accent">
@@ -79,7 +87,70 @@ export default function DashboardClient({
         })}
       </div>
 
-      <QuickAddTarefa clientes={clientes} />
+      <QuickCommandCenter clientes={clientes} />
+
+      {tarefasHoje.length > 0 && (
+        <div className="mb-6">
+          <p className="mb-3 flex items-center gap-1.5 text-sm font-medium text-text">
+            <CalendarClock size={14} className="text-accent" /> Hoje
+          </p>
+          <div className="flex flex-col gap-2">
+            {tarefasHoje.map((t) => {
+              const { icone: Icon, cor } = visualDaCategoriaTarefa(t.categoria);
+              const hora = new Date(t.prazo).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+              return (
+                <div
+                  key={t.id}
+                  className="flex items-center gap-3 rounded-xl border border-border bg-card/60 px-4 py-2.5"
+                  style={t.clienteCor ? { borderLeft: `2px solid ${t.clienteCor}` } : undefined}
+                >
+                  <span className="w-12 shrink-0 text-xs font-medium text-muted">{hora}</span>
+                  <div
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+                    style={{ backgroundColor: `${cor}1A`, color: cor }}
+                  >
+                    <Icon size={13} />
+                  </div>
+                  <p className="text-sm text-text">
+                    {t.titulo}
+                    {t.clienteNome && <span className="text-muted"> — {t.clienteNome}</span>}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {clientesResumo.length > 0 && (
+        <div className="mb-6">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="flex items-center gap-1.5 text-sm font-medium text-text">
+              <Users size={14} className="text-accent" /> Clientes ativos
+            </p>
+            <Link href="/dashboard/clientes" className="flex items-center gap-1 text-xs text-muted hover:text-text">
+              Ver todos <ArrowRight size={11} />
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+            {clientesResumo.map((c) => (
+              <Link key={c.id} href={`/dashboard/clientes/${c.id}`}>
+                <Card hoverable={false} className="p-3 transition-colors hover:bg-hover">
+                  <span
+                    className="mb-2 inline-block h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: c.cor || "#9CA3AF" }}
+                  />
+                  <p className="truncate text-xs font-medium text-text">{c.nome}</p>
+                  <p className="text-[11px] text-muted">
+                    {c.totalTarefas} tarefas
+                    {c.pendentes > 0 && <span className="text-accent"> · {c.pendentes} pendente{c.pendentes > 1 ? "s" : ""}</span>}
+                  </p>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="mb-3 flex items-center justify-between">
         <p className="text-sm font-medium text-text">
@@ -92,7 +163,7 @@ export default function DashboardClient({
           <p className="text-sm text-muted">Nada pendente — capriche no cafezinho ☕</p>
         )}
         {abertas.map((t, i) => (
-          <TarefaRow key={t.id} index={i} tarefa={t} clienteNome={t.clienteNome} />
+          <TarefaRow key={t.id} index={i} tarefa={t} clienteNome={t.clienteNome} clienteCor={t.clienteCor} />
         ))}
       </div>
 
@@ -108,7 +179,7 @@ export default function DashboardClient({
           {verConcluidas && (
             <div className="flex flex-col gap-2 opacity-60">
               {concluidas.map((t, i) => (
-                <TarefaRow key={t.id} index={i} tarefa={t} clienteNome={t.clienteNome} />
+                <TarefaRow key={t.id} index={i} tarefa={t} clienteNome={t.clienteNome} clienteCor={t.clienteCor} />
               ))}
             </div>
           )}

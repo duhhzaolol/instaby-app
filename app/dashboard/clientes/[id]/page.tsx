@@ -148,7 +148,16 @@ export default async function ClienteDetalhePage({
               <TarefaRow
                 key={t.id}
                 index={i}
-                tarefa={{ id: t.id, titulo: t.titulo, tipo: t.tipo, status: t.status, prazo: t.prazo?.toISOString() || null }}
+                tarefa={{
+                  id: t.id,
+                  titulo: t.titulo,
+                  tipo: t.tipo,
+                  status: t.status,
+                  prazo: t.prazo?.toISOString() || null,
+                  categoria: t.categoria,
+                  descricao: t.descricao,
+                  prioridade: t.prioridade,
+                }}
               />
             ))}
           </div>

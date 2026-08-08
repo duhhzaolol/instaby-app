@@ -12,6 +12,9 @@ export async function PATCH(
     data: {
       ...(body.status !== undefined && { status: body.status }),
       ...(body.titulo !== undefined && { titulo: body.titulo }),
+      ...(body.descricao !== undefined && { descricao: body.descricao }),
+      ...(body.prioridade !== undefined && { prioridade: body.prioridade }),
+      ...(body.categoria !== undefined && { categoria: body.categoria }),
       ...(body.prazo !== undefined && { prazo: body.prazo ? new Date(body.prazo) : null }),
     },
   });

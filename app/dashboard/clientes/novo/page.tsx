@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Input, Label } from "@/components/ui/Input";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
+import { SeletorCor } from "@/components/ui/SeletorCor";
 import { Button } from "@/components/ui/Button";
 
 export default function NovoClientePage() {
@@ -16,6 +17,7 @@ export default function NovoClientePage() {
   const [endereco, setEndereco] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [linkDrive, setLinkDrive] = useState("");
+  const [cor, setCor] = useState("#3B82F6");
   const [status, setStatus] = useState("lead");
   const [mensalidade, setMensalidade] = useState(0);
   const [proximoVencimento, setProximoVencimento] = useState("");
@@ -36,6 +38,7 @@ export default function NovoClientePage() {
         endereco,
         logoUrl,
         linkDrive,
+        cor,
         status,
         ...(status === "ativo" && { mensalidade, proximoVencimento }),
       }),
@@ -95,6 +98,11 @@ export default function NovoClientePage() {
             placeholder="https://drive.google.com/..."
             className="mb-4"
           />
+
+          <Label>Cor do cliente (usada em tarefas, agenda e badges)</Label>
+          <div className="mb-4">
+            <SeletorCor value={cor} onChange={setCor} />
+          </div>
 
           <Label>Status</Label>
           <select

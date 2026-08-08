@@ -91,7 +91,7 @@ export default async function ClientesPage({
 
           return (
             <Link key={c.id} href={`/dashboard/clientes/${c.id}`}>
-              <Card index={i} className="p-4">
+              <Card index={i} className="p-4" style={c.cor ? { borderLeft: `3px solid ${c.cor}` } : undefined}>
                 <div className="mb-4 flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     {c.logoUrl ? (
@@ -102,7 +102,10 @@ export default async function ClientesPage({
                         className="h-10 w-10 rounded-xl object-cover"
                       />
                     ) : (
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-sm font-semibold text-accent">
+                      <div
+                        className="flex h-10 w-10 items-center justify-center rounded-xl text-sm font-semibold"
+                        style={{ backgroundColor: `${c.cor || "#E63946"}1A`, color: c.cor || "#E63946" }}
+                      >
                         {iniciais}
                       </div>
                     )}

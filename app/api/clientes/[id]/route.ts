@@ -42,6 +42,7 @@ export async function PATCH(
         valorRenovacao: body.valorRenovacao || null,
       }),
       ...(body.exibirLogoPublico !== undefined && { exibirLogoPublico: body.exibirLogoPublico }),
+      ...(body.cor !== undefined && { cor: body.cor }),
     },
   });
 

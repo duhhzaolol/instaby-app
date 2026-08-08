@@ -6,6 +6,7 @@ import { Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Input, Label } from "@/components/ui/Input";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
+import { SeletorCor } from "@/components/ui/SeletorCor";
 import { Button } from "@/components/ui/Button";
 
 type Cliente = {
@@ -17,6 +18,7 @@ type Cliente = {
   endereco: string;
   logoUrl: string;
   linkDrive: string;
+  cor: string;
   status: string;
 };
 
@@ -29,6 +31,7 @@ export default function EditarClienteForm({ cliente }: { cliente: Cliente }) {
   const [endereco, setEndereco] = useState(cliente.endereco);
   const [logoUrl, setLogoUrl] = useState(cliente.logoUrl);
   const [linkDrive, setLinkDrive] = useState(cliente.linkDrive);
+  const [cor, setCor] = useState(cliente.cor || "#3B82F6");
   const [status, setStatus] = useState(cliente.status);
   const [mensalidade, setMensalidade] = useState(0);
   const [proximoVencimento, setProximoVencimento] = useState("");
@@ -52,6 +55,7 @@ export default function EditarClienteForm({ cliente }: { cliente: Cliente }) {
         endereco,
         logoUrl,
         linkDrive,
+        cor,
         status,
         ...(status === "ativo" && mensalidade > 0 && proximoVencimento && { mensalidade, proximoVencimento }),
       }),
@@ -108,6 +112,11 @@ export default function EditarClienteForm({ cliente }: { cliente: Cliente }) {
           placeholder="https://drive.google.com/..."
           className="mb-4"
         />
+
+        <Label>Cor do cliente (usada em tarefas, agenda e badges)</Label>
+        <div className="mb-4">
+          <SeletorCor value={cor} onChange={setCor} />
+        </div>
 
         <Label>Status</Label>
         <select

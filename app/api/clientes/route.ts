@@ -26,6 +26,9 @@ export async function POST(request: NextRequest) {
       cnpj: body.cnpj || null,
       contatoNome: body.contatoNome || null,
       endereco: body.endereco || null,
+      logoUrl: body.logoUrl || null,
+      linkDrive: body.linkDrive || null,
+      cor: body.cor || null,
       status: body.status || "lead",
     },
   });

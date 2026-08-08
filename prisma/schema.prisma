@@ -25,6 +25,7 @@ model Cliente {
   endereco           String?
   logoUrl            String?
   linkDrive          String?
+  cor                String? // hex — usada como accent do cliente (badges, tarefas, agenda)
   status             String    @default("lead") // lead | ativo | inativo
   descontoMensal     Decimal   @default(0) // abatido do total dos serviços contratados
   prazoContratoMeses Int?
@@ -42,14 +43,17 @@ model Cliente {
 }
 
 model Tarefa {
-  id        String   @id @default(uuid())
-  clienteId String?
-  cliente   Cliente? @relation(fields: [clienteId], references: [id])
-  titulo    String
-  tipo      String   @default("tarefa") // tarefa | ideia
-  status    String   @default("a_fazer") // a_fazer | em_andamento | feito
-  prazo     DateTime?
-  link      String?
+  id         String    @id @default(uuid())
+  clienteId  String?
+  cliente    Cliente?  @relation(fields: [clienteId], references: [id])
+  titulo     String
+  tipo       String    @default("tarefa") // tarefa | ideia
+  categoria  String? // gravacao | arte | reel | fotos | campanha | reuniao | contato | orcamento | ideia | outra
+  descricao  String?
+  prioridade String? // baixa | media | alta
+  status     String    @default("a_fazer") // a_fazer | em_andamento | feito
+  prazo      DateTime?
+  link       String?
   createdAt DateTime @default(now())
 }
 

@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   const tarefas = await prisma.tarefa.findMany({
-    include: { cliente: { select: { nome: true } } },
+    include: { cliente: { select: { nome: true, cor: true } } },
     orderBy: { createdAt: "desc" },
   });
   return NextResponse.json(tarefas);
@@ -20,6 +20,9 @@ export async function POST(request: NextRequest) {
     data: {
       titulo: body.titulo,
       tipo: body.tipo || "tarefa",
+      categoria: body.categoria || null,
+      descricao: body.descricao || null,
+      prioridade: body.prioridade || null,
       clienteId: body.clienteId || null,
       link: body.link || null,
       prazo: body.prazo ? new Date(body.prazo) : null,

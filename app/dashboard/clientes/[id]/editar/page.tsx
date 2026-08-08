@@ -19,6 +19,7 @@ export default async function EditarClientePage({ params }: { params: { id: stri
           endereco: cliente.endereco || "",
           logoUrl: cliente.logoUrl || "",
           linkDrive: cliente.linkDrive || "",
+          cor: cliente.cor || "",
           status: cliente.status,
         }}
       />
