@@ -1,24 +1,22 @@
 # Instaby App
 
-Painel interno da Instaby Agência — v31 (correção do gráfico).
+Painel interno da Instaby Agência — v32.
 
-## O bug
+## O que entrou nesta versão
 
-Quando o período escolhido era "Este mês" ou "Mês anterior" (só 1 mês),
-o gráfico de linha ficava só com um ponto — e uma linha não dá pra
-desenhar com um ponto só, por isso apareciam bolinhas soltas sem traço
-nenhum, do jeito que apareceu no seu print.
+**Gráfico de progresso do mês** — novo card "🚀 Progresso do mês", que só
+aparece quando o período selecionado é "Este mês" ou "Mês anterior".
+Mostra dia 1 até hoje (ou até o fim, se for mês anterior), com duas áreas
+subindo:
+- **Verde**: entradas acumuladas (soma de tudo que já entrou até aquele
+  dia)
+- **Vermelha**: lucro acumulado (entradas menos custos, até aquele dia)
 
-## A correção
+É exatamente a ideia do print que você mandou — um placar visual de
+"quanto já rendeu esse mês", que vai subindo conforme os dias passam,
+pra você acompanhar se está no ritmo de bater uma meta até o fim do mês.
 
-Separei as duas coisas:
-- Os **cards de resumo** (Entradas, Custos fixos, Custos flexíveis,
-  Lucro) continuam seguindo exatamente o período que você escolhe no
-  seletor
-- O **gráfico de linha** agora sempre mostra pelo menos 6 meses de
-  histórico, não importa qual período esteja selecionado nos cards —
-  assim sempre tem linha de verdade pra ver a tendência
-
-Adicionei uma notinha embaixo do título do gráfico deixando isso claro
-("Histórico dos últimos meses — os cards acima seguem o período
-escolhido"), pra não confundir.
+Esse gráfico fica **acima** do gráfico de comparação entre meses (que
+continua existindo, mostrando os últimos 6 meses lado a lado) — os dois
+convivem, cada um respondendo uma pergunta diferente: "como estou indo
+esse mês" vs. "como os meses se comparam".

@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   LineChart,
   Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   Tooltip,
@@ -12,7 +14,7 @@ import {
   CartesianGrid,
   Legend,
 } from "recharts";
-import { Plus, TrendingUp, TrendingDown, Wallet, AlertTriangle, MessageCircle } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, Wallet, AlertTriangle, MessageCircle, Rocket } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -50,6 +52,7 @@ export default function FinanceiroClient({
   periodo,
   resumo,
   grafico,
+  graficoDiario,
   cobrancasPendentes,
   custosFixos,
   custosFlexiveis,
@@ -58,6 +61,7 @@ export default function FinanceiroClient({
   periodo: string;
   resumo: { entradas: number; despesasFixas: number; despesasFlexiveis: number; lucro: number };
   grafico: { mes: string; entradas: number; despesasFixas: number; despesasFlexiveis: number }[];
+  graficoDiario: { dia: number; entradas: number; lucro: number }[] | null;
   cobrancasPendentes: CobrancaPendente[];
   custosFixos: DespesaRowData[];
   custosFlexiveis: DespesaRowData[];
@@ -146,6 +150,76 @@ export default function FinanceiroClient({
           </p>
         </Card>
       </div>
+
+      {graficoDiario && graficoDiario.length > 1 && (
+        <Card index={99} hoverable={false} className="mb-6 p-5">
+          <p className="flex items-center gap-1.5 text-sm font-medium text-text">
+            <Rocket size={14} className="text-accent" /> Progresso do mês
+          </p>
+          <p className="mb-4 text-xs text-muted">
+            Acumulado dia a dia — entrada e lucro subindo até o fim do mês
+          </p>
+          <ResponsiveContainer width="100%" height={220}>
+            <AreaChart data={graficoDiario} margin={{ left: -20, right: 8, top: 8 }}>
+              <defs>
+                <linearGradient id="corEntradaDiaria" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#22C55E" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="#22C55E" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="corLucroDiario" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#E63946" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="#E63946" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+              <XAxis
+                dataKey="dia"
+                stroke="#9CA3AF"
+                fontSize={11}
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={(d) => `dia ${d}`}
+                interval={Math.ceil(graficoDiario.length / 8)}
+              />
+              <YAxis hide />
+              <Tooltip
+                contentStyle={{
+                  background: "#1C2028",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  borderRadius: 12,
+                  fontSize: 12,
+                  color: "#F9FAFB",
+                }}
+                labelFormatter={(d) => `Dia ${d}`}
+                formatter={(v: number, nome: string) => [
+                  `R$ ${v.toLocaleString("pt-BR")}`,
+                  nome === "entradas" ? "Entradas acumuladas" : "Lucro acumulado",
+                ]}
+              />
+              <Legend
+                formatter={(v) => (v === "entradas" ? "Entradas acumuladas" : "Lucro acumulado")}
+                wrapperStyle={{ fontSize: 11, color: "#9CA3AF" }}
+              />
+              <Area
+                type="monotone"
+                dataKey="entradas"
+                stroke="#22C55E"
+                strokeWidth={2}
+                fill="url(#corEntradaDiaria)"
+                animationDuration={900}
+              />
+              <Area
+                type="monotone"
+                dataKey="lucro"
+                stroke="#E63946"
+                strokeWidth={2}
+                fill="url(#corLucroDiario)"
+                animationDuration={900}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </Card>
+      )}
 
       <Card index={4} hoverable={false} className="mb-6 p-5">
         <p className="text-sm font-medium text-text">Entradas x Custos fixos x Custos flexíveis</p>

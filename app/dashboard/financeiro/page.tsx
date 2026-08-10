@@ -106,6 +106,33 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: {
   const totalFixas = custosFixos.reduce((s, d) => s + Number(d.valor), 0);
   const totalFlexiveis = custosFlexiveis.reduce((s, d) => s + Number(d.valor), 0);
 
+  // Acúmulo dia a dia do mês selecionado (só faz sentido pra "este mês" / "mês anterior")
+  let graficoDiario: { dia: number; entradas: number; lucro: number }[] | null = null;
+  if (periodo === "mes_atual" || periodo === "mes_anterior") {
+    const ultimoDia =
+      periodo === "mes_atual" ? hoje.getDate() : new Date(ate.getFullYear(), ate.getMonth() + 1, 0).getDate();
+
+    const entradasPorDia: Record<number, number> = {};
+    const custosPorDia: Record<number, number> = {};
+    cobrancas.forEach((c) => {
+      const dia = c.createdAt.getDate();
+      entradasPorDia[dia] = (entradasPorDia[dia] || 0) + Number(c.valor);
+    });
+    despesas.forEach((d) => {
+      const dia = d.data.getDate();
+      custosPorDia[dia] = (custosPorDia[dia] || 0) + Number(d.valor);
+    });
+
+    let acumuladoEntradas = 0;
+    let acumuladoCustos = 0;
+    graficoDiario = [];
+    for (let dia = 1; dia <= ultimoDia; dia++) {
+      acumuladoEntradas += entradasPorDia[dia] || 0;
+      acumuladoCustos += custosPorDia[dia] || 0;
+      graficoDiario.push({ dia, entradas: acumuladoEntradas, lucro: acumuladoEntradas - acumuladoCustos });
+    }
+  }
+
   return (
     <FinanceiroClient
       periodo={periodo}
@@ -116,6 +143,7 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: {
         lucro: totalEntradas - totalFixas - totalFlexiveis,
       }}
       grafico={Object.entries(mensal).map(([mes, v]) => ({ mes, ...v }))}
+      graficoDiario={graficoDiario}
       cobrancasPendentes={cobrancasPendentes.map((c) => ({
         id: c.id,
         cliente: c.cliente.nome,
