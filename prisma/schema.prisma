@@ -165,13 +165,15 @@ model Cobranca {
 }
 
 model Despesa {
-  id        String   @id @default(uuid())
-  clienteId String?
-  cliente   Cliente? @relation(fields: [clienteId], references: [id])
-  descricao String
-  valor     Decimal
-  tipo      String   @default("flexivel") // fixa | flexivel
-  data      DateTime @default(now())
+  id                 String   @id @default(uuid())
+  clienteId          String?
+  cliente            Cliente? @relation(fields: [clienteId], references: [id])
+  descricao          String
+  valor              Decimal
+  tipo               String   @default("flexivel") // fixa | flexivel
+  recorrente         Boolean  @default(false) // true só na despesa "modelo" — repete todo mês sozinha
+  origemRecorrenteId String? // preenchido nas cópias geradas automaticamente todo mês
+  data               DateTime @default(now())
 }
 
 // Depoimentos fixos — aparecem em toda página de orçamento

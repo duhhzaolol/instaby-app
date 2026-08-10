@@ -306,6 +306,7 @@ function NovaDespesaForm({
   const [valor, setValor] = useState(0);
   const [clienteId, setClienteId] = useState("");
   const [data, setData] = useState(new Date().toISOString().slice(0, 10));
+  const [recorrente, setRecorrente] = useState(tipo === "fixa");
   const [enviando, setEnviando] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -315,7 +316,14 @@ function NovaDespesaForm({
     await fetch("/api/despesas", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ descricao, valor, clienteId: clienteId || null, data, tipo }),
+      body: JSON.stringify({
+        descricao,
+        valor,
+        clienteId: tipo === "fixa" ? null : clienteId || null,
+        data,
+        tipo,
+        recorrente: tipo === "fixa" ? recorrente : false,
+      }),
     });
 
     setEnviando(false);
@@ -342,18 +350,25 @@ function NovaDespesaForm({
           className="h-10 rounded-xl border border-border bg-card/60 px-3 text-sm text-text"
         />
       </div>
-      <select
-        value={clienteId}
-        onChange={(e) => setClienteId(e.target.value)}
-        className="mb-2 h-10 w-full rounded-xl border border-border bg-card/60 px-3 text-sm text-text"
-      >
-        <option value="">Sem cliente</option>
-        {clientes.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.nome}
-          </option>
-        ))}
-      </select>
+      {tipo === "fixa" ? (
+        <label className="mb-3 flex items-center gap-2 rounded-lg border border-accent/20 bg-accent/5 px-3 py-2.5 text-xs text-text">
+          <input type="checkbox" checked={recorrente} onChange={(e) => setRecorrente(e.target.checked)} />
+          Ativar cobrança recorrente — aparece sozinha todo mês, sem precisar preencher de novo
+        </label>
+      ) : (
+        <select
+          value={clienteId}
+          onChange={(e) => setClienteId(e.target.value)}
+          className="mb-2 h-10 w-full rounded-xl border border-border bg-card/60 px-3 text-sm text-text"
+        >
+          <option value="">Sem cliente</option>
+          {clientes.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.nome}
+            </option>
+          ))}
+        </select>
+      )}
       <Button type="submit" size="sm" disabled={enviando || valor <= 0} className="w-full">
         {enviando ? "Salvando..." : "Salvar"}
       </Button>

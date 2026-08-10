@@ -17,7 +17,39 @@ function faixaPeriodo(periodo: string) {
   return { desde: inicioMesAtual, ate: hoje, meses: 1 };
 }
 
+async function garantirRecorrentesDoMes() {
+  const hoje = new Date();
+  const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+
+  const modelos = await prisma.despesa.findMany({ where: { recorrente: true } });
+
+  for (const modelo of modelos) {
+    const jaExisteEsseMes = await prisma.despesa.findFirst({
+      where: {
+        data: { gte: inicioMes },
+        OR: [{ id: modelo.id }, { origemRecorrenteId: modelo.id }],
+      },
+    });
+
+    if (!jaExisteEsseMes) {
+      await prisma.despesa.create({
+        data: {
+          descricao: modelo.descricao,
+          valor: modelo.valor,
+          tipo: modelo.tipo,
+          clienteId: modelo.clienteId,
+          recorrente: false,
+          origemRecorrenteId: modelo.id,
+          data: inicioMes,
+        },
+      });
+    }
+  }
+}
+
 export default async function FinanceiroPage({ searchParams }: { searchParams: { periodo?: string } }) {
+  await garantirRecorrentesDoMes();
+
   const periodo = searchParams.periodo || "mes_atual";
   const { desde, ate, meses } = faixaPeriodo(periodo);
 
@@ -89,6 +121,7 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: {
         valor: Number(d.valor),
         cliente: d.cliente?.nome || null,
         data: d.data.toISOString(),
+        recorrente: d.recorrente || !!d.origemRecorrenteId,
       }))}
       custosFlexiveis={custosFlexiveis.slice(0, 10).map((d) => ({
         id: d.id,

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Repeat } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { Input } from "@/components/ui/Input";
@@ -14,6 +14,7 @@ export type DespesaRowData = {
   valor: number;
   data: string;
   cliente?: string | null;
+  recorrente?: boolean;
 };
 
 export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index: number }) {
@@ -70,7 +71,14 @@ export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index:
   return (
     <Card index={index} hoverable={false} className="flex items-center justify-between px-4 py-3">
       <div>
-        <p className="text-sm text-text">{despesa.descricao}</p>
+        <p className="flex items-center gap-1.5 text-sm text-text">
+          {despesa.descricao}
+          {despesa.recorrente && (
+            <span title="Recorrente — repete todo mês sozinha">
+              <Repeat size={11} className="text-accent" />
+            </span>
+          )}
+        </p>
         <p className="text-xs text-muted">
           {despesa.cliente && `${despesa.cliente} · `}
           {new Date(despesa.data).toLocaleDateString("pt-BR")}
