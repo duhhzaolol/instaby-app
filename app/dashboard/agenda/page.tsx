@@ -40,7 +40,7 @@ export default async function AgendaPage({
     }),
     prisma.tarefa.findMany({
       where: { prazo: { gte: inicioGrade, lte: fimGrade } },
-      include: { cliente: { select: { nome: true } } },
+      include: { cliente: { select: { nome: true, cor: true } } },
     }),
     prisma.registroTempo.findMany({
       where: { inicio: { gte: inicioGrade, lte: fimGrade } },
