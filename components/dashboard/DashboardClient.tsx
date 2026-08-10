@@ -44,15 +44,39 @@ export default function DashboardClient({
   const concluidas = tarefas.filter((t) => t.status === "feito");
 
   const cards = [
-    { label: "Clientes ativos", value: metrics.clientesAtivos, icon: Users, sensivel: false },
-    { label: "Leads em aberto", value: metrics.leadsPendentes, icon: UserPlus, sensivel: false },
-    { label: "Faturamento do mês", value: metrics.faturamentoMes, prefix: "R$ ", icon: Wallet, sensivel: true },
+    {
+      label: "Clientes ativos",
+      value: metrics.clientesAtivos,
+      icon: Users,
+      sensivel: false,
+      href: "/dashboard/clientes?status=ativo",
+      cor: "#3B82F6",
+    },
+    {
+      label: "Leads em aberto",
+      value: metrics.leadsPendentes,
+      icon: UserPlus,
+      sensivel: false,
+      href: "/dashboard/clientes?status=lead",
+      cor: "#A855F7",
+    },
+    {
+      label: "Faturamento do mês",
+      value: metrics.faturamentoMes,
+      prefix: "R$ ",
+      icon: Wallet,
+      sensivel: true,
+      href: "/dashboard/financeiro",
+      cor: "#22C55E",
+    },
     {
       label: "Cobranças pendentes",
       value: metrics.cobrancasPendentesValor,
       prefix: "R$ ",
       icon: Clock,
       sensivel: true,
+      href: "/dashboard/financeiro",
+      cor: "#F59E0B",
     },
   ];
 
@@ -66,23 +90,28 @@ export default function DashboardClient({
         {cards.map((c, i) => {
           const Icon = c.icon;
           return (
-            <Card key={c.label} index={i} className="p-4 transition-shadow hover:shadow-glow">
-              <div className="mb-2 flex items-center justify-between">
-                <p className="text-xs text-muted">{c.label}</p>
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent/10 text-accent">
-                  <Icon size={14} />
+            <Link key={c.label} href={c.href}>
+              <Card index={i} className="p-4 transition-shadow hover:shadow-glow">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-xs text-muted">{c.label}</p>
+                  <div
+                    className="flex h-7 w-7 items-center justify-center rounded-lg"
+                    style={{ backgroundColor: `${c.cor}1A`, color: c.cor }}
+                  >
+                    <Icon size={14} />
+                  </div>
                 </div>
-              </div>
-              <p className="text-xl font-medium text-text">
-                {c.sensivel ? (
-                  <ValorSensivel oculto={oculto}>
+                <p className="text-xl font-medium text-text">
+                  {c.sensivel ? (
+                    <ValorSensivel oculto={oculto}>
+                      <CountUp value={c.value} prefix={c.prefix} />
+                    </ValorSensivel>
+                  ) : (
                     <CountUp value={c.value} prefix={c.prefix} />
-                  </ValorSensivel>
-                ) : (
-                  <CountUp value={c.value} prefix={c.prefix} />
-                )}
-              </p>
-            </Card>
+                  )}
+                </p>
+              </Card>
+            </Link>
           );
         })}
       </div>

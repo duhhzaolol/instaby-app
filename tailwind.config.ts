@@ -5,14 +5,14 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        base: "#09090B",
-        card: "#111827",
-        hover: "#1F2937",
+        base: "#131519",
+        card: "#1C2028",
+        hover: "#282D38",
         accent: "#E63946",
         "accent-dim": "#3a1414",
         text: "#F9FAFB",
         muted: "#9CA3AF",
-        border: "rgba(255,255,255,.06)",
+        border: "rgba(255,255,255,.08)",
       },
       boxShadow: {
         premium: "0 8px 24px -8px rgba(0,0,0,0.5)",

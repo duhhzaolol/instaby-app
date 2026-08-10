@@ -1,5 +1,5 @@
-import { ShutterLoading } from "@/components/ui/ShutterLoading";
+import { PageTransitionLoading } from "@/components/ui/PageTransitionLoading";
 
 export default function Loading() {
-  return <ShutterLoading />;
+  return <PageTransitionLoading />;
 }
