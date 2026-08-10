@@ -53,14 +53,19 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: {
   const periodo = searchParams.periodo || "mes_atual";
   const { desde, ate, meses } = faixaPeriodo(periodo);
 
-  const [cobrancas, despesas, cobrancasPendentes, clientes] = await Promise.all([
+  const hoje = new Date();
+  const mesesGrafico = Math.max(meses, 6);
+  const desdeGrafico = new Date(hoje.getFullYear(), hoje.getMonth() - (mesesGrafico - 1), 1);
+  const desdeConsulta = desde < desdeGrafico ? desde : desdeGrafico;
+
+  const [cobrancasTodas, despesasTodas, cobrancasPendentes, clientes] = await Promise.all([
     prisma.cobranca.findMany({
-      where: { status: "pago", createdAt: { gte: desde, lte: ate } },
+      where: { status: "pago", createdAt: { gte: desdeConsulta } },
       include: { cliente: true },
       orderBy: { createdAt: "desc" },
     }),
     prisma.despesa.findMany({
-      where: { data: { gte: desde, lte: ate } },
+      where: { data: { gte: desdeConsulta } },
       include: { cliente: true },
       orderBy: { data: "desc" },
     }),
@@ -72,23 +77,28 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: {
     prisma.cliente.findMany({ select: { id: true, nome: true }, orderBy: { nome: "asc" } }),
   ]);
 
+  // Gráfico: sempre com pelo menos 6 meses de histórico, pra linha nunca ficar com 1 ponto só
   const mensal: Record<string, { entradas: number; despesasFixas: number; despesasFlexiveis: number }> = {};
-  for (let i = meses - 1; i >= 0; i--) {
+  for (let i = mesesGrafico - 1; i >= 0; i--) {
     const d = new Date();
     d.setMonth(d.getMonth() - i);
     mensal[NOMES_MESES[d.getMonth()]] = { entradas: 0, despesasFixas: 0, despesasFlexiveis: 0 };
   }
-  cobrancas.forEach((c) => {
+  cobrancasTodas.forEach((c) => {
     const chave = NOMES_MESES[c.createdAt.getMonth()];
     if (chave in mensal) mensal[chave].entradas += Number(c.valor);
   });
-  despesas.forEach((d) => {
+  despesasTodas.forEach((d) => {
     const chave = NOMES_MESES[d.data.getMonth()];
     if (chave in mensal) {
       if (d.tipo === "fixa") mensal[chave].despesasFixas += Number(d.valor);
       else mensal[chave].despesasFlexiveis += Number(d.valor);
     }
   });
+
+  // Resumo e listas: só o período que a pessoa escolheu no seletor
+  const cobrancas = cobrancasTodas.filter((c) => c.createdAt >= desde && c.createdAt <= ate);
+  const despesas = despesasTodas.filter((d) => d.data >= desde && d.data <= ate);
 
   const totalEntradas = cobrancas.reduce((s, c) => s + Number(c.valor), 0);
   const custosFixos = despesas.filter((d) => d.tipo === "fixa");

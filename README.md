@@ -1,34 +1,24 @@
 # Instaby App
 
-Painel interno da Instaby Agência — v30.
+Painel interno da Instaby Agência — v31 (correção do gráfico).
 
-## O que entrou nesta versão
+## O bug
 
-### 1. Custos operacionais sem cliente + cobrança recorrente
-O formulário de "Novo" em Custos operacionais mudou:
-- Não pergunta mais cliente (faz sentido, água/aluguel não é de ninguém
-  específico)
-- Ganhou um checkbox **"Ativar cobrança recorrente"** — marcado, essa
-  despesa aparece sozinha todo mês, sem você precisar cadastrar de novo.
-  O sistema gera a cópia do mês automaticamente na primeira vez que você
-  abre o Financeiro naquele mês (não precisa de nada rodando em segundo
-  plano, é gerado na hora que você acessa)
-- Despesas recorrentes ganham um ícone de repetição do lado do nome, pra
-  você saber quais são automáticas
+Quando o período escolhido era "Este mês" ou "Mês anterior" (só 1 mês),
+o gráfico de linha ficava só com um ponto — e uma linha não dá pra
+desenhar com um ponto só, por isso apareciam bolinhas soltas sem traço
+nenhum, do jeito que apareceu no seu print.
 
-Os Custos flexíveis continuam exatamente como estavam (cliente opcional,
-sem recorrência).
+## A correção
 
-### 2. Rodapé em todas as páginas do painel
-Adicionei um rodapé simples (logo pequeno + "Instaby App · painel interno
-da agência") no fim de toda tela do dashboard — ajuda a preencher o
-espaço em páginas mais curtas como o Financeiro, em vez do botão ficar
-colado perto do topo.
+Separei as duas coisas:
+- Os **cards de resumo** (Entradas, Custos fixos, Custos flexíveis,
+  Lucro) continuam seguindo exatamente o período que você escolhe no
+  seletor
+- O **gráfico de linha** agora sempre mostra pelo menos 6 meses de
+  histórico, não importa qual período esteja selecionado nos cards —
+  assim sempre tem linha de verdade pra ver a tendência
 
-## Sobre o DRE
-
-Já te expliquei o conceito na conversa, mas resumindo aqui: Receita −
-Custos fixos − Custos flexíveis = Lucro. O gráfico de linha do Financeiro
-já é isso, e agora que os fixos podem ser recorrentes, o DRE dos próximos
-meses vai se montando sozinho conforme o tempo passa — você só cadastra
-o custo fixo uma vez.
+Adicionei uma notinha embaixo do título do gráfico deixando isso claro
+("Histórico dos últimos meses — os cards acima seguem o período
+escolhido"), pra não confundir.

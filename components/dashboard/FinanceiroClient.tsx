@@ -148,7 +148,8 @@ export default function FinanceiroClient({
       </div>
 
       <Card index={4} hoverable={false} className="mb-6 p-5">
-        <p className="mb-4 text-sm font-medium text-text">Entradas x Custos fixos x Custos flexíveis</p>
+        <p className="text-sm font-medium text-text">Entradas x Custos fixos x Custos flexíveis</p>
+        <p className="mb-4 text-xs text-muted">Histórico dos últimos meses (os cards acima seguem o período escolhido)</p>
         <ResponsiveContainer width="100%" height={240}>
           <LineChart data={grafico} margin={{ left: -20, right: 8, top: 8 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
