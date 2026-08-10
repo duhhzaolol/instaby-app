@@ -3,8 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { ShieldCheck } from "lucide-react";
 import OrcamentoInterativo from "./OrcamentoInterativo";
 
-const etapas = ["Briefing", "Análise", "Estratégia", "Execução", "Resultados"];
-
 function gerarCodigo(id: string, data: Date) {
   return `PC-${data.getFullYear()}-${id.slice(0, 3).toUpperCase()}`;
 }
@@ -36,6 +34,10 @@ export default async function OrcamentoPublicoPage({
 
   if (!orcamento) notFound();
 
+  if (!orcamento.visualizadoEm) {
+    prisma.orcamento.update({ where: { id: orcamento.id }, data: { visualizadoEm: new Date() } }).catch(() => {});
+  }
+
   const logosEmbaralhados = [...logos].sort(() => Math.random() - 0.5);
 
   const validoAte = new Date(orcamento.createdAt);
@@ -60,60 +62,42 @@ export default async function OrcamentoPublicoPage({
         </div>
       </div>
 
-      {/* Hero */}
-      <div className="relative overflow-hidden border-b border-white/[0.06] bg-gradient-to-br from-[#0B0D12] via-[#151822] to-[#1a0e10] px-4 py-12">
-        <div className="mx-auto grid max-w-4xl grid-cols-1 items-center gap-8 lg:grid-cols-2">
-          <div>
-            <div className="mb-4 flex items-center gap-2">
-              <span className="inline-block h-[1.5px] w-5 bg-[#E63946]" />
-              <span className="font-mono text-[11px] uppercase tracking-wide text-[#E63946]">
-                proposta comercial
-              </span>
-            </div>
-            <p className="text-4xl font-medium leading-tight text-[#F9FAFB]">gestão estratégica</p>
-            <p className="mb-4 text-4xl font-medium leading-tight">
-              <span className="text-[#E63946]">pra {orcamento.cliente.nome}</span>{" "}
-              <span className="text-[#F9FAFB]">crescer.</span>
-            </p>
-            <p className="max-w-md text-sm leading-relaxed text-[#9CA3AF]">
-              Conteúdo, tráfego e produção trabalhando juntos, com clareza de valor em cada etapa.
-            </p>
-          </div>
+      {/* Hero centralizado */}
+      <div className="relative overflow-hidden border-b border-white/[0.06] bg-gradient-to-b from-[#0B0D12] via-[#151822] to-[#0B0D12] px-4 py-16">
+        {/* gráfico decorativo de fundo, bem sutil */}
+        <svg viewBox="0 0 800 300" className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.12]">
+          <defs>
+            <linearGradient id="linhaChart" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#E63946" stopOpacity="0.6" />
+              <stop offset="100%" stopColor="#E63946" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <path
+            d="M0 220 L100 190 L200 205 L300 130 L400 160 L500 80 L600 110 L700 40 L800 60 L800 300 L0 300 Z"
+            fill="url(#linhaChart)"
+          />
+          <path
+            d="M0 220 L100 190 L200 205 L300 130 L400 160 L500 80 L600 110 L700 40 L800 60"
+            fill="none"
+            stroke="#E63946"
+            strokeWidth="2"
+          />
+        </svg>
 
-          <div className="relative hidden aspect-[4/3] items-center justify-center rounded-2xl border border-white/[0.06] bg-[#111827]/60 lg:flex">
-            <svg viewBox="0 0 300 180" className="h-full w-full p-6">
-              <defs>
-                <linearGradient id="linhaChart" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#E63946" stopOpacity="0.35" />
-                  <stop offset="100%" stopColor="#E63946" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              <text x="0" y="16" fill="#9CA3AF" fontSize="10" fontFamily="monospace">
-                PERFORMANCE
-              </text>
-              <path
-                d="M0 120 L40 100 L80 110 L120 70 L160 85 L200 40 L240 55 L300 15 L300 180 L0 180 Z"
-                fill="url(#linhaChart)"
-              />
-              <path
-                d="M0 120 L40 100 L80 110 L120 70 L160 85 L200 40 L240 55 L300 15"
-                fill="none"
-                stroke="#E63946"
-                strokeWidth="2"
-              />
-            </svg>
+        <div className="relative mx-auto max-w-2xl text-center">
+          <div className="mb-4 flex items-center justify-center gap-2">
+            <span className="inline-block h-[1.5px] w-5 bg-[#E63946]" />
+            <span className="font-mono text-[11px] uppercase tracking-wide text-[#E63946]">proposta comercial</span>
+            <span className="inline-block h-[1.5px] w-5 bg-[#E63946]" />
           </div>
-        </div>
-
-        {/* Etapas */}
-        <div className="relative mx-auto mt-10 grid max-w-4xl grid-cols-5 gap-2">
-          {etapas.map((etapa, i) => (
-            <div key={etapa}>
-              <p className="mb-1.5 font-mono text-[10px] text-[#E63946]">0{i + 1}</p>
-              <p className="mb-2 text-xs font-medium text-[#F9FAFB]">{etapa}</p>
-              <div className="h-[2px] w-full rounded-full bg-[#E63946]/70" />
-            </div>
-          ))}
+          <p className="text-3xl font-medium leading-tight text-[#F9FAFB] sm:text-4xl">gestão estratégica</p>
+          <p className="mb-4 text-3xl font-medium leading-tight sm:text-4xl">
+            <span className="text-[#E63946]">pra {orcamento.cliente.nome}</span>{" "}
+            <span className="text-[#F9FAFB]">crescer.</span>
+          </p>
+          <p className="mx-auto max-w-md text-sm leading-relaxed text-[#9CA3AF]">
+            Conteúdo, tráfego e produção trabalhando juntos, com clareza de valor em cada etapa.
+          </p>
         </div>
       </div>
 

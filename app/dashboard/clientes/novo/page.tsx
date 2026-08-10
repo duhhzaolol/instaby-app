@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { Input, Label } from "@/components/ui/Input";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { SeletorCor } from "@/components/ui/SeletorCor";
+import { UploadLogo } from "@/components/ui/UploadLogo";
 import { Button } from "@/components/ui/Button";
 
 export default function NovoClientePage() {
@@ -88,8 +89,10 @@ export default function NovoClientePage() {
             </div>
           </div>
 
-          <Label>Link do logo (opcional — URL de uma imagem)</Label>
-          <Input value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://..." className="mb-4" />
+          <Label>Logo do cliente (opcional)</Label>
+          <div className="mb-4">
+            <UploadLogo value={logoUrl} onChange={setLogoUrl} />
+          </div>
 
           <Label>Pasta no Google Drive (opcional)</Label>
           <Input

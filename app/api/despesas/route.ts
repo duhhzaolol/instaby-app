@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
       descricao: body.descricao,
       valor: body.valor,
       clienteId: body.clienteId || null,
+      tipo: body.tipo || "flexivel",
       data: body.data ? new Date(body.data) : new Date(),
     },
   });

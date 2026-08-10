@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Clock, CircleDollarSign } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, CircleDollarSign, History } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -11,6 +11,8 @@ const NOMES_MESES = [
 function chaveDia(d: Date) {
   return d.toISOString().slice(0, 10);
 }
+
+type Evento = { tipo: "cobranca" | "tarefa" | "hora"; texto: string; cor?: string | null };
 
 export default async function AgendaPage({
   searchParams,
@@ -31,7 +33,7 @@ export default async function AgendaPage({
   const fimGrade = new Date(fimMes);
   fimGrade.setDate(fimGrade.getDate() + (6 - fimMes.getDay()));
 
-  const [cobrancas, tarefas] = await Promise.all([
+  const [cobrancas, tarefas, registrosTempo] = await Promise.all([
     prisma.cobranca.findMany({
       where: { vencimento: { gte: inicioGrade, lte: fimGrade } },
       include: { cliente: { select: { nome: true } } },
@@ -40,9 +42,13 @@ export default async function AgendaPage({
       where: { prazo: { gte: inicioGrade, lte: fimGrade } },
       include: { cliente: { select: { nome: true } } },
     }),
+    prisma.registroTempo.findMany({
+      where: { inicio: { gte: inicioGrade, lte: fimGrade } },
+      include: { cliente: { select: { nome: true, cor: true } } },
+    }),
   ]);
 
-  const eventosPorDia: Record<string, { tipo: "cobranca" | "tarefa"; texto: string; status: string }[]> = {};
+  const eventosPorDia: Record<string, Evento[]> = {};
 
   cobrancas.forEach((c) => {
     if (!c.vencimento) return;
@@ -50,7 +56,6 @@ export default async function AgendaPage({
     (eventosPorDia[chave] ||= []).push({
       tipo: "cobranca",
       texto: `${c.cliente.nome} · R$ ${Number(c.valor).toFixed(0)}`,
-      status: c.status,
     });
   });
 
@@ -60,7 +65,16 @@ export default async function AgendaPage({
     (eventosPorDia[chave] ||= []).push({
       tipo: "tarefa",
       texto: t.cliente ? `${t.titulo} · ${t.cliente.nome}` : t.titulo,
-      status: t.status,
+      cor: t.cliente?.cor,
+    });
+  });
+
+  registrosTempo.forEach((r) => {
+    const chave = chaveDia(r.inicio);
+    (eventosPorDia[chave] ||= []).push({
+      tipo: "hora",
+      texto: r.cliente ? `${r.atividade} · ${r.cliente.nome}` : r.atividade,
+      cor: r.cliente?.cor,
     });
   });
 
@@ -78,7 +92,7 @@ export default async function AgendaPage({
       <div className="mb-6 flex items-center justify-between">
         <div>
           <p className="text-lg font-medium text-text">Agenda</p>
-          <p className="text-sm text-muted">Vencimentos e prazos num só lugar</p>
+          <p className="text-sm text-muted">Vencimentos, prazos e horas trabalhadas num só lugar</p>
         </div>
         <div className="flex items-center gap-2">
           <Link
@@ -99,12 +113,15 @@ export default async function AgendaPage({
         </div>
       </div>
 
-      <div className="mb-4 flex items-center gap-4 text-xs text-muted">
+      <div className="mb-4 flex flex-wrap items-center gap-4 text-xs text-muted">
         <span className="flex items-center gap-1.5">
           <CircleDollarSign size={12} className="text-red-400" /> Cobrança vencendo
         </span>
         <span className="flex items-center gap-1.5">
           <Clock size={12} className="text-sky-400" /> Prazo de tarefa
+        </span>
+        <span className="flex items-center gap-1.5">
+          <History size={12} className="text-emerald-400" /> Horas trabalhadas (cor do cliente)
         </span>
       </div>
 
@@ -138,19 +155,19 @@ export default async function AgendaPage({
                   {d.getDate()}
                 </span>
                 <div className="flex flex-col gap-1">
-                  {eventos.slice(0, 3).map((e, i) => (
-                    <div
-                      key={i}
-                      className={`truncate rounded px-1 py-0.5 text-[10px] ${
-                        e.tipo === "cobranca"
-                          ? "bg-red-500/10 text-red-400"
-                          : "bg-sky-500/10 text-sky-400"
-                      }`}
-                      title={e.texto}
-                    >
-                      {e.texto}
-                    </div>
-                  ))}
+                  {eventos.slice(0, 3).map((e, i) => {
+                    const estilo =
+                      e.tipo === "cobranca"
+                        ? { backgroundColor: "rgba(239,68,68,0.1)", color: "#f87171" }
+                        : e.tipo === "hora"
+                        ? { backgroundColor: `${e.cor || "#22C55E"}1A`, color: e.cor || "#4ade80" }
+                        : { backgroundColor: "rgba(56,189,248,0.1)", color: "#38bdf8" };
+                    return (
+                      <div key={i} className="truncate rounded px-1 py-0.5 text-[10px]" style={estilo} title={e.texto}>
+                        {e.texto}
+                      </div>
+                    );
+                  })}
                   {eventos.length > 3 && (
                     <p className="text-[10px] text-muted">+{eventos.length - 3} mais</p>
                   )}

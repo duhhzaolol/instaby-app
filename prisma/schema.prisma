@@ -122,6 +122,7 @@ model Orcamento {
   slug      String   @unique
   status    String   @default("pendente") // pendente | aceito | recusado
   enviadoEm DateTime?
+  visualizadoEm DateTime?
   createdAt DateTime @default(now())
 
   itens     ItemOrcamento[]
@@ -169,6 +170,7 @@ model Despesa {
   cliente   Cliente? @relation(fields: [clienteId], references: [id])
   descricao String
   valor     Decimal
+  tipo      String   @default("flexivel") // fixa | flexivel
   data      DateTime @default(now())
 }
 

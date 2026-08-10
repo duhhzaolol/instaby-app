@@ -40,6 +40,7 @@ export default async function OrcamentosPage() {
                 total={total}
                 index={i}
                 clienteNome={o.cliente.nome}
+                visualizadoEm={o.visualizadoEm?.toISOString() || null}
               />
             );
           })}

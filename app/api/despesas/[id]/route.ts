@@ -13,6 +13,7 @@ export async function PATCH(
       ...(body.descricao !== undefined && { descricao: body.descricao }),
       ...(body.valor !== undefined && { valor: body.valor }),
       ...(body.data !== undefined && { data: new Date(body.data) }),
+      ...(body.tipo !== undefined && { tipo: body.tipo }),
     },
   });
 

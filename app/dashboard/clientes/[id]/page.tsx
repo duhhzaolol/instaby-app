@@ -214,7 +214,16 @@ export default async function ClienteDetalhePage({
             )}
             {cliente.orcamentos.map((o, i) => {
               const total = o.itens.reduce((soma, item) => soma + Number(item.valor), 0);
-              return <OrcamentoRow key={o.id} slug={o.slug} status={o.status} total={total} index={i} />;
+              return (
+                <OrcamentoRow
+                  key={o.id}
+                  slug={o.slug}
+                  status={o.status}
+                  total={total}
+                  index={i}
+                  visualizadoEm={o.visualizadoEm?.toISOString() || null}
+                />
+              );
             })}
           </div>
           <Link

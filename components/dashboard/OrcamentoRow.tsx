@@ -23,12 +23,14 @@ export function OrcamentoRow({
   total,
   index,
   clienteNome,
+  visualizadoEm,
 }: {
   slug: string;
   status: string;
   total: number;
   index: number;
   clienteNome?: string;
+  visualizadoEm?: string | null;
 }) {
   const router = useRouter();
 
@@ -43,7 +45,17 @@ export function OrcamentoRow({
     <Card index={index} className="flex items-center justify-between px-4 py-3">
       <a href={`/orcamento/${slug}`} target="_blank" className="min-w-0 flex-1">
         <p className="truncate text-sm text-text">{clienteNome ? clienteNome : `/orcamento/${slug}`}</p>
-        <p className="text-xs text-muted">R$ {total.toFixed(0)}</p>
+        <p className="text-xs text-muted">
+          R$ {total.toFixed(0)}
+          {visualizadoEm ? (
+            <span className="text-emerald-400">
+              {" "}
+              · visto em {new Date(visualizadoEm).toLocaleDateString("pt-BR")}
+            </span>
+          ) : (
+            <span> · ainda não visto</span>
+          )}
+        </p>
       </a>
       <div className="flex items-center gap-3">
         <Badge tone={tone[status]}>{label[status]}</Badge>

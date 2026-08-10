@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { Input, Label } from "@/components/ui/Input";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { SeletorCor } from "@/components/ui/SeletorCor";
+import { UploadLogo } from "@/components/ui/UploadLogo";
 import { Button } from "@/components/ui/Button";
 
 type Cliente = {
@@ -97,13 +98,10 @@ export default function EditarClienteForm({ cliente }: { cliente: Cliente }) {
           </div>
         </div>
 
-        <Label>Link do logo (cole a URL de uma imagem, ex: link do Drive/Imgur)</Label>
-        <Input
-          value={logoUrl}
-          onChange={(e) => setLogoUrl(e.target.value)}
-          placeholder="https://..."
-          className="mb-4"
-        />
+        <Label>Logo do cliente</Label>
+        <div className="mb-4">
+          <UploadLogo value={logoUrl} onChange={setLogoUrl} />
+        </div>
 
         <Label>Pasta no Google Drive</Label>
         <Input
