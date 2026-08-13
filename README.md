@@ -1,22 +1,42 @@
 # Instaby App
 
-Painel interno da Instaby Agência — v32.
+Painel interno da Instaby Agência — v33.
 
-## O que entrou nesta versão
+## Novidade: sincronizar com Google Agenda e Calendário da Apple
 
-**Gráfico de progresso do mês** — novo card "🚀 Progresso do mês", que só
-aparece quando o período selecionado é "Este mês" ou "Mês anterior".
-Mostra dia 1 até hoje (ou até o fim, se for mês anterior), com duas áreas
-subindo:
-- **Verde**: entradas acumuladas (soma de tudo que já entrou até aquele
-  dia)
-- **Vermelha**: lucro acumulado (entradas menos custos, até aquele dia)
+Adicionei um "feed de calendário" (arquivo .ics) que junta os prazos de
+tarefa e os vencimentos de cobrança do Instaby, no formato que qualquer
+app de calendário entende.
 
-É exatamente a ideia do print que você mandou — um placar visual de
-"quanto já rendeu esse mês", que vai subindo conforme os dias passam,
-pra você acompanhar se está no ritmo de bater uma meta até o fim do mês.
+### Como ativar
 
-Esse gráfico fica **acima** do gráfico de comparação entre meses (que
-continua existindo, mostrando os últimos 6 meses lado a lado) — os dois
-convivem, cada um respondendo uma pergunta diferente: "como estou indo
-esse mês" vs. "como os meses se comparam".
+1. Adiciona a variável de ambiente `AGENDA_SECRET` no Vercel (Settings →
+   Environment Variables) — pode ser qualquer texto aleatório, só seu.
+   Redeploy depois de adicionar.
+2. Entra em `/dashboard/agenda` — vai aparecer um card com o link pronto
+   (já monta a URL certa com o secret dentro)
+3. Copia esse link
+
+### No Google Agenda (computador)
+Configurações → Adicionar calendário → **A partir de URL** → cola o link
+→ Adicionar calendário.
+
+### No Calendário da Apple (Mac)
+Arquivo → **Nova assinatura de calendário** → cola o link → Assinar.
+
+### No iPhone
+Ajustes → Calendário → Contas → Adicionar Conta → Outra → **Adicionar
+Calendário Assinado** → cola o link.
+
+## Como funciona (e o que não faz)
+
+- É **de leitura** — o Google/Apple não escrevem de volta no Instaby, só
+  mostram o que já está lá
+- Atualiza sozinho, mas não é instantâneo — cada app de calendário decide
+  de quanto em quanto tempo ele revisita o link (geralmente a cada
+  algumas horas, não dá pra configurar isso)
+- Se quiser sincronização de verdade nos dois sentidos (criar evento no
+  Google e aparecer no Instaby), isso é um projeto bem maior — precisa de
+  autenticação OAuth com o Google, e o Calendário da Apple não tem um
+  caminho parecido fácil. Não fiz isso porque o custo não compensa o
+  ganho pro seu uso (você sozinho, controlando tudo pelo Instaby mesmo)

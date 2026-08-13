@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Clock, CircleDollarSign, History } from "lucide-react";
+import { headers } from "next/headers";
+import { ChevronLeft, ChevronRight, Clock, CircleDollarSign, History, CalendarPlus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -87,6 +88,11 @@ export default async function AgendaPage({
   const mesSeguinte = new Date(ano, mes + 1, 1);
   const hojeChave = chaveDia(hoje);
 
+  const host = headers().get("host");
+  const linkIcs = process.env.AGENDA_SECRET
+    ? `https://${host}/api/agenda.ics?secret=${process.env.AGENDA_SECRET}`
+    : null;
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
@@ -112,6 +118,24 @@ export default async function AgendaPage({
           </Link>
         </div>
       </div>
+
+      {linkIcs ? (
+        <div className="mb-4 flex items-start gap-3 rounded-xl border border-accent/20 bg-accent/5 p-4">
+          <CalendarPlus size={18} className="mt-0.5 shrink-0 text-accent" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-text">Ver no Google Agenda ou no Calendário da Apple</p>
+            <p className="mb-2 text-xs text-muted">
+              Copia esse link e cola em "Adicionar calendário → A partir de URL" (Google) ou "Nova assinatura de
+              calendário" (Apple). Atualiza sozinho de tempos em tempos.
+            </p>
+            <code className="block truncate rounded-lg bg-base/60 px-3 py-2 text-[11px] text-muted">{linkIcs}</code>
+          </div>
+        </div>
+      ) : (
+        <p className="mb-4 text-xs text-muted">
+          Pra sincronizar com Google/Apple Calendar, configure a variável <code>AGENDA_SECRET</code> no ambiente.
+        </p>
+      )}
 
       <div className="mb-4 flex flex-wrap items-center gap-4 text-xs text-muted">
         <span className="flex items-center gap-1.5">
