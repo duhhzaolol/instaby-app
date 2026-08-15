@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { NovoRegistroTempoForm } from "@/components/dashboard/NovoRegistroTempoForm";
 import { RegistroTempoRow } from "@/components/dashboard/RegistroTempoRow";
@@ -26,7 +27,7 @@ export default async function HorasPage() {
     }),
     prisma.registroTempo.findMany({
       where: { inicio: { gte: inicioMes() } },
-      include: { cliente: { select: { nome: true, cor: true } } },
+      include: { cliente: { select: { id: true, nome: true, cor: true } } },
     }),
     prisma.tarefa.findMany({
       where: { status: { not: "feito" } },
@@ -34,7 +35,7 @@ export default async function HorasPage() {
     }),
   ]);
 
-  type BlocoCliente = { cor: string | null; total: number; atividades: Record<string, number> };
+  type BlocoCliente = { id: string; cor: string | null; total: number; atividades: Record<string, number> };
   const porCliente: Record<string, BlocoCliente> = {};
   let semCliente = 0;
   let totalMes = 0;
@@ -45,7 +46,7 @@ export default async function HorasPage() {
     totalMes += horas;
 
     if (r.cliente) {
-      const bloco = (porCliente[r.cliente.nome] ||= { cor: r.cliente.cor, total: 0, atividades: {} });
+      const bloco = (porCliente[r.cliente.nome] ||= { id: r.cliente.id, cor: r.cliente.cor, total: 0, atividades: {} });
       bloco.total += horas;
       bloco.atividades[r.atividade] = (bloco.atividades[r.atividade] || 0) + horas;
     } else {
@@ -77,9 +78,10 @@ export default async function HorasPage() {
             const maiorAtividade = Math.max(...atividades.map(([, h]) => h));
 
             return (
-              <div
+              <Link
                 key={nome}
-                className="rounded-2xl border border-border bg-card/60 p-4"
+                href={`/dashboard/horas/${bloco.id}`}
+                className="block rounded-2xl border border-border bg-card/60 p-4 transition-colors hover:bg-hover"
                 style={{ borderLeft: `3px solid ${cor}` }}
               >
                 <div className="mb-3 flex items-center justify-between">
@@ -105,7 +107,7 @@ export default async function HorasPage() {
                     </div>
                   ))}
                 </div>
-              </div>
+              </Link>
             );
           })}
 
