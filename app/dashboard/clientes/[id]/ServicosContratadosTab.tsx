@@ -16,6 +16,7 @@ export default function ServicosContratadosTab({
   contratados,
   catalogo,
   descontoMensal,
+  acrescimoMensal,
   prazoContratoMeses,
   valorRenovacao,
 }: {
@@ -23,6 +24,7 @@ export default function ServicosContratadosTab({
   contratados: Contratado[];
   catalogo: Servico[];
   descontoMensal: number;
+  acrescimoMensal: number;
   prazoContratoMeses: number | null;
   valorRenovacao: number | null;
 }) {
@@ -30,6 +32,7 @@ export default function ServicosContratadosTab({
   const [adicionando, setAdicionando] = useState<string | null>(null);
   const [editandoContrato, setEditandoContrato] = useState(false);
   const [desconto, setDesconto] = useState(descontoMensal);
+  const [acrescimo, setAcrescimo] = useState(acrescimoMensal);
   const [prazo, setPrazo] = useState(prazoContratoMeses?.toString() || "");
   const [renovacao, setRenovacao] = useState(valorRenovacao || 0);
   const [salvando, setSalvando] = useState(false);
@@ -38,7 +41,7 @@ export default function ServicosContratadosTab({
   const categorias = useMemo(() => Array.from(new Set(catalogo.map((s) => s.categoria))), [catalogo]);
 
   const totalServicos = contratados.reduce((soma, c) => soma + c.valor, 0);
-  const mensalidadeFinal = Math.max(0, totalServicos - descontoMensal);
+  const mensalidadeFinal = Math.max(0, totalServicos - descontoMensal + acrescimoMensal);
 
   async function adicionar(servico: Servico) {
     setAdicionando(servico.id);
@@ -58,6 +61,7 @@ export default function ServicosContratadosTab({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         descontoMensal: desconto,
+        acrescimoMensal: acrescimo,
         prazoContratoMeses: prazo || null,
         valorRenovacao: renovacao || null,
       }),
@@ -66,6 +70,8 @@ export default function ServicosContratadosTab({
     setEditandoContrato(false);
     router.refresh();
   }
+
+  const mostrarResumo = contratados.length > 0 || descontoMensal > 0 || acrescimoMensal > 0;
 
   return (
     <div>
@@ -80,7 +86,7 @@ export default function ServicosContratadosTab({
         ))}
       </div>
 
-      {contratados.length > 0 && (
+      {mostrarResumo && (
         <div className="mb-6 rounded-xl border border-accent/20 bg-accent/5 p-4">
           {editandoContrato ? (
             <div>
@@ -90,16 +96,23 @@ export default function ServicosContratadosTab({
                   <CurrencyInput value={desconto} onChange={setDesconto} />
                 </div>
                 <div>
-                  <Label>Prazo do contrato (meses)</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={prazo}
-                    onChange={(e) => setPrazo(e.target.value)}
-                    placeholder="ex: 12"
-                  />
+                  <Label>Acréscimo mensal</Label>
+                  <CurrencyInput value={acrescimo} onChange={setAcrescimo} />
                 </div>
               </div>
+              <p className="mb-3 text-[11px] text-muted">
+                Use o acréscimo pra cobrir o que já foi combinado com o cliente mas ainda não virou serviço
+                cadastrado aqui — vai somando ao total conforme você for detalhando os serviços de verdade.
+              </p>
+              <Label>Prazo do contrato (meses)</Label>
+              <Input
+                type="number"
+                min={0}
+                value={prazo}
+                onChange={(e) => setPrazo(e.target.value)}
+                placeholder="ex: 12"
+                className="mb-3"
+              />
               <Label>Valor após renovação (opcional)</Label>
               <CurrencyInput value={renovacao} onChange={setRenovacao} className="mb-3" />
               <div className="flex gap-2">
@@ -123,6 +136,12 @@ export default function ServicosContratadosTab({
                   <span className="text-sm text-red-400">− R$ {descontoMensal.toFixed(0)}</span>
                 </div>
               )}
+              {acrescimoMensal > 0 && (
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-xs text-muted">Acréscimo mensal</span>
+                  <span className="text-sm text-emerald-400">+ R$ {acrescimoMensal.toFixed(0)}</span>
+                </div>
+              )}
               <div className="mb-3 flex items-center justify-between border-t border-border pt-2">
                 <span className="text-sm font-medium text-text">Mensalidade final</span>
                 <span className="text-lg font-medium text-accent">R$ {mensalidadeFinal.toFixed(0)}</span>
@@ -138,7 +157,7 @@ export default function ServicosContratadosTab({
                 onClick={() => setEditandoContrato(true)}
                 className="flex items-center gap-1.5 text-xs font-medium text-accent hover:underline"
               >
-                <Pencil size={11} /> Ajustar desconto, prazo e renovação
+                <Pencil size={11} /> Ajustar desconto, acréscimo, prazo e renovação
               </button>
             </div>
           )}

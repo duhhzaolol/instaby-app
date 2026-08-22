@@ -48,7 +48,7 @@ export default async function ClienteDetalhePage({
 
   const orcamentosAceitos = cliente.orcamentos.filter((o) => o.status === "aceito");
   const totalServicos = cliente.servicosContratados.reduce((soma, sc) => soma + Number(sc.valor), 0);
-  const mensalidade = Math.max(0, totalServicos - Number(cliente.descontoMensal));
+  const mensalidade = Math.max(0, totalServicos - Number(cliente.descontoMensal) + Number(cliente.acrescimoMensal));
 
   return (
     <div>
@@ -185,6 +185,7 @@ export default async function ClienteDetalhePage({
             valorUnitario: Number(s.valorUnitario),
           }))}
           descontoMensal={Number(cliente.descontoMensal)}
+          acrescimoMensal={Number(cliente.acrescimoMensal)}
           prazoContratoMeses={cliente.prazoContratoMeses}
           valorRenovacao={cliente.valorRenovacao ? Number(cliente.valorRenovacao) : null}
         />

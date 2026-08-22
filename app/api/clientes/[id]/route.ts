@@ -35,6 +35,7 @@ export async function PATCH(
       ...(body.linkDrive !== undefined && { linkDrive: body.linkDrive }),
       ...(body.status !== undefined && { status: body.status }),
       ...(body.descontoMensal !== undefined && { descontoMensal: body.descontoMensal }),
+      ...(body.acrescimoMensal !== undefined && { acrescimoMensal: body.acrescimoMensal }),
       ...(body.prazoContratoMeses !== undefined && {
         prazoContratoMeses: body.prazoContratoMeses ? parseInt(body.prazoContratoMeses) : null,
       }),

@@ -74,11 +74,14 @@ export default async function ClientesPage({
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {clientes.map((c, i) => {
           const somaServicos = c.servicosContratados.reduce((soma, sc) => soma + Number(sc.valor), 0);
-          const servicosComDesconto = somaServicos > 0 ? Math.max(0, somaServicos - Number(c.descontoMensal)) : 0;
+          const servicosComAjuste =
+            somaServicos > 0
+              ? Math.max(0, somaServicos - Number(c.descontoMensal) + Number(c.acrescimoMensal))
+              : 0;
           const recorrentes = c.cobrancas
             .filter((cb) => cb.tipo === "recorrente")
             .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-          const mensalidade = servicosComDesconto > 0 ? servicosComDesconto : recorrentes.length > 0 ? Number(recorrentes[0].valor) : 0;
+          const mensalidade = servicosComAjuste > 0 ? servicosComAjuste : recorrentes.length > 0 ? Number(recorrentes[0].valor) : 0;
           const totalRecebido = c.cobrancas
             .filter((cb) => cb.status === "pago")
             .reduce((soma, cb) => soma + Number(cb.valor), 0);

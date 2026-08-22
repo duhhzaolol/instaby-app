@@ -36,7 +36,8 @@ export async function POST(
   if (!conteudo && body.fonte === "servicos" && cliente.servicosContratados.length > 0) {
     const totalServicos = cliente.servicosContratados.reduce((s, sc) => s + Number(sc.valor), 0);
     const desconto = Number(cliente.descontoMensal);
-    const valorFinal = Math.max(0, totalServicos - desconto);
+    const acrescimo = Number(cliente.acrescimoMensal);
+    const valorFinal = Math.max(0, totalServicos - desconto + acrescimo);
 
     const clausulasServicos = cliente.servicosContratados
       .map((sc, i) => {
@@ -46,10 +47,14 @@ export async function POST(
       })
       .join("\n\n");
 
-    const linhaValor =
-      desconto > 0
-        ? `Valor: R$ ${totalServicos.toFixed(2)} em serviços, com desconto comercial de R$ ${desconto.toFixed(2)}, totalizando R$ ${valorFinal.toFixed(2)} mensais.`
-        : `Valor: R$ ${valorFinal.toFixed(2)} mensais.`;
+    let linhaValor = `Valor: R$ ${valorFinal.toFixed(2)} mensais.`;
+    if (desconto > 0 && acrescimo > 0) {
+      linhaValor = `Valor: R$ ${totalServicos.toFixed(2)} em serviços, com desconto comercial de R$ ${desconto.toFixed(2)} e acréscimo de R$ ${acrescimo.toFixed(2)}, totalizando R$ ${valorFinal.toFixed(2)} mensais.`;
+    } else if (desconto > 0) {
+      linhaValor = `Valor: R$ ${totalServicos.toFixed(2)} em serviços, com desconto comercial de R$ ${desconto.toFixed(2)}, totalizando R$ ${valorFinal.toFixed(2)} mensais.`;
+    } else if (acrescimo > 0) {
+      linhaValor = `Valor: R$ ${totalServicos.toFixed(2)} em serviços, com acréscimo de R$ ${acrescimo.toFixed(2)}, totalizando R$ ${valorFinal.toFixed(2)} mensais.`;
+    }
 
     const linhaPrazo = cliente.prazoContratoMeses
       ? `Vigência: ${cliente.prazoContratoMeses} meses a partir da assinatura.`
