@@ -13,7 +13,12 @@ function chaveDia(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
-type Evento = { tipo: "cobranca" | "tarefa" | "hora"; texto: string; cor?: string | null };
+type Evento = {
+  tipo: "cobranca" | "tarefa" | "hora";
+  texto: string;
+  cor?: string | null;
+  href: string;
+};
 
 export default async function AgendaPage({
   searchParams,
@@ -37,15 +42,15 @@ export default async function AgendaPage({
   const [cobrancas, tarefas, registrosTempo] = await Promise.all([
     prisma.cobranca.findMany({
       where: { vencimento: { gte: inicioGrade, lte: fimGrade } },
-      include: { cliente: { select: { nome: true } } },
+      include: { cliente: { select: { id: true, nome: true } } },
     }),
     prisma.tarefa.findMany({
       where: { prazo: { gte: inicioGrade, lte: fimGrade } },
-      include: { cliente: { select: { nome: true, cor: true } } },
+      include: { cliente: { select: { id: true, nome: true, cor: true } } },
     }),
     prisma.registroTempo.findMany({
       where: { inicio: { gte: inicioGrade, lte: fimGrade } },
-      include: { cliente: { select: { nome: true, cor: true } } },
+      include: { cliente: { select: { id: true, nome: true, cor: true } } },
     }),
   ]);
 
@@ -57,6 +62,7 @@ export default async function AgendaPage({
     (eventosPorDia[chave] ||= []).push({
       tipo: "cobranca",
       texto: `${c.cliente.nome} · R$ ${Number(c.valor).toFixed(0)}`,
+      href: `/dashboard/clientes/${c.cliente.id}?aba=financeiro`,
     });
   });
 
@@ -67,6 +73,7 @@ export default async function AgendaPage({
       tipo: "tarefa",
       texto: t.cliente ? `${t.titulo} · ${t.cliente.nome}` : t.titulo,
       cor: t.cliente?.cor,
+      href: t.cliente ? `/dashboard/clientes/${t.cliente.id}?aba=tarefas` : "/dashboard",
     });
   });
 
@@ -76,6 +83,7 @@ export default async function AgendaPage({
       tipo: "hora",
       texto: r.cliente ? `${r.atividade} · ${r.cliente.nome}` : r.atividade,
       cor: r.cliente?.cor,
+      href: r.cliente ? `/dashboard/horas/${r.cliente.id}` : "/dashboard/horas",
     });
   });
 
@@ -186,10 +194,18 @@ export default async function AgendaPage({
                         : e.tipo === "hora"
                         ? { backgroundColor: `${e.cor || "#22C55E"}1A`, color: e.cor || "#4ade80" }
                         : { backgroundColor: "rgba(56,189,248,0.1)", color: "#38bdf8" };
+                    const IconeEvento = e.tipo === "cobranca" ? CircleDollarSign : e.tipo === "hora" ? History : Clock;
                     return (
-                      <div key={i} className="truncate rounded px-1 py-0.5 text-[10px]" style={estilo} title={e.texto}>
-                        {e.texto}
-                      </div>
+                      <Link
+                        key={i}
+                        href={e.href}
+                        className="flex items-center gap-1 truncate rounded px-1 py-0.5 text-[10px] hover:opacity-80"
+                        style={estilo}
+                        title={e.texto}
+                      >
+                        <IconeEvento size={9} className="shrink-0" />
+                        <span className="truncate">{e.texto}</span>
+                      </Link>
                     );
                   })}
                   {eventos.length > 3 && (

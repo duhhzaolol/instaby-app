@@ -1,21 +1,25 @@
 # Instaby App
 
-Painel interno da Instaby Agência — v38 (correção do feed de calendário).
+Painel interno da Instaby Agência — v39.
 
-## O bug de verdade
+## O que entrou nesta versão
 
-Não era demora de atualização — o link do calendário nunca incluiu as
-**horas trabalhadas**. Ele só levava tarefas com prazo e cobranças com
-vencimento. Por isso só aparecia a tarefa "Criar arte" (que tinha prazo
-marcado) e nada das horas, mesmo elas já aparecendo certinho na Agenda de
-dentro do app.
+**Agenda clicável** — cada item do calendário (tarefa, cobrança, hora
+trabalhada) agora tem um ícone junto (💰 cobrança, ⏰ tarefa, 🕓 hora) e é
+clicável, levando direto pro lugar certo:
 
-## A correção
+- **Tarefa** → aba Tarefas do cliente (ou a Visão Geral, se a tarefa não
+  tiver cliente)
+- **Cobrança** (vermelho) → aba Financeiro do cliente, onde já dá pra
+  marcar como paga ou editar o valor
+- **Hora trabalhada** → o calendário de Horas daquele cliente
 
-O mesmo link de sempre agora também manda os registros de Horas
-(qualquer um que já tenha horário de fim marcado), com o nome da
-atividade e do cliente. **Não precisa trocar o link nem assinar de
-novo** — é a mesma URL, só que agora com mais informação dentro dela. Na
-próxima vez que o Calendário da Apple for buscar atualização (pode
-adiantar isso removendo e assinando de novo com o mesmo link, como te
-expliquei antes), as horas já devem aparecer.
+Assim, em vez de só olhar o texto e tentar adivinhar o que é ("Edição —
+Lauro"? "Sky" em vermelho?), você clica e já cai direto onde pode editar
+ou entender o que é aquilo.
+
+## Limite pra você saber
+
+Quando um dia tem mais de 3 eventos, o "+N mais" continua sendo só texto
+— não abre nada ainda. Se isso incomodar no dia a dia, dá pra criar uma
+tela de "ver o dia inteiro" numa próxima entrega.
