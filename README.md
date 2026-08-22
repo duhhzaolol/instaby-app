@@ -1,26 +1,26 @@
 # Instaby App
 
-Painel interno da Instaby Agência — v36.
+Painel interno da Instaby Agência — v37.
 
 ## O que entrou nesta versão
 
-**Acréscimo mensal**, ao lado do desconto que já existia — resolve
-exatamente o caso que você descreveu: cadastrou só 2 dos serviços que
-combinou com a Sky (somando R$ 500), mas a mensalidade real já é R$
-1.500, porque ainda faltam serviços a detalhar no catálogo.
+### 1. Novo status de cliente: "Avulso"
+Pra quando você faz um trabalho pontual (freela, captação extra) que não
+é um contrato fixo. Agora as opções são: Lead, Ativo, **Avulso**, Inativo
+— disponível no cadastro, na edição, e como aba de filtro na lista de
+Clientes.
 
-Agora, na aba Serviços do cliente, ao clicar em "Ajustar desconto,
-acréscimo, prazo e renovação" tem dois campos lado a lado:
-- **Desconto mensal** (já existia) — abate do total
-- **Acréscimo mensal** (novo) — soma ao total
+### 2. Marcar tarefa como "Feito" já pode registrar as horas junto
+Antes, só dava pra ir em Horas → escolher a tarefa → concluir. Agora
+funciona também o caminho contrário: quando você muda o status de
+qualquer tarefa pra "Feito" (na Visão Geral ou dentro do cliente), abre
+um miniformulário perguntando o horário de início e fim. Se preencher,
+ele já cria o registro em Horas sozinho, vinculado ao cliente da tarefa
+— sem precisar ir na tela de Horas separadamente. Se não quiser
+registrar agora, tem o botão "Só marcar feito".
 
-A "Mensalidade final" = Total dos serviços − Desconto + Acréscimo.
-
-Assim você já deixa o valor certo (R$ 1.500) rodando desde já, e vai
-tirando o acréscimo aos poucos conforme cadastra os serviços que faltam
-— no dia que cadastrar tudo, é só zerar o acréscimo que o valor final
-continua o mesmo, só que agora vindo 100% dos serviços detalhados.
-
-Atualizei também o texto do contrato gerado automaticamente (aba
-Contratos → "Gerar contrato dos serviços contratados") pra mencionar o
-acréscimo quando ele existir, junto com o desconto.
+### 3. Serviço avulso no Financeiro
+Isso já existia — vale só o lembrete: dentro do cliente, aba Financeiro,
+"+ Lançar cobrança", escolhendo tipo **Única** e status **Pago**, já
+entra como entrada no Financeiro geral. Combinado com o novo status
+Avulso, cobre exatamente o caso de um freela pontual.

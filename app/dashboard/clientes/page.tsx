@@ -5,15 +5,17 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 
-const statusTone: Record<string, "yellow" | "green" | "gray"> = {
+const statusTone: Record<string, "yellow" | "green" | "gray" | "blue"> = {
   lead: "yellow",
   ativo: "green",
+  avulso: "blue",
   inativo: "gray",
 };
 
 const statusLabel: Record<string, string> = {
   lead: "Lead",
   ativo: "Ativo",
+  avulso: "Avulso",
   inativo: "Inativo",
 };
 
@@ -34,6 +36,7 @@ export default async function ClientesPage({
     { valor: "todos", label: "Todos" },
     { valor: "lead", label: "Lead" },
     { valor: "ativo", label: "Ativo" },
+    { valor: "avulso", label: "Avulso" },
     { valor: "inativo", label: "Inativo" },
   ];
 

@@ -89,6 +89,7 @@ export default async function DashboardPage() {
         categoria: t.categoria,
         descricao: t.descricao,
         prioridade: t.prioridade,
+        clienteId: t.clienteId,
         clienteNome: t.cliente?.nome || null,
         clienteCor: t.cliente?.cor || null,
       }))}

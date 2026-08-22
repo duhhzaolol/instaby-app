@@ -124,6 +124,7 @@ export default function EditarClienteForm({ cliente }: { cliente: Cliente }) {
         >
           <option value="lead">Lead</option>
           <option value="ativo">Ativo</option>
+          <option value="avulso">Avulso (trabalho pontual, sem contrato fixo)</option>
           <option value="inativo">Inativo</option>
         </select>
 

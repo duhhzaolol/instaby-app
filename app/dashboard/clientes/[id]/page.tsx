@@ -160,6 +160,7 @@ export default async function ClienteDetalhePage({
                   categoria: t.categoria,
                   descricao: t.descricao,
                   prioridade: t.prioridade,
+                  clienteId: cliente.id,
                 }}
               />
             ))}

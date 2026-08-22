@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, ChevronDown } from "lucide-react";
+import { Trash2, ChevronDown, Clock } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { visualDaCategoriaTarefa, PRIORIDADES } from "@/lib/categoriaTarefaVisual";
+import { formatarDuracao } from "@/lib/formatarDuracao";
 
 export type TarefaRowData = {
   id: string;
@@ -15,7 +16,13 @@ export type TarefaRowData = {
   categoria?: string | null;
   descricao?: string | null;
   prioridade?: string | null;
+  clienteId?: string | null;
 };
+
+function horaAtual() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
 
 export function TarefaRow({
   tarefa,
@@ -37,16 +44,63 @@ export function TarefaRow({
   const [prioridade, setPrioridade] = useState(tarefa.prioridade || "");
   const [salvando, setSalvando] = useState(false);
 
+  const [confirmandoConclusao, setConfirmandoConclusao] = useState(false);
+  const [horaInicioConclusao, setHoraInicioConclusao] = useState("");
+  const [horaFimConclusao, setHoraFimConclusao] = useState(horaAtual());
+  const [registrandoConclusao, setRegistrandoConclusao] = useState(false);
+
   const prazoVencido = tarefa.prazo && tarefa.status !== "feito" && new Date(tarefa.prazo) < new Date();
   const { icone: Icon, cor } = visualDaCategoriaTarefa(tarefa.categoria);
   const prioridadeInfo = PRIORIDADES.find((p) => p.valor === tarefa.prioridade);
 
+  const duracaoPrevia =
+    horaInicioConclusao && horaFimConclusao
+      ? (() => {
+          const [h1, m1] = horaInicioConclusao.split(":").map(Number);
+          const [h2, m2] = horaFimConclusao.split(":").map(Number);
+          const minutos = h2 * 60 + m2 - (h1 * 60 + m1);
+          return minutos > 0 ? formatarDuracao(minutos / 60) : null;
+        })()
+      : null;
+
   async function mudarStatus(status: string) {
+    if (status === "feito" && tarefa.status !== "feito") {
+      setConfirmandoConclusao(true);
+      return;
+    }
     await fetch(`/api/tarefas/${tarefa.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
+    router.refresh();
+  }
+
+  async function confirmarConclusao(registrarHoras: boolean) {
+    setRegistrandoConclusao(true);
+
+    await fetch(`/api/tarefas/${tarefa.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "feito" }),
+    });
+
+    if (registrarHoras && horaInicioConclusao && horaFimConclusao) {
+      const hoje = new Date().toISOString().slice(0, 10);
+      await fetch("/api/registros-tempo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          atividade: tarefa.titulo,
+          clienteId: tarefa.clienteId || null,
+          inicio: `${hoje}T${horaInicioConclusao}:00`,
+          fim: `${hoje}T${horaFimConclusao}:00`,
+        }),
+      });
+    }
+
+    setRegistrandoConclusao(false);
+    setConfirmandoConclusao(false);
     router.refresh();
   }
 
@@ -129,6 +183,51 @@ export function TarefaRow({
           />
         </div>
       </div>
+
+      {confirmandoConclusao && (
+        <div className="border-t border-accent/20 bg-accent/5 p-4">
+          <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-accent">
+            <Clock size={12} /> Já sabe o horário que você fez isso? Já registro nas Horas junto.
+          </p>
+          <div className="mb-3 grid grid-cols-2 gap-2">
+            <div>
+              <label className="mb-1 block text-xs text-muted">Início</label>
+              <input
+                type="time"
+                value={horaInicioConclusao}
+                onChange={(e) => setHoraInicioConclusao(e.target.value)}
+                className="h-9 w-full rounded-lg border border-border bg-base px-2 text-xs text-text"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-muted">Fim</label>
+              <input
+                type="time"
+                value={horaFimConclusao}
+                onChange={(e) => setHoraFimConclusao(e.target.value)}
+                className="h-9 w-full rounded-lg border border-border bg-base px-2 text-xs text-text"
+              />
+            </div>
+          </div>
+          {duracaoPrevia && <p className="mb-3 text-xs text-muted">Vai registrar {duracaoPrevia} nas Horas.</p>}
+          <div className="flex gap-2">
+            <button
+              onClick={() => confirmarConclusao(true)}
+              disabled={registrandoConclusao || !horaInicioConclusao || !horaFimConclusao}
+              className="h-9 flex-1 rounded-lg bg-accent text-xs font-medium text-white disabled:opacity-40"
+            >
+              {registrandoConclusao ? "Salvando..." : "Marcar feito e registrar horas"}
+            </button>
+            <button
+              onClick={() => confirmarConclusao(false)}
+              disabled={registrandoConclusao}
+              className="h-9 rounded-lg border border-border px-3 text-xs text-muted hover:text-text"
+            >
+              Só marcar feito
+            </button>
+          </div>
+        </div>
+      )}
 
       {detalheAberto && (
         <div className="border-t border-border bg-base/40 p-4">
