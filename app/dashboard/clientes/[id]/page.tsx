@@ -108,10 +108,13 @@ export default async function ClienteDetalhePage({
         </div>
         <div className="flex items-center gap-3">
           {mensalidade > 0 && (
-            <div className="rounded-lg border border-accent/20 bg-accent/5 px-3 py-1.5 text-right">
-              <p className="text-[10px] text-muted">Mensalidade</p>
+            <Link
+              href={`/dashboard/clientes/${cliente.id}?aba=servicos`}
+              className="rounded-lg border border-accent/20 bg-accent/5 px-3 py-1.5 text-right transition-colors hover:bg-accent/10"
+            >
+              <p className="text-[10px] text-muted">Mensalidade · editar em Serviços</p>
               <p className="text-sm font-medium text-accent">R$ {mensalidade.toFixed(0)}</p>
-            </div>
+            </Link>
           )}
           <Link
             href={`/dashboard/clientes/${cliente.id}/editar`}
