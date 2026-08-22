@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { formatarDuracao } from "@/lib/formatarDuracao";
 
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const NOMES_MESES = [
@@ -101,7 +102,7 @@ export default async function HorasClientePage({
       >
         <span className="text-sm font-medium text-text">Total do mês</span>
         <span className="text-lg font-medium" style={{ color: cor }}>
-          {totalMes.toFixed(1)}h
+          {formatarDuracao(totalMes)}
         </span>
       </div>
 
@@ -140,7 +141,7 @@ export default async function HorasClientePage({
                 {trabalhou && (
                   <div>
                     <p className="mb-1 text-[11px] font-medium" style={{ color: cor }}>
-                      {totalDia.toFixed(1)}h
+                      {formatarDuracao(totalDia)}
                     </p>
                     <div className="flex flex-col gap-0.5">
                       {registrosDoDia.slice(0, 2).map((r, i) => (

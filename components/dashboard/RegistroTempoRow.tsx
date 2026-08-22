@@ -5,14 +5,18 @@ import { useRouter } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { formatarDuracao } from "@/lib/formatarDuracao";
 
 export type RegistroTempoData = {
   id: string;
   atividade: string;
   inicio: string;
   fim: string | null;
+  clienteId?: string | null;
   clienteNome?: string | null;
 };
+
+type Cliente = { id: string; nome: string };
 
 function formatarHora(iso: string) {
   return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
@@ -24,9 +28,19 @@ function duracaoHoras(inicio: string, fim: string | null) {
   return Math.max(0, ms / 1000 / 60 / 60);
 }
 
-export function RegistroTempoRow({ registro, index }: { registro: RegistroTempoData; index: number }) {
+export function RegistroTempoRow({
+  registro,
+  index,
+  clientes,
+}: {
+  registro: RegistroTempoData;
+  index: number;
+  clientes?: Cliente[];
+}) {
   const router = useRouter();
   const [editando, setEditando] = useState(false);
+  const [atividade, setAtividade] = useState(registro.atividade);
+  const [clienteId, setClienteId] = useState(registro.clienteId || "");
   const [inicio, setInicio] = useState(formatarHora(registro.inicio));
   const [fim, setFim] = useState(registro.fim ? formatarHora(registro.fim) : "");
   const [salvando, setSalvando] = useState(false);
@@ -40,6 +54,8 @@ export function RegistroTempoRow({ registro, index }: { registro: RegistroTempoD
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        atividade,
+        clienteId: clienteId || null,
         inicio: `${dataBase}T${inicio}:00`,
         fim: fim ? `${dataBase}T${fim}:00` : null,
       }),
@@ -58,7 +74,32 @@ export function RegistroTempoRow({ registro, index }: { registro: RegistroTempoD
   if (editando) {
     return (
       <Card index={index} hoverable={false} className="p-3.5">
-        <p className="mb-2 text-sm text-text">{registro.atividade}</p>
+        <label className="mb-1 block text-xs text-muted">Atividade</label>
+        <input
+          value={atividade}
+          onChange={(e) => setAtividade(e.target.value)}
+          className="mb-2 h-9 w-full rounded-lg border border-border bg-base px-2 text-sm text-text"
+        />
+
+        {clientes && (
+          <>
+            <label className="mb-1 block text-xs text-muted">Cliente</label>
+            <select
+              value={clienteId}
+              onChange={(e) => setClienteId(e.target.value)}
+              className="mb-2 h-9 w-full rounded-lg border border-border bg-base px-2 text-sm text-text"
+            >
+              <option value="">Sem cliente / interno</option>
+              {clientes.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nome}
+                </option>
+              ))}
+            </select>
+          </>
+        )}
+
+        <label className="mb-1 block text-xs text-muted">Horário</label>
         <div className="mb-3 grid grid-cols-2 gap-2">
           <input
             type="time"
@@ -90,16 +131,20 @@ export function RegistroTempoRow({ registro, index }: { registro: RegistroTempoD
       <div>
         <p className="text-sm text-text">
           {registro.atividade}
-          {registro.clienteNome && (
+          {registro.clienteNome ? (
             <span className="ml-2 rounded-full bg-white/5 px-1.5 py-0.5 text-[10px] text-muted">
               {registro.clienteNome}
+            </span>
+          ) : (
+            <span className="ml-2 rounded-full bg-accent/10 px-1.5 py-0.5 text-[10px] text-accent">
+              sem cliente
             </span>
           )}
         </p>
         <p className="text-xs text-muted">
           {formatarHora(registro.inicio)}
           {registro.fim ? ` – ${formatarHora(registro.fim)}` : " – em andamento"}
-          {duracao !== null && ` · ${duracao.toFixed(1)}h`}
+          {duracao !== null && ` · ${formatarDuracao(duracao)}`}
         </p>
       </div>
       <div className="flex items-center gap-3">

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { NovoRegistroTempoForm } from "@/components/dashboard/NovoRegistroTempoForm";
 import { RegistroTempoRow } from "@/components/dashboard/RegistroTempoRow";
+import { formatarDuracao } from "@/lib/formatarDuracao";
 
 function inicioMes() {
   const d = new Date();
@@ -28,6 +29,7 @@ export default async function HorasPage() {
     prisma.registroTempo.findMany({
       where: { inicio: { gte: inicioMes() } },
       include: { cliente: { select: { id: true, nome: true, cor: true } } },
+      orderBy: { inicio: "desc" },
     }),
     prisma.tarefa.findMany({
       where: { status: { not: "feito" } },
@@ -37,7 +39,7 @@ export default async function HorasPage() {
 
   type BlocoCliente = { id: string; cor: string | null; total: number; atividades: Record<string, number> };
   const porCliente: Record<string, BlocoCliente> = {};
-  let semCliente = 0;
+  const semCliente: typeof registrosMes = [];
   let totalMes = 0;
 
   registrosMes.forEach((r) => {
@@ -50,9 +52,14 @@ export default async function HorasPage() {
       bloco.total += horas;
       bloco.atividades[r.atividade] = (bloco.atividades[r.atividade] || 0) + horas;
     } else {
-      semCliente += horas;
+      semCliente.push(r);
     }
   });
+
+  const totalSemCliente = semCliente.reduce((soma, r) => {
+    if (!r.fim) return soma;
+    return soma + (r.fim.getTime() - r.inicio.getTime()) / 1000 / 60 / 60;
+  }, 0);
 
   const ranking = Object.entries(porCliente).sort((a, b) => b[1].total - a[1].total);
 
@@ -65,10 +72,10 @@ export default async function HorasPage() {
 
       <div className="mb-6 flex items-center justify-between rounded-xl border border-accent/20 bg-accent/5 px-4 py-3">
         <span className="text-sm font-medium text-text">Total do mês (todos os clientes)</span>
-        <span className="text-xl font-medium text-accent">{totalMes.toFixed(1)}h</span>
+        <span className="text-xl font-medium text-accent">{formatarDuracao(totalMes)}</span>
       </div>
 
-      {ranking.length === 0 && semCliente === 0 ? (
+      {ranking.length === 0 && semCliente.length === 0 ? (
         <p className="mb-6 text-sm text-muted">Nada registrado ainda esse mês.</p>
       ) : (
         <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -89,14 +96,14 @@ export default async function HorasPage() {
                     <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: cor }} />
                     {nome}
                   </p>
-                  <span className="text-sm font-medium text-text">{bloco.total.toFixed(1)}h</span>
+                  <span className="text-sm font-medium text-text">{formatarDuracao(bloco.total)}</span>
                 </div>
                 <div className="flex flex-col gap-2">
                   {atividades.map(([atividade, horas]) => (
                     <div key={atividade}>
                       <div className="mb-1 flex items-center justify-between text-xs">
                         <span className="text-muted">{atividade}</span>
-                        <span className="text-text">{horas.toFixed(1)}h</span>
+                        <span className="text-text">{formatarDuracao(horas)}</span>
                       </div>
                       <div className="h-1.5 w-full overflow-hidden rounded-full bg-base">
                         <div
@@ -110,15 +117,35 @@ export default async function HorasPage() {
               </Link>
             );
           })}
+        </div>
+      )}
 
-          {semCliente > 0 && (
-            <div className="rounded-2xl border border-border bg-card/60 p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-muted">Sem cliente / interno</p>
-                <span className="text-sm text-muted">{semCliente.toFixed(1)}h</span>
-              </div>
-            </div>
-          )}
+      {semCliente.length > 0 && (
+        <div className="mb-6">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-xs uppercase tracking-wide text-muted">Sem cliente / interno</p>
+            <span className="text-xs text-muted">{formatarDuracao(totalSemCliente)}</span>
+          </div>
+          <p className="mb-2 text-xs text-muted">
+            Registros sem cliente vinculado — clica no lápis pra atribuir um cliente depois de cadastrá-lo.
+          </p>
+          <div className="flex flex-col gap-2">
+            {semCliente.map((r, i) => (
+              <RegistroTempoRow
+                key={r.id}
+                index={i}
+                clientes={clientes}
+                registro={{
+                  id: r.id,
+                  atividade: r.atividade,
+                  inicio: r.inicio.toISOString(),
+                  fim: r.fim?.toISOString() || null,
+                  clienteId: null,
+                  clienteNome: null,
+                }}
+              />
+            ))}
+          </div>
         </div>
       )}
 
@@ -129,11 +156,13 @@ export default async function HorasPage() {
           <RegistroTempoRow
             key={r.id}
             index={i}
+            clientes={clientes}
             registro={{
               id: r.id,
               atividade: r.atividade,
               inicio: r.inicio.toISOString(),
               fim: r.fim?.toISOString() || null,
+              clienteId: r.clienteId,
               clienteNome: r.cliente?.nome || null,
             }}
           />
