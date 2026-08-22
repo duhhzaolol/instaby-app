@@ -1,26 +1,21 @@
 # Instaby App
 
-Painel interno da Instaby Agência — v37.
+Painel interno da Instaby Agência — v38 (correção do feed de calendário).
 
-## O que entrou nesta versão
+## O bug de verdade
 
-### 1. Novo status de cliente: "Avulso"
-Pra quando você faz um trabalho pontual (freela, captação extra) que não
-é um contrato fixo. Agora as opções são: Lead, Ativo, **Avulso**, Inativo
-— disponível no cadastro, na edição, e como aba de filtro na lista de
-Clientes.
+Não era demora de atualização — o link do calendário nunca incluiu as
+**horas trabalhadas**. Ele só levava tarefas com prazo e cobranças com
+vencimento. Por isso só aparecia a tarefa "Criar arte" (que tinha prazo
+marcado) e nada das horas, mesmo elas já aparecendo certinho na Agenda de
+dentro do app.
 
-### 2. Marcar tarefa como "Feito" já pode registrar as horas junto
-Antes, só dava pra ir em Horas → escolher a tarefa → concluir. Agora
-funciona também o caminho contrário: quando você muda o status de
-qualquer tarefa pra "Feito" (na Visão Geral ou dentro do cliente), abre
-um miniformulário perguntando o horário de início e fim. Se preencher,
-ele já cria o registro em Horas sozinho, vinculado ao cliente da tarefa
-— sem precisar ir na tela de Horas separadamente. Se não quiser
-registrar agora, tem o botão "Só marcar feito".
+## A correção
 
-### 3. Serviço avulso no Financeiro
-Isso já existia — vale só o lembrete: dentro do cliente, aba Financeiro,
-"+ Lançar cobrança", escolhendo tipo **Única** e status **Pago**, já
-entra como entrada no Financeiro geral. Combinado com o novo status
-Avulso, cobre exatamente o caso de um freela pontual.
+O mesmo link de sempre agora também manda os registros de Horas
+(qualquer um que já tenha horário de fim marcado), com o nome da
+atividade e do cliente. **Não precisa trocar o link nem assinar de
+novo** — é a mesma URL, só que agora com mais informação dentro dela. Na
+próxima vez que o Calendário da Apple for buscar atualização (pode
+adiantar isso removendo e assinando de novo com o mesmo link, como te
+expliquei antes), as horas já devem aparecer.
