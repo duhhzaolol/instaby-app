@@ -1,25 +1,30 @@
 # Instaby App
 
-Painel interno da Instaby Agência — v39.
+Painel interno da Instaby Agência — v40 (correção de fuso horário).
 
-## O que entrou nesta versão
+## O bug
 
-**Agenda clicável** — cada item do calendário (tarefa, cobrança, hora
-trabalhada) agora tem um ícone junto (💰 cobrança, ⏰ tarefa, 🕓 hora) e é
-clicável, levando direto pro lugar certo:
+O servidor onde o app roda (Vercel) usa o horário de Greenwich (UTC) por
+padrão. Quando você digitava um horário tipo "05:00", o app mandava só o
+número puro pro servidor — e o servidor entendia como "05:00 em
+Greenwich", que, na volta pro horário de Brasília (3 horas atrás), virava
+"02:00". Por isso os horários apareciam sempre 3 horas adiantados do que
+você digitou.
 
-- **Tarefa** → aba Tarefas do cliente (ou a Visão Geral, se a tarefa não
-  tiver cliente)
-- **Cobrança** (vermelho) → aba Financeiro do cliente, onde já dá pra
-  marcar como paga ou editar o valor
-- **Hora trabalhada** → o calendário de Horas daquele cliente
+## A correção
 
-Assim, em vez de só olhar o texto e tentar adivinhar o que é ("Edição —
-Lauro"? "Sky" em vermelho?), você clica e já cai direto onde pode editar
-ou entender o que é aquilo.
+Em todo lugar que registra horário (Registrar horas, editar um registro
+de horas, e concluir uma tarefa com horário de início/fim), o app agora
+já avisa explicitamente pro servidor "esse horário é de Brasília" — então
+ele grava certo, na hora certa, sem depender de qual fuso o servidor está
+rodando.
 
-## Limite pra você saber
+## Um ponto que fiquei de olho, mas não mexi ainda
 
-Quando um dia tem mais de 3 eventos, o "+N mais" continua sendo só texto
-— não abre nada ainda. Se isso incomodar no dia a dia, dá pra criar uma
-tela de "ver o dia inteiro" numa próxima entrega.
+Esse mesmo tipo de problema, em teoria, pode também afetar campos que só
+têm **data** (sem hora) — tipo vencimento de cobrança, data de despesa,
+ou o prazo de uma tarefa quando você não marca o horário. Nesses casos o
+risco é mostrar o dia errado (um dia antes), não a hora errada. Não
+apareceu isso na sua mensagem, mas se você notar alguma data de cobrança
+ou despesa aparecendo um dia antes do que devia, me avisa que eu resolvo
+isso também — é a mesma causa, só que numa parte diferente do app.

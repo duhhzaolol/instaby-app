@@ -45,8 +45,8 @@ export function NovoRegistroTempoForm({
       body: JSON.stringify({
         atividade,
         clienteId: clienteId || null,
-        inicio: `${data}T${inicio}:00`,
-        fim: fim ? `${data}T${fim}:00` : null,
+        inicio: `${data}T${inicio}:00-03:00`,
+        fim: fim ? `${data}T${fim}:00-03:00` : null,
       }),
     });
 

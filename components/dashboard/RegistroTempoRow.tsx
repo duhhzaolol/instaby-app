@@ -56,8 +56,8 @@ export function RegistroTempoRow({
       body: JSON.stringify({
         atividade,
         clienteId: clienteId || null,
-        inicio: `${dataBase}T${inicio}:00`,
-        fim: fim ? `${dataBase}T${fim}:00` : null,
+        inicio: `${dataBase}T${inicio}:00-03:00`,
+        fim: fim ? `${dataBase}T${fim}:00-03:00` : null,
       }),
     });
     setSalvando(false);

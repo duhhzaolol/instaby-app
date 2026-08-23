@@ -93,8 +93,8 @@ export function TarefaRow({
         body: JSON.stringify({
           atividade: tarefa.titulo,
           clienteId: tarefa.clienteId || null,
-          inicio: `${hoje}T${horaInicioConclusao}:00`,
-          fim: `${hoje}T${horaFimConclusao}:00`,
+          inicio: `${hoje}T${horaInicioConclusao}:00-03:00`,
+          fim: `${hoje}T${horaFimConclusao}:00-03:00`,
         }),
       });
     }
@@ -113,7 +113,7 @@ export function TarefaRow({
 
   async function salvarDetalhe() {
     setSalvando(true);
-    const prazo = data ? `${data}T${hora || "00:00"}:00` : null;
+    const prazo = data ? `${data}T${hora || "00:00"}:00-03:00` : null;
     await fetch(`/api/tarefas/${tarefa.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
