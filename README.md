@@ -1,23 +1,38 @@
 # Instaby App
 
-Painel interno da Instaby Agência — v41.
+Painel interno da Instaby Agência — v42.
 
-## O que entrou nesta versão
+## As três coisas da análise do mockup
 
-**Edição rápida direto na Agenda** — clicar em qualquer item do
-calendário (tarefa, cobrança ou hora trabalhada) agora abre um popup
-pequeno pra corrigir data e horário na hora, sem sair da tela. Tem
-também um botão de excluir, e um link "Ver detalhes completos" pra quem
-quiser ver tudo (descrição, status, etc.) na tela de origem.
+### 1. Meta do mês
+Configurações → novo campo "Meta de faturamento". Configurado, aparece
+um card na Visão Geral logo abaixo dos indicadores, com barra de
+progresso mostrando quanto já faturou esse mês vs. a meta. Some sozinho
+se você não configurar nenhuma meta.
 
-- **Tarefa**: edita data e horário (horário é opcional)
-- **Cobrança**: edita a data de vencimento
-- **Hora trabalhada**: edita data, início e fim
+### 2. Performance por cliente
+Novo card na Visão Geral — ranking dos clientes que mais pagaram esse
+mês, com barrinha proporcional (na cor de cada cliente) e o valor.
+Calculado a partir das cobranças pagas reais, sem precisar cadastrar
+nada novo.
 
-## Bônus: corrigido mais um caso do bug de fuso horário
+### 3. Últimas atividades
+Feed simples ao lado do anterior — pega os últimos pagamentos recebidos,
+clientes novos, contratos gerados e propostas aceitas, e mostra em ordem
+cronológica ("hoje 14:32", "ontem", ou a data). Também 100% a partir de
+dado que já existe.
 
-Enquanto mexia nisso, achei e corrigi o ponto que eu tinha avisado como
-"não confirmado" na entrega anterior: perto da meia-noite, um evento
-podia cair no dia seguinte por engano na Agenda (o cálculo de "que dia é
-esse horário" não considerava o fuso de Brasília). Agora considera —
-tanto pra mostrar quanto pra editar.
+## Onde ficou tudo isso na tela
+
+Visão Geral, logo depois dos 4 indicadores do topo: Meta do mês (se
+configurada) → Central de Comando → Hoje → Clientes ativos →
+**Performance por cliente + Últimas atividades** (lado a lado) →
+Afazeres.
+
+## Lembrando da conversa
+
+As outras partes do mockup (pipeline comercial, insight automático,
+projetos, aprovações com imagem) ficaram de fora por enquanto — ou
+precisam de modelo de dados novo, ou contradizem decisões que você já
+tinha tomado (tarefas sem agrupar em projeto, sem guardar arquivo no
+app). Se quiser tocar em alguma dessas depois, é só puxar o assunto.

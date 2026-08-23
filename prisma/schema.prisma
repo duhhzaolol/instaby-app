@@ -187,6 +187,7 @@ model Depoimento {
 
 // Configurações gerais da agência — sempre 1 registro só (id fixo "config")
 model Configuracao {
-  id              String  @id @default("config")
-  whatsappAgencia String? // formato: 5519999999999 (DDI+DDD+número, só dígitos)
+  id                    String   @id @default("config")
+  whatsappAgencia       String? // formato: 5519999999999 (DDI+DDD+número, só dígitos)
+  metaFaturamentoMensal Decimal?
 }

@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import DepoimentosForm from "./DepoimentosForm";
 import WhatsappAgenciaForm from "./WhatsappAgenciaForm";
 import LogosClientesForm from "./LogosClientesForm";
+import MetaFaturamentoForm from "./MetaFaturamentoForm";
 
 export default async function ConfiguracoesPage() {
   const [depoimentos, config, clientesComLogo] = await Promise.all([
@@ -17,6 +18,14 @@ export default async function ConfiguracoesPage() {
   return (
     <div className="flex flex-col gap-8">
       <p className="text-lg font-medium text-text">Configurações</p>
+
+      <div>
+        <p className="mb-1 text-sm font-medium text-text">Meta de faturamento</p>
+        <p className="mb-4 text-sm text-muted">
+          Usada na Visão Geral pra mostrar o progresso do mês.
+        </p>
+        <MetaFaturamentoForm metaAtual={config?.metaFaturamentoMensal ? Number(config.metaFaturamentoMensal) : 0} />
+      </div>
 
       <div>
         <p className="mb-1 text-sm font-medium text-text">WhatsApp da agência</p>

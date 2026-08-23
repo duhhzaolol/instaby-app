@@ -2,7 +2,19 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Users, UserPlus, Wallet, Clock, ChevronDown, CalendarClock, ArrowRight } from "lucide-react";
+import {
+  Users,
+  UserPlus,
+  Wallet,
+  Clock,
+  ChevronDown,
+  CalendarClock,
+  ArrowRight,
+  Target,
+  TrendingUp,
+  FileSignature,
+  FileText,
+} from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { CountUp } from "@/components/ui/CountUp";
 import { QuickCommandCenter } from "@/components/dashboard/QuickCommandCenter";
@@ -23,6 +35,33 @@ type Cliente = { id: string; nome: string; cor: string | null };
 type ClienteResumo = { id: string; nome: string; cor: string | null; totalTarefas: number; pendentes: number };
 type Tarefa = TarefaRowData & { clienteNome: string | null; clienteCor: string | null };
 type TarefaHoje = { id: string; titulo: string; categoria: string | null; prazo: string; clienteNome: string | null; clienteCor: string | null };
+type Meta = { valor: number; atual: number };
+type PerformanceCliente = { nome: string; cor: string | null; valor: number; percentual: number };
+type Atividade = { id: string; texto: string; cliente: string; valor?: number; data: string; tipo: string };
+
+const iconePorAtividade: Record<string, any> = {
+  pagamento: Wallet,
+  cliente: UserPlus,
+  contrato: FileSignature,
+  orcamento: FileText,
+};
+const corPorAtividade: Record<string, string> = {
+  pagamento: "#22C55E",
+  cliente: "#3B82F6",
+  contrato: "#E63946",
+  orcamento: "#A855F7",
+};
+
+function tempoRelativo(iso: string) {
+  const data = new Date(iso);
+  const hoje = new Date();
+  const mesmodia = data.toDateString() === hoje.toDateString();
+  const ontem = new Date(hoje);
+  ontem.setDate(ontem.getDate() - 1);
+  if (mesmodia) return `hoje, ${data.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+  if (data.toDateString() === ontem.toDateString()) return "ontem";
+  return data.toLocaleDateString("pt-BR");
+}
 
 export default function DashboardClient({
   metrics,
@@ -30,12 +69,18 @@ export default function DashboardClient({
   clientes,
   clientesResumo,
   tarefasHoje,
+  meta,
+  performancePorCliente,
+  atividades,
 }: {
   metrics: Metrics;
   tarefas: Tarefa[];
   clientes: Cliente[];
   clientesResumo: ClienteResumo[];
   tarefasHoje: TarefaHoje[];
+  meta: Meta;
+  performancePorCliente: PerformanceCliente[];
+  atividades: Atividade[];
 }) {
   const { oculto, alternar } = useOcultarValores();
   const [verConcluidas, setVerConcluidas] = useState(false);
@@ -116,6 +161,29 @@ export default function DashboardClient({
         })}
       </div>
 
+      {meta.valor > 0 && (
+        <Card index={4} hoverable={false} className="mb-6 p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="flex items-center gap-1.5 text-sm font-medium text-text">
+              <Target size={14} className="text-accent" /> Meta do mês
+            </p>
+            <p className="text-xs text-muted">
+              <ValorSensivel oculto={oculto}>
+                R$ {meta.atual.toFixed(0)} de R$ {meta.valor.toFixed(0)}
+              </ValorSensivel>
+              {" · "}
+              {Math.min(100, Math.round((meta.atual / meta.valor) * 100))}%
+            </p>
+          </div>
+          <div className="h-2 w-full overflow-hidden rounded-full bg-base">
+            <div
+              className="h-full rounded-full bg-accent transition-all"
+              style={{ width: `${Math.min(100, (meta.atual / meta.valor) * 100)}%` }}
+            />
+          </div>
+        </Card>
+      )}
+
       <QuickCommandCenter clientes={clientes} />
 
       {tarefasHoje.length > 0 && (
@@ -178,6 +246,75 @@ export default function DashboardClient({
               </Link>
             ))}
           </div>
+        </div>
+      )}
+
+      {(performancePorCliente.length > 0 || atividades.length > 0) && (
+        <div className="mb-6 grid grid-cols-1 gap-3 lg:grid-cols-2">
+          {performancePorCliente.length > 0 && (
+            <Card hoverable={false} className="p-4">
+              <p className="mb-3 flex items-center gap-1.5 text-sm font-medium text-text">
+                <TrendingUp size={14} className="text-accent" /> Performance por cliente
+              </p>
+              <div className="flex flex-col gap-2.5">
+                {performancePorCliente.map((c) => (
+                  <div key={c.nome}>
+                    <div className="mb-1 flex items-center justify-between text-xs">
+                      <span className="flex items-center gap-1.5 text-text">
+                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: c.cor || "#9CA3AF" }} />
+                        {c.nome}
+                      </span>
+                      <span className="text-muted">
+                        <ValorSensivel oculto={oculto}>R$ {c.valor.toFixed(0)}</ValorSensivel>
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-base">
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: `${c.percentual}%`, backgroundColor: c.cor || "#E63946" }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {atividades.length > 0 && (
+            <Card hoverable={false} className="p-4">
+              <p className="mb-3 text-sm font-medium text-text">Últimas atividades</p>
+              <div className="flex flex-col gap-3">
+                {atividades.map((a) => {
+                  const Icon = iconePorAtividade[a.tipo] || Wallet;
+                  const cor = corPorAtividade[a.tipo] || "#9CA3AF";
+                  return (
+                    <div key={a.id} className="flex items-center gap-2.5">
+                      <div
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+                        style={{ backgroundColor: `${cor}1A`, color: cor }}
+                      >
+                        <Icon size={13} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs text-text">
+                          {a.texto} <span className="text-muted">— {a.cliente}</span>
+                        </p>
+                        <p className="text-[11px] text-muted">
+                          {tempoRelativo(a.data)}
+                          {a.valor !== undefined && (
+                            <>
+                              {" · "}
+                              <ValorSensivel oculto={oculto}>R$ {a.valor.toFixed(0)}</ValorSensivel>
+                            </>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
         </div>
       )}
 
