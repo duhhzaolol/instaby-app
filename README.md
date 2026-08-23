@@ -1,38 +1,28 @@
 # Instaby App
 
-Painel interno da Instaby Agência — v42.
+Painel interno da Instaby Agência — v43.
 
-## As três coisas da análise do mockup
+## O que entrou nesta versão
 
-### 1. Meta do mês
-Configurações → novo campo "Meta de faturamento". Configurado, aparece
-um card na Visão Geral logo abaixo dos indicadores, com barra de
-progresso mostrando quanto já faturou esse mês vs. a meta. Some sozinho
-se você não configurar nenhuma meta.
+### 1. Nova página: Tarefas
+Item novo na sidebar — lista global de tarefas de todos os clientes, com
+abas Abertas / Concluídas / Todas. Reaproveita o mesmo card de tarefa que
+já existia (clica pra ver detalhes, editar, marcar como feito com
+registro de horas junto).
 
-### 2. Performance por cliente
-Novo card na Visão Geral — ranking dos clientes que mais pagaram esse
-mês, com barrinha proporcional (na cor de cada cliente) e o valor.
-Calculado a partir das cobranças pagas reais, sem precisar cadastrar
-nada novo.
+### 2. Sidebar reorganizada
+Ganhou a seção "Configurações" (antes só tinha o ícone de engrenagem
+escondido no rodapé). Agora fica: **Geral** (Visão geral, Clientes,
+Agenda, Tarefas, Horas, Financeiro) → **Comercial** (Serviços, Pacotes,
+Orçamentos, Contratos) → **Configurações**.
 
-### 3. Últimas atividades
-Feed simples ao lado do anterior — pega os últimos pagamentos recebidos,
-clientes novos, contratos gerados e propostas aceitas, e mostra em ordem
-cronológica ("hoje 14:32", "ontem", ou a data). Também 100% a partir de
-dado que já existe.
+### 3. Gráfico do Financeiro com preenchimento em gradiente
+O gráfico "Entradas x Custos fixos x Custos flexíveis" trocou de linha
+seca pra área com gradiente (mais parecido com o "Evolução financeira"
+do mockup que você mandou) — mesma informação, visual mais rico.
 
-## Onde ficou tudo isso na tela
+## Sobre o resto do refino visual
 
-Visão Geral, logo depois dos 4 indicadores do topo: Meta do mês (se
-configurada) → Central de Comando → Hoje → Clientes ativos →
-**Performance por cliente + Últimas atividades** (lado a lado) →
-Afazeres.
-
-## Lembrando da conversa
-
-As outras partes do mockup (pipeline comercial, insight automático,
-projetos, aprovações com imagem) ficaram de fora por enquanto — ou
-precisam de modelo de dados novo, ou contradizem decisões que você já
-tinha tomado (tarefas sem agrupar em projeto, sem guardar arquivo no
-app). Se quiser tocar em alguma dessas depois, é só puxar o assunto.
+Isso foi o primeiro passo (baixo risco, sem inventar dado). Se quiser
+seguir aproximando mais do mockup (cards ainda mais refinados, mais
+seções tipo "Insight automático"), me chama que seguimos.

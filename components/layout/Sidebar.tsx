@@ -14,6 +14,7 @@ import {
   Package2,
   Clock,
   Calendar,
+  CheckSquare,
   Settings,
   Menu,
   X,
@@ -23,6 +24,7 @@ const menuPrincipal = [
   { label: "Visão geral", href: "/dashboard", icon: LayoutGrid },
   { label: "Clientes", href: "/dashboard/clientes", icon: Users },
   { label: "Agenda", href: "/dashboard/agenda", icon: Calendar },
+  { label: "Tarefas", href: "/dashboard/tarefas", icon: CheckSquare },
   { label: "Horas", href: "/dashboard/horas", icon: Clock },
   { label: "Financeiro", href: "/dashboard/financeiro", icon: Wallet },
 ];
@@ -33,6 +35,8 @@ const menuOrcamento = [
   { label: "Orçamentos", href: "/dashboard/orcamentos", icon: FileText },
   { label: "Contratos", href: "/dashboard/contratos", icon: FileSignature },
 ];
+
+const menuConfig = [{ label: "Configurações", href: "/dashboard/configuracoes", icon: Settings }];
 
 function ItemMenu({
   item,
@@ -97,6 +101,13 @@ function ConteudoSidebar({ nome, email, onNavigate }: { nome: string; email: str
             <ItemMenu key={item.href} item={item} ativo={!!ativo(item.href)} onClick={onNavigate} />
           ))}
         </div>
+
+        <div className="flex flex-col gap-1">
+          <p className="px-3 pb-1 text-[11px] uppercase tracking-wider text-muted/70">Configurações</p>
+          {menuConfig.map((item) => (
+            <ItemMenu key={item.href} item={item} ativo={!!ativo(item.href)} onClick={onNavigate} />
+          ))}
+        </div>
       </nav>
 
       <div className="flex items-center gap-3 rounded-xl border border-border bg-card/60 px-3 py-2.5">
@@ -107,9 +118,6 @@ function ConteudoSidebar({ nome, email, onNavigate }: { nome: string; email: str
           <p className="truncate text-sm text-text">{nome}</p>
           <p className="truncate text-xs text-muted">{email}</p>
         </div>
-        <Link href="/dashboard/configuracoes" onClick={onNavigate} className="text-muted hover:text-text">
-          <Settings size={16} />
-        </Link>
       </div>
     </>
   );

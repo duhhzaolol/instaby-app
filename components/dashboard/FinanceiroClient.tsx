@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  LineChart,
-  Line,
   AreaChart,
   Area,
   XAxis,
@@ -225,7 +223,21 @@ export default function FinanceiroClient({
         <p className="text-sm font-medium text-text">Entradas x Custos fixos x Custos flexíveis</p>
         <p className="mb-4 text-xs text-muted">Histórico dos últimos meses (os cards acima seguem o período escolhido)</p>
         <ResponsiveContainer width="100%" height={240}>
-          <LineChart data={grafico} margin={{ left: -20, right: 8, top: 8 }}>
+          <AreaChart data={grafico} margin={{ left: -20, right: 8, top: 8 }}>
+            <defs>
+              <linearGradient id="corEntradasMensal" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#22C55E" stopOpacity={0.35} />
+                <stop offset="100%" stopColor="#22C55E" stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="corFixasMensal" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#F97316" stopOpacity={0.25} />
+                <stop offset="100%" stopColor="#F97316" stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="corFlexMensal" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#E63946" stopOpacity={0.25} />
+                <stop offset="100%" stopColor="#E63946" stopOpacity={0} />
+              </linearGradient>
+            </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
             <XAxis dataKey="mes" stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} />
             <YAxis hide />
@@ -246,10 +258,10 @@ export default function FinanceiroClient({
               formatter={(v) => (v === "entradas" ? "Entradas" : v === "despesasFixas" ? "Custos fixos" : "Custos flexíveis")}
               wrapperStyle={{ fontSize: 11, color: "#9CA3AF" }}
             />
-            <Line type="monotone" dataKey="entradas" stroke="#22C55E" strokeWidth={2} dot={{ r: 3 }} />
-            <Line type="monotone" dataKey="despesasFixas" stroke="#F97316" strokeWidth={2} dot={{ r: 3 }} />
-            <Line type="monotone" dataKey="despesasFlexiveis" stroke="#E63946" strokeWidth={2} dot={{ r: 3 }} />
-          </LineChart>
+            <Area type="monotone" dataKey="entradas" stroke="#22C55E" strokeWidth={2.5} fill="url(#corEntradasMensal)" dot={{ r: 3 }} />
+            <Area type="monotone" dataKey="despesasFixas" stroke="#F97316" strokeWidth={2} fill="url(#corFixasMensal)" dot={{ r: 3 }} />
+            <Area type="monotone" dataKey="despesasFlexiveis" stroke="#E63946" strokeWidth={2} fill="url(#corFlexMensal)" dot={{ r: 3 }} />
+          </AreaChart>
         </ResponsiveContainer>
       </Card>
 
