@@ -131,15 +131,15 @@ export default function EditarClienteForm({ cliente }: { cliente: Cliente }) {
         {viroAtivoAgora && (
           <div className="mb-6 rounded-xl border border-accent/20 bg-accent/5 p-3">
             <p className="mb-3 text-xs font-medium text-accent">
-              Ativando agora — configure a cobrança recorrente (opcional)
+              Lançar uma primeira cobrança agora? (opcional)
             </p>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Mensalidade</Label>
+                <Label>Valor</Label>
                 <CurrencyInput value={mensalidade} onChange={setMensalidade} />
               </div>
               <div>
-                <Label>Próximo vencimento</Label>
+                <Label>Vencimento</Label>
                 <Input
                   type="date"
                   value={proximoVencimento}
@@ -147,6 +147,10 @@ export default function EditarClienteForm({ cliente }: { cliente: Cliente }) {
                 />
               </div>
             </div>
+            <p className="mt-2 text-[11px] text-muted">
+              Isso só cria uma cobrança pendente pontual — não define a mensalidade do cliente. A
+              mensalidade de verdade vem da aba <strong>Serviços</strong>.
+            </p>
           </div>
         )}
 

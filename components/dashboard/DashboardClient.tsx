@@ -14,6 +14,7 @@ import {
   TrendingUp,
   FileSignature,
   FileText,
+  Sparkles,
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { CountUp } from "@/components/ui/CountUp";
@@ -72,6 +73,7 @@ export default function DashboardClient({
   meta,
   performancePorCliente,
   atividades,
+  variacaoFaturamento,
 }: {
   metrics: Metrics;
   tarefas: Tarefa[];
@@ -81,6 +83,7 @@ export default function DashboardClient({
   meta: Meta;
   performancePorCliente: PerformanceCliente[];
   atividades: Atividade[];
+  variacaoFaturamento: number | null;
 }) {
   const { oculto, alternar } = useOcultarValores();
   const [verConcluidas, setVerConcluidas] = useState(false);
@@ -246,6 +249,27 @@ export default function DashboardClient({
               </Link>
             ))}
           </div>
+        </div>
+      )}
+
+      {variacaoFaturamento !== null && (
+        <div className="mb-6 overflow-hidden rounded-2xl border border-accent/20 bg-gradient-to-br from-accent/10 via-card to-card p-5">
+          <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-accent">
+            <Sparkles size={13} /> Insight Instaby
+          </p>
+          <p className="mb-1 text-lg font-medium text-text">
+            {variacaoFaturamento >= 0
+              ? `Seu faturamento cresceu ${variacaoFaturamento}% esse mês!`
+              : `Seu faturamento caiu ${Math.abs(variacaoFaturamento)}% esse mês.`}
+          </p>
+          <p className="mb-3 text-sm text-muted">
+            {variacaoFaturamento >= 0
+              ? "Comparado ao mês anterior — confira o detalhe no Financeiro."
+              : "Comparado ao mês anterior — vale dar uma olhada no que mudou."}
+          </p>
+          <Link href="/dashboard/financeiro" className="text-sm font-medium text-accent hover:underline">
+            Ver Financeiro completo →
+          </Link>
         </div>
       )}
 

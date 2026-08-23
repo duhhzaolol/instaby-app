@@ -6,6 +6,11 @@ function inicioMes() {
   return new Date(d.getFullYear(), d.getMonth(), 1);
 }
 
+function inicioMesAnterior() {
+  const d = new Date();
+  return new Date(d.getFullYear(), d.getMonth() - 1, 1);
+}
+
 function inicioHoje() {
   const d = new Date();
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -34,6 +39,7 @@ export default async function DashboardPage() {
     clientesRecentes,
     contratosRecentes,
     orcamentosRecentes,
+    faturamentoMesAnteriorAgg,
   ] = await Promise.all([
     prisma.cliente.count({ where: { status: "ativo" } }),
     prisma.cliente.count({ where: { status: "lead" } }),
@@ -97,10 +103,17 @@ export default async function DashboardPage() {
       orderBy: { createdAt: "desc" },
       take: 3,
     }),
+    prisma.cobranca.aggregate({
+      _sum: { valor: true },
+      where: { status: "pago", createdAt: { gte: inicioMesAnterior(), lt: inicioMes() } },
+    }),
   ]);
 
   const metaFaturamento = config?.metaFaturamentoMensal ? Number(config.metaFaturamentoMensal) : 0;
   const faturamentoMes = Number(cobrancasPagasMes._sum.valor || 0);
+  const faturamentoMesAnterior = Number(faturamentoMesAnteriorAgg._sum.valor || 0);
+  const variacaoFaturamento =
+    faturamentoMesAnterior > 0 ? Math.round(((faturamentoMes - faturamentoMesAnterior) / faturamentoMesAnterior) * 100) : null;
 
   const somaPorCliente: Record<string, { nome: string; cor: string | null; valor: number }> = {};
   cobrancasPagasPorCliente.forEach((c) => {
@@ -191,6 +204,7 @@ export default async function DashboardPage() {
       }))}
       meta={{ valor: metaFaturamento, atual: faturamentoMes }}
       performancePorCliente={performancePorCliente}
+      variacaoFaturamento={variacaoFaturamento}
       atividades={atividades.map((a) => ({ ...a, data: a.data.toISOString() }))}
     />
   );

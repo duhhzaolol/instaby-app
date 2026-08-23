@@ -122,15 +122,15 @@ export default function NovoClientePage() {
           {status === "ativo" && (
             <div className="mb-6 rounded-xl border border-accent/20 bg-accent/5 p-3">
               <p className="mb-3 text-xs font-medium text-accent">
-                Ativando — configure a cobrança recorrente
+                Lançar uma primeira cobrança agora? (opcional)
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label>Mensalidade</Label>
+                  <Label>Valor</Label>
                   <CurrencyInput value={mensalidade} onChange={setMensalidade} />
                 </div>
                 <div>
-                  <Label>Próximo vencimento</Label>
+                  <Label>Vencimento</Label>
                   <Input
                     type="date"
                     value={proximoVencimento}
@@ -139,8 +139,8 @@ export default function NovoClientePage() {
                 </div>
               </div>
               <p className="mt-2 text-[11px] text-muted">
-                Isso cria a primeira cobrança pendente. Pagamentos de meses anteriores você lança
-                depois, na aba Financeiro do cliente.
+                Isso só cria uma cobrança pendente pontual — não define a mensalidade do cliente. A
+                mensalidade de verdade vem da aba <strong>Serviços</strong>, depois de cadastrado.
               </p>
             </div>
           )}

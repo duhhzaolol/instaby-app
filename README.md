@@ -1,28 +1,34 @@
 # Instaby App
 
-Painel interno da Instaby Agência — v43.
+Painel interno da Instaby Agência — v44.
 
-## O que entrou nesta versão
+## 1. Mensalidade unificada
 
-### 1. Nova página: Tarefas
-Item novo na sidebar — lista global de tarefas de todos os clientes, com
-abas Abertas / Concluídas / Todas. Reaproveita o mesmo card de tarefa que
-já existia (clica pra ver detalhes, editar, marcar como feito com
-registro de horas junto).
+Removida a ambiguidade de vez:
+- A **mensalidade** de um cliente agora vem **só** dos Serviços
+  Contratados (soma − desconto + acréscimo). Sem exceção, sem fallback
+  escondido.
+- O campo antigo que aparecia ao ativar um cliente foi renomeado pra
+  "Lançar uma primeira cobrança agora? (opcional)" — deixa claro que é
+  só uma cobrança pontual pra começar, não define mais a mensalidade
+  oficial dele. Tem um aviso explicando isso no próprio formulário.
+- Cliente sem nenhum serviço cadastrado agora mostra "Sem serviços" na
+  lista, em vez de puxar silenciosamente um valor antigo que podia estar
+  desatualizado.
 
-### 2. Sidebar reorganizada
-Ganhou a seção "Configurações" (antes só tinha o ícone de engrenagem
-escondido no rodapé). Agora fica: **Geral** (Visão geral, Clientes,
-Agenda, Tarefas, Horas, Financeiro) → **Comercial** (Serviços, Pacotes,
-Orçamentos, Contratos) → **Configurações**.
+Isso evita o tipo de confusão que rolou com a Sky lá atrás — daqui pra
+frente só tem um lugar de verdade pra saber quanto um cliente paga.
 
-### 3. Gráfico do Financeiro com preenchimento em gradiente
-O gráfico "Entradas x Custos fixos x Custos flexíveis" trocou de linha
-seca pra área com gradiente (mais parecido com o "Evolução financeira"
-do mockup que você mandou) — mesma informação, visual mais rico.
+## 2. Refino visual — card de Insight automático
 
-## Sobre o resto do refino visual
+Novo card "✨ Insight Instaby" no Dashboard — compara o faturamento desse
+mês com o mês anterior e mostra a frase pronta ("Seu faturamento cresceu
+X% esse mês!"), no mesmo estilo do card vermelho do mockup que você
+mandou. É regra simples (matemática, sem IA) — só aparece quando já tem
+faturamento do mês anterior pra comparar.
 
-Isso foi o primeiro passo (baixo risco, sem inventar dado). Se quiser
-seguir aproximando mais do mockup (cards ainda mais refinados, mais
-seções tipo "Insight automático"), me chama que seguimos.
+## Onde ficou tudo isso
+
+Dashboard, na mesma sequência: indicadores → Meta do mês → Central de
+Comando → Hoje → Clientes ativos → **Insight** → Performance/Atividades →
+Afazeres.
