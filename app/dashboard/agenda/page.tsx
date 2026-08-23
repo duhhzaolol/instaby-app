@@ -2,8 +2,8 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { ChevronLeft, ChevronRight, Clock, CircleDollarSign, History, CalendarPlus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { AgendaGrid, EventoAgenda } from "@/components/dashboard/AgendaGrid";
 
-const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const NOMES_MESES = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
@@ -13,12 +13,15 @@ function chaveDia(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
-type Evento = {
-  tipo: "cobranca" | "tarefa" | "hora";
-  texto: string;
-  cor?: string | null;
-  href: string;
-};
+// Usado só pra encaixar um horário salvo (cobrança/tarefa/hora) no dia certo do calendário,
+// já considerando o fuso de Brasília — evita virar o dia seguinte perto da meia-noite.
+function chaveDiaEvento(d: Date) {
+  return d.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+}
+
+function horaBR(d: Date) {
+  return d.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" });
+}
 
 export default async function AgendaPage({
   searchParams,
@@ -54,47 +57,56 @@ export default async function AgendaPage({
     }),
   ]);
 
-  const eventosPorDia: Record<string, Evento[]> = {};
+  const eventosPorDia: Record<string, EventoAgenda[]> = {};
 
   cobrancas.forEach((c) => {
     if (!c.vencimento) return;
-    const chave = chaveDia(c.vencimento);
+    const chave = chaveDiaEvento(c.vencimento);
     (eventosPorDia[chave] ||= []).push({
+      id: c.id,
       tipo: "cobranca",
       texto: `${c.cliente.nome} · R$ ${Number(c.valor).toFixed(0)}`,
       href: `/dashboard/clientes/${c.cliente.id}?aba=financeiro`,
+      data: chave,
     });
   });
 
   tarefas.forEach((t) => {
     if (!t.prazo) return;
-    const chave = chaveDia(t.prazo);
+    const chave = chaveDiaEvento(t.prazo);
     (eventosPorDia[chave] ||= []).push({
+      id: t.id,
       tipo: "tarefa",
       texto: t.cliente ? `${t.titulo} · ${t.cliente.nome}` : t.titulo,
       cor: t.cliente?.cor,
       href: t.cliente ? `/dashboard/clientes/${t.cliente.id}?aba=tarefas` : "/dashboard",
+      data: chave,
+      hora: horaBR(t.prazo) !== "00:00" ? horaBR(t.prazo) : null,
     });
   });
 
   registrosTempo.forEach((r) => {
-    const chave = chaveDia(r.inicio);
+    const chave = chaveDiaEvento(r.inicio);
     (eventosPorDia[chave] ||= []).push({
+      id: r.id,
       tipo: "hora",
       texto: r.cliente ? `${r.atividade} · ${r.cliente.nome}` : r.atividade,
       cor: r.cliente?.cor,
       href: r.cliente ? `/dashboard/horas/${r.cliente.id}` : "/dashboard/horas",
+      data: chave,
+      horaInicio: horaBR(r.inicio),
+      horaFim: r.fim ? horaBR(r.fim) : null,
     });
   });
 
-  const dias: Date[] = [];
+  const dias: string[] = [];
   for (let d = new Date(inicioGrade); d <= fimGrade; d.setDate(d.getDate() + 1)) {
-    dias.push(new Date(d));
+    dias.push(chaveDia(d));
   }
 
   const mesAnterior = new Date(ano, mes - 1, 1);
   const mesSeguinte = new Date(ano, mes + 1, 1);
-  const hojeChave = chaveDia(hoje);
+  const hojeChave = chaveDiaEvento(hoje);
 
   const host = headers().get("host");
   const linkIcs = process.env.AGENDA_SECRET
@@ -157,66 +169,8 @@ export default async function AgendaPage({
         </span>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-border">
-        <div className="grid grid-cols-7 border-b border-border bg-card/40">
-          {DIAS_SEMANA.map((d) => (
-            <div key={d} className="px-2 py-2 text-center text-[11px] font-medium text-muted">
-              {d}
-            </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-7">
-          {dias.map((d) => {
-            const chave = chaveDia(d);
-            const eventos = eventosPorDia[chave] || [];
-            const foraDoMes = d.getMonth() !== mes;
-            const ehHoje = chave === hojeChave;
+      <AgendaGrid dias={dias} eventosPorDia={eventosPorDia} mes={mes} hojeChave={hojeChave} />
 
-            return (
-              <div
-                key={chave}
-                className={`min-h-[92px] border-b border-r border-border p-1.5 last:border-r-0 ${
-                  foraDoMes ? "bg-black/20" : ""
-                }`}
-              >
-                <span
-                  className={`mb-1 inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] ${
-                    ehHoje ? "bg-accent text-white" : foraDoMes ? "text-muted/40" : "text-muted"
-                  }`}
-                >
-                  {d.getDate()}
-                </span>
-                <div className="flex flex-col gap-1">
-                  {eventos.slice(0, 3).map((e, i) => {
-                    const estilo =
-                      e.tipo === "cobranca"
-                        ? { backgroundColor: "rgba(239,68,68,0.1)", color: "#f87171" }
-                        : e.tipo === "hora"
-                        ? { backgroundColor: `${e.cor || "#22C55E"}1A`, color: e.cor || "#4ade80" }
-                        : { backgroundColor: "rgba(56,189,248,0.1)", color: "#38bdf8" };
-                    const IconeEvento = e.tipo === "cobranca" ? CircleDollarSign : e.tipo === "hora" ? History : Clock;
-                    return (
-                      <Link
-                        key={i}
-                        href={e.href}
-                        className="flex items-center gap-1 truncate rounded px-1 py-0.5 text-[10px] hover:opacity-80"
-                        style={estilo}
-                        title={e.texto}
-                      >
-                        <IconeEvento size={9} className="shrink-0" />
-                        <span className="truncate">{e.texto}</span>
-                      </Link>
-                    );
-                  })}
-                  {eventos.length > 3 && (
-                    <p className="text-[10px] text-muted">+{eventos.length - 3} mais</p>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
     </div>
   );
 }
