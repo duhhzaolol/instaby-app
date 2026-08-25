@@ -6,6 +6,7 @@ import NovaTarefaForm from "./NovaTarefaForm";
 import ContratosTab from "./ContratosTab";
 import FinanceiroTab from "./FinanceiroTab";
 import ServicosContratadosTab from "./ServicosContratadosTab";
+import RelatoriosTab from "./RelatoriosTab";
 import { TarefaRow } from "@/components/dashboard/TarefaRow";
 import { OrcamentoRow } from "@/components/dashboard/OrcamentoRow";
 import { RegistroTempoRow } from "@/components/dashboard/RegistroTempoRow";
@@ -29,6 +30,7 @@ export default async function ClienteDetalhePage({
         despesas: { orderBy: { data: "desc" } },
         servicosContratados: { where: { ativo: true }, include: { servico: true }, orderBy: { createdAt: "asc" } },
         registrosTempo: { orderBy: { inicio: "desc" }, take: 60 },
+        relatorios: { orderBy: { fim: "desc" } },
       },
     }),
     prisma.servico.findMany({ orderBy: [{ categoria: "asc" }, { nome: "asc" }] }),
@@ -40,6 +42,7 @@ export default async function ClienteDetalhePage({
   const abas = [
     { valor: "tarefas", label: "Tarefas" },
     { valor: "servicos", label: "Serviços" },
+    { valor: "relatorios", label: "Relatórios" },
     { valor: "financeiro", label: "Financeiro" },
     { valor: "orcamentos", label: "Orçamentos" },
     { valor: "contratos", label: "Contratos" },
@@ -167,6 +170,23 @@ export default async function ClienteDetalhePage({
           </div>
           <NovaTarefaForm clienteId={cliente.id} />
         </div>
+      )}
+
+      {aba === "relatorios" && (
+        <RelatoriosTab
+          clienteId={cliente.id}
+          redesGerenciadas={cliente.redesGerenciadas}
+          relatorios={cliente.relatorios.map((r) => ({
+            id: r.id,
+            rede: r.rede,
+            inicio: r.inicio.toISOString(),
+            fim: r.fim.toISOString(),
+            seguidoresInicio: r.seguidoresInicio,
+            seguidoresFim: r.seguidoresFim,
+            investimento: r.investimento ? Number(r.investimento) : null,
+            leads: r.leads,
+          }))}
+        />
       )}
 
       {aba === "servicos" && (

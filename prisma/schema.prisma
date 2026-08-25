@@ -41,6 +41,39 @@ model Cliente {
   despesas            Despesa[]
   servicosContratados ServicoContratado[]
   registrosTempo      RegistroTempo[]
+  redesGerenciadas    String[] @default([]) // instagram | tiktok | facebook | google | meta_ads
+  relatorios          RelatorioPeriodo[]
+}
+
+// Relatório de performance por rede e por período — dado lançado manualmente (Fase 1).
+model RelatorioPeriodo {
+  id          String   @id @default(uuid())
+  clienteId   String
+  cliente     Cliente  @relation(fields: [clienteId], references: [id])
+  rede        String // instagram | tiktok | facebook | google | meta_ads
+  inicio      DateTime
+  fim         DateTime
+
+  seguidoresInicio     Int?
+  seguidoresFim        Int?
+  alcance              Int?
+  impressoes           Int?
+  curtidas             Int?
+  comentariosQtd       Int?
+  compartilhamentos    Int?
+  salvamentos          Int?
+  visualizacoes        Int?
+  postsPublicados      Int?
+  reelsPublicados      Int?
+
+  investimento Decimal?
+  cliques      Int?
+  leads        Int?
+
+  comentarioAgencia String?
+  comentarioCliente String?
+
+  createdAt DateTime @default(now())
 }
 
 model Tarefa {

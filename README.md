@@ -1,34 +1,29 @@
 # Instaby App
 
-Painel interno da Instaby Agência — v44.
+Painel interno da Instaby Agência — v47 (Relatórios — Fase 4).
 
-## 1. Mensalidade unificada
+## O que entrou nesta versão
 
-Removida a ambiguidade de vez:
-- A **mensalidade** de um cliente agora vem **só** dos Serviços
-  Contratados (soma − desconto + acréscimo). Sem exceção, sem fallback
-  escondido.
-- O campo antigo que aparecia ao ativar um cliente foi renomeado pra
-  "Lançar uma primeira cobrança agora? (opcional)" — deixa claro que é
-  só uma cobrança pontual pra começar, não define mais a mensalidade
-  oficial dele. Tem um aviso explicando isso no próprio formulário.
-- Cliente sem nenhum serviço cadastrado agora mostra "Sem serviços" na
-  lista, em vez de puxar silenciosamente um valor antigo que podia estar
-  desatualizado.
+**Histórico e comparação entre meses** — pulando a Fase 3 por enquanto
+(ainda depende da aprovação da Meta, como já conversamos), fui direto
+pra Fase 4.
 
-Isso evita o tipo de confusão que rolou com a Sky lá atrás — daqui pra
-frente só tem um lugar de verdade pra saber quanto um cliente paga.
+### 1. Gráfico de evolução, dentro do cliente
+Na aba Relatórios, assim que uma rede tem **2 ou mais períodos**
+lançados, aparece um gráfico de linha mostrando a evolução — seguidores
+pras redes orgânicas, leads pras redes pagas. Um gráfico por rede que já
+tiver histórico suficiente.
 
-## 2. Refino visual — card de Insight automático
+### 2. Tendência na própria página pública do relatório
+Quando o cliente abre o link do relatório e já existem **3 ou mais
+períodos** lançados daquela rede, aparece um mini-gráfico de tendência
+mostrando a trajetória ao longo do tempo — além da comparação com o
+período imediatamente anterior que já existia desde a Fase 1.
 
-Novo card "✨ Insight Instaby" no Dashboard — compara o faturamento desse
-mês com o mês anterior e mostra a frase pronta ("Seu faturamento cresceu
-X% esse mês!"), no mesmo estilo do card vermelho do mockup que você
-mandou. É regra simples (matemática, sem IA) — só aparece quando já tem
-faturamento do mês anterior pra comparar.
+## Sobre a Fase 3 e a Fase 5
 
-## Onde ficou tudo isso
-
-Dashboard, na mesma sequência: indicadores → Meta do mês → Central de
-Comando → Hoje → Clientes ativos → **Insight** → Performance/Atividades →
-Afazeres.
+Continuam no backlog, sem mudança do que já conversamos:
+- **Fase 3** (puxar dado automático via API do Instagram/TikTok/Google) —
+  trava na aprovação da própria Meta, fora do meu controle
+- **Fase 5** (IA interpretando o resultado) — única parte com custo
+  recorrente de verdade, vale combinar antes de ativar
