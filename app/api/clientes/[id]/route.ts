@@ -44,6 +44,7 @@ export async function PATCH(
       }),
       ...(body.exibirLogoPublico !== undefined && { exibirLogoPublico: body.exibirLogoPublico }),
       ...(body.cor !== undefined && { cor: body.cor }),
+      ...(body.redesGerenciadas !== undefined && { redesGerenciadas: body.redesGerenciadas }),
     },
   });
 
