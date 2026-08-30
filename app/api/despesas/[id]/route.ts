@@ -14,6 +14,9 @@ export async function PATCH(
       ...(body.valor !== undefined && { valor: body.valor }),
       ...(body.data !== undefined && { data: new Date(body.data) }),
       ...(body.tipo !== undefined && { tipo: body.tipo }),
+      ...(body.categoriaFinanceira !== undefined && { categoriaFinanceira: body.categoriaFinanceira }),
+      ...(body.categoria !== undefined && { categoria: body.categoria }),
+      ...(body.subcategoria !== undefined && { subcategoria: body.subcategoria }),
     },
   });
 

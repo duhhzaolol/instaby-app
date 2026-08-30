@@ -16,6 +16,7 @@ export async function POST(
       clienteId: params.id,
       valor: parseFloat(body.valor),
       tipo: body.tipo || "recorrente",
+      categoria: body.categoria || null,
       status: body.status || "pendente",
       vencimento: body.vencimento ? new Date(body.vencimento) : null,
       createdAt: body.data ? new Date(body.data) : undefined,

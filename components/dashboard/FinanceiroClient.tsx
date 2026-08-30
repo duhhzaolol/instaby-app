@@ -20,6 +20,7 @@ import { Input, Label } from "@/components/ui/Input";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { CountUp } from "@/components/ui/CountUp";
 import { DespesaRow, DespesaRowData } from "@/components/dashboard/DespesaRow";
+import { CATEGORIAS_FINANCEIRAS, visualDaCategoriaFinanceira } from "@/lib/categoriasFinanceiras";
 
 type Cliente = { id: string; nome: string };
 type CobrancaPendente = {
@@ -394,7 +395,13 @@ function NovaDespesaForm({
   const [clienteId, setClienteId] = useState("");
   const [data, setData] = useState(new Date().toISOString().slice(0, 10));
   const [recorrente, setRecorrente] = useState(tipo === "fixa");
+  const [categoriaFinanceira, setCategoriaFinanceira] = useState(
+    tipo === "fixa" ? "despesa_fixa" : "despesa_variavel"
+  );
+  const [categoria, setCategoria] = useState("");
   const [enviando, setEnviando] = useState(false);
+
+  const infoCategoria = visualDaCategoriaFinanceira(categoriaFinanceira);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -409,6 +416,8 @@ function NovaDespesaForm({
         clienteId: tipo === "fixa" ? null : clienteId || null,
         data,
         tipo,
+        categoriaFinanceira,
+        categoria: categoria || null,
         recorrente: tipo === "fixa" ? recorrente : false,
       }),
     });
@@ -428,6 +437,49 @@ function NovaDespesaForm({
         placeholder={tipo === "fixa" ? "Aluguel, internet, ferramenta..." : "Papel, equipamento, comida..."}
         className="mb-2"
       />
+
+      <div className="mb-2 grid grid-cols-2 gap-2">
+        <div>
+          <Label>Classificação</Label>
+          <select
+            value={categoriaFinanceira}
+            onChange={(e) => {
+              setCategoriaFinanceira(e.target.value);
+              setCategoria("");
+            }}
+            className="h-10 w-full rounded-xl border border-border bg-card/60 px-3 text-sm text-text"
+          >
+            {CATEGORIAS_FINANCEIRAS.map((c) => (
+              <option key={c.valor} value={c.valor}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <Label>Categoria</Label>
+          <input
+            list={`sugestoes-${categoriaFinanceira}`}
+            value={categoria}
+            onChange={(e) => setCategoria(e.target.value)}
+            placeholder="ex: Aluguel"
+            className="h-10 w-full rounded-xl border border-border bg-card/60 px-3 text-sm text-text"
+          />
+          <datalist id={`sugestoes-${categoriaFinanceira}`}>
+            {infoCategoria?.sugestoes.map((s) => (
+              <option key={s} value={s} />
+            ))}
+          </datalist>
+        </div>
+      </div>
+
+      {categoriaFinanceira === "transferencia" && (
+        <p className="mb-2 text-[11px] text-muted">
+          Retiradas e transferências não entram na conta de lucro/despesa — ficam registradas só pra
+          controle.
+        </p>
+      )}
+
       <div className="mb-2 grid grid-cols-2 gap-2">
         <CurrencyInput value={valor} onChange={setValor} />
         <input

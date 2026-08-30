@@ -8,6 +8,7 @@ import { DespesaRow, DespesaRowData } from "@/components/dashboard/DespesaRow";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { Input, Label } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { CATEGORIAS_RECEITA } from "@/lib/categoriasFinanceiras";
 
 export default function FinanceiroTab({
   clienteId,
@@ -56,6 +57,7 @@ function NovaCobrancaForm({ clienteId, onSalvo }: { clienteId: string; onSalvo: 
   const router = useRouter();
   const [valor, setValor] = useState(0);
   const [tipo, setTipo] = useState("recorrente");
+  const [categoria, setCategoria] = useState("Serviços");
   const [status, setStatus] = useState("pago");
   const [data, setData] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -70,6 +72,7 @@ function NovaCobrancaForm({ clienteId, onSalvo }: { clienteId: string; onSalvo: 
       body: JSON.stringify({
         valor,
         tipo,
+        categoria,
         status,
         vencimento: data || undefined,
         data: status === "pago" ? data || undefined : undefined,
@@ -119,6 +122,20 @@ function NovaCobrancaForm({ clienteId, onSalvo }: { clienteId: string; onSalvo: 
             <option value="pendente">Pendente</option>
           </select>
         </div>
+      </div>
+      <div className="mb-3">
+        <Label>Categoria da receita</Label>
+        <select
+          value={categoria}
+          onChange={(e) => setCategoria(e.target.value)}
+          className="h-10 w-full rounded-xl border border-border bg-card/60 px-3 text-sm text-text"
+        >
+          {CATEGORIAS_RECEITA.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
       </div>
       <Button type="submit" size="sm" disabled={enviando || valor <= 0} className="w-full">
         {enviando ? "Salvando..." : "Lançar cobrança"}

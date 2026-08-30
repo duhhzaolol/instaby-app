@@ -193,6 +193,7 @@ model Cobranca {
   orcamento   Orcamento? @relation(fields: [orcamentoId], references: [id])
   valor       Decimal
   tipo        String     @default("recorrente") // recorrente | unica
+  categoria   String? // ex: "Serviços", "Mensalidades", "Produtos" — texto livre
   vencimento  DateTime?
   status      String     @default("pendente") // pendente | pago | atrasado
   createdAt   DateTime   @default(now())
@@ -204,7 +205,10 @@ model Despesa {
   cliente            Cliente? @relation(fields: [clienteId], references: [id])
   descricao          String
   valor              Decimal
-  tipo               String   @default("flexivel") // fixa | flexivel
+  tipo               String   @default("flexivel") // fixa | flexivel — mantido pro gráfico existente
+  categoriaFinanceira String? // custo | despesa_fixa | despesa_variavel | despesa_financeira | imposto | investimento | transferencia
+  categoria          String? // ex: "Aluguel", "Material de escritório" — texto livre
+  subcategoria       String?
   recorrente         Boolean  @default(false) // true só na despesa "modelo" — repete todo mês sozinha
   origemRecorrenteId String? // preenchido nas cópias geradas automaticamente todo mês
   data               DateTime @default(now())

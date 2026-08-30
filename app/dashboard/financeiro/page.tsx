@@ -37,6 +37,9 @@ async function garantirRecorrentesDoMes() {
           descricao: modelo.descricao,
           valor: modelo.valor,
           tipo: modelo.tipo,
+          categoriaFinanceira: modelo.categoriaFinanceira,
+          categoria: modelo.categoria,
+          subcategoria: modelo.subcategoria,
           clienteId: modelo.clienteId,
           recorrente: false,
           origemRecorrenteId: modelo.id,
@@ -89,6 +92,7 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: {
     if (chave in mensal) mensal[chave].entradas += Number(c.valor);
   });
   despesasTodas.forEach((d) => {
+    if (d.categoriaFinanceira === "transferencia") return; // retirada/transferência não conta como despesa
     const chave = NOMES_MESES[d.data.getMonth()];
     if (chave in mensal) {
       if (d.tipo === "fixa") mensal[chave].despesasFixas += Number(d.valor);
@@ -103,8 +107,12 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: {
   const totalEntradas = cobrancas.reduce((s, c) => s + Number(c.valor), 0);
   const custosFixos = despesas.filter((d) => d.tipo === "fixa");
   const custosFlexiveis = despesas.filter((d) => d.tipo !== "fixa");
-  const totalFixas = custosFixos.reduce((s, d) => s + Number(d.valor), 0);
-  const totalFlexiveis = custosFlexiveis.reduce((s, d) => s + Number(d.valor), 0);
+  const totalFixas = custosFixos
+    .filter((d) => d.categoriaFinanceira !== "transferencia")
+    .reduce((s, d) => s + Number(d.valor), 0);
+  const totalFlexiveis = custosFlexiveis
+    .filter((d) => d.categoriaFinanceira !== "transferencia")
+    .reduce((s, d) => s + Number(d.valor), 0);
 
   // Acúmulo dia a dia do mês selecionado (só faz sentido pra "este mês" / "mês anterior")
   let graficoDiario: { dia: number; entradas: number; lucro: number }[] | null = null;
@@ -119,6 +127,7 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: {
       entradasPorDia[dia] = (entradasPorDia[dia] || 0) + Number(c.valor);
     });
     despesas.forEach((d) => {
+      if (d.categoriaFinanceira === "transferencia") return;
       const dia = d.data.getDate();
       custosPorDia[dia] = (custosPorDia[dia] || 0) + Number(d.valor);
     });
@@ -160,6 +169,8 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: {
         cliente: d.cliente?.nome || null,
         data: d.data.toISOString(),
         recorrente: d.recorrente || !!d.origemRecorrenteId,
+        categoriaFinanceira: d.categoriaFinanceira,
+        categoria: d.categoria,
       }))}
       custosFlexiveis={custosFlexiveis.slice(0, 10).map((d) => ({
         id: d.id,
@@ -167,6 +178,8 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: {
         valor: Number(d.valor),
         cliente: d.cliente?.nome || null,
         data: d.data.toISOString(),
+        categoriaFinanceira: d.categoriaFinanceira,
+        categoria: d.categoria,
       }))}
       clientes={clientes}
     />

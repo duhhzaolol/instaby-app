@@ -227,6 +227,8 @@ export default async function ClienteDetalhePage({
             descricao: d.descricao,
             valor: Number(d.valor),
             data: d.data.toISOString(),
+            categoriaFinanceira: d.categoriaFinanceira,
+            categoria: d.categoria,
           }))}
         />
       )}

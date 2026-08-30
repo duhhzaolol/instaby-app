@@ -13,6 +13,7 @@ export async function PATCH(
       ...(body.status !== undefined && { status: body.status }),
       ...(body.valor !== undefined && { valor: body.valor }),
       ...(body.tipo !== undefined && { tipo: body.tipo }),
+      ...(body.categoria !== undefined && { categoria: body.categoria }),
       ...(body.vencimento !== undefined && { vencimento: body.vencimento ? new Date(body.vencimento) : null }),
     },
   });
