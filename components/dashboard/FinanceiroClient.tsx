@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   AreaChart,
@@ -32,12 +33,7 @@ type CobrancaPendente = {
   vencimento: string | null;
 };
 
-const PERIODOS = [
-  { valor: "mes_atual", label: "Este mês" },
-  { valor: "mes_anterior", label: "Mês anterior" },
-  { valor: "3m", label: "Últimos 3 meses" },
-  { valor: "6m", label: "Últimos 6 meses" },
-];
+import { PERIODOS_FINANCEIRO } from "@/lib/periodoFinanceiro";
 
 function diasParaVencer(vencimento: string) {
   const hoje = new Date();
@@ -68,17 +64,30 @@ export default function FinanceiroClient({
 }) {
   const router = useRouter();
   const [formAberto, setFormAberto] = useState<"fixa" | "flexivel" | null>(null);
+  const [personDesde, setPersonDesde] = useState("");
+  const [personAte, setPersonAte] = useState("");
 
   function mudarPeriodo(novo: string) {
+    if (novo === "personalizado") return; // espera preencher as datas
     router.push(`/dashboard/financeiro?periodo=${novo}`);
+  }
+
+  function aplicarPersonalizado() {
+    if (!personDesde || !personAte) return;
+    router.push(`/dashboard/financeiro?periodo=personalizado&desde=${personDesde}&ate=${personAte}`);
   }
 
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-lg font-medium text-text">Financeiro</p>
-        <div className="flex flex-wrap gap-2">
-          {PERIODOS.map((p) => (
+        <div>
+          <p className="text-lg font-medium text-text">Financeiro</p>
+          <Link href="/dashboard/financeiro/dre" className="text-xs font-medium text-accent hover:underline">
+            Ver DRE →
+          </Link>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {PERIODOS_FINANCEIRO.map((p) => (
             <button
               key={p.valor}
               onClick={() => mudarPeriodo(p.valor)}
@@ -89,6 +98,29 @@ export default function FinanceiroClient({
               {p.label}
             </button>
           ))}
+          {periodo === "personalizado" && (
+            <div className="flex items-center gap-1.5">
+              <input
+                type="date"
+                value={personDesde}
+                onChange={(e) => setPersonDesde(e.target.value)}
+                className="h-8 rounded-lg border border-border bg-card/60 px-2 text-xs text-text"
+              />
+              <span className="text-xs text-muted">até</span>
+              <input
+                type="date"
+                value={personAte}
+                onChange={(e) => setPersonAte(e.target.value)}
+                className="h-8 rounded-lg border border-border bg-card/60 px-2 text-xs text-text"
+              />
+              <button
+                onClick={aplicarPersonalizado}
+                className="h-8 rounded-lg bg-accent px-3 text-xs font-medium text-white"
+              >
+                Aplicar
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

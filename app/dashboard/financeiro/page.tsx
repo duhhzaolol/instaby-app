@@ -1,21 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import FinanceiroClient from "@/components/dashboard/FinanceiroClient";
+import { faixaPeriodo } from "@/lib/periodoFinanceiro";
 
 const NOMES_MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
-
-function faixaPeriodo(periodo: string) {
-  const hoje = new Date();
-  const inicioMesAtual = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-
-  if (periodo === "mes_anterior") {
-    const inicio = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
-    const fim = new Date(hoje.getFullYear(), hoje.getMonth(), 0, 23, 59, 59);
-    return { desde: inicio, ate: fim, meses: 1 };
-  }
-  if (periodo === "3m") return { desde: new Date(hoje.getFullYear(), hoje.getMonth() - 2, 1), ate: hoje, meses: 3 };
-  if (periodo === "6m") return { desde: new Date(hoje.getFullYear(), hoje.getMonth() - 5, 1), ate: hoje, meses: 6 };
-  return { desde: inicioMesAtual, ate: hoje, meses: 1 };
-}
 
 async function garantirRecorrentesDoMes() {
   const hoje = new Date();
@@ -50,11 +37,15 @@ async function garantirRecorrentesDoMes() {
   }
 }
 
-export default async function FinanceiroPage({ searchParams }: { searchParams: { periodo?: string } }) {
+export default async function FinanceiroPage({
+  searchParams,
+}: {
+  searchParams: { periodo?: string; desde?: string; ate?: string };
+}) {
   await garantirRecorrentesDoMes();
 
   const periodo = searchParams.periodo || "mes_atual";
-  const { desde, ate, meses } = faixaPeriodo(periodo);
+  const { desde, ate, meses } = faixaPeriodo(periodo, { desde: searchParams.desde, ate: searchParams.ate });
 
   const hoje = new Date();
   const mesesGrafico = Math.max(meses, 6);

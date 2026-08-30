@@ -1,43 +1,49 @@
 # Instaby App
 
-Painel interno da Instaby Agência — v51 (Financeiro, Fase 2).
+Painel interno da Instaby Agência — v52 (Financeiro, Fase 3).
 
-## O que mudou
+## O que entrou: DRE de verdade
 
-### Competência separada de pagamento
-Toda despesa agora tem:
-- **Data de competência** (o campo "Data" de sempre, só renomeado) — o
-  mês a que o gasto pertence
-- **Status**: Pendente, Pago, Atrasado ou Cancelado
-- **Vencimento** — aparece só quando o status é Pendente/Atrasado
-- **Data de pagamento** — quando o status é Pago, e pode ser diferente da
-  competência (ex: competência em agosto, mas você só pagou em setembro)
+Nova página `/dashboard/financeiro/dre`, acessível pelo link "Ver DRE →"
+no topo do Financeiro.
 
-Cobranças (receitas) ganharam o mesmo tipo de campo por baixo (data de
-competência e data de recebimento), e o status ganhou a opção
-**Cancelado**, que faltava.
+### A estrutura completa
+```
+Receita Bruta
+(−) Impostos sobre vendas
+(−) Descontos/cancelamentos  [ainda não rastreado — mostra R$ 0]
+= Receita Líquida
 
-### Cancelado não conta em nada
-Igual já valia pra Transferência/Retirada (Fase 1), agora despesa
-**Cancelada** também some dos totais e gráficos — só fica registrada
-pra você não perder o histórico de que aquilo foi lançado e depois
-cancelado.
+(−) Custos diretos
+= Lucro Bruto                    → Margem bruta
 
-### Onde aparece
-- No formulário de nova despesa: Status + (Vencimento OU Data de
-  pagamento, dependendo do que você escolher)
-- Ao editar qualquer despesa: os mesmos campos
-- Na lista, cada despesa com status diferente de "Pago" ganha uma
-  etiqueta colorida (laranja pra pendente, vermelho pra atrasado, cinza
-  pra cancelado) mostrando o vencimento
-- Cobranças: o formulário de edição ganhou o seletor de status completo
+(−) Despesas Operacionais        (com o detalhe de cada categoria embaixo)
+= Lucro Operacional              → Margem operacional
 
-## O que não mudou
-Nada foi apagado, nenhum lançamento antigo foi alterado — todos entram
-com status "Pago" por padrão (do jeito que sempre funcionou), então nada
-quebra.
+(−) Despesas Financeiras
+= Lucro Líquido                  → Margem líquida
+```
+
+### Por competência, não por caixa
+Diferente da Visão Geral (que soma só cobranças já marcadas como
+"Pago"), a DRE soma **tudo que pertence àquele período**, mesmo que
+ainda esteja pendente — é assim que uma DRE de verdade funciona,
+olhando pra quando a receita/despesa "aconteceu", não pra quando o
+dinheiro efetivamente mudou de mão.
+
+### Período estendido
+O seletor de período (tanto na Visão Geral quanto na DRE) ganhou duas
+opções novas: **Este ano**, **Ano anterior**, e **Personalizado** (você
+escolhe as duas datas).
+
+### Avisos importantes
+- Se tiver despesa **sem classificação** (ou marcada como Retirada/
+  Transferência) no período, aparece um aviso amarelo dizendo quanto
+  ficou de fora da conta — assim você sabe que a DRE não está 100%
+  completa até classificar tudo
+- **Investimentos/Ativos** do período aparecem separados, informando que
+  reduziram o caixa mas não entram na DRE (compra de equipamento não é
+  despesa operacional)
 
 ## Próxima fase
-Fase 3 — DRE de verdade (Receita Bruta → Custos → Lucro Bruto → Despesas
-→ Lucro Operacional → Lucro Líquido, com as margens), usando a
-competência que agora já está separada.
+Fase 4 — Contas a Pagar e Contas a Receber como telas próprias.
