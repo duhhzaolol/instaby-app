@@ -20,7 +20,7 @@ import { Input, Label } from "@/components/ui/Input";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { CountUp } from "@/components/ui/CountUp";
 import { DespesaRow, DespesaRowData } from "@/components/dashboard/DespesaRow";
-import { CATEGORIAS_FINANCEIRAS, visualDaCategoriaFinanceira } from "@/lib/categoriasFinanceiras";
+import { CATEGORIAS_FINANCEIRAS, STATUS_DESPESA, visualDaCategoriaFinanceira } from "@/lib/categoriasFinanceiras";
 
 type Cliente = { id: string; nome: string };
 type CobrancaPendente = {
@@ -399,6 +399,9 @@ function NovaDespesaForm({
     tipo === "fixa" ? "despesa_fixa" : "despesa_variavel"
   );
   const [categoria, setCategoria] = useState("");
+  const [status, setStatus] = useState("pago");
+  const [vencimento, setVencimento] = useState("");
+  const [dataPagamento, setDataPagamento] = useState("");
   const [enviando, setEnviando] = useState(false);
 
   const infoCategoria = visualDaCategoriaFinanceira(categoriaFinanceira);
@@ -418,6 +421,9 @@ function NovaDespesaForm({
         tipo,
         categoriaFinanceira,
         categoria: categoria || null,
+        status,
+        vencimento: vencimento || null,
+        dataPagamento: status === "pago" ? dataPagamento || data : null,
         recorrente: tipo === "fixa" ? recorrente : false,
       }),
     });
@@ -481,13 +487,55 @@ function NovaDespesaForm({
       )}
 
       <div className="mb-2 grid grid-cols-2 gap-2">
+        <div>
+          <Label>Status</Label>
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className="h-10 w-full rounded-xl border border-border bg-card/60 px-3 text-sm text-text"
+          >
+            {STATUS_DESPESA.map((s) => (
+              <option key={s.valor} value={s.valor}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        {(status === "pendente" || status === "atrasado") && (
+          <div>
+            <Label>Vencimento</Label>
+            <input
+              type="date"
+              value={vencimento}
+              onChange={(e) => setVencimento(e.target.value)}
+              className="h-10 w-full rounded-xl border border-border bg-card/60 px-3 text-sm text-text"
+            />
+          </div>
+        )}
+        {status === "pago" && (
+          <div>
+            <Label>Data do pagamento (se diferente)</Label>
+            <input
+              type="date"
+              value={dataPagamento}
+              onChange={(e) => setDataPagamento(e.target.value)}
+              className="h-10 w-full rounded-xl border border-border bg-card/60 px-3 text-sm text-text"
+            />
+          </div>
+        )}
+      </div>
+
+      <div className="mb-2 grid grid-cols-2 gap-2">
         <CurrencyInput value={valor} onChange={setValor} />
-        <input
-          type="date"
-          value={data}
-          onChange={(e) => setData(e.target.value)}
-          className="h-10 rounded-xl border border-border bg-card/60 px-3 text-sm text-text"
-        />
+        <div>
+          <label className="mb-1 block text-[11px] text-muted">Data de competência</label>
+          <input
+            type="date"
+            value={data}
+            onChange={(e) => setData(e.target.value)}
+            className="h-10 w-full rounded-xl border border-border bg-card/60 px-3 text-sm text-text"
+          />
+        </div>
       </div>
       {tipo === "fixa" ? (
         <label className="mb-3 flex items-center gap-2 rounded-lg border border-accent/20 bg-accent/5 px-3 py-2.5 text-xs text-text">

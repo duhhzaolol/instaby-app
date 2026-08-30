@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { CATEGORIAS_FINANCEIRAS, visualDaCategoriaFinanceira } from "@/lib/categoriasFinanceiras";
+import { CATEGORIAS_FINANCEIRAS, STATUS_DESPESA, visualDaCategoriaFinanceira } from "@/lib/categoriasFinanceiras";
 
 export type DespesaRowData = {
   id: string;
@@ -18,6 +18,14 @@ export type DespesaRowData = {
   recorrente?: boolean;
   categoriaFinanceira?: string | null;
   categoria?: string | null;
+  status?: string | null;
+  vencimento?: string | null;
+};
+
+const CORES_STATUS: Record<string, string> = {
+  pendente: "#F59E0B",
+  atrasado: "#EF4444",
+  cancelado: "#6B7280",
 };
 
 export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index: number }) {
@@ -28,10 +36,13 @@ export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index:
   const [data, setData] = useState(despesa.data.slice(0, 10));
   const [categoriaFinanceira, setCategoriaFinanceira] = useState(despesa.categoriaFinanceira || "");
   const [categoria, setCategoria] = useState(despesa.categoria || "");
+  const [status, setStatus] = useState(despesa.status || "pago");
+  const [vencimento, setVencimento] = useState(despesa.vencimento?.slice(0, 10) || "");
   const [salvando, setSalvando] = useState(false);
 
   const infoCategoria = visualDaCategoriaFinanceira(despesa.categoriaFinanceira);
   const infoCategoriaEditando = visualDaCategoriaFinanceira(categoriaFinanceira);
+  const corStatus = despesa.status && despesa.status !== "pago" ? CORES_STATUS[despesa.status] : null;
 
   async function salvar() {
     setSalvando(true);
@@ -44,6 +55,9 @@ export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index:
         data,
         categoriaFinanceira: categoriaFinanceira || null,
         categoria: categoria || null,
+        status,
+        vencimento: status === "pendente" || status === "atrasado" ? vencimento || null : null,
+        dataPagamento: status === "pago" ? data : null,
       }),
     });
     setSalvando(false);
@@ -92,14 +106,40 @@ export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index:
           </datalist>
         </div>
 
+        <div className="mb-2 grid grid-cols-2 gap-2">
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className="h-10 w-full rounded-xl border border-border bg-card/60 px-3 text-sm text-text"
+          >
+            {STATUS_DESPESA.map((s) => (
+              <option key={s.valor} value={s.valor}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+          {(status === "pendente" || status === "atrasado") && (
+            <input
+              type="date"
+              value={vencimento}
+              onChange={(e) => setVencimento(e.target.value)}
+              title="Vencimento"
+              className="h-10 w-full rounded-xl border border-border bg-card/60 px-3 text-sm text-text"
+            />
+          )}
+        </div>
+
         <div className="mb-3 grid grid-cols-2 gap-2">
           <CurrencyInput value={valor} onChange={setValor} />
-          <input
-            type="date"
-            value={data}
-            onChange={(e) => setData(e.target.value)}
-            className="h-10 rounded-xl border border-border bg-card/60 px-3 text-sm text-text"
-          />
+          <div>
+            <label className="mb-1 block text-[10px] text-muted">Competência</label>
+            <input
+              type="date"
+              value={data}
+              onChange={(e) => setData(e.target.value)}
+              className="h-10 w-full rounded-xl border border-border bg-card/60 px-3 text-sm text-text"
+            />
+          </div>
         </div>
         <div className="flex gap-2">
           <Button size="sm" onClick={salvar} disabled={salvando} className="flex-1">
@@ -124,7 +164,7 @@ export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index:
             </span>
           )}
         </p>
-        <p className="flex items-center gap-1.5 text-xs text-muted">
+        <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
           {despesa.cliente && `${despesa.cliente} · `}
           {new Date(despesa.data).toLocaleDateString("pt-BR")}
           {despesa.categoria ? (
@@ -136,6 +176,15 @@ export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index:
             </span>
           ) : (
             <span className="rounded-full bg-white/5 px-1.5 py-0.5 text-[10px] text-muted">Sem categoria</span>
+          )}
+          {corStatus && (
+            <span
+              className="rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+              style={{ backgroundColor: `${corStatus}1A`, color: corStatus }}
+            >
+              {STATUS_DESPESA.find((s) => s.valor === despesa.status)?.label}
+              {despesa.vencimento && ` · vence ${new Date(despesa.vencimento).toLocaleDateString("pt-BR")}`}
+            </span>
           )}
         </p>
       </div>

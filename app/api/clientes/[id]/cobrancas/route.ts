@@ -19,6 +19,8 @@ export async function POST(
       categoria: body.categoria || null,
       status: body.status || "pendente",
       vencimento: body.vencimento ? new Date(body.vencimento) : null,
+      dataCompetencia: body.dataCompetencia ? new Date(body.dataCompetencia) : null,
+      dataRecebimento: body.status === "pago" && body.data ? new Date(body.data) : null,
       createdAt: body.data ? new Date(body.data) : undefined,
     },
   });

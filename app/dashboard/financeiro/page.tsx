@@ -68,7 +68,7 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: {
       orderBy: { createdAt: "desc" },
     }),
     prisma.despesa.findMany({
-      where: { data: { gte: desdeConsulta } },
+      where: { data: { gte: desdeConsulta }, status: { not: "cancelado" } },
       include: { cliente: true },
       orderBy: { data: "desc" },
     }),
@@ -171,6 +171,8 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: {
         recorrente: d.recorrente || !!d.origemRecorrenteId,
         categoriaFinanceira: d.categoriaFinanceira,
         categoria: d.categoria,
+        status: d.status,
+        vencimento: d.vencimento?.toISOString() || null,
       }))}
       custosFlexiveis={custosFlexiveis.map((d) => ({
         id: d.id,
@@ -180,6 +182,8 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: {
         data: d.data.toISOString(),
         categoriaFinanceira: d.categoriaFinanceira,
         categoria: d.categoria,
+        status: d.status,
+        vencimento: d.vencimento?.toISOString() || null,
       }))}
       clientes={clientes}
     />

@@ -17,6 +17,11 @@ export async function PATCH(
       ...(body.categoriaFinanceira !== undefined && { categoriaFinanceira: body.categoriaFinanceira }),
       ...(body.categoria !== undefined && { categoria: body.categoria }),
       ...(body.subcategoria !== undefined && { subcategoria: body.subcategoria }),
+      ...(body.status !== undefined && { status: body.status }),
+      ...(body.vencimento !== undefined && { vencimento: body.vencimento ? new Date(body.vencimento) : null }),
+      ...(body.dataPagamento !== undefined && {
+        dataPagamento: body.dataPagamento ? new Date(body.dataPagamento) : null,
+      }),
     },
   });
 

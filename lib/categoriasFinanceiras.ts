@@ -73,6 +73,20 @@ export const CATEGORIAS_FINANCEIRAS: {
 
 export const CATEGORIAS_RECEITA = ["Serviços", "Produtos", "Mensalidades", "Recorrências", "Outras receitas"];
 
+export const STATUS_DESPESA = [
+  { valor: "pendente", label: "Pendente" },
+  { valor: "pago", label: "Pago" },
+  { valor: "atrasado", label: "Atrasado" },
+  { valor: "cancelado", label: "Cancelado" },
+];
+
+export const STATUS_COBRANCA = [
+  { valor: "pendente", label: "Pendente" },
+  { valor: "pago", label: "Recebido" },
+  { valor: "atrasado", label: "Atrasado" },
+  { valor: "cancelado", label: "Cancelado" },
+];
+
 export function visualDaCategoriaFinanceira(valor: string | null | undefined) {
   return CATEGORIAS_FINANCEIRAS.find((c) => c.valor === valor) || null;
 }

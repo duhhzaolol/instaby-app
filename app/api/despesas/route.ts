@@ -27,6 +27,9 @@ export async function POST(request: NextRequest) {
       categoria: body.categoria || null,
       subcategoria: body.subcategoria || null,
       recorrente: body.recorrente || false,
+      status: body.status || "pago",
+      vencimento: body.vencimento ? new Date(body.vencimento) : null,
+      dataPagamento: body.dataPagamento ? new Date(body.dataPagamento) : null,
       data: body.data ? new Date(body.data) : new Date(),
     },
   });

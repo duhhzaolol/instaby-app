@@ -194,8 +194,10 @@ model Cobranca {
   valor       Decimal
   tipo        String     @default("recorrente") // recorrente | unica
   categoria   String? // ex: "Serviços", "Mensalidades", "Produtos" — texto livre
+  dataCompetencia DateTime? // mês a que a receita pertence — se vazio, usa createdAt
+  dataRecebimento DateTime? // quando o dinheiro realmente entrou
   vencimento  DateTime?
-  status      String     @default("pendente") // pendente | pago | atrasado
+  status      String     @default("pendente") // pendente | pago | atrasado | cancelado
   createdAt   DateTime   @default(now())
 }
 
@@ -209,9 +211,12 @@ model Despesa {
   categoriaFinanceira String? // custo | despesa_fixa | despesa_variavel | despesa_financeira | imposto | investimento | transferencia
   categoria          String? // ex: "Aluguel", "Material de escritório" — texto livre
   subcategoria       String?
+  status             String   @default("pago") // pendente | pago | atrasado | cancelado
+  vencimento         DateTime? // só relevante quando status = pendente/atrasado
+  dataPagamento      DateTime? // quando o dinheiro realmente saiu (pode ser diferente da competência)
   recorrente         Boolean  @default(false) // true só na despesa "modelo" — repete todo mês sozinha
   origemRecorrenteId String? // preenchido nas cópias geradas automaticamente todo mês
-  data               DateTime @default(now())
+  data               DateTime @default(now()) // data de competência — mês a que o gasto pertence
 }
 
 // Depoimentos fixos — aparecem em toda página de orçamento

@@ -15,6 +15,12 @@ export async function PATCH(
       ...(body.tipo !== undefined && { tipo: body.tipo }),
       ...(body.categoria !== undefined && { categoria: body.categoria }),
       ...(body.vencimento !== undefined && { vencimento: body.vencimento ? new Date(body.vencimento) : null }),
+      ...(body.dataCompetencia !== undefined && {
+        dataCompetencia: body.dataCompetencia ? new Date(body.dataCompetencia) : null,
+      }),
+      ...(body.dataRecebimento !== undefined && {
+        dataRecebimento: body.dataRecebimento ? new Date(body.dataRecebimento) : null,
+      }),
     },
   });
 

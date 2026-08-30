@@ -8,16 +8,18 @@ import { Badge } from "@/components/ui/Badge";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { Button } from "@/components/ui/Button";
 
-const tone: Record<string, "green" | "red" | "yellow"> = {
+const tone: Record<string, "green" | "red" | "yellow" | "gray"> = {
   pago: "green",
   atrasado: "red",
   pendente: "yellow",
+  cancelado: "gray",
 };
 
 const label: Record<string, string> = {
   pago: "Pago",
   atrasado: "Atrasado",
   pendente: "Pendente",
+  cancelado: "Cancelado",
 };
 
 export type CobrancaRowData = {
@@ -41,6 +43,7 @@ export function CobrancaRow({
   const [editando, setEditando] = useState(false);
   const [valor, setValor] = useState(cobranca.valor);
   const [tipo, setTipo] = useState(cobranca.tipo);
+  const [status, setStatus] = useState(cobranca.status);
   const [vencimento, setVencimento] = useState(cobranca.vencimento?.slice(0, 10) || "");
   const [salvando, setSalvando] = useState(false);
 
@@ -49,7 +52,7 @@ export function CobrancaRow({
     await fetch(`/api/cobrancas/${cobranca.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ valor, tipo, vencimento: vencimento || null }),
+      body: JSON.stringify({ valor, tipo, status, vencimento: vencimento || null }),
     });
     setSalvando(false);
     setEditando(false);
@@ -86,10 +89,20 @@ export function CobrancaRow({
         <select
           value={tipo}
           onChange={(e) => setTipo(e.target.value)}
-          className="mb-3 h-10 w-full rounded-xl border border-border bg-card/60 px-3 text-sm text-text"
+          className="mb-2 h-10 w-full rounded-xl border border-border bg-card/60 px-3 text-sm text-text"
         >
           <option value="recorrente">Recorrente</option>
           <option value="unica">Única</option>
+        </select>
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          className="mb-3 h-10 w-full rounded-xl border border-border bg-card/60 px-3 text-sm text-text"
+        >
+          <option value="pendente">Pendente</option>
+          <option value="pago">Recebido</option>
+          <option value="atrasado">Atrasado</option>
+          <option value="cancelado">Cancelado</option>
         </select>
         <div className="flex gap-2">
           <Button size="sm" onClick={salvar} disabled={salvando} className="flex-1">
