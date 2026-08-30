@@ -1,47 +1,15 @@
 # Instaby App
 
-Painel interno da Instaby Agência — v49 (Financeiro, Fase 1).
+Painel interno da Instaby Agência — v50 (correção).
 
-## Resumo do que foi feito
+## O bug
 
-Primeira fase da evolução do Financeiro (documento que você mandou) —
-**Tipo + Categoria/Subcategoria**, a base de tudo que vem depois.
+A lista de "Custos flexíveis" no Financeiro só mostrava as 10 despesas
+mais recentes — um limite que ficou no código desde bem no início do
+projeto, sem nenhum "ver mais" pra acessar o resto. Por isso as despesas
+da sua viagem em São Paulo sumiam depois da oitava/nona linha.
 
-## O que mudou
+## A correção
 
-### 1. Classificação financeira completa
-Toda despesa agora pode ter uma **Classificação** (Custo direto,
-Despesa fixa, Despesa variável, Despesa financeira, Imposto, Investimento/
-Ativo, Retirada/Transferência) e uma **Categoria** (texto livre, com
-sugestões — Aluguel, Material de escritório, Comida, etc., que mudam
-conforme a classificação escolhida). O campo velho de fixa/flexível
-continua existindo por baixo (o gráfico de sempre não quebrou), só que
-agora tem uma camada mais rica em cima.
-
-Receitas (cobranças) também ganharam **Categoria** (Serviços, Produtos,
-Mensalidades, Recorrências, Outras receitas).
-
-### 2. Retirada/Transferência não conta mais como despesa
-Regra importante do documento: se você lançar uma "Retirada pessoal" ou
-"Distribuição de lucros" com a classificação **Transferência**, ela fica
-registrada (você continua vendo ela na lista), mas **não entra mais na
-conta de lucro nem nos gráficos** — porque tirar dinheiro seu do caixa
-não é uma despesa da agência.
-
-### 3. Lançamentos antigos não foram mexidos
-Nenhuma despesa que já existia foi reclassificada — tudo o que você já
-tinha (celular, cartório, comida, HDD, quadros...) continua exatamente
-como estava, só que agora mostra **"Sem categoria"** até você mesmo
-classificar. Pra isso, é só clicar no lápis de qualquer despesa — o
-formulário de edição agora também tem os campos de classificação.
-
-## O que NÃO mudou
-
-- O gráfico "Entradas x Custos fixos x Custos flexíveis" continua igual
-  (só passou a ignorar retiradas/transferências no cálculo)
-- Nenhuma despesa ou cobrança foi apagada ou alterada automaticamente
-- O visual, os cards, as cores — tudo igual
-
-## Próximas fases (não fiz ainda, aguardando você)
-Competência vs. pagamento → DRE de verdade → Contas a Pagar/Receber →
-o resto, conforme combinamos.
+Removido o limite — agora mostra todas as despesas flexíveis do período
+selecionado, igual os Custos operacionais (fixos) já faziam.

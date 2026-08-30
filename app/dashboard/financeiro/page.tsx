@@ -172,7 +172,7 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: {
         categoriaFinanceira: d.categoriaFinanceira,
         categoria: d.categoria,
       }))}
-      custosFlexiveis={custosFlexiveis.slice(0, 10).map((d) => ({
+      custosFlexiveis={custosFlexiveis.map((d) => ({
         id: d.id,
         descricao: d.descricao,
         valor: Number(d.valor),
