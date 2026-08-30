@@ -15,6 +15,7 @@ import {
   Clock,
   Calendar,
   CheckSquare,
+  BarChart3,
   Settings,
   Menu,
   X,
@@ -26,7 +27,11 @@ const menuPrincipal = [
   { label: "Agenda", href: "/dashboard/agenda", icon: Calendar },
   { label: "Tarefas", href: "/dashboard/tarefas", icon: CheckSquare },
   { label: "Horas", href: "/dashboard/horas", icon: Clock },
-  { label: "Financeiro", href: "/dashboard/financeiro", icon: Wallet },
+];
+
+const menuFinanceiro = [
+  { label: "Visão geral", href: "/dashboard/financeiro", icon: Wallet },
+  { label: "DRE", href: "/dashboard/financeiro/dre", icon: BarChart3 },
 ];
 
 const menuOrcamento = [
@@ -71,8 +76,17 @@ function ItemMenu({
 
 function ConteudoSidebar({ nome, email, onNavigate }: { nome: string; email: string; onNavigate?: () => void }) {
   const pathname = usePathname();
-  const ativo = (href: string) =>
-    href === "/dashboard" ? pathname === "/dashboard" : pathname?.startsWith(href);
+
+  const todosHrefs = [
+    ...menuPrincipal.map((i) => i.href),
+    ...menuFinanceiro.map((i) => i.href),
+    ...menuOrcamento.map((i) => i.href),
+    ...menuConfig.map((i) => i.href),
+  ];
+  const melhorMatch = todosHrefs
+    .filter((h) => pathname === h || pathname?.startsWith(h + "/"))
+    .sort((a, b) => b.length - a.length)[0];
+  const ativo = (href: string) => href === melhorMatch;
 
   const iniciais = nome
     .split(" ")
@@ -91,6 +105,13 @@ function ConteudoSidebar({ nome, email, onNavigate }: { nome: string; email: str
         <div className="flex flex-col gap-1">
           <p className="px-3 pb-1 text-[11px] uppercase tracking-wider text-muted/70">Geral</p>
           {menuPrincipal.map((item) => (
+            <ItemMenu key={item.href} item={item} ativo={!!ativo(item.href)} onClick={onNavigate} />
+          ))}
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <p className="px-3 pb-1 text-[11px] uppercase tracking-wider text-muted/70">Financeiro</p>
+          {menuFinanceiro.map((item) => (
             <ItemMenu key={item.href} item={item} ativo={!!ativo(item.href)} onClick={onNavigate} />
           ))}
         </div>

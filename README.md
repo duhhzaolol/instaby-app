@@ -1,49 +1,25 @@
 # Instaby App
 
-Painel interno da Instaby Agência — v52 (Financeiro, Fase 3).
+Painel interno da Instaby Agência — v53.
 
-## O que entrou: DRE de verdade
+## 1. DRE no menu lateral
 
-Nova página `/dashboard/financeiro/dre`, acessível pelo link "Ver DRE →"
-no topo do Financeiro.
+Criei a seção **"Financeiro"** própria no menu, com dois itens: **Visão
+geral** e **DRE**. Tirei o link escondido "Ver DRE →" que ficava dentro
+da própria tela — agora é navegação de verdade, igual o resto do app.
 
-### A estrutura completa
-```
-Receita Bruta
-(−) Impostos sobre vendas
-(−) Descontos/cancelamentos  [ainda não rastreado — mostra R$ 0]
-= Receita Líquida
+## 2. Resumo por cliente (sem precisar calcular na mão)
 
-(−) Custos diretos
-= Lucro Bruto                    → Margem bruta
+Novo card na Visão Geral do Financeiro, logo depois dos indicadores do
+topo — pra cada cliente que teve movimento no período selecionado,
+mostra:
 
-(−) Despesas Operacionais        (com o detalhe de cada categoria embaixo)
-= Lucro Operacional              → Margem operacional
+- **Entradas** (o que ele te pagou)
+- **Despesas** (o que você gastou ligado a ele — só aparece se tiver)
+- **Lucro** (a conta já pronta, entradas menos despesas)
 
-(−) Despesas Financeiras
-= Lucro Líquido                  → Margem líquida
-```
+Exatamente o exemplo que você deu: Sky Fit pagou R$ 1.500, teve R$ 800 de
+despesa, o card já mostra R$ 700 de lucro, sem você pegar calculadora.
 
-### Por competência, não por caixa
-Diferente da Visão Geral (que soma só cobranças já marcadas como
-"Pago"), a DRE soma **tudo que pertence àquele período**, mesmo que
-ainda esteja pendente — é assim que uma DRE de verdade funciona,
-olhando pra quando a receita/despesa "aconteceu", não pra quando o
-dinheiro efetivamente mudou de mão.
-
-### Período estendido
-O seletor de período (tanto na Visão Geral quanto na DRE) ganhou duas
-opções novas: **Este ano**, **Ano anterior**, e **Personalizado** (você
-escolhe as duas datas).
-
-### Avisos importantes
-- Se tiver despesa **sem classificação** (ou marcada como Retirada/
-  Transferência) no período, aparece um aviso amarelo dizendo quanto
-  ficou de fora da conta — assim você sabe que a DRE não está 100%
-  completa até classificar tudo
-- **Investimentos/Ativos** do período aparecem separados, informando que
-  reduziram o caixa mas não entram na DRE (compra de equipamento não é
-  despesa operacional)
-
-## Próxima fase
-Fase 4 — Contas a Pagar e Contas a Receber como telas próprias.
+Segue o mesmo período selecionado lá em cima (Este mês, Últimos 3 meses,
+etc.) — muda junto quando você troca o filtro.

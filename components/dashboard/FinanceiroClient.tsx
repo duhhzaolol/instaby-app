@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   AreaChart,
@@ -52,6 +51,7 @@ export default function FinanceiroClient({
   custosFixos,
   custosFlexiveis,
   clientes,
+  resumoPorCliente,
 }: {
   periodo: string;
   resumo: { entradas: number; despesasFixas: number; despesasFlexiveis: number; lucro: number };
@@ -61,6 +61,7 @@ export default function FinanceiroClient({
   custosFixos: DespesaRowData[];
   custosFlexiveis: DespesaRowData[];
   clientes: Cliente[];
+  resumoPorCliente: { nome: string; cor: string | null; entradas: number; despesas: number; lucro: number }[];
 }) {
   const router = useRouter();
   const [formAberto, setFormAberto] = useState<"fixa" | "flexivel" | null>(null);
@@ -82,9 +83,7 @@ export default function FinanceiroClient({
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-lg font-medium text-text">Financeiro</p>
-          <Link href="/dashboard/financeiro/dre" className="text-xs font-medium text-accent hover:underline">
-            Ver DRE →
-          </Link>
+          <p className="text-xs text-muted">Visão geral · a DRE está no menu ao lado</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {PERIODOS_FINANCEIRO.map((p) => (
@@ -181,6 +180,34 @@ export default function FinanceiroClient({
           </p>
         </Card>
       </div>
+
+      {resumoPorCliente.length > 0 && (
+        <Card index={4} hoverable={false} className="mb-6 p-5">
+          <p className="mb-1 text-sm font-medium text-text">Resumo por cliente</p>
+          <p className="mb-4 text-xs text-muted">
+            O que entrou, o que saiu com despesas dele, e o lucro — no período selecionado.
+          </p>
+          <div className="flex flex-col gap-2">
+            {resumoPorCliente.map((c) => (
+              <div key={c.nome} className="flex items-center justify-between rounded-xl bg-base/60 px-3.5 py-2.5">
+                <span className="flex items-center gap-2 text-sm text-text">
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: c.cor || "#9CA3AF" }} />
+                  {c.nome}
+                </span>
+                <div className="flex items-center gap-4 text-xs">
+                  <span className="text-emerald-400">+R$ {c.entradas.toFixed(0)}</span>
+                  {c.despesas > 0 && <span className="text-red-400">−R$ {c.despesas.toFixed(0)}</span>}
+                  <span
+                    className={`min-w-[70px] text-right font-medium ${c.lucro >= 0 ? "text-accent" : "text-red-400"}`}
+                  >
+                    R$ {c.lucro.toFixed(0)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {graficoDiario && graficoDiario.length > 1 && (
         <Card index={99} hoverable={false} className="mb-6 p-5">

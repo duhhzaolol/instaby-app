@@ -133,6 +133,23 @@ export default async function FinanceiroPage({
     }
   }
 
+  // Resumo por cliente — entradas, despesas e lucro, pra não precisar calcular na mão
+  const porCliente: Record<string, { nome: string; cor: string | null; entradas: number; despesas: number }> = {};
+  cobrancas.forEach((c) => {
+    const chave = c.clienteId;
+    porCliente[chave] ||= { nome: c.cliente.nome, cor: c.cliente.cor, entradas: 0, despesas: 0 };
+    porCliente[chave].entradas += Number(c.valor);
+  });
+  despesas.forEach((d) => {
+    if (!d.clienteId || !d.cliente) return;
+    if (d.categoriaFinanceira === "transferencia") return;
+    porCliente[d.clienteId] ||= { nome: d.cliente.nome, cor: d.cliente.cor, entradas: 0, despesas: 0 };
+    porCliente[d.clienteId].despesas += Number(d.valor);
+  });
+  const resumoPorCliente = Object.values(porCliente)
+    .map((c) => ({ ...c, lucro: c.entradas - c.despesas }))
+    .sort((a, b) => b.entradas - a.entradas);
+
   return (
     <FinanceiroClient
       periodo={periodo}
@@ -177,6 +194,7 @@ export default async function FinanceiroPage({
         vencimento: d.vencimento?.toISOString() || null,
       }))}
       clientes={clientes}
+      resumoPorCliente={resumoPorCliente}
     />
   );
 }
