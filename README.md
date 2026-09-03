@@ -1,25 +1,23 @@
 # Instaby App
 
-Painel interno da Instaby Agência — v53.
+Painel interno da Instaby Agência — v54.
 
-## 1. DRE no menu lateral
+## O que entrou nesta versão
 
-Criei a seção **"Financeiro"** própria no menu, com dois itens: **Visão
-geral** e **DRE**. Tirei o link escondido "Ver DRE →" que ficava dentro
-da própria tela — agora é navegação de verdade, igual o resto do app.
+### 1. Horas geral — navegação por mês
+A tela de Horas (menu lateral) sempre mostrava só o mês atual, sem jeito
+de voltar. Agora tem as setinhas ao lado do nome do mês, igual a Agenda —
+navega pra trás e pra frente livremente. A seção "Hoje" só aparece
+quando você está vendo o mês atual (não faz sentido num mês passado).
 
-## 2. Resumo por cliente (sem precisar calcular na mão)
+### 2. Aba Horas do cliente — trocada a bagunça por um calendário
+Aquela lista enorme e desorganizada de registros dentro do cliente saiu
+de cena. No lugar: um resumo do total do mês + um botão "Ver calendário
+de horas", que leva pro calendário que já existia (construído faz tempo,
+com dias marcados e setas de mês) — só que agora ele fica fácil de
+achar, direto na aba.
 
-Novo card na Visão Geral do Financeiro, logo depois dos indicadores do
-topo — pra cada cliente que teve movimento no período selecionado,
-mostra:
-
-- **Entradas** (o que ele te pagou)
-- **Despesas** (o que você gastou ligado a ele — só aparece se tiver)
-- **Lucro** (a conta já pronta, entradas menos despesas)
-
-Exatamente o exemplo que você deu: Sky Fit pagou R$ 1.500, teve R$ 800 de
-despesa, o card já mostra R$ 700 de lucro, sem você pegar calculadora.
-
-Segue o mesmo período selecionado lá em cima (Este mês, Últimos 3 meses,
-etc.) — muda junto quando você troca o filtro.
+## Onde ficou tudo isso
+- `/dashboard/horas` — navegação por mês nova
+- Dentro do cliente → aba Horas → botão "Ver calendário de horas" leva
+  pro calendário por dia, com as setas de mês

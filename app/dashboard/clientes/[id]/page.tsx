@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Phone, Plus, Pencil, Building2, MapPin, User, FolderOpen } from "lucide-react";
+import { ArrowLeft, Phone, Plus, Pencil, Building2, MapPin, User, FolderOpen, CalendarClock } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import NovaTarefaForm from "./NovaTarefaForm";
 import ContratosTab from "./ContratosTab";
@@ -9,7 +9,6 @@ import ServicosContratadosTab from "./ServicosContratadosTab";
 import RelatoriosTab from "./RelatoriosTab";
 import { TarefaRow } from "@/components/dashboard/TarefaRow";
 import { OrcamentoRow } from "@/components/dashboard/OrcamentoRow";
-import { RegistroTempoRow } from "@/components/dashboard/RegistroTempoRow";
 import { Clock } from "lucide-react";
 
 export default async function ClienteDetalhePage({
@@ -291,29 +290,23 @@ export default async function ClienteDetalhePage({
               </div>
             );
           })()}
-          <div className="flex flex-col gap-2">
-            {cliente.registrosTempo.length === 0 && (
-              <p className="text-sm text-muted">Nenhum registro ainda.</p>
-            )}
-            {cliente.registrosTempo.map((r, i) => (
-              <RegistroTempoRow
-                key={r.id}
-                index={i}
-                registro={{
-                  id: r.id,
-                  atividade: r.atividade,
-                  inicio: r.inicio.toISOString(),
-                  fim: r.fim?.toISOString() || null,
-                }}
-              />
-            ))}
+          <p className="mb-4 text-sm text-muted">
+            Pra ver dia a dia (com calendário e navegação entre meses), abre o calendário completo desse cliente.
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Link
+              href={`/dashboard/horas/${cliente.id}`}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-accent py-2.5 text-sm font-medium text-white hover:opacity-90"
+            >
+              <CalendarClock size={14} /> Ver calendário de horas
+            </Link>
+            <Link
+              href="/dashboard/horas"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-border bg-card/60 py-2.5 text-sm text-text transition-colors hover:bg-hover"
+            >
+              <Clock size={14} /> Registrar horas
+            </Link>
           </div>
-          <Link
-            href="/dashboard/horas"
-            className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl border border-border bg-card/60 py-2.5 text-sm text-text transition-colors hover:bg-hover"
-          >
-            <Clock size={14} /> Registrar horas
-          </Link>
         </div>
       )}
     </div>

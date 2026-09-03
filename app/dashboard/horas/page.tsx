@@ -1,33 +1,53 @@
 import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { NovoRegistroTempoForm } from "@/components/dashboard/NovoRegistroTempoForm";
 import { RegistroTempoRow } from "@/components/dashboard/RegistroTempoRow";
 import { formatarDuracao } from "@/lib/formatarDuracao";
 
-function inicioMes() {
-  const d = new Date();
-  return new Date(d.getFullYear(), d.getMonth(), 1);
-}
+const NOMES_MESES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
 
 function inicioHoje() {
   const d = new Date();
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
-export default async function HorasPage() {
+export default async function HorasPage({
+  searchParams,
+}: {
+  searchParams: { mes?: string };
+}) {
+  const hoje = new Date();
+  const [anoParam, mesParam] = (searchParams.mes || `${hoje.getFullYear()}-${hoje.getMonth() + 1}`)
+    .split("-")
+    .map(Number);
+  const ano = anoParam;
+  const mes = mesParam - 1;
+  const vendoMesAtual = ano === hoje.getFullYear() && mes === hoje.getMonth();
+
+  const inicioMesVisto = new Date(ano, mes, 1);
+  const fimMesVisto = new Date(ano, mes + 1, 0, 23, 59, 59);
+  const mesAnterior = new Date(ano, mes - 1, 1);
+  const mesSeguinte = new Date(ano, mes + 1, 1);
+
   const [clientes, registrosHoje, registrosMes, tarefasAbertas] = await Promise.all([
     prisma.cliente.findMany({
       where: { status: { not: "inativo" } },
       select: { id: true, nome: true },
       orderBy: { nome: "asc" },
     }),
+    vendoMesAtual
+      ? prisma.registroTempo.findMany({
+          where: { inicio: { gte: inicioHoje() } },
+          include: { cliente: { select: { nome: true } } },
+          orderBy: { inicio: "desc" },
+        })
+      : Promise.resolve([]),
     prisma.registroTempo.findMany({
-      where: { inicio: { gte: inicioHoje() } },
-      include: { cliente: { select: { nome: true } } },
-      orderBy: { inicio: "desc" },
-    }),
-    prisma.registroTempo.findMany({
-      where: { inicio: { gte: inicioMes() } },
+      where: { inicio: { gte: inicioMesVisto, lte: fimMesVisto } },
       include: { cliente: { select: { id: true, nome: true, cor: true } } },
       orderBy: { inicio: "desc" },
     }),
@@ -65,18 +85,39 @@ export default async function HorasPage() {
 
   return (
     <div>
-      <p className="mb-1 text-lg font-medium text-text">Horas</p>
+      <div className="mb-1 flex items-center justify-between">
+        <p className="text-lg font-medium text-text">Horas</p>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/dashboard/horas?mes=${mesAnterior.getFullYear()}-${mesAnterior.getMonth() + 1}`}
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card/60 text-muted hover:text-text"
+          >
+            <ChevronLeft size={14} />
+          </Link>
+          <p className="w-32 text-center text-sm font-medium text-text">
+            {NOMES_MESES[mes]} {ano}
+          </p>
+          <Link
+            href={`/dashboard/horas?mes=${mesSeguinte.getFullYear()}-${mesSeguinte.getMonth() + 1}`}
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card/60 text-muted hover:text-text"
+          >
+            <ChevronRight size={14} />
+          </Link>
+        </div>
+      </div>
       <p className="mb-6 text-sm text-muted">Dado interno — o cliente nunca vê isso</p>
 
       <NovoRegistroTempoForm clientes={clientes} tarefasAbertas={tarefasAbertas} />
 
       <div className="mb-6 flex items-center justify-between rounded-xl border border-accent/20 bg-accent/5 px-4 py-3">
-        <span className="text-sm font-medium text-text">Total do mês (todos os clientes)</span>
+        <span className="text-sm font-medium text-text">
+          Total {vendoMesAtual ? "do mês" : `de ${NOMES_MESES[mes].toLowerCase()}`} (todos os clientes)
+        </span>
         <span className="text-xl font-medium text-accent">{formatarDuracao(totalMes)}</span>
       </div>
 
       {ranking.length === 0 && semCliente.length === 0 ? (
-        <p className="mb-6 text-sm text-muted">Nada registrado ainda esse mês.</p>
+        <p className="mb-6 text-sm text-muted">Nada registrado nesse mês.</p>
       ) : (
         <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {ranking.map(([nome, bloco]) => {
@@ -87,7 +128,7 @@ export default async function HorasPage() {
             return (
               <Link
                 key={nome}
-                href={`/dashboard/horas/${bloco.id}`}
+                href={`/dashboard/horas/${bloco.id}?mes=${ano}-${mes + 1}`}
                 className="block rounded-2xl border border-border bg-card/60 p-4 transition-colors hover:bg-hover"
                 style={{ borderLeft: `3px solid ${cor}` }}
               >
@@ -149,25 +190,29 @@ export default async function HorasPage() {
         </div>
       )}
 
-      <p className="mb-2 text-xs uppercase tracking-wide text-muted">Hoje</p>
-      <div className="flex flex-col gap-2">
-        {registrosHoje.length === 0 && <p className="text-sm text-muted">Nada registrado hoje ainda.</p>}
-        {registrosHoje.map((r, i) => (
-          <RegistroTempoRow
-            key={r.id}
-            index={i}
-            clientes={clientes}
-            registro={{
-              id: r.id,
-              atividade: r.atividade,
-              inicio: r.inicio.toISOString(),
-              fim: r.fim?.toISOString() || null,
-              clienteId: r.clienteId,
-              clienteNome: r.cliente?.nome || null,
-            }}
-          />
-        ))}
-      </div>
+      {vendoMesAtual && (
+        <>
+          <p className="mb-2 text-xs uppercase tracking-wide text-muted">Hoje</p>
+          <div className="flex flex-col gap-2">
+            {registrosHoje.length === 0 && <p className="text-sm text-muted">Nada registrado hoje ainda.</p>}
+            {registrosHoje.map((r, i) => (
+              <RegistroTempoRow
+                key={r.id}
+                index={i}
+                clientes={clientes}
+                registro={{
+                  id: r.id,
+                  atividade: r.atividade,
+                  inicio: r.inicio.toISOString(),
+                  fim: r.fim?.toISOString() || null,
+                  clienteId: r.clienteId,
+                  clienteNome: r.cliente?.nome || null,
+                }}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
