@@ -21,6 +21,7 @@ export function QuickCommandCenter({ clientes }: { clientes: Cliente[] }) {
   const [clienteEscolhido, setClienteEscolhido] = useState<string | null>(null);
   const [observacao, setObservacao] = useState("");
   const [prazo, setPrazo] = useState("");
+  const [hora, setHora] = useState("");
 
   function abrir() {
     setAberto(true);
@@ -29,6 +30,7 @@ export function QuickCommandCenter({ clientes }: { clientes: Cliente[] }) {
     setTituloLivre("");
     setObservacao("");
     setPrazo("");
+    setHora("");
     setClienteEscolhido(null);
   }
 
@@ -61,7 +63,7 @@ export function QuickCommandCenter({ clientes }: { clientes: Cliente[] }) {
         categoria,
         clienteId: clienteEscolhido,
         descricao: observacao || null,
-        prazo: prazo ? `${prazo}T00:00:00-03:00` : null,
+        prazo: prazo ? `${prazo}T${hora || "00:00"}:00-03:00` : null,
       }),
     });
     setEnviando(false);
@@ -259,7 +261,16 @@ export function QuickCommandCenter({ clientes }: { clientes: Cliente[] }) {
                       className="mb-3 w-full rounded-xl border border-border bg-base/60 px-3.5 py-2.5 text-sm text-text outline-none placeholder:text-muted/50 focus:border-accent/50"
                     />
                     <label className="mb-1 block text-xs text-muted">Prazo (se já souber)</label>
-                    <DatePicker value={prazo} onChange={setPrazo} placeholder="Sem prazo por enquanto" className="mb-4" limpavel />
+                    <div className="mb-4 grid grid-cols-2 gap-2">
+                      <DatePicker value={prazo} onChange={setPrazo} placeholder="Sem prazo" limpavel />
+                      <input
+                        type="time"
+                        value={hora}
+                        onChange={(e) => setHora(e.target.value)}
+                        disabled={!prazo}
+                        className="h-10 w-full rounded-xl border border-border bg-base/60 px-3 text-sm text-text disabled:opacity-40"
+                      />
+                    </div>
                     <button
                       type="submit"
                       disabled={enviando}

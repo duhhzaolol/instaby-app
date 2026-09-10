@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { TarefaRow } from "@/components/dashboard/TarefaRow";
+import { NovaTarefaGlobalForm } from "@/components/dashboard/NovaTarefaGlobalForm";
 import { CheckSquare, CalendarDays } from "lucide-react";
 
 const ABAS = [
@@ -23,11 +24,18 @@ export default async function TarefasPage({
       ? {}
       : { status: { not: "feito" } };
 
-  const tarefas = await prisma.tarefa.findMany({
-    where,
-    include: { cliente: { select: { nome: true, cor: true } } },
-    orderBy: { createdAt: "desc" },
-  });
+  const [tarefas, clientes] = await Promise.all([
+    prisma.tarefa.findMany({
+      where,
+      include: { cliente: { select: { nome: true, cor: true } } },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.cliente.findMany({
+      where: { status: { not: "inativo" } },
+      select: { id: true, nome: true, cor: true },
+      orderBy: { nome: "asc" },
+    }),
+  ]);
 
   return (
     <div>
@@ -59,6 +67,8 @@ export default async function TarefasPage({
           </a>
         ))}
       </div>
+
+      <NovaTarefaGlobalForm clientes={clientes} />
 
       {tarefas.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-border bg-card/40 py-16 text-center">

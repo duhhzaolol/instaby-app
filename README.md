@@ -1,31 +1,22 @@
 # Instaby App
 
-Painel interno da Instaby Agência — v58.
+Painel interno da Instaby Agência — v59.
 
-## 1. Calendário pequeno pra escolher data (estilo Apple)
+## 1. "+ Nova tarefa" na tela global de Tarefas
 
-Novo componente `DatePicker` — em vez do seletor nativo do navegador,
-abre um calendário do mês, com setas pra trocar de mês, dia de hoje
-marcado, e um botão "Hoje" pra pular direto. Troquei em todo lugar de
-tarefa que tinha campo de data:
+Item que já tinha ficado anotado — agora resolvido. Botão "+ Nova
+tarefa" logo abaixo das abas, abre um formulário completo ali mesmo:
+título, cliente (opcional), categoria (opcional), **data + horário**
+juntos, e observação. Fecha sozinho depois de criar.
 
-- Central de Comando (prazo da tarefa rápida)
-- Painel de detalhe de qualquer tarefa (editar data)
-- Popup do Calendário de conteúdo
-- Formulário de nova tarefa dentro do cliente
+## 2. Data e horário juntos, sem precisar editar depois
 
-Deixei o componente em `components/ui/DatePicker.tsx`, então dá pra
-trocar em outros formulários do app (financeiro, relatórios etc.) depois
-se você quiser — não mexi neles agora pra manter o escopo focado em
-tarefa.
+Na Central de Comando (tarefa rápida), a etapa de detalhes agora tem
+**data e horário lado a lado** — antes só tinha a data. Se você já sabe
+a que horas vai fazer aquilo, define tudo na hora de criar, sem precisar
+clicar em editar depois. O campo de horário só libera depois que uma
+data é escolhida.
 
-## 2. Amanhã, destacado no Dashboard
-
-Nova seção "Amanhã" na Visão Geral, logo abaixo de "Hoje" — mesmo
-formato, um pouco mais discreta (opacidade menor, sem contorno colorido
-no título) pra não competir visualmente com o que é urgente de verdade
-hoje. Só mostra tarefas ainda não concluídas.
-
-Combinado com a cor de urgência que já entrou na v57, agora o prazo que
-está chegando fica visível em várias camadas: a seção Amanhã no
-Dashboard, e a cor mudando gradualmente em qualquer lista de tarefa.
+## Onde ficou tudo isso
+- Tela de Tarefas → botão "+ Nova tarefa" (novo)
+- Central de Comando → etapa de detalhes → data + horário juntos
