@@ -7,6 +7,8 @@ import ContratosTab from "./ContratosTab";
 import FinanceiroTab from "./FinanceiroTab";
 import ServicosContratadosTab from "./ServicosContratadosTab";
 import RelatoriosTab from "./RelatoriosTab";
+import VisaoGeralClienteTab from "./VisaoGeralClienteTab";
+import ContatosTab from "./ContatosTab";
 import { TarefaRow } from "@/components/dashboard/TarefaRow";
 import { OrcamentoRow } from "@/components/dashboard/OrcamentoRow";
 import { Clock } from "lucide-react";
@@ -30,6 +32,8 @@ export default async function ClienteDetalhePage({
         servicosContratados: { where: { ativo: true }, include: { servico: true }, orderBy: { createdAt: "asc" } },
         registrosTempo: { orderBy: { inicio: "desc" }, take: 60 },
         relatorios: { orderBy: { fim: "desc" } },
+        conteudos: { orderBy: { createdAt: "desc" } },
+        contatos: { orderBy: { createdAt: "asc" } },
       },
     }),
     prisma.servico.findMany({ orderBy: [{ categoria: "asc" }, { nome: "asc" }] }),
@@ -37,8 +41,10 @@ export default async function ClienteDetalhePage({
 
   if (!cliente) notFound();
 
-  const aba = searchParams.aba || "tarefas";
+  const aba = searchParams.aba || "visao_geral";
   const abas = [
+    { valor: "visao_geral", label: "Visão Geral" },
+    { valor: "contatos", label: "Contatos" },
     { valor: "tarefas", label: "Tarefas" },
     { valor: "servicos", label: "Serviços" },
     { valor: "escopo", label: "Escopo" },
@@ -83,6 +89,56 @@ export default async function ClienteDetalhePage({
       };
     });
   const mensalidade = Math.max(0, totalServicos - Number(cliente.descontoMensal) + Number(cliente.acrescimoMensal));
+
+  const proximaCobranca = cliente.cobrancas
+    .filter((c) => (c.status === "pendente" || c.status === "atrasado") && c.vencimento)
+    .sort((a, b) => a.vencimento!.getTime() - b.vencimento!.getTime())[0];
+
+  const contratoVigente = cliente.contratos.find((c) => c.status === "assinado");
+
+  const receitaMes = cliente.cobrancas
+    .filter((c) => c.status === "pago" && c.createdAt >= inicioMesEscopo && c.createdAt <= fimMesEscopo)
+    .reduce((s, c) => s + Number(c.valor), 0);
+
+  const despesasMes = cliente.despesas
+    .filter(
+      (d) =>
+        d.categoriaFinanceira !== "transferencia" &&
+        d.status !== "cancelado" &&
+        d.data >= inicioMesEscopo &&
+        d.data <= fimMesEscopo
+    )
+    .reduce((s, d) => s + Number(d.valor), 0);
+
+  const horasMes = cliente.registrosTempo
+    .filter((r) => r.fim && r.inicio >= inicioMesEscopo && r.inicio <= fimMesEscopo)
+    .reduce((s, r) => s + (r.fim!.getTime() - r.inicio.getTime()) / 1000 / 60 / 60, 0);
+
+  const conteudosPublicadosMes = cliente.conteudos.filter(
+    (c) => c.status === "publicado" && c.dataPublicacao && c.dataPublicacao >= inicioMesEscopo && c.dataPublicacao <= fimMesEscopo
+  ).length;
+  const conteudosPlanejados = cliente.conteudos.filter((c) => c.status !== "publicado" && c.status !== "ideia").length;
+  const itensFaltantes = escopo.reduce((s, e) => s + e.faltando, 0);
+
+  const proximaAtividade = cliente.tarefas
+    .filter((t) => t.status !== "feito" && t.prazo && t.prazo >= new Date())
+    .sort((a, b) => a.prazo!.getTime() - b.prazo!.getTime())[0];
+
+  const ultimoRelatorio = cliente.relatorios[0];
+
+  type EventoTimeline = { texto: string; data: Date; tipo: string };
+  const timeline: EventoTimeline[] = [
+    ...cliente.cobrancas
+      .filter((c) => c.status === "pago")
+      .map((c) => ({ texto: `Pagamento recebido — R$ ${Number(c.valor).toFixed(0)}`, data: c.createdAt, tipo: "pagamento" })),
+    ...cliente.contratos.filter((c) => c.status === "assinado").map((c) => ({ texto: "Contrato assinado", data: c.createdAt, tipo: "contrato" })),
+    ...orcamentosAceitos.map((o) => ({ texto: "Proposta aceita", data: o.createdAt, tipo: "orcamento" })),
+    ...cliente.conteudos
+      .filter((c) => c.status === "publicado" && c.dataPublicacao)
+      .map((c) => ({ texto: `${c.titulo} — publicado`, data: c.dataPublicacao!, tipo: "conteudo" })),
+  ]
+    .sort((a, b) => b.data.getTime() - a.data.getTime())
+    .slice(0, 8);
 
   return (
     <div>
@@ -174,6 +230,42 @@ export default async function ClienteDetalhePage({
           </Link>
         ))}
       </div>
+
+      {aba === "visao_geral" && (
+        <VisaoGeralClienteTab
+          mensalidade={mensalidade}
+          proximaCobranca={proximaCobranca ? { valor: Number(proximaCobranca.valor), vencimento: proximaCobranca.vencimento?.toISOString() || null } : null}
+          contratoVigente={!!contratoVigente}
+          receitaMes={receitaMes}
+          despesasMes={despesasMes}
+          horasMes={horasMes}
+          conteudosPublicadosMes={conteudosPublicadosMes}
+          conteudosPlanejados={conteudosPlanejados}
+          itensFaltantes={itensFaltantes}
+          proximaAtividade={proximaAtividade ? { titulo: proximaAtividade.titulo, prazo: proximaAtividade.prazo?.toISOString() || null } : null}
+          situacaoRelatorio={ultimoRelatorio ? new Date(ultimoRelatorio.fim).toLocaleDateString("pt-BR") : null}
+          timeline={timeline.map((t) => ({ texto: t.texto, data: t.data.toISOString(), tipo: t.tipo }))}
+        />
+      )}
+
+      {aba === "contatos" && (
+        <ContatosTab
+          clienteId={cliente.id}
+          contatoAntigo={cliente.contatoNome}
+          contatos={cliente.contatos.map((c) => ({
+            id: c.id,
+            nome: c.nome,
+            cargo: c.cargo,
+            telefone: c.telefone,
+            whatsapp: c.whatsapp,
+            email: c.email,
+            principal: c.principal,
+            financeiro: c.financeiro,
+            aprovacaoConteudo: c.aprovacaoConteudo,
+            contratos: c.contratos,
+          }))}
+        />
+      )}
 
       {aba === "tarefas" && (
         <div>

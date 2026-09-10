@@ -56,9 +56,25 @@ conteúdo e na criação rápida — sem isso, a Visão de Captações ficaria s
 - **Objetivo**: central do cliente (status, mensalidade, próxima cobrança, escopo do mês, horas, rentabilidade, próxima atividade) — tudo calculado, nada duplicado
 - **Critério**: abrir o cliente já mostra o que importa sem entrar em cada aba
 
+**Concluída (v63)**: nova aba "Visão Geral" (agora a primeira aba, aberta por padrão ao
+entrar no cliente) — mensalidade, próxima cobrança, contrato vigente, horas do mês,
+receita/despesas/rentabilidade do mês, conteúdo publicado/planejado + itens faltando do
+escopo, situação do relatório, próxima atividade, e uma linha do tempo (pagamentos,
+contrato assinado, proposta aceita, conteúdo publicado) — tudo calculado a partir do que
+já existia, zero campo novo digitado à mão. TAREFA 04 (Projetos) foi pulada por decisão
+dele.
+
 ### TAREFA 06 — Múltiplos contatos
 - **Banco**: novo model `Contato` (cliente, nome, cargo, telefone, WhatsApp, email, observações, flags: principal/financeiro/aprovação/contratos). Campo antigo de contato único do Cliente vira o "contato principal" migrado automaticamente (sem perder dado)
 - **Critério**: cliente antigo continua funcionando com 1 contato; dá pra adicionar mais
+
+**Concluída (v64)**: novo model `Contato` (aditivo), nova aba "Contatos" no cliente —
+lista com nome/cargo/WhatsApp/e-mail e as flags (Principal/Financeiro/Aprovação de
+conteúdo/Assina contratos). Diferente do planejado, **não migrei automaticamente** o
+contato antigo (`Cliente.contatoNome`) pra um Contato novo — decidi não inventar dado
+que o usuário não confirmou (o campo antigo continua sendo mostrado como "Contato do
+cadastro" na mesma aba, só como referência, e edita-se onde sempre editou). Se quiser
+que eu migre automaticamente, é rápido de fazer depois.
 
 ### TAREFA 07 — Links e referências do cliente
 - **Banco**: novo model `LinkCliente` (cliente, tipo, url, label). Campo antigo `linkDrive` vira o primeiro link migrado

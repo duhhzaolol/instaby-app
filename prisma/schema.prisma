@@ -44,6 +44,7 @@ model Cliente {
   redesGerenciadas    String[] @default([]) // instagram | tiktok | facebook | google | meta_ads
   relatorios          RelatorioPeriodo[]
   conteudos           Conteudo[]
+  contatos            Contato[]
 }
 
 // Relatório de performance por rede e por período — dado lançado manualmente (Fase 1).
@@ -73,6 +74,28 @@ model RelatorioPeriodo {
 
   comentarioAgencia String?
   comentarioCliente String?
+
+  createdAt DateTime @default(now())
+}
+
+// Contatos adicionais do cliente — o campo antigo Cliente.contatoNome continua existindo
+// e funcionando (é o "contato principal" implícito de quem tinha só um), isso aqui é aditivo.
+model Contato {
+  id        String   @id @default(uuid())
+  clienteId String
+  cliente   Cliente  @relation(fields: [clienteId], references: [id])
+
+  nome         String
+  cargo        String?
+  telefone     String?
+  whatsapp     String?
+  email        String?
+  observacoes  String?
+
+  principal          Boolean @default(false)
+  financeiro         Boolean @default(false)
+  aprovacaoConteudo  Boolean @default(false)
+  contratos          Boolean @default(false)
 
   createdAt DateTime @default(now())
 }
