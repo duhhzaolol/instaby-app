@@ -7,20 +7,31 @@ export async function PATCH(
 ) {
   const body = await request.json();
 
-  const servico = await prisma.servico.update({
-    where: { id: params.id },
-    data: {
-      ...(body.nome !== undefined && { nome: body.nome }),
-      ...(body.descricao !== undefined && { descricao: body.descricao }),
-      ...(body.categoria !== undefined && { categoria: body.categoria }),
-      ...(body.unidade !== undefined && { unidade: body.unidade }),
-      ...(body.valorUnitario !== undefined && { valorUnitario: body.valorUnitario }),
-      ...(body.clausulaContrato !== undefined && { clausulaContrato: body.clausulaContrato }),
-      ...(body.formatoConteudo !== undefined && { formatoConteudo: body.formatoConteudo || null }),
-    },
-  });
+  if (
+    body.valorUnitario !== undefined &&
+    (typeof body.valorUnitario !== "number" || isNaN(body.valorUnitario))
+  ) {
+    return NextResponse.json({ erro: "Valor precisa ser um número válido" }, { status: 400 });
+  }
 
-  return NextResponse.json(servico);
+  try {
+    const servico = await prisma.servico.update({
+      where: { id: params.id },
+      data: {
+        ...(body.nome !== undefined && { nome: body.nome }),
+        ...(body.descricao !== undefined && { descricao: body.descricao }),
+        ...(body.categoria !== undefined && { categoria: body.categoria }),
+        ...(body.unidade !== undefined && { unidade: body.unidade }),
+        ...(body.valorUnitario !== undefined && { valorUnitario: body.valorUnitario }),
+        ...(body.clausulaContrato !== undefined && { clausulaContrato: body.clausulaContrato }),
+        ...(body.formatoConteudo !== undefined && { formatoConteudo: body.formatoConteudo || null }),
+      },
+    });
+
+    return NextResponse.json(servico);
+  } catch {
+    return NextResponse.json({ erro: "Não deu pra salvar esse serviço." }, { status: 400 });
+  }
 }
 
 export async function DELETE(

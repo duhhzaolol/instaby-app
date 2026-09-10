@@ -11,21 +11,25 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const body = await request.json();
 
-  if (!body.nome || !body.valorUnitario) {
-    return NextResponse.json({ erro: "Nome e valor são obrigatórios" }, { status: 400 });
+  if (!body.nome || typeof body.valorUnitario !== "number" || isNaN(body.valorUnitario)) {
+    return NextResponse.json({ erro: "Nome e um valor numérico válido são obrigatórios" }, { status: 400 });
   }
 
-  const servico = await prisma.servico.create({
-    data: {
-      nome: body.nome,
-      descricao: body.descricao || "",
-      categoria: body.categoria || "Outros",
-      unidade: body.unidade || "mês",
-      valorUnitario: body.valorUnitario,
-      clausulaContrato: body.clausulaContrato || null,
-      formatoConteudo: body.formatoConteudo || null,
-    },
-  });
+  try {
+    const servico = await prisma.servico.create({
+      data: {
+        nome: body.nome,
+        descricao: body.descricao || "",
+        categoria: body.categoria || "Outros",
+        unidade: body.unidade || "mês",
+        valorUnitario: body.valorUnitario,
+        clausulaContrato: body.clausulaContrato || null,
+        formatoConteudo: body.formatoConteudo || null,
+      },
+    });
 
-  return NextResponse.json(servico, { status: 201 });
+    return NextResponse.json(servico, { status: 201 });
+  } catch {
+    return NextResponse.json({ erro: "Não deu pra criar esse serviço." }, { status: 400 });
+  }
 }

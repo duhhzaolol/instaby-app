@@ -45,16 +45,29 @@ export default function ServicosContratadosTab({
   const mensalidadeFinal = Math.max(0, totalServicos - desconto + acrescimo);
 
   async function adicionar(servico: Servico) {
+    if (typeof servico.valorUnitario !== "number" || isNaN(servico.valorUnitario)) {
+      alert(`"${servico.nome}" está sem um valor válido no catálogo. Edita ele em Serviços antes de usar.`);
+      return;
+    }
+
     setAdicionando(servico.id);
-    const res = await fetch(`/api/clientes/${clienteId}/servicos-contratados`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ servicoId: servico.id, quantidade: 1, valor: servico.valorUnitario }),
-    });
-    const novo = await res.json();
-    setContratados((atual) => [...atual, novo]);
+    try {
+      const res = await fetch(`/api/clientes/${clienteId}/servicos-contratados`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ servicoId: servico.id, quantidade: 1, valor: servico.valorUnitario }),
+      });
+      const novo = await res.json();
+      if (!res.ok || !novo?.servico) {
+        alert(novo?.erro || "Não deu pra adicionar esse serviço. Tenta de novo, ou edita ele em Serviços.");
+      } else {
+        setContratados((atual) => [...atual, novo]);
+        router.refresh();
+      }
+    } catch {
+      alert("Não deu pra adicionar esse serviço — problema de conexão. Tenta de novo.");
+    }
     setAdicionando(null);
-    router.refresh();
   }
 
   function atualizarLocal(id: string, patch: Partial<ServicoContratadoData>) {

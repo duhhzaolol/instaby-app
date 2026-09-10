@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Input, Textarea, Label } from "@/components/ui/Input";
@@ -24,6 +24,15 @@ export default function EditarServicoForm({ servico }: { servico: Servico }) {
   const [nome, setNome] = useState(servico.nome);
   const [descricao, setDescricao] = useState(servico.descricao);
   const [categoria, setCategoria] = useState(servico.categoria);
+  const [categoriasExistentes, setCategoriasExistentes] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetch("/api/servicos")
+      .then((r) => r.json())
+      .then((servicos: { categoria: string }[]) => {
+        setCategoriasExistentes(Array.from(new Set(servicos.map((s) => s.categoria))).sort());
+      });
+  }, []);
   const [unidade, setUnidade] = useState(servico.unidade);
   const [valor, setValor] = useState(servico.valorUnitario);
   const [clausulaContrato, setClausulaContrato] = useState(servico.clausulaContrato);
@@ -57,7 +66,12 @@ export default function EditarServicoForm({ servico }: { servico: Servico }) {
         <div className="mb-4 grid grid-cols-2 gap-3">
           <div>
             <Label>Categoria</Label>
-            <Input value={categoria} onChange={(e) => setCategoria(e.target.value)} />
+            <Input list="categorias-existentes" value={categoria} onChange={(e) => setCategoria(e.target.value)} />
+            <datalist id="categorias-existentes">
+              {categoriasExistentes.map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
           </div>
           <div>
             <Label>Unidade</Label>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Input, Textarea, Label } from "@/components/ui/Input";
@@ -12,10 +12,19 @@ export default function NovoServicoPage() {
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
   const [categoria, setCategoria] = useState("Social media");
+  const [categoriasExistentes, setCategoriasExistentes] = useState<string[]>([]);
   const [unidade, setUnidade] = useState("mês");
   const [valor, setValor] = useState(0);
   const [clausulaContrato, setClausulaContrato] = useState("");
   const [enviando, setEnviando] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/servicos")
+      .then((r) => r.json())
+      .then((servicos: { categoria: string }[]) => {
+        setCategoriasExistentes(Array.from(new Set(servicos.map((s) => s.categoria))).sort());
+      });
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -69,7 +78,16 @@ export default function NovoServicoPage() {
           <div className="mb-4 grid grid-cols-2 gap-3">
             <div>
               <Label>Categoria</Label>
-              <Input value={categoria} onChange={(e) => setCategoria(e.target.value)} />
+              <Input
+                list="categorias-existentes"
+                value={categoria}
+                onChange={(e) => setCategoria(e.target.value)}
+              />
+              <datalist id="categorias-existentes">
+                {categoriasExistentes.map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
             </div>
             <div>
               <Label>Unidade</Label>

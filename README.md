@@ -1,34 +1,45 @@
-# Instaby App — v66
+# Instaby App — v68
 
-## Loading discreto em todo o painel (não só no + / -)
+## 1. Corrigido o erro do "Cobertura em tempo real"
 
-### A causa raiz
-A tela cheia com o logo pulsando foi feita pra troca de página (ex: sair de Tarefas e
-entrar em Financeiro). O problema é que o Next.js usa essa mesma tela toda vez que uma
-parte da página pede pra atualizar os dados — o que acontece em praticamente TODO botão
-do app (marcar tarefa como feita, editar despesa, mudar status, etc.), não só no `+`/`-`
-que você reportou.
+### A causa
+Quando o servidor recusava adicionar um serviço (por algum motivo — valor inválido, por
+exemplo), a tela tentava usar a resposta como se tivesse dado certo, e travava com
+aquele "Application error". Isso é código meu de uma atualização recente, não é bug
+antigo.
 
 ### A correção
-- **Dentro do painel** (`/dashboard/**`), a tela cheia virou uma **barrinha fina no
-  topo**, discreta, que aparece e some rápido — sem cobrir a tela, sem parecer que
-  recarregou tudo
-- A tela cheia com o logo continua existindo, só que agora reservada pra troca de
-  página de verdade (saindo do painel)
+- A API agora sempre responde de forma limpa quando algo dá errado, em vez de deixar
+  vazar um erro cru
+- A tela agora confere se deu certo antes de atualizar a lista — se não deu, mostra um
+  aviso explicando (em vez de travar)
+- Apliquei o mesmo cuidado nas rotas de criar e editar serviço no catálogo, pra evitar
+  que um valor inválido fique salvo silenciosamente
 
-### Além disso, o `+`/`-` ficou instantâneo de verdade
-Na aba Serviços do cliente, clicar no `+`/`-` agora muda o número **na hora**, sem
-esperar nem um pouquinho — o pedido pro servidor continua acontecendo por trás, mas a
-tela já mostra o resultado antes dele terminar. Mesma coisa pra editar valor e excluir
-um serviço contratado.
+Se "Cobertura em tempo real" continuar dando problema depois de subir esse zip, agora em
+vez de travar a tela, vai aparecer um aviso dizendo exatamente o que está errado.
+
+## 2. Onde gerenciar o catálogo sem programar (já existia!)
+
+`/dashboard/servicos` — no menu lateral, seção Comercial → "Catálogo de serviços". Já
+faz tudo que você pediu:
+- **Criar** → botão "Novo serviço" no topo
+- **Editar** → clica em qualquer serviço da lista
+- **Mudar valor base** → dentro da edição, campo "Valor unitário"
+- **Mudar categoria** → dentro da edição, campo "Categoria"
+
+### O que melhorei agora
+- **Aviso visual** pra serviço sem valor definido (R$ 0) — fica com borda laranja e a
+  etiqueta "Sem valor", e tem um aviso no topo contando quantos estão assim. Isso ajuda
+  você a achar o "Cobertura em tempo real" (ou qualquer outro) rapidinho
+- **Categoria virou uma lista com sugestão** — ao digitar, aparecem as categorias que já
+  existem, pra você escolher uma delas em vez de digitar errado e criar sem querer uma
+  categoria nova parecida (tipo "Cobertura de Evento" vs "Cobertura de Eventos")
 
 ### Arquivos alterados
-- `components/ui/BarraCarregamentoDiscreta.tsx` (novo)
-- `app/dashboard/loading.tsx` (troca a tela cheia pela barra)
-- `app/globals.css` (animação da barra)
-- `app/dashboard/clientes/[id]/ServicosContratadosTab.tsx` e
-  `components/dashboard/ServicoContratadoRow.tsx` (atualização instantânea)
-
-### O que não mudou
-`app/loading.tsx` (fora do painel) continua com a tela cheia — é só pra quando você
-realmente troca de página, onde faz sentido esperar um pouco.
+- `app/api/clientes/[id]/servicos-contratados/route.ts`
+- `app/api/servicos/route.ts` e `[id]/route.ts`
+- `app/dashboard/clientes/[id]/ServicosContratadosTab.tsx`
+- `app/dashboard/servicos/page.tsx`
+- `app/dashboard/servicos/novo/page.tsx`
+- `app/dashboard/servicos/[id]/editar/EditarServicoForm.tsx`
