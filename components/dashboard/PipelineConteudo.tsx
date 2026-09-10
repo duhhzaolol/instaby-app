@@ -191,7 +191,7 @@ export function PipelineConteudo({ colunas }: { colunas: { status: string; label
                   ))}
                 </select>
 
-                <div className="mb-3 grid grid-cols-2 gap-2">
+                <div className="mb-3 grid grid-cols-3 gap-2">
                   <div>
                     <label className="mb-1 block text-xs text-muted">Formato</label>
                     <select
@@ -206,6 +206,14 @@ export function PipelineConteudo({ colunas }: { colunas: { status: string; label
                         </option>
                       ))}
                     </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-muted">Captação</label>
+                    <DatePicker
+                      value={detalhe.dataCaptacao?.slice(0, 10) || ""}
+                      onChange={(v) => salvarCampo("dataCaptacao", v || null)}
+                      limpavel
+                    />
                   </div>
                   <div>
                     <label className="mb-1 block text-xs text-muted">Publicação</label>

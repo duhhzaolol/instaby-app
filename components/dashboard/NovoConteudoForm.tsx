@@ -18,6 +18,7 @@ export function NovoConteudoForm({ clientes }: { clientes: Cliente[] }) {
   const [objetivo, setObjetivo] = useState("");
   const [redes, setRedes] = useState<string[]>([]);
   const [dataPublicacao, setDataPublicacao] = useState("");
+  const [dataCaptacao, setDataCaptacao] = useState("");
   const [enviando, setEnviando] = useState(false);
 
   function alternarRede(r: string) {
@@ -47,6 +48,7 @@ export function NovoConteudoForm({ clientes }: { clientes: Cliente[] }) {
         objetivo: objetivo || null,
         redes,
         dataPublicacao: dataPublicacao || null,
+        dataCaptacao: dataCaptacao || null,
       }),
     });
     setEnviando(false);
@@ -134,8 +136,16 @@ export function NovoConteudoForm({ clientes }: { clientes: Cliente[] }) {
         className="mb-3 w-full rounded-xl border border-border bg-base/60 px-3.5 py-2.5 text-sm text-text"
       />
 
-      <label className="mb-1 block text-xs text-muted">Data de publicação prevista</label>
-      <DatePicker value={dataPublicacao} onChange={setDataPublicacao} placeholder="Ainda não sei" className="mb-4" limpavel />
+      <div className="mb-4 grid grid-cols-2 gap-2">
+        <div>
+          <label className="mb-1 block text-xs text-muted">Data de captação</label>
+          <DatePicker value={dataCaptacao} onChange={setDataCaptacao} placeholder="Ainda não sei" limpavel />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-muted">Publicação prevista</label>
+          <DatePicker value={dataPublicacao} onChange={setDataPublicacao} placeholder="Ainda não sei" limpavel />
+        </div>
+      </div>
 
       <button
         type="submit"

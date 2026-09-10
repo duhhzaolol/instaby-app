@@ -18,10 +18,17 @@
 - **Reaproveita**: `CalendarioTarefas`/`AgendaGrid` (padrão de grade+popup), `DatePicker`, `TarefaRow` (pra listar as tarefas vinculadas dentro do conteúdo)
 - **Critério de concluído**: criar conteúdo, vincular tarefas nele, ver no calendário por data de publicação, pipeline por status funcionando, nada quebrado no que já existia
 
-### TAREFA 02 — Visão de Captações
+### TAREFA 02 — Visão de Captações [x]
 - **Objetivo**: tela agrupando conteúdos por data de captação, pra equipe saber tudo que precisa produzir num dia
 - **Páginas**: `/dashboard/conteudo/captacoes`
 - **Critério**: agrupa por dia, mostra cliente + formato + o que precisa
+
+**Concluída (v61)**: nova página agrupando por dia (e dentro do dia, por cliente), listando
+cada item com ícone do formato — exatamente o exemplo do documento ("SEXTA — SKYFIT: Reel
+institucional, Reel professor..."). Dias futuros aparecem primeiro, passados ficam
+recolhidos embaixo. Como o campo "Data de captação" já existia no banco desde a Tarefa 01
+mas não tinha onde ser preenchido na interface, também adicionei ele no modal de detalhe do
+conteúdo e na criação rápida — sem isso, a Visão de Captações ficaria sempre vazia.
 
 ---
 

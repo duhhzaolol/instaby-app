@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Camera } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { STATUS_CONTEUDO } from "@/lib/conteudoVisual";
 import { PipelineConteudo, ConteudoResumo } from "@/components/dashboard/PipelineConteudo";
@@ -45,7 +46,15 @@ export default async function ConteudoPage({
 
   return (
     <div>
-      <p className="mb-1 text-lg font-medium text-text">Conteúdo</p>
+      <div className="mb-1 flex items-center justify-between">
+        <p className="text-lg font-medium text-text">Conteúdo</p>
+        <Link
+          href="/dashboard/conteudo/captacoes"
+          className="flex items-center gap-1.5 rounded-xl border border-border bg-card/60 px-3 py-2 text-sm text-text hover:bg-hover"
+        >
+          <Camera size={14} /> Captações
+        </Link>
+      </div>
       <p className="mb-6 text-sm text-muted">
         Cada peça de conteúdo, do briefing até publicado — as tarefas de produção continuam na aba Tarefas, vinculadas aqui.
       </p>
