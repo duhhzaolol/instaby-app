@@ -1,33 +1,21 @@
-# Instaby App — v64
+# Instaby App — v65
 
-## TAREFA 06 CONCLUÍDA — Múltiplos contatos
+## Quantidade editável direto na linha (Serviços do cliente)
 
-### Implementado
-Nova aba **"Contatos"** dentro do cliente (logo depois de Visão Geral). Cada contato
-tem nome, cargo, WhatsApp, e-mail, e flags de responsabilidade (Principal, Financeiro,
-Aprovação de conteúdo, Assina contratos) — pra você saber quem procurar quando precisar
-de algo específico.
+### O que mudou
+Na aba Serviços do cliente, cada serviço contratado agora tem um `− quantidade +` direto
+na linha — clica no `+` ou `−` e já muda na hora, sem precisar clicar no lápis pra abrir
+o modo de edição.
 
-### Sobre o contato antigo
-O campo único que já existia (`Cliente.contatoNome`) **não foi tocado nem migrado
-automaticamente** — segui a regra do documento de não inventar dado sem confirmação.
-Ele aparece na própria aba Contatos como "Contato do cadastro", só como referência (e
-continua editável onde sempre foi, na tela de editar cliente). Se um cliente não tiver
-nenhum Contato novo cadastrado ainda, é só isso que aparece — nada quebra.
+O valor ajusta sozinho, mantendo a mesma "taxa por unidade" que já estava valendo — se
+você tinha um desconto aplicado (R$ 150 em vez do R$ 200 de tabela pra 2 unidades, por
+exemplo), aumentar pra 3 unidades mantém a proporção do desconto, não volta pro preço
+cheio do catálogo.
 
-### Banco
-- Novo model `Contato` (aditivo) — cliente, nome, cargo, telefone, whatsapp, email,
-  observações, e as 4 flags booleanas
+O lápis continua ali, só que agora é mais pra ajustar o **valor manualmente** (aplicar
+um desconto específico) — pra só mudar quantidade, não precisa mais abrir nada.
 
-### Arquivos principais
-- `prisma/schema.prisma`
-- `app/api/clientes/[id]/contatos/route.ts` e `app/api/contatos/[id]/route.ts`
-- `app/dashboard/clientes/[id]/ContatosTab.tsx` (novo)
-- `app/dashboard/clientes/[id]/page.tsx`
+### Arquivos alterados
+- `components/dashboard/ServicoContratadoRow.tsx`
 
-### Testes/verificações
-Nada em Cliente (cadastro, edição, orçamento, contrato) foi alterado.
-
-### Próxima
-TAREFA 07 — Links e referências do cliente (Drive, Canva, redes sociais, etc — hoje só
-tem 1 link do Drive). Seguindo.
+Nenhuma API nova precisou ser criada — a rota de editar já aceitava quantidade e valor.
