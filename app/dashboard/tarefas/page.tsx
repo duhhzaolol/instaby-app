@@ -1,6 +1,7 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { TarefaRow } from "@/components/dashboard/TarefaRow";
-import { CheckSquare } from "lucide-react";
+import { CheckSquare, CalendarDays } from "lucide-react";
 
 const ABAS = [
   { valor: "abertas", label: "Abertas" },
@@ -35,6 +36,12 @@ export default async function TarefasPage({
           <p className="text-lg font-medium text-text">Tarefas</p>
           <p className="text-sm text-muted">Todas as tarefas, de todos os clientes, num lugar só</p>
         </div>
+        <Link
+          href="/dashboard/tarefas/calendario"
+          className="flex items-center gap-1.5 rounded-xl border border-border bg-card/60 px-3 py-2 text-sm text-text hover:bg-hover"
+        >
+          <CalendarDays size={14} /> Calendário de conteúdo
+        </Link>
       </div>
 
       <div className="mb-5 flex gap-2">
