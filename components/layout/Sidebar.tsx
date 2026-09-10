@@ -16,6 +16,8 @@ import {
   Calendar,
   CheckSquare,
   BarChart3,
+  ArrowDownCircle,
+  ArrowUpCircle,
   Settings,
   Menu,
   X,
@@ -32,6 +34,8 @@ const menuPrincipal = [
 const menuFinanceiro = [
   { label: "Visão geral", href: "/dashboard/financeiro", icon: Wallet },
   { label: "DRE", href: "/dashboard/financeiro/dre", icon: BarChart3 },
+  { label: "Contas a Pagar", href: "/dashboard/financeiro/contas-a-pagar", icon: ArrowUpCircle },
+  { label: "Contas a Receber", href: "/dashboard/financeiro/contas-a-receber", icon: ArrowDownCircle },
 ];
 
 const menuOrcamento = [
