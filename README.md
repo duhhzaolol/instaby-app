@@ -1,33 +1,31 @@
 # Instaby App
 
-Painel interno da Instaby Agência — v56.
+Painel interno da Instaby Agência — v58.
 
-## Calendário de conteúdo
+## 1. Calendário pequeno pra escolher data (estilo Apple)
 
-Nova tela: `/dashboard/tarefas/calendario` — acessível pelo botão
-"Calendário de conteúdo" na tela de Tarefas, e também dentro de cada
-cliente (aba Tarefas → "Ver calendário de conteúdo desse cliente").
+Novo componente `DatePicker` — em vez do seletor nativo do navegador,
+abre um calendário do mês, com setas pra trocar de mês, dia de hoje
+marcado, e um botão "Hoje" pra pular direto. Troquei em todo lugar de
+tarefa que tinha campo de data:
 
-### O que ela faz
-- Calendário mensal com todas as tarefas pendentes (por padrão — dá pra
-  trocar pra "Mostrando todas"), cada uma na cor do cliente
-- **Filtro por cliente**: pílulas no topo — clica no nome do cliente e o
-  calendário mostra só o cronograma dele (exatamente o cenário de
-  apresentar pro cliente separado)
-- Navegação por mês com as setinhas
-- Clica em qualquer item do calendário e abre um popup rápido pra mudar
-  data, trocar status, marcar como feito, ou excluir — sem sair da tela
+- Central de Comando (prazo da tarefa rápida)
+- Painel de detalhe de qualquer tarefa (editar data)
+- Popup do Calendário de conteúdo
+- Formulário de nova tarefa dentro do cliente
 
-### Como cadastrar o cronograma
-Não criei nada novo de cadastro — reaproveitei o formulário de tarefa
-que já existe (dentro do cliente, aba Tarefas → "+ Nova tarefa" ou pela
-Central de Comando no Dashboard). Pra cada linha do seu cronograma:
+Deixei o componente em `components/ui/DatePicker.tsx`, então dá pra
+trocar em outros formulários do app (financeiro, relatórios etc.) depois
+se você quiser — não mexi neles agora pra manter o escopo focado em
+tarefa.
 
-- **Conteúdo** → Título da tarefa
-- **Formato** → Categoria (Arte = arte/carrossel, Reel = reels, Campanha
-  = quando tiver tráfego pago envolvido)
-- **Objetivo** → Descrição
-- **Data sugerida** → Prazo
+## 2. Amanhã, destacado no Dashboard
 
-Cadastra um por um, e eles já aparecem certinho no calendário — sem
-precisar de nenhuma tela nova de cadastro.
+Nova seção "Amanhã" na Visão Geral, logo abaixo de "Hoje" — mesmo
+formato, um pouco mais discreta (opacidade menor, sem contorno colorido
+no título) pra não competir visualmente com o que é urgente de verdade
+hoje. Só mostra tarefas ainda não concluídas.
+
+Combinado com a cor de urgência que já entrou na v57, agora o prazo que
+está chegando fica visível em várias camadas: a seção Amanhã no
+Dashboard, e a cor mudando gradualmente em qualquer lista de tarefa.

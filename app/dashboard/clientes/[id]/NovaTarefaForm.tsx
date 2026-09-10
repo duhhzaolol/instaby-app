@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
+import { DatePicker } from "@/components/ui/DatePicker";
 
 export default function NovaTarefaForm({ clienteId }: { clienteId: string }) {
   const router = useRouter();
@@ -62,13 +63,7 @@ export default function NovaTarefaForm({ clienteId }: { clienteId: string }) {
           <option value="tarefa">Tarefa</option>
           <option value="ideia">Ideia</option>
         </select>
-        <input
-          type="date"
-          value={prazo}
-          onChange={(e) => setPrazo(e.target.value)}
-          title="Prazo (opcional)"
-          className="h-9 rounded-lg border border-border bg-base px-2 text-sm text-text"
-        />
+        <DatePicker value={prazo} onChange={setPrazo} placeholder="Prazo" className="w-32" limpavel />
         <button
           type="submit"
           disabled={enviando}

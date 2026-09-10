@@ -70,6 +70,7 @@ export default function DashboardClient({
   clientes,
   clientesResumo,
   tarefasHoje,
+  tarefasAmanha,
   meta,
   performancePorCliente,
   atividades,
@@ -80,6 +81,7 @@ export default function DashboardClient({
   clientes: Cliente[];
   clientesResumo: ClienteResumo[];
   tarefasHoje: TarefaHoje[];
+  tarefasAmanha: TarefaHoje[];
   meta: Meta;
   performancePorCliente: PerformanceCliente[];
   atividades: Atividade[];
@@ -202,6 +204,39 @@ export default function DashboardClient({
                 <div
                   key={t.id}
                   className="flex items-center gap-3 rounded-xl border border-border bg-card/60 px-4 py-2.5"
+                  style={t.clienteCor ? { borderLeft: `2px solid ${t.clienteCor}` } : undefined}
+                >
+                  <span className="w-12 shrink-0 text-xs font-medium text-muted">{hora}</span>
+                  <div
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+                    style={{ backgroundColor: `${cor}1A`, color: cor }}
+                  >
+                    <Icon size={13} />
+                  </div>
+                  <p className="text-sm text-text">
+                    {t.titulo}
+                    {t.clienteNome && <span className="text-muted"> — {t.clienteNome}</span>}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {tarefasAmanha.length > 0 && (
+        <div className="mb-6">
+          <p className="mb-3 flex items-center gap-1.5 text-sm font-medium text-muted">
+            <CalendarClock size={13} /> Amanhã
+          </p>
+          <div className="flex flex-col gap-2">
+            {tarefasAmanha.map((t) => {
+              const { icone: Icon, cor } = visualDaCategoriaTarefa(t.categoria);
+              const hora = new Date(t.prazo).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+              return (
+                <div
+                  key={t.id}
+                  className="flex items-center gap-3 rounded-xl border border-border bg-card/30 px-4 py-2.5 opacity-90"
                   style={t.clienteCor ? { borderLeft: `2px solid ${t.clienteCor}` } : undefined}
                 >
                   <span className="w-12 shrink-0 text-xs font-medium text-muted">{hora}</span>

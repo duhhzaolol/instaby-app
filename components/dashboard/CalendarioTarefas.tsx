@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { X, ExternalLink, Check } from "lucide-react";
+import { DatePicker } from "@/components/ui/DatePicker";
 
 export type TarefaCalendario = {
   id: string;
@@ -155,12 +156,7 @@ export function CalendarioTarefas({
             </p>
 
             <label className="mb-1 block text-xs text-muted">Data</label>
-            <input
-              type="date"
-              value={data}
-              onChange={(e) => setData(e.target.value)}
-              className="mb-3 h-10 w-full rounded-lg border border-border bg-base px-3 text-sm text-text"
-            />
+            <DatePicker value={data} onChange={setData} className="mb-3" />
 
             <label className="mb-1 block text-xs text-muted">Status</label>
             <select

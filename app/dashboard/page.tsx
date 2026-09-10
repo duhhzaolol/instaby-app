@@ -22,6 +22,12 @@ function fimHoje() {
   return d;
 }
 
+function fimAmanha() {
+  const d = inicioHoje();
+  d.setDate(d.getDate() + 2);
+  return d;
+}
+
 export default async function DashboardPage() {
   const [
     clientesAtivos,
@@ -33,6 +39,7 @@ export default async function DashboardPage() {
     clientes,
     clientesComContagem,
     tarefasHoje,
+    tarefasAmanha,
     config,
     cobrancasPagasPorCliente,
     cobrancasRecentes,
@@ -77,6 +84,11 @@ export default async function DashboardPage() {
     }),
     prisma.tarefa.findMany({
       where: { prazo: { gte: inicioHoje(), lt: fimHoje() } },
+      include: { cliente: { select: { nome: true, cor: true } } },
+      orderBy: { prazo: "asc" },
+    }),
+    prisma.tarefa.findMany({
+      where: { prazo: { gte: fimHoje(), lt: fimAmanha() }, status: { not: "feito" } },
       include: { cliente: { select: { nome: true, cor: true } } },
       orderBy: { prazo: "asc" },
     }),
@@ -195,6 +207,14 @@ export default async function DashboardPage() {
         pendentes: c.tarefas.length,
       }))}
       tarefasHoje={tarefasHoje.map((t) => ({
+        id: t.id,
+        titulo: t.titulo,
+        categoria: t.categoria,
+        prazo: t.prazo!.toISOString(),
+        clienteNome: t.cliente?.nome || null,
+        clienteCor: t.cliente?.cor || null,
+      }))}
+      tarefasAmanha={tarefasAmanha.map((t) => ({
         id: t.id,
         titulo: t.titulo,
         categoria: t.categoria,

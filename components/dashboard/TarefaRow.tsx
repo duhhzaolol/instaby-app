@@ -6,6 +6,8 @@ import { Trash2, ChevronDown, Clock } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { visualDaCategoriaTarefa, PRIORIDADES } from "@/lib/categoriaTarefaVisual";
 import { formatarDuracao } from "@/lib/formatarDuracao";
+import { urgenciaPrazo } from "@/lib/urgenciaPrazo";
+import { DatePicker } from "@/components/ui/DatePicker";
 
 export type TarefaRowData = {
   id: string;
@@ -49,7 +51,7 @@ export function TarefaRow({
   const [horaFimConclusao, setHoraFimConclusao] = useState(horaAtual());
   const [registrandoConclusao, setRegistrandoConclusao] = useState(false);
 
-  const prazoVencido = tarefa.prazo && tarefa.status !== "feito" && new Date(tarefa.prazo) < new Date();
+  const urgencia = urgenciaPrazo(tarefa.prazo);
   const { icone: Icon, cor } = visualDaCategoriaTarefa(tarefa.categoria);
   const prioridadeInfo = PRIORIDADES.find((p) => p.valor === tarefa.prioridade);
 
@@ -148,7 +150,7 @@ export function TarefaRow({
               {clienteNome && <span>{clienteNome}</span>}
               {prioridadeInfo && <span>{prioridadeInfo.label}</span>}
               {tarefa.prazo ? (
-                <span className={prazoVencido ? "text-red-400" : ""}>
+                <span style={urgencia && tarefa.status !== "feito" ? { color: urgencia.cor } : undefined}>
                   {new Date(tarefa.prazo).toLocaleDateString("pt-BR")}
                   {tarefa.prazo.slice(11, 16) !== "00:00" && ` · ${tarefa.prazo.slice(11, 16)}`}
                 </span>
@@ -242,12 +244,7 @@ export function TarefaRow({
           <div className="mb-3 grid grid-cols-3 gap-2">
             <div>
               <label className="mb-1 block text-xs text-muted">Data</label>
-              <input
-                type="date"
-                value={data}
-                onChange={(e) => setData(e.target.value)}
-                className="h-9 w-full rounded-lg border border-border bg-card/60 px-2 text-xs text-text"
-              />
+              <DatePicker value={data} onChange={setData} placeholder="Sem data" limpavel />
             </div>
             <div>
               <label className="mb-1 block text-xs text-muted">Horário</label>

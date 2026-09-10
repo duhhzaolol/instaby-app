@@ -4,25 +4,32 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Zap, X, CheckCircle2, ArrowLeft, Keyboard } from "lucide-react";
 import { CATEGORIAS_TAREFA, type CategoriaTarefa } from "@/lib/categoriaTarefaVisual";
+import { DatePicker } from "@/components/ui/DatePicker";
 
 type Cliente = { id: string; nome: string; cor: string | null };
 
 export function QuickCommandCenter({ clientes }: { clientes: Cliente[] }) {
   const router = useRouter();
   const [aberto, setAberto] = useState(false);
-  const [etapa, setEtapa] = useState<"categoria" | "cliente" | "texto" | "sucesso">("categoria");
+  const [etapa, setEtapa] = useState<"categoria" | "cliente" | "detalhes" | "texto" | "sucesso">("categoria");
   const [categoria, setCategoria] = useState<CategoriaTarefa | null>(null);
   const [tituloLivre, setTituloLivre] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [modoTexto, setModoTexto] = useState(false);
   const [textoRapido, setTextoRapido] = useState("");
   const [clienteRapido, setClienteRapido] = useState("");
+  const [clienteEscolhido, setClienteEscolhido] = useState<string | null>(null);
+  const [observacao, setObservacao] = useState("");
+  const [prazo, setPrazo] = useState("");
 
   function abrir() {
     setAberto(true);
     setEtapa("categoria");
     setCategoria(null);
     setTituloLivre("");
+    setObservacao("");
+    setPrazo("");
+    setClienteEscolhido(null);
   }
 
   function fechar() {
@@ -38,7 +45,12 @@ export function QuickCommandCenter({ clientes }: { clientes: Cliente[] }) {
     }
   }
 
-  async function criarTarefa(clienteId: string | null, titulo?: string) {
+  function escolherCliente(clienteId: string | null) {
+    setClienteEscolhido(clienteId);
+    setEtapa("detalhes");
+  }
+
+  async function criarTarefa(titulo?: string) {
     setEnviando(true);
     const catInfo = CATEGORIAS_TAREFA.find((c) => c.valor === categoria);
     await fetch("/api/tarefas", {
@@ -47,7 +59,9 @@ export function QuickCommandCenter({ clientes }: { clientes: Cliente[] }) {
       body: JSON.stringify({
         titulo: titulo || catInfo?.label || "Tarefa",
         categoria,
-        clienteId,
+        clienteId: clienteEscolhido,
+        descricao: observacao || null,
+        prazo: prazo ? `${prazo}T00:00:00-03:00` : null,
       }),
     });
     setEnviando(false);
@@ -159,13 +173,16 @@ export function QuickCommandCenter({ clientes }: { clientes: Cliente[] }) {
               <>
                 <div className="mb-4 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    {etapa === "cliente" && (
-                      <button onClick={() => setEtapa("categoria")} className="text-muted hover:text-text">
+                    {(etapa === "cliente" || etapa === "detalhes") && (
+                      <button
+                        onClick={() => setEtapa(etapa === "detalhes" ? "cliente" : "categoria")}
+                        className="text-muted hover:text-text"
+                      >
                         <ArrowLeft size={16} />
                       </button>
                     )}
                     <p className="text-sm font-medium text-text">
-                      {etapa === "categoria" ? "⚡ O que precisa fazer?" : "Para qual cliente?"}
+                      {etapa === "categoria" ? "⚡ O que precisa fazer?" : etapa === "cliente" ? "Para qual cliente?" : "Quer detalhar? (opcional)"}
                     </p>
                   </div>
                   <button onClick={fechar} className="text-muted hover:text-text">
@@ -204,7 +221,7 @@ export function QuickCommandCenter({ clientes }: { clientes: Cliente[] }) {
                     {clientes.map((c) => (
                       <button
                         key={c.id}
-                        onClick={() => criarTarefa(c.id)}
+                        onClick={() => escolherCliente(c.id)}
                         disabled={enviando}
                         className="flex items-center gap-2.5 rounded-xl border border-border bg-base/60 px-3.5 py-2.5 text-left transition-colors hover:bg-hover disabled:opacity-50"
                       >
@@ -216,7 +233,7 @@ export function QuickCommandCenter({ clientes }: { clientes: Cliente[] }) {
                       </button>
                     ))}
                     <button
-                      onClick={() => criarTarefa(null)}
+                      onClick={() => escolherCliente(null)}
                       disabled={enviando}
                       className="rounded-xl border border-dashed border-border px-3.5 py-2.5 text-left text-sm text-muted hover:text-text disabled:opacity-50"
                     >
@@ -225,12 +242,40 @@ export function QuickCommandCenter({ clientes }: { clientes: Cliente[] }) {
                   </div>
                 )}
 
+                {etapa === "detalhes" && (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      criarTarefa();
+                    }}
+                  >
+                    <label className="mb-1 block text-xs text-muted">Observação</label>
+                    <textarea
+                      autoFocus
+                      value={observacao}
+                      onChange={(e) => setObservacao(e.target.value)}
+                      rows={2}
+                      placeholder="Pra lembrar do que se trata depois — ex: panfleto pro Dia das Mães"
+                      className="mb-3 w-full rounded-xl border border-border bg-base/60 px-3.5 py-2.5 text-sm text-text outline-none placeholder:text-muted/50 focus:border-accent/50"
+                    />
+                    <label className="mb-1 block text-xs text-muted">Prazo (se já souber)</label>
+                    <DatePicker value={prazo} onChange={setPrazo} placeholder="Sem prazo por enquanto" className="mb-4" limpavel />
+                    <button
+                      type="submit"
+                      disabled={enviando}
+                      className="h-11 w-full rounded-xl bg-accent text-sm font-semibold text-white disabled:opacity-40"
+                    >
+                      {enviando ? "Criando..." : "Criar tarefa"}
+                    </button>
+                  </form>
+                )}
+
                 {etapa === "texto" && (
                   <form
                     onSubmit={(e) => {
                       e.preventDefault();
                       if (!tituloLivre.trim()) return;
-                      criarTarefa(null, tituloLivre);
+                      criarTarefa(tituloLivre);
                     }}
                   >
                     <input
