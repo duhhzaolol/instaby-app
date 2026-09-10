@@ -13,7 +13,7 @@ type Contratado = ServicoContratadoData & { servicoId: string };
 
 export default function ServicosContratadosTab({
   clienteId,
-  contratados,
+  contratados: contratadosIniciais,
   catalogo,
   descontoMensal,
   acrescimoMensal,
@@ -29,6 +29,7 @@ export default function ServicosContratadosTab({
   valorRenovacao: number | null;
 }) {
   const router = useRouter();
+  const [contratados, setContratados] = useState(contratadosIniciais);
   const [adicionando, setAdicionando] = useState<string | null>(null);
   const [editandoContrato, setEditandoContrato] = useState(false);
   const [desconto, setDesconto] = useState(descontoMensal);
@@ -41,16 +42,28 @@ export default function ServicosContratadosTab({
   const categorias = useMemo(() => Array.from(new Set(catalogo.map((s) => s.categoria))), [catalogo]);
 
   const totalServicos = contratados.reduce((soma, c) => soma + c.valor, 0);
-  const mensalidadeFinal = Math.max(0, totalServicos - descontoMensal + acrescimoMensal);
+  const mensalidadeFinal = Math.max(0, totalServicos - desconto + acrescimo);
 
   async function adicionar(servico: Servico) {
     setAdicionando(servico.id);
-    await fetch(`/api/clientes/${clienteId}/servicos-contratados`, {
+    const res = await fetch(`/api/clientes/${clienteId}/servicos-contratados`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ servicoId: servico.id, quantidade: 1, valor: servico.valorUnitario }),
     });
+    const novo = await res.json();
+    setContratados((atual) => [...atual, novo]);
     setAdicionando(null);
+    router.refresh();
+  }
+
+  function atualizarLocal(id: string, patch: Partial<ServicoContratadoData>) {
+    setContratados((atual) => atual.map((c) => (c.id === id ? { ...c, ...patch } : c)));
+    router.refresh();
+  }
+
+  function removerLocal(id: string) {
+    setContratados((atual) => atual.filter((c) => c.id !== id));
     router.refresh();
   }
 
@@ -71,7 +84,7 @@ export default function ServicosContratadosTab({
     router.refresh();
   }
 
-  const mostrarResumo = contratados.length > 0 || descontoMensal > 0 || acrescimoMensal > 0;
+  const mostrarResumo = contratados.length > 0 || desconto > 0 || acrescimo > 0;
 
   return (
     <div>
@@ -82,7 +95,13 @@ export default function ServicosContratadosTab({
           <p className="text-sm text-muted">Nenhum serviço contratado ainda — adicione abaixo.</p>
         )}
         {contratados.map((c, i) => (
-          <ServicoContratadoRow key={c.id} item={c} index={i} />
+          <ServicoContratadoRow
+            key={c.id}
+            item={c}
+            index={i}
+            onAtualizado={(patch) => atualizarLocal(c.id, patch)}
+            onRemovido={() => removerLocal(c.id)}
+          />
         ))}
       </div>
 
@@ -130,16 +149,16 @@ export default function ServicosContratadosTab({
                 <span className="text-xs text-muted">Total dos serviços</span>
                 <span className="text-sm text-text">R$ {totalServicos.toFixed(0)}</span>
               </div>
-              {descontoMensal > 0 && (
+              {desconto > 0 && (
                 <div className="mb-2 flex items-center justify-between">
                   <span className="text-xs text-muted">Desconto mensal</span>
-                  <span className="text-sm text-red-400">− R$ {descontoMensal.toFixed(0)}</span>
+                  <span className="text-sm text-red-400">− R$ {desconto.toFixed(0)}</span>
                 </div>
               )}
-              {acrescimoMensal > 0 && (
+              {acrescimo > 0 && (
                 <div className="mb-2 flex items-center justify-between">
                   <span className="text-xs text-muted">Acréscimo mensal</span>
-                  <span className="text-sm text-emerald-400">+ R$ {acrescimoMensal.toFixed(0)}</span>
+                  <span className="text-sm text-emerald-400">+ R$ {acrescimo.toFixed(0)}</span>
                 </div>
               )}
               <div className="mb-3 flex items-center justify-between border-t border-border pt-2">

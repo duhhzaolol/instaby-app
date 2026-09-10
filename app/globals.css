@@ -63,3 +63,12 @@
 .animate-gentle-pulse {
   animation: gentle-pulse 1.8s ease-in-out infinite;
 }
+
+@keyframes loading-bar {
+  0% { transform: translateX(-100%); }
+  60% { transform: translateX(220%); }
+  100% { transform: translateX(220%); }
+}
+.animate-loading-bar {
+  animation: loading-bar 0.9s ease-in-out infinite;
+}

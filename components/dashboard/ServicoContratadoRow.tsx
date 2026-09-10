@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Pencil, Trash2, Minus, Plus } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
@@ -17,11 +16,14 @@ export type ServicoContratadoData = {
 export function ServicoContratadoRow({
   item,
   index,
+  onAtualizado,
+  onRemovido,
 }: {
   item: ServicoContratadoData;
   index: number;
+  onAtualizado: (patch: Partial<ServicoContratadoData>) => void;
+  onRemovido: () => void;
 }) {
-  const router = useRouter();
   const [editando, setEditando] = useState(false);
   const [quantidade, setQuantidade] = useState(item.quantidade);
   const [valor, setValor] = useState(item.valor);
@@ -32,6 +34,7 @@ export function ServicoContratadoRow({
 
   async function salvar() {
     setSalvando(true);
+    onAtualizado({ quantidade, valor }); // atualiza a tela na hora
     await fetch(`/api/servicos-contratados/${item.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -39,13 +42,12 @@ export function ServicoContratadoRow({
     });
     setSalvando(false);
     setEditando(false);
-    router.refresh();
   }
 
   async function remover() {
     if (!confirm(`Remover "${item.servico.nome}" dos serviços contratados?`)) return;
+    onRemovido(); // some da tela na hora
     await fetch(`/api/servicos-contratados/${item.id}`, { method: "DELETE" });
-    router.refresh();
   }
 
   // muda a quantidade direto na linha — mantém o valor por unidade que já estava
@@ -57,13 +59,13 @@ export function ServicoContratadoRow({
     const novoValor = Math.round(valorPorUnidade * novaQuantidade);
 
     setAlterandoQtd(true);
+    onAtualizado({ quantidade: novaQuantidade, valor: novoValor }); // atualiza a tela na hora, sem esperar o servidor
     await fetch(`/api/servicos-contratados/${item.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ quantidade: novaQuantidade, valor: novoValor }),
     });
     setAlterandoQtd(false);
-    router.refresh();
   }
 
   if (editando) {

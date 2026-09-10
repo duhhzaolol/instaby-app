@@ -1,5 +1,5 @@
-import { PageTransitionLoading } from "@/components/ui/PageTransitionLoading";
+import { BarraCarregamentoDiscreta } from "@/components/ui/BarraCarregamentoDiscreta";
 
 export default function Loading() {
-  return <PageTransitionLoading />;
+  return <BarraCarregamentoDiscreta />;
 }
