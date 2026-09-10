@@ -16,6 +16,7 @@ export async function PATCH(
       ...(body.prioridade !== undefined && { prioridade: body.prioridade }),
       ...(body.categoria !== undefined && { categoria: body.categoria }),
       ...(body.prazo !== undefined && { prazo: body.prazo ? new Date(body.prazo) : null }),
+      ...(body.conteudoId !== undefined && { conteudoId: body.conteudoId || null }),
     },
   });
 

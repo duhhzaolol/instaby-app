@@ -43,6 +43,7 @@ model Cliente {
   registrosTempo      RegistroTempo[]
   redesGerenciadas    String[] @default([]) // instagram | tiktok | facebook | google | meta_ads
   relatorios          RelatorioPeriodo[]
+  conteudos           Conteudo[]
 }
 
 // Relatório de performance por rede e por período — dado lançado manualmente (Fase 1).
@@ -80,6 +81,8 @@ model Tarefa {
   id         String    @id @default(uuid())
   clienteId  String?
   cliente    Cliente?  @relation(fields: [clienteId], references: [id])
+  conteudoId String?
+  conteudo   Conteudo? @relation(fields: [conteudoId], references: [id])
   titulo     String
   tipo       String    @default("tarefa") // tarefa | ideia
   categoria  String? // gravacao | arte | reel | fotos | campanha | reuniao | contato | orcamento | ideia | outra
@@ -88,6 +91,41 @@ model Tarefa {
   status     String    @default("a_fazer") // a_fazer | em_andamento | feito
   prazo      DateTime?
   link       String?
+  createdAt DateTime @default(now())
+}
+
+// Uma publicação/peça de conteúdo — diferente de tarefa: tem briefing, roteiro, pipeline de produção próprio.
+// Uma tarefa pode se vincular a um conteúdo (ex: "gravar", "editar", "publicar"), mas conteúdo não substitui tarefa.
+model Conteudo {
+  id        String   @id @default(uuid())
+  clienteId String?
+  cliente   Cliente? @relation(fields: [clienteId], references: [id])
+
+  titulo    String
+  campanha  String?
+  formato   String? // reel | story | carrossel | post | foto | video | ads | outro
+  objetivo  String?
+  pilar     String?
+  redes     String[] @default([]) // instagram | tiktok | facebook | google | meta_ads
+  tipoVeiculacao String @default("organico") // organico | anuncio
+
+  briefing    String?
+  roteiro     String?
+  legenda     String?
+  cta         String?
+  referencias String?
+  linkArquivos String?
+
+  dataCaptacao    DateTime?
+  prazoEdicao     DateTime?
+  prazoAprovacao  DateTime?
+  dataPublicacao  DateTime?
+  urlPublicada    String?
+
+  status String @default("ideia")
+  // ideia | planejado | producao | edicao | revisao_interna | aguardando_aprovacao | alteracao_solicitada | aprovado | agendado | publicado
+
+  tarefas   Tarefa[]
   createdAt DateTime @default(now())
 }
 
