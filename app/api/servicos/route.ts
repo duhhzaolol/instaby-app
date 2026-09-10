@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
       unidade: body.unidade || "mês",
       valorUnitario: body.valorUnitario,
       clausulaContrato: body.clausulaContrato || null,
+      formatoConteudo: body.formatoConteudo || null,
     },
   });
 

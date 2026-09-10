@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { Input, Textarea, Label } from "@/components/ui/Input";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { Button } from "@/components/ui/Button";
+import { FORMATOS_CONTEUDO } from "@/lib/conteudoVisual";
 
 type Servico = {
   id: string;
@@ -15,6 +16,7 @@ type Servico = {
   unidade: string;
   valorUnitario: number;
   clausulaContrato: string;
+  formatoConteudo?: string | null;
 };
 
 export default function EditarServicoForm({ servico }: { servico: Servico }) {
@@ -25,6 +27,7 @@ export default function EditarServicoForm({ servico }: { servico: Servico }) {
   const [unidade, setUnidade] = useState(servico.unidade);
   const [valor, setValor] = useState(servico.valorUnitario);
   const [clausulaContrato, setClausulaContrato] = useState(servico.clausulaContrato);
+  const [formatoConteudo, setFormatoConteudo] = useState(servico.formatoConteudo || "");
   const [enviando, setEnviando] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -34,7 +37,7 @@ export default function EditarServicoForm({ servico }: { servico: Servico }) {
     await fetch(`/api/servicos/${servico.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nome, descricao, categoria, unidade, valorUnitario: valor, clausulaContrato }),
+      body: JSON.stringify({ nome, descricao, categoria, unidade, valorUnitario: valor, clausulaContrato, formatoConteudo }),
     });
 
     setEnviando(false);
@@ -64,6 +67,24 @@ export default function EditarServicoForm({ servico }: { servico: Servico }) {
 
         <Label>Valor unitário</Label>
         <CurrencyInput value={valor} onChange={setValor} className="mb-4" />
+
+        <Label>Formato de conteúdo (opcional)</Label>
+        <select
+          value={formatoConteudo}
+          onChange={(e) => setFormatoConteudo(e.target.value)}
+          className="mb-1 h-10 w-full rounded-xl border border-border bg-card/60 px-3 text-sm text-text"
+        >
+          <option value="">Não é um formato de conteúdo (ex: reunião, orçamento)</option>
+          {FORMATOS_CONTEUDO.map((f) => (
+            <option key={f.valor} value={f.valor}>
+              {f.label}
+            </option>
+          ))}
+        </select>
+        <p className="mb-4 text-xs text-muted">
+          Se esse serviço é tipo "8 Reels por mês", liga ele ao formato "Reel" — assim o Escopo
+          mensal do cliente sabe comparar contratado x entregue automaticamente.
+        </p>
 
         <Label>Texto pro contrato (opcional — se deixar em branco, usa a descrição)</Label>
         <Textarea

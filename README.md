@@ -1,30 +1,41 @@
-# Instaby App — v61
+# Instaby App — v62
 
-## TAREFA 02 CONCLUÍDA — Visão de Captações
+## TAREFA 03 CONCLUÍDA — Escopo mensal
 
 ### Implementado
-- Nova página `/dashboard/conteudo/captacoes` (botão "Captações" no topo de Conteúdo)
-- Agrupa por dia (ex: "SEXTA — 11/09/2026"), e dentro do dia por cliente, listando cada
-  item com o ícone do formato — igual o exemplo do documento
-- Dias futuros aparecem primeiro; já passados ficam numa seção "Já passou" embaixo
-- Adicionei o campo **Data de captação** no modal de detalhe do conteúdo e na criação
-  rápida (o campo já existia no banco desde a Tarefa 01, mas não tinha onde preencher —
-  sem isso essa tela nunca teria dado pra usar)
+- `Servico` ganhou um campo opcional **"Formato de conteúdo"** — liga um serviço tipo
+  "8 Reels por mês" ao formato "Reel" (configurável em Serviços → editar qualquer
+  serviço; se não for um formato de conteúdo, deixa em branco, como reunião ou
+  orçamento)
+- Nova aba **"Escopo"** dentro do cliente: mostra, pra cada serviço contratado ligado a
+  um formato, quanto foi **contratado**, **entregue** (Conteúdo com status Publicado),
+  **planejado** (qualquer status entre Planejado e Aprovado) e **faltando**, com barra
+  de progresso — tudo calculado a partir do que já existe, nada digitado na mão
+- Sem serviço vinculado a um formato, a aba simplesmente avisa e explica como ligar —
+  não força nada
 
 ### Banco
-Nenhuma mudança — só usa o campo `dataCaptacao` que já existia desde a Tarefa 01.
+- `Servico.formatoConteudo` (String, opcional) — aditivo, não mexe em serviço nenhum
+  que já existe
 
 ### Arquivos principais
-- `app/dashboard/conteudo/captacoes/page.tsx` (novo)
-- `components/dashboard/PipelineConteudo.tsx` (campo de captação no modal)
-- `components/dashboard/NovoConteudoForm.tsx` (campo de captação na criação)
-- `app/dashboard/conteudo/page.tsx` (link pra Captações)
+- `prisma/schema.prisma`
+- `app/api/servicos/route.ts` e `[id]/route.ts`
+- `app/dashboard/servicos/[id]/editar/EditarServicoForm.tsx` e `page.tsx`
+- `app/dashboard/clientes/[id]/page.tsx` (aba Escopo + cálculo)
 
 ### Testes/verificações
-Nada em Conteúdo (Tarefa 01), Tarefas, Agenda ou Dashboard foi alterado além do
-necessário — mudança pequena e isolada.
+Nada em Serviços, Clientes, Conteúdo ou Orçamento foi alterado além da adição do campo
+— serviço sem o campo preenchido continua funcionando exatamente como antes em
+orçamento/contrato/proposta pública.
+
+### Pendência conhecida
+O cálculo hoje é sempre do **mês atual**, sem navegação entre meses (o exemplo do
+documento era "Setembro/SkyFit" — cobre isso, mas não dá pra olhar agosto depois que
+setembro passar). Se isso for importante no seu uso, é rápido de adicionar.
 
 ### Próxima
-TAREFA 03 — Escopo mensal (contratado x planejado x entregue, calculado a partir dos
-Serviços Contratados + Conteúdo). Parando aqui de novo antes de seguir — testa a Visão
-de Captações com alguns conteúdos de datas diferentes primeiro.
+TAREFA 04 — Projetos (agrupar tarefa/conteúdo/hora/despesa/cobrança sob um trabalho
+específico, opcional). Parando aqui de novo — essa é justamente uma das partes que eu
+questionei se você vai usar de verdade (Conteúdo já cobre bastante do que "Projeto"
+serviria pra você sozinho). Vale confirmar antes de eu construir.

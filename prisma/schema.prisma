@@ -138,6 +138,7 @@ model Servico {
   categoria       String
   unidade         String? // ex: "mês", "reel"
   valorUnitario   Decimal
+  formatoConteudo String? // liga esse serviço a um formato de Conteúdo (reel/story/carrossel/...), pro Escopo mensal calcular contratado x entregue
 
   itens        ItemOrcamento[]
   pacoteItens  PacoteItem[]

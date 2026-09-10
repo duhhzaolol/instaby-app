@@ -41,6 +41,7 @@ export default async function ClienteDetalhePage({
   const abas = [
     { valor: "tarefas", label: "Tarefas" },
     { valor: "servicos", label: "Serviços" },
+    { valor: "escopo", label: "Escopo" },
     { valor: "relatorios", label: "Relatórios" },
     { valor: "financeiro", label: "Financeiro" },
     { valor: "orcamentos", label: "Orçamentos" },
@@ -50,6 +51,37 @@ export default async function ClienteDetalhePage({
 
   const orcamentosAceitos = cliente.orcamentos.filter((o) => o.status === "aceito");
   const totalServicos = cliente.servicosContratados.reduce((soma, sc) => soma + Number(sc.valor), 0);
+
+  const hojeEscopo = new Date();
+  const inicioMesEscopo = new Date(hojeEscopo.getFullYear(), hojeEscopo.getMonth(), 1);
+  const fimMesEscopo = new Date(hojeEscopo.getFullYear(), hojeEscopo.getMonth() + 1, 0, 23, 59, 59);
+
+  const conteudosDoMes = await prisma.conteudo.findMany({
+    where: {
+      clienteId: cliente.id,
+      formato: { not: null },
+      OR: [
+        { dataPublicacao: { gte: inicioMesEscopo, lte: fimMesEscopo } },
+        { dataPublicacao: null, dataCaptacao: { gte: inicioMesEscopo, lte: fimMesEscopo } },
+      ],
+    },
+    select: { formato: true, status: true },
+  });
+
+  const escopo = cliente.servicosContratados
+    .filter((sc) => sc.servico.formatoConteudo)
+    .map((sc) => {
+      const doFormato = conteudosDoMes.filter((c) => c.formato === sc.servico.formatoConteudo);
+      const entregue = doFormato.filter((c) => c.status === "publicado").length;
+      const planejado = doFormato.filter((c) => c.status !== "publicado" && c.status !== "ideia").length;
+      return {
+        nome: sc.servico.nome,
+        contratado: sc.quantidade,
+        entregue,
+        planejado,
+        faltando: Math.max(0, sc.quantidade - entregue - planejado),
+      };
+    });
   const mensalidade = Math.max(0, totalServicos - Number(cliente.descontoMensal) + Number(cliente.acrescimoMensal));
 
   return (
@@ -215,6 +247,61 @@ export default async function ClienteDetalhePage({
           prazoContratoMeses={cliente.prazoContratoMeses}
           valorRenovacao={cliente.valorRenovacao ? Number(cliente.valorRenovacao) : null}
         />
+      )}
+
+      {aba === "escopo" && (
+        <div>
+          <p className="mb-1 text-sm font-medium text-text">
+            Escopo de {new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
+          </p>
+          <p className="mb-4 text-sm text-muted">
+            Contratado x entregue x planejado, calculado a partir dos Serviços Contratados e do Conteúdo — nada digitado à mão.
+          </p>
+          {escopo.length === 0 ? (
+            <p className="text-sm text-muted">
+              Nenhum serviço contratado está ligado a um formato de conteúdo ainda. Vá em Serviços →
+              editar um serviço → "Formato de conteúdo" pra ligar (ex: liga o serviço "8 Reels/mês" ao formato Reel).
+            </p>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {escopo.map((e) => (
+                <div key={e.nome} className="rounded-xl border border-border bg-card/60 p-4">
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="text-sm font-medium text-text">{e.nome}</p>
+                    <p className="text-xs text-muted">
+                      Contratado: <span className="text-text">{e.contratado}</span>
+                    </p>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-base">
+                    <div className="flex h-full">
+                      <div
+                        className="h-full bg-emerald-500"
+                        style={{ width: `${Math.min(100, (e.entregue / e.contratado) * 100)}%` }}
+                      />
+                      <div
+                        className="h-full bg-sky-500"
+                        style={{ width: `${Math.min(100 - (e.entregue / e.contratado) * 100, (e.planejado / e.contratado) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-2 flex items-center gap-4 text-xs">
+                    <span className="flex items-center gap-1 text-emerald-400">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Entregue: {e.entregue}
+                    </span>
+                    <span className="flex items-center gap-1 text-sky-400">
+                      <span className="h-1.5 w-1.5 rounded-full bg-sky-500" /> Planejado: {e.planejado}
+                    </span>
+                    {e.faltando > 0 && (
+                      <span className="flex items-center gap-1 text-amber-400">
+                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> Faltando: {e.faltando}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {aba === "financeiro" && (

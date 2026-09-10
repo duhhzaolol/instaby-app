@@ -39,6 +39,8 @@ conteúdo e na criação rápida — sem isso, a Visão de Captações ficaria s
 - **Páginas**: aba nova ou seção na Visão Geral do cliente
 - **Critério**: SkyFit mostra "8 Reels contratados, 4 publicados, 3 planejados, 1 faltando" batendo com o dado real
 
+**Concluída (v62)**: `Servico` ganhou `formatoConteudo` opcional (liga um serviço tipo "8 Reels/mês" ao formato Reel do Conteúdo — configurável em Servicos → editar). Nova aba "Escopo" dentro do cliente, mostrando contratado/entregue/planejado/faltando por serviço vinculado, com barra de progresso (verde=entregue, azul=planejado), calculado a partir de Conteudo do mês atual — sem nenhum número digitado à mão. Se o serviço não estiver vinculado a um formato, simplesmente não aparece no Escopo (nada quebra, nada é forçado).
+
 ---
 
 ## FASE 3 — Projetos
