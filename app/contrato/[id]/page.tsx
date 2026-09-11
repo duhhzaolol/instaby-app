@@ -36,8 +36,8 @@ export default async function ContratoPublicoPage({ params }: { params: { id: st
     });
     if (orcamento) {
       itens = orcamento.itens.map((i) => ({
-        nome: i.servico.nome,
-        texto: i.servico.clausulaContrato || i.servico.descricao,
+        nome: i.nomeServico || i.servico.nome,
+        texto: i.servico.clausulaContrato || i.descricaoServico || i.servico.descricao,
         categoria: i.servico.categoria,
         valor: Number(i.valor),
       }));

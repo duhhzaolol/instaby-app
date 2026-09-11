@@ -19,6 +19,7 @@ import {
   ArrowDownCircle,
   ArrowUpCircle,
   Film,
+  Trophy,
   Settings,
   Menu,
   X,
@@ -41,6 +42,7 @@ const menuFinanceiro = [
 ];
 
 const menuOrcamento = [
+  { label: "Oportunidades", href: "/dashboard/oportunidades", icon: Trophy },
   { label: "Catálogo de serviços", href: "/dashboard/servicos", icon: Package },
   { label: "Pacotes", href: "/dashboard/pacotes", icon: Package2 },
   { label: "Orçamentos", href: "/dashboard/orcamentos", icon: FileText },

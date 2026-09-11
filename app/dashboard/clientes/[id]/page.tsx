@@ -9,6 +9,8 @@ import ServicosContratadosTab from "./ServicosContratadosTab";
 import RelatoriosTab from "./RelatoriosTab";
 import VisaoGeralClienteTab from "./VisaoGeralClienteTab";
 import ContatosTab from "./ContatosTab";
+import LinksClienteTab from "./LinksClienteTab";
+import OnboardingTab from "./OnboardingTab";
 import { TarefaRow } from "@/components/dashboard/TarefaRow";
 import { OrcamentoRow } from "@/components/dashboard/OrcamentoRow";
 import { Clock } from "lucide-react";
@@ -20,23 +22,26 @@ export default async function ClienteDetalhePage({
   params: { id: string };
   searchParams: { aba?: string };
 }) {
-  const [cliente, catalogo] = await Promise.all([
+  const [cliente, catalogo, config] = await Promise.all([
     prisma.cliente.findUnique({
       where: { id: params.id },
       include: {
         tarefas: { orderBy: { createdAt: "desc" } },
         orcamentos: { include: { itens: true }, orderBy: { createdAt: "desc" } },
         contratos: { orderBy: { createdAt: "desc" } },
-        cobrancas: { orderBy: { createdAt: "desc" } },
+        cobrancas: { orderBy: { createdAt: "desc" }, include: { pagamentos: true } },
         despesas: { orderBy: { data: "desc" } },
         servicosContratados: { where: { ativo: true }, include: { servico: true }, orderBy: { createdAt: "asc" } },
         registrosTempo: { orderBy: { inicio: "desc" }, take: 60 },
         relatorios: { orderBy: { fim: "desc" } },
         conteudos: { orderBy: { createdAt: "desc" } },
         contatos: { orderBy: { createdAt: "asc" } },
+        links: { orderBy: { createdAt: "asc" } },
+        onboarding: { include: { itens: { orderBy: { ordem: "asc" } } } },
       },
     }),
     prisma.servico.findMany({ orderBy: [{ categoria: "asc" }, { nome: "asc" }] }),
+    prisma.configuracao.findUnique({ where: { id: "config" } }),
   ]);
 
   if (!cliente) notFound();
@@ -45,6 +50,8 @@ export default async function ClienteDetalhePage({
   const abas = [
     { valor: "visao_geral", label: "Visão Geral" },
     { valor: "contatos", label: "Contatos" },
+    { valor: "links", label: "Links" },
+    { valor: "onboarding", label: "Onboarding" },
     { valor: "tarefas", label: "Tarefas" },
     { valor: "servicos", label: "Serviços" },
     { valor: "escopo", label: "Escopo" },
@@ -95,6 +102,13 @@ export default async function ClienteDetalhePage({
     .sort((a, b) => a.vencimento!.getTime() - b.vencimento!.getTime())[0];
 
   const contratoVigente = cliente.contratos.find((c) => c.status === "assinado");
+  let proximaRenovacao: Date | null = null;
+  let diasParaRenovar: number | null = null;
+  if (contratoVigente && cliente.prazoContratoMeses) {
+    proximaRenovacao = new Date(contratoVigente.createdAt);
+    proximaRenovacao.setMonth(proximaRenovacao.getMonth() + cliente.prazoContratoMeses);
+    diasParaRenovar = Math.round((proximaRenovacao.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  }
 
   const receitaMes = cliente.cobrancas
     .filter((c) => c.status === "pago" && c.createdAt >= inicioMesEscopo && c.createdAt <= fimMesEscopo)
@@ -236,9 +250,12 @@ export default async function ClienteDetalhePage({
           mensalidade={mensalidade}
           proximaCobranca={proximaCobranca ? { valor: Number(proximaCobranca.valor), vencimento: proximaCobranca.vencimento?.toISOString() || null } : null}
           contratoVigente={!!contratoVigente}
+          proximaRenovacao={proximaRenovacao?.toISOString() || null}
+          diasParaRenovar={diasParaRenovar}
           receitaMes={receitaMes}
           despesasMes={despesasMes}
           horasMes={horasMes}
+          custoHoraPadrao={config?.custoHoraPadrao ? Number(config.custoHoraPadrao) : 0}
           conteudosPublicadosMes={conteudosPublicadosMes}
           conteudosPlanejados={conteudosPlanejados}
           itensFaltantes={itensFaltantes}
@@ -264,6 +281,37 @@ export default async function ClienteDetalhePage({
             aprovacaoConteudo: c.aprovacaoConteudo,
             contratos: c.contratos,
           }))}
+        />
+      )}
+
+      {aba === "links" && (
+        <LinksClienteTab
+          clienteId={cliente.id}
+          linkDriveAntigo={cliente.linkDrive}
+          links={cliente.links.map((l) => ({ id: l.id, tipo: l.tipo, label: l.label, url: l.url }))}
+        />
+      )}
+
+      {aba === "onboarding" && (
+        <OnboardingTab
+          clienteId={cliente.id}
+          onboarding={
+            cliente.onboarding
+              ? {
+                  id: cliente.onboarding.id,
+                  dataInicio: cliente.onboarding.dataInicio.toISOString(),
+                  status: cliente.onboarding.status,
+                  itens: cliente.onboarding.itens.map((i) => ({
+                    id: i.id,
+                    titulo: i.titulo,
+                    responsavel: i.responsavel,
+                    status: i.status,
+                    observacao: i.observacao,
+                    dataConclusao: i.dataConclusao?.toISOString() || null,
+                  })),
+                }
+              : null
+          }
         />
       )}
 
@@ -405,6 +453,7 @@ export default async function ClienteDetalhePage({
             status: c.status,
             tipo: c.tipo,
             vencimento: c.vencimento?.toISOString() || null,
+            totalPago: c.pagamentos.reduce((s, p) => s + Number(p.valor), 0),
           }))}
           despesas={cliente.despesas.map((d) => ({
             id: d.id,

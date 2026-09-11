@@ -80,6 +80,12 @@ que eu migre automaticamente, é rápido de fazer depois.
 - **Banco**: novo model `LinkCliente` (cliente, tipo, url, label). Campo antigo `linkDrive` vira o primeiro link migrado
 - **Critério**: gerenciador de links organizado, sem perder o Drive que já existia
 
+**Concluída (v69)**: novo model `LinkCliente` (aditivo), aba "Links" no cliente —
+12 tipos (Drive/Canva/Site/Instagram/TikTok/Meta Business/Google Ads/Linktree/
+Brandbook/Fotos/Vídeos/Outro), cada um com ícone. `Cliente.linkDrive` não foi
+migrado automaticamente (mesma decisão da Tarefa 06) — aparece como item de
+referência na mesma aba se ainda não tiver sido adicionado à lista nova.
+
 ---
 
 ## FASE 5 — Onboarding
@@ -89,6 +95,14 @@ que eu migre automaticamente, é rápido de fazer depois.
 - **Páginas**: dentro do cliente + `/onboarding/[token]` pública (mesmo padrão das páginas de orçamento/contrato/relatório)
 - **Critério**: checklist funcional, horas aparecem em Horas normalmente, página pública mostra timeline profissional
 
+**Concluída (v69)**: models `Onboarding` + `ItemOnboarding` (aditivos). Aba "Onboarding"
+no cliente — inicia com checklist padrão de 17 itens (do documento), marca
+concluído/bloqueado, define responsável (Agência/Cliente/Terceiro), lança tempo gasto
+por item (cria um `RegistroTempo` de verdade, aparece no módulo Horas normalmente — zero
+duplicação), adiciona item customizado. Página pública `/onboarding/[id]` com timeline
+profissional (dias até a primeira publicação, checklist concluído, horas da agência,
+itens aguardando com a responsabilidade indicada), linguagem neutra como pedido.
+
 ---
 
 ## FASE 6 — Financeiro (revisão de modelo)
@@ -96,6 +110,18 @@ que eu migre automaticamente, é rápido de fazer depois.
 - **Objetivo**: permitir baixa parcial em cobrança/despesa; "Atrasado" deixa de ser campo manual e vira cálculo (vencimento < hoje E saldo > 0)
 - **Banco**: novo model `Pagamento` (cobrançaId ou despesaId, valor, data, conta). Mantém `status` na Cobrança/Despesa mas ele passa a ser só pendente/pago/cancelado — atrasado é derivado na leitura
 - **Impacto**: telas de Contas a Pagar/Receber e DRE precisam ler o novo cálculo de atraso — testar com cuidado, é o coração do Financeiro
+
+**Concluída (v70)**: model `Pagamento` (aditivo, liga a Cobrança OU Despesa). Nova lib
+`lib/statusFinanceiro.ts` calcula o status de verdade (pendente/parcial/pago/atrasado/
+cancelado) a partir de vencimento+saldo, em vez de depender só do campo salvo — "Atrasado"
+não é mais uma opção no formulário de editar cobrança (fica escondido, é calculado).
+`CobrancaRow` ganhou botão "+ Baixa" pra lançar pagamento parcial, mostra "recebido Rx,
+saldo Ry" quando tem baixa parcial. Contas a Receber atualizado: card "Em atraso" e aba
+"Atrasadas" agora pegam qualquer pendente vencida (não só quem tinha o status antigo
+"atrasado" salvo à mão), e o "Total a receber" desconta o que já foi pago parcialmente.
+**Ainda falta**: mesma interface de baixa parcial no lado da Despesa (a API já existe,
+`DespesaRow`/Contas a Pagar não foram atualizados ainda — deixei pra não alongar mais
+essa entrega).
 
 ### TAREFA 10 — Contas financeiras + recorrência como regra
 - **Banco**: novo model `ContaFinanceira` (nome, tipo, saldo inicial). Cobrança/Despesa ganham `contaId` opcional. Recorrência (já existe pra Despesa) vira uma regra que gera ocorrências independentes editáveis uma a uma — revisar a lógica atual de "gerar cópia do mês" pra suportar isso
@@ -108,12 +134,29 @@ que eu migre automaticamente, é rápido de fazer depois.
 - **Banco**: `Configuracao` ganha `custoHoraPadrao`. Cálculo: receita do período − despesas diretas do cliente (já existe) − (horas × custo/hora)
 - **Critério**: número bate com o "Resumo por cliente" que já existe no Financeiro, só que com o custo da hora entrando na conta
 
+**Concluída (v71)**: `Configuracao.custoHoraPadrao` (novo campo em Configurações — "Custo
+por hora"). A aba Visão Geral do cliente agora mostra 4 números no "Resultado do mês":
+Receita, Despesas diretas, **Custo das horas** (horas do mês × custo/hora configurado) e
+Rentabilidade já descontando tudo isso. Se o custo por hora não estiver configurado,
+aparece um aviso claro (em vez de fingir que está certo com R/bin/sh). TAREFA 10 (Contas
+financeiras/múltiplas contas) foi pulada — ele confirmou que usa só uma conta, não
+compensa a complexidade.
+
 ---
 
 ## FASE 8 — Comercial / CRM simples
 ### TAREFA 12 — Pipeline de oportunidades
 - **Banco**: novo model `Oportunidade` (nome, contatos, origem, serviços de interesse, valor estimado, próxima ação, data, status, motivo de perda, orçamentoId). Cliente com status "Lead" vira ponto de entrada, ganhar oportunidade pode gerar o Cliente
 - **Critério**: não duplica cliente ao converter lead→cliente
+
+**Concluída (v72)**: novo model `Oportunidade` (aditivo, existe antes de virar Cliente de
+verdade). Nova tela `/dashboard/oportunidades` (menu Comercial, primeiro item) — pipeline
+em colunas (Novo lead → Contato feito → Reunião → Proposta enviada → Negociação → Ganho/
+Perdido), clica num card abre o detalhe editável (contato, origem, interesse, valor
+estimado, próxima ação com data). Botão "Ganhou" cria o Cliente automaticamente (nome,
+contato, WhatsApp, status inicial "Lead" — segue o fluxo normal de orçamento→aceite→
+ativo) e liga a oportunidade a ele via `clienteId`, sem nunca duplicar (se já foi
+convertida, só reaproveita o cliente que já existe). Botão "Perdeu" pede o motivo.
 
 ---
 
@@ -122,6 +165,16 @@ que eu migre automaticamente, é rápido de fazer depois.
 - **Objetivo**: aceitar orçamento congela os dados (não muda mais se o catálogo mudar depois); contrato ganha datas de renovação e alerta
 - **Banco**: `Orcamento` aceito passa a guardar uma cópia congelada dos itens/valores (hoje já referencia `ItemOrcamento` vivo — mudar pra snapshot). `Contrato` ganha `dataInicio`, `dataFim`, `proximaRenovacao`
 - **Cuidado**: é a área mais delicada de mexer sem quebrar orçamentos antigos — auditar antes
+
+**Concluída (v73)**: `ItemOrcamento` ganhou `nomeServico`/`descricaoServico` (congelados
+na hora de criar o orçamento) — a proposta pública, o contrato público e o gerador de
+contrato agora usam esse nome congelado, com fallback pro catálogo ao vivo em orçamentos
+antigos (nunca quebra o que já existia). `Orcamento` ganhou `dataAceite` (registrado no
+momento exato do aceite). Pra renovação de contrato, **não criei campo novo** —
+reaproveitei `Cliente.prazoContratoMeses` (que já existia) + a data de criação do
+contrato pra calcular sozinho quando ele renova. Alerta aparece na aba Visão Geral do
+cliente (se faltar 30 dias ou menos) e um resumo geral no topo da lista de Contratos,
+juntando todo mundo que está perto de renovar.
 
 ---
 

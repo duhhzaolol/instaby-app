@@ -3,6 +3,7 @@ import DepoimentosForm from "./DepoimentosForm";
 import WhatsappAgenciaForm from "./WhatsappAgenciaForm";
 import LogosClientesForm from "./LogosClientesForm";
 import MetaFaturamentoForm from "./MetaFaturamentoForm";
+import CustoHoraForm from "./CustoHoraForm";
 
 export default async function ConfiguracoesPage() {
   const [depoimentos, config, clientesComLogo] = await Promise.all([
@@ -25,6 +26,15 @@ export default async function ConfiguracoesPage() {
           Usada na Visão Geral pra mostrar o progresso do mês.
         </p>
         <MetaFaturamentoForm metaAtual={config?.metaFaturamentoMensal ? Number(config.metaFaturamentoMensal) : 0} />
+      </div>
+
+      <div>
+        <p className="mb-1 text-sm font-medium text-text">Custo por hora</p>
+        <p className="mb-4 text-sm text-muted">
+          Quanto uma hora sua "custa" pra agência — usado pra calcular a rentabilidade de cada cliente descontando
+          o tempo trabalhado, não só o dinheiro que entrou e saiu.
+        </p>
+        <CustoHoraForm custoAtual={config?.custoHoraPadrao ? Number(config.custoHoraPadrao) : 0} />
       </div>
 
       <div>

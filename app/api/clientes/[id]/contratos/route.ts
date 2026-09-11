@@ -26,7 +26,7 @@ export async function POST(
 
     if (orcamento) {
       const total = orcamento.itens.reduce((soma, item) => soma + Number(item.valor), 0);
-      const listaServicos = orcamento.itens.map((i) => i.servico.nome).join(", ");
+      const listaServicos = orcamento.itens.map((i) => i.nomeServico || i.servico.nome).join(", ");
       conteudo = `Contrato de prestação de serviços entre Instaby Agência e ${cliente.nome}.\n\nObjeto: ${listaServicos}.\n\nValor: R$ ${total.toFixed(2)} mensais.\n\nVigência: prazo indeterminado, renovação automática, cancelamento com aviso de 30 dias.`;
     }
   }

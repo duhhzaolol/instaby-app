@@ -30,6 +30,11 @@ export async function POST(
     return NextResponse.json({ erro: "Cliente não encontrado" }, { status: 404 });
   }
 
+  const servicos = await prisma.servico.findMany({
+    where: { id: { in: body.itens.map((i: any) => i.servicoId) } },
+  });
+  const servicoPorId = new Map(servicos.map((s) => [s.id, s]));
+
   const orcamento = await prisma.orcamento.create({
     data: {
       clienteId: params.id,
@@ -41,6 +46,8 @@ export async function POST(
           servicoId: item.servicoId,
           quantidade: item.quantidade,
           valor: item.valor,
+          nomeServico: servicoPorId.get(item.servicoId)?.nome || null,
+          descricaoServico: servicoPorId.get(item.servicoId)?.descricao || null,
         })),
       },
     },

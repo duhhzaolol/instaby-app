@@ -45,6 +45,8 @@ model Cliente {
   relatorios          RelatorioPeriodo[]
   conteudos           Conteudo[]
   contatos            Contato[]
+  links               LinkCliente[]
+  onboarding          Onboarding?
 }
 
 // Relatório de performance por rede e por período — dado lançado manualmente (Fase 1).
@@ -98,6 +100,79 @@ model Contato {
   contratos          Boolean @default(false)
 
   createdAt DateTime @default(now())
+}
+
+// Links e referências do cliente (Drive, Canva, redes sociais, etc) — Cliente.linkDrive
+// continua existindo e funcionando, isso aqui é uma lista adicional mais completa.
+model LinkCliente {
+  id        String   @id @default(uuid())
+  clienteId String
+  cliente   Cliente  @relation(fields: [clienteId], references: [id])
+  tipo      String // drive | canva | site | instagram | tiktok | meta_business | google_ads | linktree | brandbook | fotos | videos | outro
+  label     String?
+  url       String
+  createdAt DateTime @default(now())
+}
+
+// Onboarding — checklist do começo de um cliente novo, até ficar operacional de verdade.
+// Tempo lançado em cada item vira um RegistroTempo de verdade (módulo Horas já existente),
+// sem duplicar dado — ver ItemOnboarding.registroTempoId.
+model Onboarding {
+  id          String   @id @default(uuid())
+  clienteId   String   @unique
+  cliente     Cliente  @relation(fields: [clienteId], references: [id])
+  dataInicio  DateTime @default(now())
+  status      String   @default("em_andamento") // em_andamento | concluido
+  itens       ItemOnboarding[]
+  createdAt   DateTime @default(now())
+}
+
+model ItemOnboarding {
+  id             String     @id @default(uuid())
+  onboardingId   String
+  onboarding     Onboarding @relation(fields: [onboardingId], references: [id])
+  titulo         String
+  responsavel    String     @default("agencia") // agencia | cliente | terceiro
+  status         String     @default("pendente") // pendente | concluido | bloqueado
+  observacao     String?
+  registroTempoId String? // aponta pro RegistroTempo criado quando lança tempo nesse item
+  dataConclusao  DateTime?
+  ordem          Int        @default(0)
+  createdAt      DateTime   @default(now())
+}
+
+// Baixa/pagamento parcial de uma cobrança ou despesa — permite quitar aos poucos.
+// O status "atrasado" não é mais escolhido manualmente daqui pra frente: é calculado
+// (vencimento passou + ainda tem saldo em aberto) — ver lib/statusFinanceiro.ts.
+model Pagamento {
+  id          String    @id @default(uuid())
+  cobrancaId  String?
+  cobranca    Cobranca? @relation(fields: [cobrancaId], references: [id])
+  despesaId   String?
+  despesa     Despesa?  @relation(fields: [despesaId], references: [id])
+  valor       Decimal
+  data        DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+}
+
+// Pipeline comercial simples — existe ANTES de virar Cliente (evita duplicar cadastro:
+// ao ganhar, gera o Cliente e liga aqui via clienteId, nunca cria dois registros soltos).
+model Oportunidade {
+  id              String    @id @default(uuid())
+  nome            String // empresa ou pessoa
+  contatoNome     String?
+  contatoWhatsapp String?
+  origem          String? // indicação, instagram, site, evento...
+  interesse       String? // o que a pessoa quer
+  valorEstimado   Decimal?
+  status          String    @default("novo_lead")
+  // novo_lead | contato_feito | reuniao | proposta_enviada | negociacao | ganho | perdido
+  proximaAcao     String?
+  dataProximaAcao DateTime?
+  observacoes     String?
+  motivoPerda     String?
+  clienteId       String? // preenchido quando ganha e vira Cliente de verdade
+  createdAt       DateTime  @default(now())
 }
 
 model Tarefa {
@@ -219,6 +294,7 @@ model Orcamento {
   status    String   @default("pendente") // pendente | aceito | recusado
   enviadoEm DateTime?
   visualizadoEm DateTime?
+  dataAceite DateTime? // congela o momento exato do aceite — a proposta não muda mais depois disso
   createdAt DateTime @default(now())
 
   itens     ItemOrcamento[]
@@ -234,6 +310,11 @@ model ItemOrcamento {
   servico     Servico   @relation(fields: [servicoId], references: [id])
   quantidade  Int       @default(1)
   valor       Decimal
+  // Congelados no momento em que o item foi adicionado ao orçamento — se o nome/descrição
+  // do serviço mudar depois no catálogo, essa proposta específica continua mostrando o que
+  // foi combinado na hora. Nulo = orçamento antigo, de antes dessa mudança (usa o live join).
+  nomeServico      String?
+  descricaoServico String?
 }
 
 model Contrato {
@@ -261,6 +342,7 @@ model Cobranca {
   vencimento  DateTime?
   status      String     @default("pendente") // pendente | pago | atrasado | cancelado
   createdAt   DateTime   @default(now())
+  pagamentos  Pagamento[]
 }
 
 model Despesa {
@@ -279,6 +361,7 @@ model Despesa {
   recorrente         Boolean  @default(false) // true só na despesa "modelo" — repete todo mês sozinha
   origemRecorrenteId String? // preenchido nas cópias geradas automaticamente todo mês
   data               DateTime @default(now()) // data de competência — mês a que o gasto pertence
+  pagamentos         Pagamento[]
 }
 
 // Depoimentos fixos — aparecem em toda página de orçamento
@@ -294,4 +377,5 @@ model Configuracao {
   id                    String   @id @default("config")
   whatsappAgencia       String? // formato: 5519999999999 (DDI+DDD+número, só dígitos)
   metaFaturamentoMensal Decimal?
+  custoHoraPadrao       Decimal? // usado pra calcular rentabilidade descontando o custo das horas trabalhadas
 }

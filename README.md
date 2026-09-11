@@ -1,45 +1,42 @@
-# Instaby App — v68
+# Instaby App — v73
 
-## 1. Corrigido o erro do "Cobertura em tempo real"
+## TAREFA 13 — Snapshot do orçamento aceito + alerta de renovação
 
-### A causa
-Quando o servidor recusava adicionar um serviço (por algum motivo — valor inválido, por
-exemplo), a tela tentava usar a resposta como se tivesse dado certo, e travava com
-aquele "Application error". Isso é código meu de uma atualização recente, não é bug
-antigo.
+### 1. Orçamento congelado
+Antes, o nome/descrição do serviço numa proposta vinha sempre "ao vivo" do catálogo —
+se você editasse um serviço no catálogo meses depois, orçamentos antigos mudavam junto
+(sem querer). Agora, na hora de criar o orçamento, o nome e a descrição de cada item são
+**congelados** ali dentro. Editar o catálogo depois não muda mais nada em propostas já
+enviadas ou aceitas.
 
-### A correção
-- A API agora sempre responde de forma limpa quando algo dá errado, em vez de deixar
-  vazar um erro cru
-- A tela agora confere se deu certo antes de atualizar a lista — se não deu, mostra um
-  aviso explicando (em vez de travar)
-- Apliquei o mesmo cuidado nas rotas de criar e editar serviço no catálogo, pra evitar
-  que um valor inválido fique salvo silenciosamente
+Orçamentos antigos (de antes dessa atualização) continuam funcionando normalmente —
+usam o catálogo ao vivo como já usavam, sem quebrar nada.
 
-Se "Cobertura em tempo real" continuar dando problema depois de subir esse zip, agora em
-vez de travar a tela, vai aparecer um aviso dizendo exatamente o que está errado.
+Também passei a registrar a **data exata do aceite** (`dataAceite`).
 
-## 2. Onde gerenciar o catálogo sem programar (já existia!)
+### 2. Alerta de renovação de contrato
+Sem criar campo novo — reaproveitei o **prazo do contrato** que você já configura na
+aba Serviços do cliente. A partir da data que o contrato foi gerado + esse prazo, o
+sistema calcula sozinho quando ele renova:
 
-`/dashboard/servicos` — no menu lateral, seção Comercial → "Catálogo de serviços". Já
-faz tudo que você pediu:
-- **Criar** → botão "Novo serviço" no topo
-- **Editar** → clica em qualquer serviço da lista
-- **Mudar valor base** → dentro da edição, campo "Valor unitário"
-- **Mudar categoria** → dentro da edição, campo "Categoria"
+- Na aba **Visão Geral** do cliente: mostra "Renova em X dias" (ou "vencido há X dias"),
+  ficando laranja quando faltam 30 dias ou menos
+- Na lista **Contratos** (geral): um resumo no topo juntando todos os clientes com
+  renovação chegando, com link direto pro cliente
 
-### O que melhorei agora
-- **Aviso visual** pra serviço sem valor definido (R$ 0) — fica com borda laranja e a
-  etiqueta "Sem valor", e tem um aviso no topo contando quantos estão assim. Isso ajuda
-  você a achar o "Cobertura em tempo real" (ou qualquer outro) rapidinho
-- **Categoria virou uma lista com sugestão** — ao digitar, aparecem as categorias que já
-  existem, pra você escolher uma delas em vez de digitar errado e criar sem querer uma
-  categoria nova parecida (tipo "Cobertura de Evento" vs "Cobertura de Eventos")
+### Banco
+- `ItemOrcamento.nomeServico`, `descricaoServico` (aditivos)
+- `Orcamento.dataAceite` (aditivo)
+- Nada novo em `Contrato` — a renovação é 100% calculada
 
-### Arquivos alterados
-- `app/api/clientes/[id]/servicos-contratados/route.ts`
-- `app/api/servicos/route.ts` e `[id]/route.ts`
-- `app/dashboard/clientes/[id]/ServicosContratadosTab.tsx`
-- `app/dashboard/servicos/page.tsx`
-- `app/dashboard/servicos/novo/page.tsx`
-- `app/dashboard/servicos/[id]/editar/EditarServicoForm.tsx`
+### Arquivos principais
+- `prisma/schema.prisma`
+- `app/api/clientes/[id]/orcamentos/route.ts`, `app/api/orcamento/[slug]/aceitar/route.ts`
+- `app/orcamento/[slug]/page.tsx`, `app/contrato/[id]/page.tsx`
+- `app/api/clientes/[id]/contratos/route.ts`
+- `app/dashboard/clientes/[id]/page.tsx`, `VisaoGeralClienteTab.tsx`
+- `app/dashboard/contratos/page.tsx`
+
+## Continuando
+Próxima: TAREFA 14 (Aprovação pública de conteúdo + Solicitações do cliente +
+Templates básicos). Seguindo.

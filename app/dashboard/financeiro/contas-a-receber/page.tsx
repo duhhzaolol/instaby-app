@@ -33,7 +33,7 @@ export default async function ContasAReceberPage({
   const [abertas, todasRelevantes] = await Promise.all([
     prisma.cobranca.findMany({
       where: { status: { in: ["pendente", "atrasado"] } },
-      include: { cliente: true },
+      include: { cliente: true, pagamentos: true },
       orderBy: { vencimento: "asc" },
     }),
     prisma.cobranca.findMany({
@@ -45,21 +45,24 @@ export default async function ContasAReceberPage({
           : aba === "pendente"
           ? { status: "pendente" }
           : aba === "atrasado"
-          ? { status: "atrasado" }
+          ? { status: { in: ["pendente", "atrasado"] }, vencimento: { lt: hoje } }
           : aba === "proximos"
           ? { status: { in: ["pendente", "atrasado"] }, vencimento: { gte: hoje, lte: em7dias } }
           : { status: { in: ["pendente", "atrasado"] } },
-      include: { cliente: true },
+      include: { cliente: true, pagamentos: true },
       orderBy: aba === "pago" ? { createdAt: "desc" } : { vencimento: "asc" },
     }),
   ]);
+
+  const saldoDe = (c: (typeof abertas)[number]) =>
+    Math.max(0, Number(c.valor) - c.pagamentos.reduce((s, p) => s + Number(p.valor), 0));
 
   const vencendoHoje = abertas.filter((c) => c.vencimento && new Date(c.vencimento).toDateString() === hoje.toDateString());
   const vencendo7dias = abertas.filter(
     (c) => c.vencimento && new Date(c.vencimento) > hoje && new Date(c.vencimento) <= em7dias
   );
-  const emAtraso = abertas.filter((c) => c.vencimento && new Date(c.vencimento) < hoje);
-  const totalAReceber = abertas.reduce((s, c) => s + Number(c.valor), 0);
+  const emAtraso = abertas.filter((c) => c.vencimento && new Date(c.vencimento) < hoje && saldoDe(c) > 0);
+  const totalAReceber = abertas.reduce((s, c) => s + saldoDe(c), 0);
 
   return (
     <div>
@@ -128,6 +131,7 @@ export default async function ContasAReceberPage({
               status: c.status,
               tipo: c.tipo,
               vencimento: c.vencimento?.toISOString() || null,
+              totalPago: c.pagamentos.reduce((s, p) => s + Number(p.valor), 0),
             };
             return <CobrancaRow key={c.id} cobranca={item} index={i} clienteNome={c.cliente.nome} />;
           })}

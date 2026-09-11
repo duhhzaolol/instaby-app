@@ -44,7 +44,7 @@ export async function POST(
   const [orcamentoAtualizado] = await prisma.$transaction([
     prisma.orcamento.update({
       where: { id: orcamento.id },
-      data: { status: "aceito" },
+      data: { status: "aceito", dataAceite: new Date() },
     }),
     prisma.cobranca.create({
       data: {

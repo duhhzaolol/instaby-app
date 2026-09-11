@@ -110,8 +110,8 @@ export default async function OrcamentoPublicoPage({
         depoimentos={depoimentos.map((d) => ({ nomeCliente: d.nomeCliente, texto: d.texto }))}
         itensIniciais={orcamento.itens.map((item) => ({
           id: item.id,
-          nome: item.servico.nome,
-          descricao: item.servico.descricao,
+          nome: item.nomeServico || item.servico.nome,
+          descricao: item.descricaoServico || item.servico.descricao,
           categoria: item.servico.categoria,
           unidade: item.servico.unidade,
           quantidade: item.quantidade,

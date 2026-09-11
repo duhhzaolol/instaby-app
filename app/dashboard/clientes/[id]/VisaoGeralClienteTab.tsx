@@ -18,9 +18,12 @@ export default function VisaoGeralClienteTab({
   mensalidade,
   proximaCobranca,
   contratoVigente,
+  proximaRenovacao,
+  diasParaRenovar,
   receitaMes,
   despesasMes,
   horasMes,
+  custoHoraPadrao,
   conteudosPublicadosMes,
   conteudosPlanejados,
   itensFaltantes,
@@ -31,9 +34,12 @@ export default function VisaoGeralClienteTab({
   mensalidade: number;
   proximaCobranca: { valor: number; vencimento: string | null } | null;
   contratoVigente: boolean;
+  proximaRenovacao: string | null;
+  diasParaRenovar: number | null;
   receitaMes: number;
   despesasMes: number;
   horasMes: number;
+  custoHoraPadrao: number;
   conteudosPublicadosMes: number;
   conteudosPlanejados: number;
   itensFaltantes: number;
@@ -41,7 +47,8 @@ export default function VisaoGeralClienteTab({
   situacaoRelatorio: string | null;
   timeline: Item[];
 }) {
-  const rentabilidade = receitaMes - despesasMes;
+  const custoHoras = horasMes * custoHoraPadrao;
+  const rentabilidade = receitaMes - despesasMes - custoHoras;
 
   return (
     <div>
@@ -65,6 +72,13 @@ export default function VisaoGeralClienteTab({
             <FileSignature size={12} /> Contrato
           </p>
           <p className="text-sm font-medium text-text">{contratoVigente ? "Assinado" : "Sem contrato assinado"}</p>
+          {proximaRenovacao && diasParaRenovar !== null && (
+            <p className={`text-[11px] ${diasParaRenovar <= 30 ? "text-amber-400" : "text-muted"}`}>
+              {diasParaRenovar < 0
+                ? `Renovação vencida há ${Math.abs(diasParaRenovar)} dia(s)`
+                : `Renova em ${diasParaRenovar} dia(s)`}
+            </p>
+          )}
         </div>
         <div className="rounded-xl border border-border bg-card/60 p-3.5">
           <p className="mb-1 flex items-center gap-1.5 text-xs text-muted">
@@ -78,7 +92,7 @@ export default function VisaoGeralClienteTab({
         <p className="mb-3 flex items-center gap-1.5 text-sm font-medium text-text">
           <TrendingUp size={14} className="text-accent" /> Resultado do mês
         </p>
-        <div className="grid grid-cols-3 gap-3 text-center">
+        <div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
           <div>
             <p className="text-xs text-muted">Receita</p>
             <p className="text-base font-medium text-emerald-400">R$ {receitaMes.toFixed(0)}</p>
@@ -88,13 +102,22 @@ export default function VisaoGeralClienteTab({
             <p className="text-base font-medium text-red-400">R$ {despesasMes.toFixed(0)}</p>
           </div>
           <div>
+            <p className="text-xs text-muted">Custo das horas</p>
+            <p className="text-base font-medium text-red-400">R$ {custoHoras.toFixed(0)}</p>
+          </div>
+          <div>
             <p className="text-xs text-muted">Rentabilidade</p>
             <p className={`text-base font-medium ${rentabilidade >= 0 ? "text-accent" : "text-red-400"}`}>
               R$ {rentabilidade.toFixed(0)}
             </p>
           </div>
         </div>
-        <p className="mt-2 text-[11px] text-muted">Ainda não inclui custo de horas — isso é uma próxima fase.</p>
+        {custoHoraPadrao === 0 && (
+          <p className="mt-2 text-[11px] text-amber-400">
+            Custo por hora não configurado — Configurações → "Custo por hora". Sem isso, o custo das horas fica
+            zerado e a rentabilidade não desconta o seu tempo trabalhado.
+          </p>
+        )}
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2">

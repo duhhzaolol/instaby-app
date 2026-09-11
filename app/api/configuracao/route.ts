@@ -3,7 +3,9 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   const config = await prisma.configuracao.findUnique({ where: { id: "config" } });
-  return NextResponse.json(config || { id: "config", whatsappAgencia: null, metaFaturamentoMensal: null });
+  return NextResponse.json(
+    config || { id: "config", whatsappAgencia: null, metaFaturamentoMensal: null, custoHoraPadrao: null }
+  );
 }
 
 export async function PATCH(request: NextRequest) {
@@ -14,11 +16,13 @@ export async function PATCH(request: NextRequest) {
     update: {
       ...(body.whatsappAgencia !== undefined && { whatsappAgencia: body.whatsappAgencia }),
       ...(body.metaFaturamentoMensal !== undefined && { metaFaturamentoMensal: body.metaFaturamentoMensal }),
+      ...(body.custoHoraPadrao !== undefined && { custoHoraPadrao: body.custoHoraPadrao }),
     },
     create: {
       id: "config",
       whatsappAgencia: body.whatsappAgencia || null,
       metaFaturamentoMensal: body.metaFaturamentoMensal || null,
+      custoHoraPadrao: body.custoHoraPadrao || null,
     },
   });
 
