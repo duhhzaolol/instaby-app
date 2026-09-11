@@ -11,6 +11,7 @@ import VisaoGeralClienteTab from "./VisaoGeralClienteTab";
 import ContatosTab from "./ContatosTab";
 import LinksClienteTab from "./LinksClienteTab";
 import OnboardingTab from "./OnboardingTab";
+import SolicitacoesTab from "./SolicitacoesTab";
 import { TarefaRow } from "@/components/dashboard/TarefaRow";
 import { OrcamentoRow } from "@/components/dashboard/OrcamentoRow";
 import { Clock } from "lucide-react";
@@ -38,6 +39,7 @@ export default async function ClienteDetalhePage({
         contatos: { orderBy: { createdAt: "asc" } },
         links: { orderBy: { createdAt: "asc" } },
         onboarding: { include: { itens: { orderBy: { ordem: "asc" } } } },
+        solicitacoes: { orderBy: { createdAt: "desc" } },
       },
     }),
     prisma.servico.findMany({ orderBy: [{ categoria: "asc" }, { nome: "asc" }] }),
@@ -52,6 +54,7 @@ export default async function ClienteDetalhePage({
     { valor: "contatos", label: "Contatos" },
     { valor: "links", label: "Links" },
     { valor: "onboarding", label: "Onboarding" },
+    { valor: "solicitacoes", label: "Solicitações" },
     { valor: "tarefas", label: "Tarefas" },
     { valor: "servicos", label: "Serviços" },
     { valor: "escopo", label: "Escopo" },
@@ -312,6 +315,20 @@ export default async function ClienteDetalhePage({
                 }
               : null
           }
+        />
+      )}
+
+      {aba === "solicitacoes" && (
+        <SolicitacoesTab
+          clienteId={cliente.id}
+          solicitacoes={cliente.solicitacoes.map((s) => ({
+            id: s.id,
+            descricao: s.descricao,
+            prioridade: s.prioridade,
+            status: s.status,
+            extra: s.extra,
+            createdAt: s.createdAt.toISOString(),
+          }))}
         />
       )}
 

@@ -36,6 +36,7 @@ export type ConteudoDetalhe = ConteudoResumo & {
   prazoAprovacao: string | null;
   urlPublicada: string | null;
   tarefas: { id: string; titulo: string; status: string }[];
+  tokenAprovacao: string | null;
 };
 
 function formatarData(iso: string | null) {
@@ -80,6 +81,7 @@ export function PipelineConteudo({ colunas }: { colunas: { status: string; label
         prazoAprovacao: item.prazoAprovacao,
         urlPublicada: item.urlPublicada,
         tarefas: item.tarefas || [],
+        tokenAprovacao: item.tokenAprovacao || null,
         tarefasAbertas: (item.tarefas || []).filter((t: any) => t.status !== "feito").length,
         tarefasTotal: (item.tarefas || []).length,
       });
@@ -100,6 +102,14 @@ export function PipelineConteudo({ colunas }: { colunas: { status: string; label
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ [campo]: valor }),
     });
+    router.refresh();
+  }
+
+  async function enviarAprovacao() {
+    if (!detalhe) return;
+    const res = await fetch(`/api/conteudos/${detalhe.id}/enviar-aprovacao`, { method: "POST" });
+    const atualizado = await res.json();
+    setDetalhe({ ...detalhe, status: "aguardando_aprovacao", tokenAprovacao: atualizado.tokenAprovacao });
     router.refresh();
   }
 
@@ -256,6 +266,32 @@ export function PipelineConteudo({ colunas }: { colunas: { status: string; label
                   onBlur={(e) => salvarCampo("linkArquivos", e.target.value || null)}
                   className="mb-4 h-10 w-full rounded-xl border border-border bg-base px-3 text-sm text-text"
                 />
+
+                <div className="mb-4 rounded-xl border border-border bg-base/60 p-3">
+                  {!detalhe.tokenAprovacao ? (
+                    <button
+                      onClick={enviarAprovacao}
+                      className="flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-accent text-xs font-medium text-white"
+                    >
+                      Enviar pra aprovação do cliente
+                    </button>
+                  ) : (
+                    <>
+                      <p className="mb-1.5 text-[11px] text-muted">Link de aprovação (manda pro cliente)</p>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 truncate rounded-lg bg-base px-2 py-1.5 text-[10px] text-muted">
+                          {typeof window !== "undefined" ? window.location.origin : ""}/aprovacao/{detalhe.tokenAprovacao}
+                        </code>
+                        <button
+                          onClick={enviarAprovacao}
+                          className="shrink-0 rounded-lg border border-border px-2 py-1.5 text-[10px] text-muted hover:text-text"
+                        >
+                          Reenviar
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
 
                 <div className="mb-4">
                   <div className="mb-2 flex items-center justify-between">

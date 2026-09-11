@@ -47,6 +47,7 @@ model Cliente {
   contatos            Contato[]
   links               LinkCliente[]
   onboarding          Onboarding?
+  solicitacoes        Solicitacao[]
 }
 
 // Relatório de performance por rede e por período — dado lançado manualmente (Fase 1).
@@ -175,6 +176,18 @@ model Oportunidade {
   createdAt       DateTime  @default(now())
 }
 
+// Pedido do cliente que chega fora do fluxo normal — "faz isso pra mim", "preciso de..."
+model Solicitacao {
+  id          String   @id @default(uuid())
+  clienteId   String
+  cliente     Cliente  @relation(fields: [clienteId], references: [id])
+  descricao   String
+  prioridade  String   @default("media") // baixa | media | alta
+  status      String   @default("pendente") // pendente | em_andamento | concluida
+  extra       Boolean  @default(false) // true = fora do escopo contratado, pode precisar orçamento extra
+  createdAt   DateTime @default(now())
+}
+
 model Tarefa {
   id         String    @id @default(uuid())
   clienteId  String?
@@ -222,6 +235,13 @@ model Conteudo {
 
   status String @default("ideia")
   // ideia | planejado | producao | edicao | revisao_interna | aguardando_aprovacao | alteracao_solicitada | aprovado | agendado | publicado
+
+  tokenAprovacao        String?   @unique // gerado ao enviar pra aprovação, vira o link público
+  enviadoAprovacaoEm    DateTime?
+  visualizadoAprovacaoEm DateTime?
+  aprovadoEm            DateTime?
+  aprovadoPor           String?
+  comentarioAprovacao   String? // feedback do cliente ao pedir alteração
 
   tarefas   Tarefa[]
   createdAt DateTime @default(now())
@@ -378,4 +398,5 @@ model Configuracao {
   whatsappAgencia       String? // formato: 5519999999999 (DDI+DDD+número, só dígitos)
   metaFaturamentoMensal Decimal?
   custoHoraPadrao       Decimal? // usado pra calcular rentabilidade descontando o custo das horas trabalhadas
+  templateOnboarding    String[] @default([]) // itens do checklist padrão — se vazio, usa o do documento original
 }

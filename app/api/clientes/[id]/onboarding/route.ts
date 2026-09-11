@@ -11,11 +11,16 @@ export async function POST(
     return NextResponse.json({ erro: "Esse cliente já tem um onboarding." }, { status: 400 });
   }
 
+  const config = await prisma.configuracao.findUnique({ where: { id: "config" } });
+  const template = config?.templateOnboarding && config.templateOnboarding.length > 0
+    ? config.templateOnboarding
+    : TEMPLATE_ONBOARDING;
+
   const onboarding = await prisma.onboarding.create({
     data: {
       clienteId: params.id,
       itens: {
-        create: TEMPLATE_ONBOARDING.map((titulo, i) => ({ titulo, ordem: i })),
+        create: template.map((titulo, i) => ({ titulo, ordem: i })),
       },
     },
     include: { itens: { orderBy: { ordem: "asc" } } },

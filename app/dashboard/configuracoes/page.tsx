@@ -4,6 +4,7 @@ import WhatsappAgenciaForm from "./WhatsappAgenciaForm";
 import LogosClientesForm from "./LogosClientesForm";
 import MetaFaturamentoForm from "./MetaFaturamentoForm";
 import CustoHoraForm from "./CustoHoraForm";
+import TemplateOnboardingForm from "./TemplateOnboardingForm";
 
 export default async function ConfiguracoesPage() {
   const [depoimentos, config, clientesComLogo] = await Promise.all([
@@ -35,6 +36,14 @@ export default async function ConfiguracoesPage() {
           o tempo trabalhado, não só o dinheiro que entrou e saiu.
         </p>
         <CustoHoraForm custoAtual={config?.custoHoraPadrao ? Number(config.custoHoraPadrao) : 0} />
+      </div>
+
+      <div>
+        <p className="mb-1 text-sm font-medium text-text">Checklist padrão de onboarding</p>
+        <p className="mb-4 text-sm text-muted">
+          Usado toda vez que você clica em "Iniciar onboarding" num cliente novo. Personalize do seu jeito.
+        </p>
+        <TemplateOnboardingForm templateAtual={config?.templateOnboarding || []} />
       </div>
 
       <div>

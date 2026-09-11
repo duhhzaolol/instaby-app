@@ -1,42 +1,46 @@
-# Instaby App — v73
+# Instaby App — v74
 
-## TAREFA 13 — Snapshot do orçamento aceito + alerta de renovação
+## TAREFA 14 — Aprovação pública, Solicitações, Templates
 
-### 1. Orçamento congelado
-Antes, o nome/descrição do serviço numa proposta vinha sempre "ao vivo" do catálogo —
-se você editasse um serviço no catálogo meses depois, orçamentos antigos mudavam junto
-(sem querer). Agora, na hora de criar o orçamento, o nome e a descrição de cada item são
-**congelados** ali dentro. Editar o catálogo depois não muda mais nada em propostas já
-enviadas ou aceitas.
+### 1. Aprovação pública de conteúdo
+Dentro do modal de qualquer conteúdo (`/dashboard/conteudo`), botão **"Enviar pra
+aprovação do cliente"** — gera um link público (`/aprovacao/[token]`), muda o status
+pra "Aguardando aprovação". O cliente abre o link, vê o material (link de arquivo),
+legenda, data prevista, e tem dois botões:
+- **Aprovar** (com nome opcional, registrado)
+- **Pedir alteração** (com comentário obrigatório — ex: "trocar a cena dos 00:12") →
+  volta pro status "Alteração solicitada", com o comentário salvo
 
-Orçamentos antigos (de antes dessa atualização) continuam funcionando normalmente —
-usam o catálogo ao vivo como já usavam, sem quebrar nada.
+Marca sozinho quando foi visto pela primeira vez.
 
-Também passei a registrar a **data exata do aceite** (`dataAceite`).
+### 2. Solicitações do cliente
+Nova aba **"Solicitações"** no cliente — registra pedidos que chegam fora do fluxo
+normal ("cria um Reel extra pra domingo"). Tem prioridade e um marcador **"Fora do
+escopo"**, que sinaliza quando algo pode precisar de orçamento adicional.
 
-### 2. Alerta de renovação de contrato
-Sem criar campo novo — reaproveitei o **prazo do contrato** que você já configura na
-aba Serviços do cliente. A partir da data que o contrato foi gerado + esse prazo, o
-sistema calcula sozinho quando ele renova:
-
-- Na aba **Visão Geral** do cliente: mostra "Renova em X dias" (ou "vencido há X dias"),
-  ficando laranja quando faltam 30 dias ou menos
-- Na lista **Contratos** (geral): um resumo no topo juntando todos os clientes com
-  renovação chegando, com link direto pro cliente
+### 3. Templates (versão focada no que mais importa)
+Em vez de um construtor de templates genérico e grande, fiz o mais valioso primeiro:
+o checklist de **Onboarding** virou configurável — Configurações → "Checklist padrão
+de onboarding". Adiciona, remove, reordena os itens que aparecem toda vez que você
+clica em "Iniciar onboarding" num cliente novo. Se não mexer em nada, usa o checklist
+original de 17 itens.
 
 ### Banco
-- `ItemOrcamento.nomeServico`, `descricaoServico` (aditivos)
-- `Orcamento.dataAceite` (aditivo)
-- Nada novo em `Contrato` — a renovação é 100% calculada
+- `Conteudo`: `tokenAprovacao`, `enviadoAprovacaoEm`, `visualizadoAprovacaoEm`,
+  `aprovadoEm`, `aprovadoPor`, `comentarioAprovacao` (aditivos)
+- `Solicitacao` (nova, aditiva)
+- `Configuracao.templateOnboarding` (aditivo)
 
 ### Arquivos principais
 - `prisma/schema.prisma`
-- `app/api/clientes/[id]/orcamentos/route.ts`, `app/api/orcamento/[slug]/aceitar/route.ts`
-- `app/orcamento/[slug]/page.tsx`, `app/contrato/[id]/page.tsx`
-- `app/api/clientes/[id]/contratos/route.ts`
-- `app/dashboard/clientes/[id]/page.tsx`, `VisaoGeralClienteTab.tsx`
-- `app/dashboard/contratos/page.tsx`
+- `app/api/conteudos/[id]/enviar-aprovacao/`, `app/api/aprovacao/[token]/`
+- `app/aprovacao/[token]/page.tsx` (pública) + `AcoesAprovacao.tsx`
+- `components/dashboard/PipelineConteudo.tsx` (botão de enviar)
+- `app/api/clientes/[id]/solicitacoes/`, `app/api/solicitacoes/[id]/`
+- `app/dashboard/clientes/[id]/SolicitacoesTab.tsx`
+- `app/api/clientes/[id]/onboarding/route.ts` (usa o template configurado)
+- `app/dashboard/configuracoes/TemplateOnboardingForm.tsx`
 
 ## Continuando
-Próxima: TAREFA 14 (Aprovação pública de conteúdo + Solicitações do cliente +
-Templates básicos). Seguindo.
+Próxima: TAREFA 15 (Agenda com camadas + Dashboard "Precisa da sua atenção" + Central
+de Comando expandida — sem IA, como o documento pediu). Seguindo.

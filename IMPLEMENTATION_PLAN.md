@@ -183,6 +183,17 @@ juntando todo mundo que está perto de renovar.
 - **Objetivo**: `/aprovacao/[token]` (aprovar ou pedir alteração), model `Solicitacao` (pedido do cliente fora do escopo), templates simples de checklist reaproveitável no Onboarding/Projeto
 - **Reaproveita**: padrão das páginas públicas já existentes (orçamento/contrato/relatório)
 
+**Concluída (v74)**: `Conteudo` ganhou campos de aprovação (tokenAprovacao, datas de
+envio/visualização/aprovação, quem aprovou, comentário) — botão "Enviar pra aprovação"
+no modal de conteúdo gera o link público `/aprovacao/[token]`, o cliente vê o material +
+legenda e clica Aprovar ou Pedir alteração (com comentário, que volta pro status
+"alteração solicitada"). Novo model `Solicitacao` (aditivo) + aba "Solicitações" no
+cliente — descrição, prioridade, marca se é fora do escopo ("pode precisar orçamento
+extra"). Templates: em vez de um sistema genérico grande, fiz o mais valioso primeiro —
+o checklist de Onboarding virou configurável em Configurações (`Configuracao.
+templateOnboarding`), com o checklist do documento original como padrão se você não
+mexer em nada.
+
 ---
 
 ## FASE 11 — Agenda, Dashboard, Criação rápida global
