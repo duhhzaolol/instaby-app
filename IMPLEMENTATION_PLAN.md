@@ -123,6 +123,12 @@ saldo Ry" quando tem baixa parcial. Contas a Receber atualizado: card "Em atraso
 `DespesaRow`/Contas a Pagar não foram atualizados ainda — deixei pra não alongar mais
 essa entrega).
 
+**Pendência fechada (v77)**: `DespesaRow` ganhou o mesmo botão "+ Baixa", saldo mostrado
+na linha, status calculado (removido "Atrasado" do menu manual de edição também aqui).
+Contas a Pagar atualizado igual Contas a Receber (Em atraso e aba Atrasadas calculadas
+pelo saldo, Total a pagar desconta baixas parciais). Agora os dois lados do Financeiro
+(Cobrança e Despesa) funcionam de forma simétrica.
+
 ### TAREFA 10 — Contas financeiras + recorrência como regra
 - **Banco**: novo model `ContaFinanceira` (nome, tipo, saldo inicial). Cobrança/Despesa ganham `contaId` opcional. Recorrência (já existe pra Despesa) vira uma regra que gera ocorrências independentes editáveis uma a uma — revisar a lógica atual de "gerar cópia do mês" pra suportar isso
 - **Critério**: recorrência antiga continua gerando certo; nova ocorrência pode ser editada sem afetar as outras

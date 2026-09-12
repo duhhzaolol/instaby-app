@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2, Repeat } from "lucide-react";
+import { Pencil, Trash2, Repeat, Plus } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { CATEGORIAS_FINANCEIRAS, STATUS_DESPESA, visualDaCategoriaFinanceira } from "@/lib/categoriasFinanceiras";
+import { calcularStatusEfetivo, LABEL_STATUS_EFETIVO, COR_STATUS_EFETIVO } from "@/lib/statusFinanceiro";
 
 export type DespesaRowData = {
   id: string;
@@ -20,17 +21,16 @@ export type DespesaRowData = {
   categoria?: string | null;
   status?: string | null;
   vencimento?: string | null;
+  totalPago?: number;
 };
 
-const CORES_STATUS: Record<string, string> = {
-  pendente: "#F59E0B",
-  atrasado: "#EF4444",
-  cancelado: "#6B7280",
-};
+const STATUS_EDITAVEL = STATUS_DESPESA.filter((s) => s.valor !== "atrasado");
 
 export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index: number }) {
   const router = useRouter();
   const [editando, setEditando] = useState(false);
+  const [lancandoBaixa, setLancandoBaixa] = useState(false);
+  const [valorBaixa, setValorBaixa] = useState(0);
   const [descricao, setDescricao] = useState(despesa.descricao);
   const [valor, setValor] = useState(despesa.valor);
   const [data, setData] = useState(despesa.data.slice(0, 10));
@@ -42,7 +42,16 @@ export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index:
 
   const infoCategoria = visualDaCategoriaFinanceira(despesa.categoriaFinanceira);
   const infoCategoriaEditando = visualDaCategoriaFinanceira(categoriaFinanceira);
-  const corStatus = despesa.status && despesa.status !== "pago" ? CORES_STATUS[despesa.status] : null;
+
+  const totalPago = despesa.totalPago || 0;
+  const saldo = Math.max(0, despesa.valor - totalPago);
+  const statusEfetivo = calcularStatusEfetivo({
+    status: despesa.status || "pago",
+    valor: despesa.valor,
+    totalPago,
+    vencimento: despesa.vencimento ? new Date(despesa.vencimento) : null,
+  });
+  const corStatus = COR_STATUS_EFETIVO[statusEfetivo];
 
   async function salvar() {
     setSalvando(true);
@@ -56,12 +65,24 @@ export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index:
         categoriaFinanceira: categoriaFinanceira || null,
         categoria: categoria || null,
         status,
-        vencimento: status === "pendente" || status === "atrasado" ? vencimento || null : null,
+        vencimento: status === "pendente" ? vencimento || null : null,
         dataPagamento: status === "pago" ? data : null,
       }),
     });
     setSalvando(false);
     setEditando(false);
+    router.refresh();
+  }
+
+  async function lancarBaixa() {
+    if (valorBaixa <= 0) return;
+    await fetch(`/api/despesas/${despesa.id}/pagamentos`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ valor: valorBaixa }),
+    });
+    setValorBaixa(0);
+    setLancandoBaixa(false);
     router.refresh();
   }
 
@@ -112,13 +133,13 @@ export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index:
             onChange={(e) => setStatus(e.target.value)}
             className="h-10 w-full rounded-xl border border-border bg-card/60 px-3 text-sm text-text"
           >
-            {STATUS_DESPESA.map((s) => (
+            {STATUS_EDITAVEL.map((s) => (
               <option key={s.valor} value={s.valor}>
                 {s.label}
               </option>
             ))}
           </select>
-          {(status === "pendente" || status === "atrasado") && (
+          {status === "pendente" && (
             <input
               type="date"
               value={vencimento}
@@ -128,6 +149,9 @@ export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index:
             />
           )}
         </div>
+        <p className="mb-2 text-[11px] text-muted">
+          "Atrasado" não se escolhe mais aqui — calculado sozinho quando o vencimento passa e ainda tem saldo.
+        </p>
 
         <div className="mb-3 grid grid-cols-2 gap-2">
           <CurrencyInput value={valor} onChange={setValor} />
@@ -154,49 +178,65 @@ export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index:
   }
 
   return (
-    <Card index={index} hoverable={false} className="flex items-center justify-between px-4 py-3">
-      <div className="min-w-0">
-        <p className="flex items-center gap-1.5 text-sm text-text">
-          {despesa.descricao}
-          {despesa.recorrente && (
-            <span title="Recorrente — repete todo mês sozinha">
-              <Repeat size={11} className="text-accent" />
-            </span>
+    <Card index={index} hoverable={false} className="p-0">
+      <div className="flex items-center justify-between px-4 py-3">
+        <div className="min-w-0">
+          <p className="flex items-center gap-1.5 text-sm text-text">
+            {despesa.descricao}
+            {despesa.recorrente && (
+              <span title="Recorrente — repete todo mês sozinha">
+                <Repeat size={11} className="text-accent" />
+              </span>
+            )}
+          </p>
+          <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
+            {despesa.cliente && `${despesa.cliente} · `}
+            {new Date(despesa.data).toLocaleDateString("pt-BR")}
+            {despesa.categoria ? (
+              <span
+                className="rounded-full px-1.5 py-0.5 text-[10px]"
+                style={{ backgroundColor: `${infoCategoria?.cor || "#9CA3AF"}1A`, color: infoCategoria?.cor || "#9CA3AF" }}
+              >
+                {despesa.categoria}
+              </span>
+            ) : (
+              <span className="rounded-full bg-white/5 px-1.5 py-0.5 text-[10px] text-muted">Sem categoria</span>
+            )}
+            {statusEfetivo !== "pago" && (
+              <span
+                className="rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+                style={{ backgroundColor: `${corStatus}1A`, color: corStatus }}
+              >
+                {LABEL_STATUS_EFETIVO[statusEfetivo]}
+                {despesa.vencimento && ` · vence ${new Date(despesa.vencimento).toLocaleDateString("pt-BR")}`}
+                {totalPago > 0 && saldo > 0 && ` · pago R$ ${totalPago.toFixed(0)}, saldo R$ ${saldo.toFixed(0)}`}
+              </span>
+            )}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-3">
+          <span className="text-sm text-text">R$ {despesa.valor.toFixed(0)}</span>
+          {statusEfetivo !== "pago" && statusEfetivo !== "cancelado" && (
+            <button onClick={() => setLancandoBaixa((v) => !v)} className="flex items-center gap-1 text-xs font-medium text-accent hover:underline">
+              <Plus size={11} /> Baixa
+            </button>
           )}
-        </p>
-        <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
-          {despesa.cliente && `${despesa.cliente} · `}
-          {new Date(despesa.data).toLocaleDateString("pt-BR")}
-          {despesa.categoria ? (
-            <span
-              className="rounded-full px-1.5 py-0.5 text-[10px]"
-              style={{ backgroundColor: `${infoCategoria?.cor || "#9CA3AF"}1A`, color: infoCategoria?.cor || "#9CA3AF" }}
-            >
-              {despesa.categoria}
-            </span>
-          ) : (
-            <span className="rounded-full bg-white/5 px-1.5 py-0.5 text-[10px] text-muted">Sem categoria</span>
-          )}
-          {corStatus && (
-            <span
-              className="rounded-full px-1.5 py-0.5 text-[10px] font-medium"
-              style={{ backgroundColor: `${corStatus}1A`, color: corStatus }}
-            >
-              {STATUS_DESPESA.find((s) => s.valor === despesa.status)?.label}
-              {despesa.vencimento && ` · vence ${new Date(despesa.vencimento).toLocaleDateString("pt-BR")}`}
-            </span>
-          )}
-        </p>
+          <button onClick={() => setEditando(true)} className="text-muted hover:text-text">
+            <Pencil size={13} />
+          </button>
+          <button onClick={excluir} className="text-muted hover:text-red-400">
+            <Trash2 size={13} />
+          </button>
+        </div>
       </div>
-      <div className="flex shrink-0 items-center gap-3">
-        <span className="text-sm text-text">R$ {despesa.valor.toFixed(0)}</span>
-        <button onClick={() => setEditando(true)} className="text-muted hover:text-text">
-          <Pencil size={13} />
-        </button>
-        <button onClick={excluir} className="text-muted hover:text-red-400">
-          <Trash2 size={13} />
-        </button>
-      </div>
+      {lancandoBaixa && (
+        <div className="flex items-center gap-2 border-t border-border p-3">
+          <CurrencyInput value={valorBaixa} onChange={setValorBaixa} className="flex-1" />
+          <Button size="sm" onClick={lancarBaixa} disabled={valorBaixa <= 0}>
+            Lançar baixa
+          </Button>
+        </div>
+      )}
     </Card>
   );
 }

@@ -31,7 +31,7 @@ export default async function ClienteDetalhePage({
         orcamentos: { include: { itens: true }, orderBy: { createdAt: "desc" } },
         contratos: { orderBy: { createdAt: "desc" } },
         cobrancas: { orderBy: { createdAt: "desc" }, include: { pagamentos: true } },
-        despesas: { orderBy: { data: "desc" } },
+        despesas: { orderBy: { data: "desc" }, include: { pagamentos: true } },
         servicosContratados: { where: { ativo: true }, include: { servico: true }, orderBy: { createdAt: "asc" } },
         registrosTempo: { orderBy: { inicio: "desc" }, take: 60 },
         relatorios: { orderBy: { fim: "desc" } },
@@ -479,6 +479,9 @@ export default async function ClienteDetalhePage({
             data: d.data.toISOString(),
             categoriaFinanceira: d.categoriaFinanceira,
             categoria: d.categoria,
+            status: d.status,
+            vencimento: d.vencimento?.toISOString() || null,
+            totalPago: d.pagamentos.reduce((s, p) => s + Number(p.valor), 0),
           }))}
         />
       )}

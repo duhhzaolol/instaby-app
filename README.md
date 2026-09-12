@@ -1,30 +1,26 @@
-# Instaby App — v76
+# Instaby App — v77
 
-## TAREFA 16 — Templates de tarefas (última do plano)
+## Fechando a última pendência — baixa parcial em Despesa (Contas a Pagar)
 
-### Implementado
-- Novo model `TemplateTarefas` (nome + lista de itens)
-- Gerenciado em **Configurações** → "Templates de tarefas": cria, edita, exclui.
-  Exemplo pronto pra você cadastrar (do próprio documento): template "Captação" com
-  preparar pauta, conferir equipamento, captação, backup, seleção, edição
-- Dentro do modal de **Conteúdo**, seletor **"Aplicar template"** — escolhe um
-  template e já cria todas as tarefas de uma vez, vinculadas àquele conteúdo e
-  cliente, sem digitar uma por uma
+A única coisa que tinha ficado pra trás na Tarefa 09 (v70) — a API já existia, faltava
+a interface. Agora fechado, simétrico com o que já tinha em Cobrança:
 
-Não criei nada de template pronto por padrão — a lista começa vazia até você cadastrar
-o que faz sentido pro seu fluxo.
+- `DespesaRow` ganhou o botão **"+ Baixa"** — lança um valor parcial, mostra "pago R$X,
+  saldo R$Y" na linha
+- "Atrasado" também não é mais escolhido manualmente na edição de despesa — calculado
+  sozinho (vencimento passou + ainda tem saldo)
+- **Contas a Pagar**: card "Em atraso" e aba "Atrasadas" agora identificam qualquer
+  despesa pendente vencida (não só quem tinha o status antigo salvo à mão), "Total a
+  pagar" desconta o que já foi pago parcialmente
 
-### Banco
-- `TemplateTarefas` (aditivo)
+Com isso, Cobrança e Despesa funcionam exatamente do mesmo jeito no Financeiro.
 
-### Arquivos principais
-- `prisma/schema.prisma`
-- `app/api/templates-tarefas/` (+ `[id]`, `[id]/aplicar`)
-- `app/dashboard/configuracoes/TemplatesTarefasForm.tsx`, `page.tsx`
-- `components/dashboard/PipelineConteudo.tsx` (seletor de aplicar template)
+## Arquivos alterados
+- `components/dashboard/DespesaRow.tsx`
+- `app/dashboard/financeiro/page.tsx`, `contas-a-pagar/page.tsx`
+- `app/dashboard/clientes/[id]/page.tsx`
 
-## Com isso, fecha o IMPLEMENTATION_PLAN.md inteiro (16 tarefas)
-Próximo passo: a **auditoria final completa** que o documento original pediu — revisar
-todos os módulos, listar o que foi implementado, o banco alterado, rotas novas, o que
-mudou, o que ficou de fora conscientemente, e sugestões pra próxima versão. Vou montar
-esse documento final agora, sem pausa.
+## Status do projeto
+As 16 tarefas do `IMPLEMENTATION_PLAN.md` + essa pendência fechada = tudo que foi
+planejado no documento de 10/09 está concluído. `AUDITORIA_FINAL.md` continua valendo
+como o resumo de fechamento.

@@ -60,7 +60,7 @@ export default async function FinanceiroPage({
     }),
     prisma.despesa.findMany({
       where: { data: { gte: desdeConsulta }, status: { not: "cancelado" } },
-      include: { cliente: true },
+      include: { cliente: true, pagamentos: true },
       orderBy: { data: "desc" },
     }),
     prisma.cobranca.findMany({
@@ -181,6 +181,7 @@ export default async function FinanceiroPage({
         categoria: d.categoria,
         status: d.status,
         vencimento: d.vencimento?.toISOString() || null,
+        totalPago: d.pagamentos.reduce((s, p) => s + Number(p.valor), 0),
       }))}
       custosFlexiveis={custosFlexiveis.map((d) => ({
         id: d.id,
@@ -192,6 +193,7 @@ export default async function FinanceiroPage({
         categoria: d.categoria,
         status: d.status,
         vencimento: d.vencimento?.toISOString() || null,
+        totalPago: d.pagamentos.reduce((s, p) => s + Number(p.valor), 0),
       }))}
       clientes={clientes}
       resumoPorCliente={resumoPorCliente}
