@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { X, Trash2, Trophy, XCircle } from "lucide-react";
-import { ESTAGIOS_OPORTUNIDADE, visualDoEstagio } from "@/lib/oportunidadeVisual";
+import { ESTAGIOS_OPORTUNIDADE } from "@/lib/oportunidadeVisual";
 import { DatePicker } from "@/components/ui/DatePicker";
 
 export type OportunidadeData = {

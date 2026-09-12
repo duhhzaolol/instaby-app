@@ -1,26 +1,21 @@
-# Instaby App — v77
+# Instaby App — v78
 
-## Fechando a última pendência — baixa parcial em Despesa (Contas a Pagar)
+## Revisão de qualidade (sem funcionalidade nova)
 
-A única coisa que tinha ficado pra trás na Tarefa 09 (v70) — a API já existia, faltava
-a interface. Agora fechado, simétrico com o que já tinha em Cobrança:
+Como o plano de 16 tarefas + a pendência da baixa parcial já estavam fechados, fiz uma
+passada de revisão nos arquivos mexidos essa sessão inteira:
 
-- `DespesaRow` ganhou o botão **"+ Baixa"** — lança um valor parcial, mostra "pago R$X,
-  saldo R$Y" na linha
-- "Atrasado" também não é mais escolhido manualmente na edição de despesa — calculado
-  sozinho (vencimento passou + ainda tem saldo)
-- **Contas a Pagar**: card "Em atraso" e aba "Atrasadas" agora identificam qualquer
-  despesa pendente vencida (não só quem tinha o status antigo salvo à mão), "Total a
-  pagar" desconta o que já foi pago parcialmente
+- Conferi as ~61 rotas de API — todas com `route.ts` no lugar certo, nenhuma pasta
+  vazia
+- Revisei as relações do schema do Prisma (25 models) — todas batendo dos dois lados
+  (toda relação nova tem o campo espelhado certo no outro model)
+- Removido 1 import não usado (`visualDoEstagio` em `PipelineOportunidades.tsx`) —
+  cosmético, não afetava nada
 
-Com isso, Cobrança e Despesa funcionam exatamente do mesmo jeito no Financeiro.
+**Não rodei o build completo aqui** (nosso combinado continua sendo você conferir
+pela Vercel) — o ambiente também não tem acesso de rede pro binário do Prisma baixar
+pra validar de verdade, então essa foi uma checagem manual, não uma garantia 100%.
+Vale rodar o deploy e ficar de olho nos logs como sempre.
 
-## Arquivos alterados
-- `components/dashboard/DespesaRow.tsx`
-- `app/dashboard/financeiro/page.tsx`, `contas-a-pagar/page.tsx`
-- `app/dashboard/clientes/[id]/page.tsx`
-
-## Status do projeto
-As 16 tarefas do `IMPLEMENTATION_PLAN.md` + essa pendência fechada = tudo que foi
-planejado no documento de 10/09 está concluído. `AUDITORIA_FINAL.md` continua valendo
-como o resumo de fechamento.
+## Onde as coisas realmente ficam agora
+Nada mudou de funcionalidade — só essa limpeza pequena.
