@@ -202,6 +202,17 @@ mexer em nada.
 - **Dashboard**: novo bloco consolidando atrasos/aprovações pendentes/escopo insuficiente/onboarding travado, ordenado por urgência
 - **Central de Comando**: adiciona atalhos pra Conteúdo, Projeto, Lead — sem IA, só formulário (confirmado no documento: nada de linguagem natural)
 
+**Concluída (v75)**: Agenda ganhou toggles de camada (pílulas clicáveis) — Cobrança,
+Tarefa e Conteúdo ligados por padrão, **Horas trabalhadas desligada por padrão** (é
+registro histórico, não pede atenção futura); Conteúdo com data de publicação virou uma
+camada nova, com ícone próprio. Dashboard ganhou o bloco "Precisa da sua atenção" logo
+no topo — tarefas atrasadas, cobranças vencidas, conteúdo aguardando aprovação, contrato
+renovando, despesa sem classificação, item de onboarding bloqueado, oportunidade sem
+próxima ação — só mostra o que tem número maior que zero, cada linha leva direto pra
+tela certa. Central de Comando ganhou atalhos de navegação (Novo conteúdo/Registrar
+horas/Nova cobrança/Nova despesa/Novo lead/Novo orçamento) — sem IA, só links diretos,
+como o documento pediu explicitamente.
+
 ---
 
 ## Resumo de bancos novos (visão geral)

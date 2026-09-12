@@ -3,11 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Clock, CircleDollarSign, History, X, ExternalLink } from "lucide-react";
+import { Clock, CircleDollarSign, History, Film, X, ExternalLink } from "lucide-react";
 
 export type EventoAgenda = {
   id: string;
-  tipo: "cobranca" | "tarefa" | "hora";
+  tipo: "cobranca" | "tarefa" | "hora" | "conteudo";
   texto: string;
   cor?: string | null;
   href: string;
@@ -135,12 +135,15 @@ export function AgendaGrid({
                         ? { backgroundColor: "rgba(239,68,68,0.1)", color: "#f87171" }
                         : e.tipo === "hora"
                         ? { backgroundColor: `${e.cor || "#22C55E"}1A`, color: e.cor || "#4ade80" }
+                        : e.tipo === "conteudo"
+                        ? { backgroundColor: `${e.cor || "#A855F7"}1A`, color: e.cor || "#c084fc" }
                         : { backgroundColor: "rgba(56,189,248,0.1)", color: "#38bdf8" };
-                    const IconeEvento = e.tipo === "cobranca" ? CircleDollarSign : e.tipo === "hora" ? History : Clock;
+                    const IconeEvento =
+                      e.tipo === "cobranca" ? CircleDollarSign : e.tipo === "hora" ? History : e.tipo === "conteudo" ? Film : Clock;
                     return (
                       <button
                         key={i}
-                        onClick={() => abrir(e)}
+                        onClick={() => (e.tipo === "conteudo" ? router.push(e.href) : abrir(e))}
                         className="flex items-center gap-1 truncate rounded px-1 py-0.5 text-left text-[10px] hover:opacity-80"
                         style={estilo}
                         title={e.texto}

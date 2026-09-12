@@ -1,46 +1,41 @@
-# Instaby App — v74
+# Instaby App — v75
 
-## TAREFA 14 — Aprovação pública, Solicitações, Templates
+## TAREFA 15 — Agenda com camadas, Dashboard "Precisa da sua atenção", Central expandida
 
-### 1. Aprovação pública de conteúdo
-Dentro do modal de qualquer conteúdo (`/dashboard/conteudo`), botão **"Enviar pra
-aprovação do cliente"** — gera um link público (`/aprovacao/[token]`), muda o status
-pra "Aguardando aprovação". O cliente abre o link, vê o material (link de arquivo),
-legenda, data prevista, e tem dois botões:
-- **Aprovar** (com nome opcional, registrado)
-- **Pedir alteração** (com comentário obrigatório — ex: "trocar a cena dos 00:12") →
-  volta pro status "Alteração solicitada", com o comentário salvo
+### 1. Agenda com camadas
+Pílulas clicáveis pra ligar/desligar cada tipo de evento: Cobrança, Tarefa, Conteúdo
+(novo — data de publicação) e Horas trabalhadas. **Horas vem desligada por padrão** —
+é um registro histórico, não algo que precisa de atenção futura, então não compete
+mais visualmente com prazo/vencimento.
 
-Marca sozinho quando foi visto pela primeira vez.
+### 2. Dashboard — "Precisa da sua atenção"
+Novo bloco logo no topo, antes da Meta do mês. Só aparece o que tem alguma coisa pra
+resolver:
+- Tarefas atrasadas
+- Cobranças vencidas
+- Conteúdo aguardando aprovação
+- Contrato(s) renovando em breve (≤30 dias)
+- Despesas sem classificação
+- Item(ns) de onboarding bloqueados
+- Oportunidade(s) sem próxima ação
 
-### 2. Solicitações do cliente
-Nova aba **"Solicitações"** no cliente — registra pedidos que chegam fora do fluxo
-normal ("cria um Reel extra pra domingo"). Tem prioridade e um marcador **"Fora do
-escopo"**, que sinaliza quando algo pode precisar de orçamento adicional.
+Cada linha é clicável e leva direto pra tela certa. Se estiver tudo em dia, o bloco
+nem aparece.
 
-### 3. Templates (versão focada no que mais importa)
-Em vez de um construtor de templates genérico e grande, fiz o mais valioso primeiro:
-o checklist de **Onboarding** virou configurável — Configurações → "Checklist padrão
-de onboarding". Adiciona, remove, reordena os itens que aparecem toda vez que você
-clica em "Iniciar onboarding" num cliente novo. Se não mexer em nada, usa o checklist
-original de 17 itens.
+### 3. Central de Comando — atalhos, sem IA
+Fileira de atalhos abaixo do botão principal: Novo conteúdo, Registrar horas, Nova
+cobrança, Nova despesa, Novo lead, Novo orçamento. São links diretos pra cada tela —
+**nenhuma interpretação de texto, nenhum comando em linguagem natural**, exatamente
+como o documento pediu.
 
-### Banco
-- `Conteudo`: `tokenAprovacao`, `enviadoAprovacaoEm`, `visualizadoAprovacaoEm`,
-  `aprovadoEm`, `aprovadoPor`, `comentarioAprovacao` (aditivos)
-- `Solicitacao` (nova, aditiva)
-- `Configuracao.templateOnboarding` (aditivo)
+## Banco
+Nenhuma mudança de schema nessa leva — tudo calculado a partir do que já existia.
 
-### Arquivos principais
-- `prisma/schema.prisma`
-- `app/api/conteudos/[id]/enviar-aprovacao/`, `app/api/aprovacao/[token]/`
-- `app/aprovacao/[token]/page.tsx` (pública) + `AcoesAprovacao.tsx`
-- `components/dashboard/PipelineConteudo.tsx` (botão de enviar)
-- `app/api/clientes/[id]/solicitacoes/`, `app/api/solicitacoes/[id]/`
-- `app/dashboard/clientes/[id]/SolicitacoesTab.tsx`
-- `app/api/clientes/[id]/onboarding/route.ts` (usa o template configurado)
-- `app/dashboard/configuracoes/TemplateOnboardingForm.tsx`
+## Arquivos principais
+- `app/dashboard/agenda/page.tsx`, `components/dashboard/AgendaGrid.tsx`
+- `app/dashboard/page.tsx`, `components/dashboard/DashboardClient.tsx`
 
 ## Continuando
-Próxima: TAREFA 15 (Agenda com camadas + Dashboard "Precisa da sua atenção" + Central
-de Comando expandida — sem IA, como o documento pediu). Seguindo.
+Próxima: TAREFA 16 (Templates de tarefas/projeto — última peça pendente do documento).
+Depois disso, faço a auditoria final completa e o documento de resumo do projeto
+inteiro. Seguindo.

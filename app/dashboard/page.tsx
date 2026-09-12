@@ -47,6 +47,13 @@ export default async function DashboardPage() {
     contratosRecentes,
     orcamentosRecentes,
     faturamentoMesAnteriorAgg,
+    tarefasAtrasadas,
+    conteudosAguardandoAprovacao,
+    cobrancasVencidas,
+    contratosAssinados,
+    despesasSemClassificacao,
+    itensOnboardingBloqueados,
+    oportunidadesAbertas,
   ] = await Promise.all([
     prisma.cliente.count({ where: { status: "ativo" } }),
     prisma.cliente.count({ where: { status: "lead" } }),
@@ -119,11 +126,41 @@ export default async function DashboardPage() {
       _sum: { valor: true },
       where: { status: "pago", createdAt: { gte: inicioMesAnterior(), lt: inicioMes() } },
     }),
+    prisma.tarefa.count({ where: { status: { not: "feito" }, prazo: { lt: new Date() } } }),
+    prisma.conteudo.count({ where: { status: "aguardando_aprovacao" } }),
+    prisma.cobranca.count({ where: { status: { in: ["pendente", "atrasado"] }, vencimento: { lt: new Date() } } }),
+    prisma.contrato.findMany({
+      where: { status: "assinado" },
+      include: { cliente: { select: { nome: true, prazoContratoMeses: true } } },
+    }),
+    prisma.despesa.count({ where: { categoriaFinanceira: null, status: { not: "cancelado" } } }),
+    prisma.itemOnboarding.count({ where: { status: "bloqueado", onboarding: { status: "em_andamento" } } }),
+    prisma.oportunidade.findMany({ where: { status: { notIn: ["ganho", "perdido"] } } }),
   ]);
 
   const metaFaturamento = config?.metaFaturamentoMensal ? Number(config.metaFaturamentoMensal) : 0;
   const faturamentoMes = Number(cobrancasPagasMes._sum.valor || 0);
   const faturamentoMesAnterior = Number(faturamentoMesAnteriorAgg._sum.valor || 0);
+
+  const contratosRenovando = contratosAssinados.filter((c) => {
+    if (!c.cliente.prazoContratoMeses) return false;
+    const renovacao = new Date(c.createdAt);
+    renovacao.setMonth(renovacao.getMonth() + c.cliente.prazoContratoMeses);
+    const dias = Math.round((renovacao.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    return dias <= 30;
+  }).length;
+
+  const oportunidadesSemProximaAcao = oportunidadesAbertas.filter((o) => !o.proximaAcao || !o.dataProximaAcao).length;
+
+  const alertas = [
+    { label: "Tarefas atrasadas", contagem: tarefasAtrasadas, href: "/dashboard/tarefas", cor: "#EF4444" },
+    { label: "Cobranças vencidas", contagem: cobrancasVencidas, href: "/dashboard/financeiro/contas-a-receber", cor: "#EF4444" },
+    { label: "Conteúdo aguardando aprovação", contagem: conteudosAguardandoAprovacao, href: "/dashboard/conteudo", cor: "#06B6D4" },
+    { label: "Contrato(s) renovando em breve", contagem: contratosRenovando, href: "/dashboard/contratos", cor: "#F59E0B" },
+    { label: "Despesas sem classificação", contagem: despesasSemClassificacao, href: "/dashboard/financeiro", cor: "#F59E0B" },
+    { label: "Item(ns) de onboarding bloqueados", contagem: itensOnboardingBloqueados, href: "/dashboard/clientes", cor: "#F59E0B" },
+    { label: "Oportunidade(s) sem próxima ação", contagem: oportunidadesSemProximaAcao, href: "/dashboard/oportunidades", cor: "#9CA3AF" },
+  ].filter((a) => a.contagem > 0);
   const variacaoFaturamento =
     faturamentoMesAnterior > 0 ? Math.round(((faturamentoMes - faturamentoMesAnterior) / faturamentoMesAnterior) * 100) : null;
 
@@ -223,6 +260,7 @@ export default async function DashboardPage() {
         clienteCor: t.cliente?.cor || null,
       }))}
       meta={{ valor: metaFaturamento, atual: faturamentoMes }}
+      alertas={alertas}
       performancePorCliente={performancePorCliente}
       variacaoFaturamento={variacaoFaturamento}
       atividades={atividades.map((a) => ({ ...a, data: a.data.toISOString() }))}

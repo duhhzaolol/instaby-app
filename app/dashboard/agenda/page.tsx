@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { headers } from "next/headers";
-import { ChevronLeft, ChevronRight, Clock, CircleDollarSign, History, CalendarPlus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, CircleDollarSign, History, Film, CalendarPlus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { AgendaGrid, EventoAgenda } from "@/components/dashboard/AgendaGrid";
 
@@ -26,7 +26,7 @@ function horaBR(d: Date) {
 export default async function AgendaPage({
   searchParams,
 }: {
-  searchParams: { mes?: string };
+  searchParams: { mes?: string; camadas?: string };
 }) {
   const hoje = new Date();
   const [anoParam, mesParam] = (searchParams.mes || `${hoje.getFullYear()}-${hoje.getMonth() + 1}`)
@@ -35,6 +35,9 @@ export default async function AgendaPage({
   const ano = anoParam;
   const mes = mesParam - 1; // 0-indexed
 
+  // Horas trabalhadas fica desligada por padrão — é registro histórico, não algo que precisa de atenção futura
+  const camadasAtivas = new Set((searchParams.camadas || "cobranca,tarefa,conteudo").split(","));
+
   const inicioMes = new Date(ano, mes, 1);
   const fimMes = new Date(ano, mes + 1, 0, 23, 59, 59);
   const inicioGrade = new Date(inicioMes);
@@ -42,7 +45,7 @@ export default async function AgendaPage({
   const fimGrade = new Date(fimMes);
   fimGrade.setDate(fimGrade.getDate() + (6 - fimMes.getDay()));
 
-  const [cobrancas, tarefas, registrosTempo] = await Promise.all([
+  const [cobrancas, tarefas, registrosTempo, conteudos] = await Promise.all([
     prisma.cobranca.findMany({
       where: { vencimento: { gte: inicioGrade, lte: fimGrade } },
       include: { cliente: { select: { id: true, nome: true } } },
@@ -55,49 +58,74 @@ export default async function AgendaPage({
       where: { inicio: { gte: inicioGrade, lte: fimGrade } },
       include: { cliente: { select: { id: true, nome: true, cor: true } } },
     }),
+    prisma.conteudo.findMany({
+      where: { dataPublicacao: { gte: inicioGrade, lte: fimGrade } },
+      include: { cliente: { select: { id: true, nome: true, cor: true } } },
+    }),
   ]);
 
   const eventosPorDia: Record<string, EventoAgenda[]> = {};
 
-  cobrancas.forEach((c) => {
-    if (!c.vencimento) return;
-    const chave = chaveDiaEvento(c.vencimento);
-    (eventosPorDia[chave] ||= []).push({
-      id: c.id,
-      tipo: "cobranca",
-      texto: `${c.cliente.nome} · R$ ${Number(c.valor).toFixed(0)}`,
-      href: `/dashboard/clientes/${c.cliente.id}?aba=financeiro`,
-      data: chave,
+  if (camadasAtivas.has("cobranca")) {
+    cobrancas.forEach((c) => {
+      if (!c.vencimento) return;
+      const chave = chaveDiaEvento(c.vencimento);
+      (eventosPorDia[chave] ||= []).push({
+        id: c.id,
+        tipo: "cobranca",
+        texto: `${c.cliente.nome} · R$ ${Number(c.valor).toFixed(0)}`,
+        href: `/dashboard/clientes/${c.cliente.id}?aba=financeiro`,
+        data: chave,
+      });
     });
-  });
+  }
 
-  tarefas.forEach((t) => {
-    if (!t.prazo) return;
-    const chave = chaveDiaEvento(t.prazo);
-    (eventosPorDia[chave] ||= []).push({
-      id: t.id,
-      tipo: "tarefa",
-      texto: t.cliente ? `${t.titulo} · ${t.cliente.nome}` : t.titulo,
-      cor: t.cliente?.cor,
-      href: t.cliente ? `/dashboard/clientes/${t.cliente.id}?aba=tarefas` : "/dashboard",
-      data: chave,
-      hora: horaBR(t.prazo) !== "00:00" ? horaBR(t.prazo) : null,
+  if (camadasAtivas.has("tarefa")) {
+    tarefas.forEach((t) => {
+      if (!t.prazo) return;
+      const chave = chaveDiaEvento(t.prazo);
+      (eventosPorDia[chave] ||= []).push({
+        id: t.id,
+        tipo: "tarefa",
+        texto: t.cliente ? `${t.titulo} · ${t.cliente.nome}` : t.titulo,
+        cor: t.cliente?.cor,
+        href: t.cliente ? `/dashboard/clientes/${t.cliente.id}?aba=tarefas` : "/dashboard",
+        data: chave,
+        hora: horaBR(t.prazo) !== "00:00" ? horaBR(t.prazo) : null,
+      });
     });
-  });
+  }
 
-  registrosTempo.forEach((r) => {
-    const chave = chaveDiaEvento(r.inicio);
-    (eventosPorDia[chave] ||= []).push({
-      id: r.id,
-      tipo: "hora",
-      texto: r.cliente ? `${r.atividade} · ${r.cliente.nome}` : r.atividade,
-      cor: r.cliente?.cor,
-      href: r.cliente ? `/dashboard/horas/${r.cliente.id}` : "/dashboard/horas",
-      data: chave,
-      horaInicio: horaBR(r.inicio),
-      horaFim: r.fim ? horaBR(r.fim) : null,
+  if (camadasAtivas.has("conteudo")) {
+    conteudos.forEach((c) => {
+      if (!c.dataPublicacao) return;
+      const chave = chaveDiaEvento(c.dataPublicacao);
+      (eventosPorDia[chave] ||= []).push({
+        id: c.id,
+        tipo: "conteudo",
+        texto: c.cliente ? `${c.titulo} · ${c.cliente.nome}` : c.titulo,
+        cor: c.cliente?.cor,
+        href: "/dashboard/conteudo",
+        data: chave,
+      });
     });
-  });
+  }
+
+  if (camadasAtivas.has("hora")) {
+    registrosTempo.forEach((r) => {
+      const chave = chaveDiaEvento(r.inicio);
+      (eventosPorDia[chave] ||= []).push({
+        id: r.id,
+        tipo: "hora",
+        texto: r.cliente ? `${r.atividade} · ${r.cliente.nome}` : r.atividade,
+        cor: r.cliente?.cor,
+        href: r.cliente ? `/dashboard/horas/${r.cliente.id}` : "/dashboard/horas",
+        data: chave,
+        horaInicio: horaBR(r.inicio),
+        horaFim: r.fim ? horaBR(r.fim) : null,
+      });
+    });
+  }
 
   const dias: string[] = [];
   for (let d = new Date(inicioGrade); d <= fimGrade; d.setDate(d.getDate() + 1)) {
@@ -122,7 +150,7 @@ export default async function AgendaPage({
         </div>
         <div className="flex items-center gap-2">
           <Link
-            href={`/dashboard/agenda?mes=${mesAnterior.getFullYear()}-${mesAnterior.getMonth() + 1}`}
+            href={`/dashboard/agenda?mes=${mesAnterior.getFullYear()}-${mesAnterior.getMonth() + 1}&camadas=${Array.from(camadasAtivas).join(",")}`}
             className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card/60 text-muted hover:text-text"
           >
             <ChevronLeft size={15} />
@@ -131,7 +159,7 @@ export default async function AgendaPage({
             {NOMES_MESES[mes]} {ano}
           </p>
           <Link
-            href={`/dashboard/agenda?mes=${mesSeguinte.getFullYear()}-${mesSeguinte.getMonth() + 1}`}
+            href={`/dashboard/agenda?mes=${mesSeguinte.getFullYear()}-${mesSeguinte.getMonth() + 1}&camadas=${Array.from(camadasAtivas).join(",")}`}
             className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card/60 text-muted hover:text-text"
           >
             <ChevronRight size={15} />
@@ -157,16 +185,29 @@ export default async function AgendaPage({
         </p>
       )}
 
-      <div className="mb-4 flex flex-wrap items-center gap-4 text-xs text-muted">
-        <span className="flex items-center gap-1.5">
-          <CircleDollarSign size={12} className="text-red-400" /> Cobrança vencendo
-        </span>
-        <span className="flex items-center gap-1.5">
-          <Clock size={12} className="text-sky-400" /> Prazo de tarefa
-        </span>
-        <span className="flex items-center gap-1.5">
-          <History size={12} className="text-emerald-400" /> Horas trabalhadas (cor do cliente)
-        </span>
+      <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
+        {[
+          { valor: "cobranca", label: "Cobrança vencendo", icone: CircleDollarSign, cor: "#f87171" },
+          { valor: "tarefa", label: "Prazo de tarefa", icone: Clock, cor: "#38bdf8" },
+          { valor: "conteudo", label: "Conteúdo publicando", icone: Film, cor: "#c084fc" },
+          { valor: "hora", label: "Horas trabalhadas", icone: History, cor: "#4ade80" },
+        ].map((camada) => {
+          const ativa = camadasAtivas.has(camada.valor);
+          const novasCamadas = new Set(camadasAtivas);
+          ativa ? novasCamadas.delete(camada.valor) : novasCamadas.add(camada.valor);
+          const Icon = camada.icone;
+          return (
+            <Link
+              key={camada.valor}
+              href={`/dashboard/agenda?mes=${ano}-${mes + 1}&camadas=${Array.from(novasCamadas).join(",")}`}
+              className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 transition-colors ${
+                ativa ? "border-border bg-card/60 text-text" : "border-border/50 text-muted/50"
+              }`}
+            >
+              <Icon size={11} style={{ color: ativa ? camada.cor : undefined }} /> {camada.label}
+            </Link>
+          );
+        })}
       </div>
 
       <AgendaGrid dias={dias} eventosPorDia={eventosPorDia} mes={mes} hojeChave={hojeChave} />

@@ -15,6 +15,7 @@ import {
   FileSignature,
   FileText,
   Sparkles,
+  AlertTriangle,
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { CountUp } from "@/components/ui/CountUp";
@@ -72,6 +73,7 @@ export default function DashboardClient({
   tarefasHoje,
   tarefasAmanha,
   meta,
+  alertas,
   performancePorCliente,
   atividades,
   variacaoFaturamento,
@@ -82,6 +84,7 @@ export default function DashboardClient({
   clientesResumo: ClienteResumo[];
   tarefasHoje: TarefaHoje[];
   tarefasAmanha: TarefaHoje[];
+  alertas: { label: string; contagem: number; href: string; cor: string }[];
   meta: Meta;
   performancePorCliente: PerformanceCliente[];
   atividades: Atividade[];
@@ -166,6 +169,31 @@ export default function DashboardClient({
         })}
       </div>
 
+      {alertas.length > 0 && (
+        <div className="mb-6 rounded-2xl border border-border bg-card/60 p-4">
+          <p className="mb-3 flex items-center gap-1.5 text-sm font-medium text-text">
+            <AlertTriangle size={14} className="text-amber-400" /> Precisa da sua atenção
+          </p>
+          <div className="flex flex-col gap-1.5">
+            {alertas.map((a) => (
+              <Link
+                key={a.label}
+                href={a.href}
+                className="flex items-center justify-between rounded-lg px-2.5 py-1.5 text-sm hover:bg-hover"
+              >
+                <span className="text-text">{a.label}</span>
+                <span
+                  className="rounded-full px-2 py-0.5 text-xs font-medium"
+                  style={{ backgroundColor: `${a.cor}1A`, color: a.cor }}
+                >
+                  {a.contagem}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       {meta.valor > 0 && (
         <Card index={4} hoverable={false} className="mb-6 p-4">
           <div className="mb-2 flex items-center justify-between">
@@ -190,6 +218,25 @@ export default function DashboardClient({
       )}
 
       <QuickCommandCenter clientes={clientes} />
+
+      <div className="mb-6 flex flex-wrap gap-2">
+        {[
+          { label: "Novo conteúdo", href: "/dashboard/conteudo" },
+          { label: "Registrar horas", href: "/dashboard/horas" },
+          { label: "Nova cobrança", href: "/dashboard/financeiro" },
+          { label: "Nova despesa", href: "/dashboard/financeiro" },
+          { label: "Novo lead", href: "/dashboard/oportunidades" },
+          { label: "Novo orçamento", href: "/dashboard/clientes" },
+        ].map((atalho) => (
+          <Link
+            key={atalho.label}
+            href={atalho.href}
+            className="rounded-full border border-border bg-card/60 px-3 py-1.5 text-xs text-muted hover:border-accent/30 hover:text-text"
+          >
+            + {atalho.label}
+          </Link>
+        ))}
+      </div>
 
       {tarefasHoje.length > 0 && (
         <div className="mb-6">
