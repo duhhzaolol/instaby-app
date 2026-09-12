@@ -5,9 +5,10 @@ import LogosClientesForm from "./LogosClientesForm";
 import MetaFaturamentoForm from "./MetaFaturamentoForm";
 import CustoHoraForm from "./CustoHoraForm";
 import TemplateOnboardingForm from "./TemplateOnboardingForm";
+import TemplatesTarefasForm from "./TemplatesTarefasForm";
 
 export default async function ConfiguracoesPage() {
-  const [depoimentos, config, clientesComLogo] = await Promise.all([
+  const [depoimentos, config, clientesComLogo, templatesTarefas] = await Promise.all([
     prisma.depoimento.findMany({ where: { ativo: true }, orderBy: { id: "desc" } }),
     prisma.configuracao.findUnique({ where: { id: "config" } }),
     prisma.cliente.findMany({
@@ -15,6 +16,7 @@ export default async function ConfiguracoesPage() {
       select: { id: true, nome: true, logoUrl: true, exibirLogoPublico: true },
       orderBy: { nome: "asc" },
     }),
+    prisma.templateTarefas.findMany({ orderBy: { nome: "asc" } }),
   ]);
 
   return (
@@ -44,6 +46,15 @@ export default async function ConfiguracoesPage() {
           Usado toda vez que você clica em "Iniciar onboarding" num cliente novo. Personalize do seu jeito.
         </p>
         <TemplateOnboardingForm templateAtual={config?.templateOnboarding || []} />
+      </div>
+
+      <div>
+        <p className="mb-1 text-sm font-medium text-text">Templates de tarefas</p>
+        <p className="mb-4 text-sm text-muted">
+          Checklists reaproveitáveis — ex: "Captação" com preparar pauta, conferir equipamento, captação, backup,
+          seleção, edição. Aplica de uma vez num conteúdo ou cliente, sem digitar tarefa por tarefa.
+        </p>
+        <TemplatesTarefasForm templates={templatesTarefas} />
       </div>
 
       <div>

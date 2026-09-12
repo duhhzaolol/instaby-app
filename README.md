@@ -1,41 +1,30 @@
-# Instaby App — v75
+# Instaby App — v76
 
-## TAREFA 15 — Agenda com camadas, Dashboard "Precisa da sua atenção", Central expandida
+## TAREFA 16 — Templates de tarefas (última do plano)
 
-### 1. Agenda com camadas
-Pílulas clicáveis pra ligar/desligar cada tipo de evento: Cobrança, Tarefa, Conteúdo
-(novo — data de publicação) e Horas trabalhadas. **Horas vem desligada por padrão** —
-é um registro histórico, não algo que precisa de atenção futura, então não compete
-mais visualmente com prazo/vencimento.
+### Implementado
+- Novo model `TemplateTarefas` (nome + lista de itens)
+- Gerenciado em **Configurações** → "Templates de tarefas": cria, edita, exclui.
+  Exemplo pronto pra você cadastrar (do próprio documento): template "Captação" com
+  preparar pauta, conferir equipamento, captação, backup, seleção, edição
+- Dentro do modal de **Conteúdo**, seletor **"Aplicar template"** — escolhe um
+  template e já cria todas as tarefas de uma vez, vinculadas àquele conteúdo e
+  cliente, sem digitar uma por uma
 
-### 2. Dashboard — "Precisa da sua atenção"
-Novo bloco logo no topo, antes da Meta do mês. Só aparece o que tem alguma coisa pra
-resolver:
-- Tarefas atrasadas
-- Cobranças vencidas
-- Conteúdo aguardando aprovação
-- Contrato(s) renovando em breve (≤30 dias)
-- Despesas sem classificação
-- Item(ns) de onboarding bloqueados
-- Oportunidade(s) sem próxima ação
+Não criei nada de template pronto por padrão — a lista começa vazia até você cadastrar
+o que faz sentido pro seu fluxo.
 
-Cada linha é clicável e leva direto pra tela certa. Se estiver tudo em dia, o bloco
-nem aparece.
+### Banco
+- `TemplateTarefas` (aditivo)
 
-### 3. Central de Comando — atalhos, sem IA
-Fileira de atalhos abaixo do botão principal: Novo conteúdo, Registrar horas, Nova
-cobrança, Nova despesa, Novo lead, Novo orçamento. São links diretos pra cada tela —
-**nenhuma interpretação de texto, nenhum comando em linguagem natural**, exatamente
-como o documento pediu.
+### Arquivos principais
+- `prisma/schema.prisma`
+- `app/api/templates-tarefas/` (+ `[id]`, `[id]/aplicar`)
+- `app/dashboard/configuracoes/TemplatesTarefasForm.tsx`, `page.tsx`
+- `components/dashboard/PipelineConteudo.tsx` (seletor de aplicar template)
 
-## Banco
-Nenhuma mudança de schema nessa leva — tudo calculado a partir do que já existia.
-
-## Arquivos principais
-- `app/dashboard/agenda/page.tsx`, `components/dashboard/AgendaGrid.tsx`
-- `app/dashboard/page.tsx`, `components/dashboard/DashboardClient.tsx`
-
-## Continuando
-Próxima: TAREFA 16 (Templates de tarefas/projeto — última peça pendente do documento).
-Depois disso, faço a auditoria final completa e o documento de resumo do projeto
-inteiro. Seguindo.
+## Com isso, fecha o IMPLEMENTATION_PLAN.md inteiro (16 tarefas)
+Próximo passo: a **auditoria final completa** que o documento original pediu — revisar
+todos os módulos, listar o que foi implementado, o banco alterado, rotas novas, o que
+mudou, o que ficou de fora conscientemente, e sugestões pra próxima versão. Vou montar
+esse documento final agora, sem pausa.

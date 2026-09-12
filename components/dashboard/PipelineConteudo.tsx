@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { X, Plus, Trash2, ExternalLink } from "lucide-react";
 import { FORMATOS_CONTEUDO, STATUS_CONTEUDO, visualDoFormato } from "@/lib/conteudoVisual";
@@ -47,6 +47,14 @@ function formatarData(iso: string | null) {
 export function PipelineConteudo({ colunas }: { colunas: { status: string; label: string; cor: string; itens: ConteudoResumo[] }[] }) {
   const router = useRouter();
   const [detalheId, setDetalheId] = useState<string | null>(null);
+  const [templates, setTemplates] = useState<{ id: string; nome: string }[]>([]);
+
+  useEffect(() => {
+    fetch("/api/templates-tarefas")
+      .then((r) => r.json())
+      .then(setTemplates)
+      .catch(() => {});
+  }, []);
   const [detalhe, setDetalhe] = useState<ConteudoDetalhe | null>(null);
   const [carregando, setCarregando] = useState(false);
 
@@ -111,6 +119,17 @@ export function PipelineConteudo({ colunas }: { colunas: { status: string; label
     const atualizado = await res.json();
     setDetalhe({ ...detalhe, status: "aguardando_aprovacao", tokenAprovacao: atualizado.tokenAprovacao });
     router.refresh();
+  }
+
+  async function aplicarTemplate(templateId: string) {
+    if (!detalhe || !templateId) return;
+    await fetch(`/api/templates-tarefas/${templateId}/aplicar`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clienteId: detalhe.clienteId, conteudoId: detalhe.id }),
+    });
+    router.refresh();
+    abrir(detalhe.id);
   }
 
   async function novaTarefaVinculada() {
@@ -296,9 +315,25 @@ export function PipelineConteudo({ colunas }: { colunas: { status: string; label
                 <div className="mb-4">
                   <div className="mb-2 flex items-center justify-between">
                     <p className="text-xs uppercase tracking-wide text-muted">Tarefas vinculadas</p>
-                    <button onClick={novaTarefaVinculada} className="flex items-center gap-1 text-xs text-accent hover:underline">
-                      <Plus size={11} /> Nova
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {templates.length > 0 && (
+                        <select
+                          onChange={(e) => e.target.value && aplicarTemplate(e.target.value)}
+                          defaultValue=""
+                          className="h-6 rounded-lg border border-border bg-base px-1.5 text-[10px] text-muted"
+                        >
+                          <option value="">Aplicar template...</option>
+                          {templates.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.nome}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      <button onClick={novaTarefaVinculada} className="flex items-center gap-1 text-xs text-accent hover:underline">
+                        <Plus size={11} /> Nova
+                      </button>
+                    </div>
                   </div>
                   {detalhe.tarefas.length === 0 ? (
                     <p className="text-xs text-muted">Nenhuma tarefa vinculada ainda.</p>

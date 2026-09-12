@@ -188,6 +188,15 @@ model Solicitacao {
   createdAt   DateTime @default(now())
 }
 
+// Checklist reutilizável — aplica de uma vez várias tarefas num cliente/conteúdo
+// (ex: "Captação": preparar pauta, conferir equipamento, captação, backup, seleção, edição)
+model TemplateTarefas {
+  id        String   @id @default(uuid())
+  nome      String
+  itens     String[]
+  createdAt DateTime @default(now())
+}
+
 model Tarefa {
   id         String    @id @default(uuid())
   clienteId  String?

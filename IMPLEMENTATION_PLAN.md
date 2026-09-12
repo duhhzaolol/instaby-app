@@ -213,10 +213,18 @@ tela certa. Central de Comando ganhou atalhos de navegação (Novo conteúdo/Reg
 horas/Nova cobrança/Nova despesa/Novo lead/Novo orçamento) — sem IA, só links diretos,
 como o documento pediu explicitamente.
 
+### TAREFA 16 — Templates de tarefas
+**Concluída (v76)**: novo model `TemplateTarefas` (nome + lista de itens, aditivo).
+Gerenciado em Configurações — cria/edita/exclui templates (ex: "Captação": preparar
+pauta, conferir equipamento, captação, backup, seleção, edição). Dentro do modal de
+Conteúdo, um seletor "Aplicar template" cria todas as tarefas do template de uma vez,
+já vinculadas àquele conteúdo e cliente — sem digitar tarefa por tarefa. Com isso,
+fecha a lista de 16 tarefas técnicas do plano.
+
 ---
 
 ## Resumo de bancos novos (visão geral)
-`Conteudo`, `Projeto`, `Contato`, `LinkCliente`, `Onboarding`, `ItemOnboarding`, `Pagamento`, `ContaFinanceira`, `Oportunidade`, `Solicitacao`, `Template` — todos aditivos, nenhum remove campo existente.
+`Conteudo`, `Contato`, `LinkCliente`, `Onboarding`, `ItemOnboarding`, `Pagamento`, `Oportunidade`, `Solicitacao`, `TemplateTarefas` — todos aditivos, nenhum remove campo existente. `Projeto` e `ContaFinanceira` não foram criados (Tarefas 04 e 10 puladas por decisão dele).
 
 ## O que fica fora desta rodada (por instrução explícita do documento)
 Cronômetro, IA dentro do app, Portal do Cliente completo, integração bancária automática, app mobile nativo.
