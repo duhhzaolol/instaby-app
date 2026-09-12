@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Phone, Plus, Pencil, Building2, MapPin, User, FolderOpen, CalendarClock, CalendarDays } from "lucide-react";
+import { ArrowLeft, Phone, Plus, Pencil, Building2, MapPin, User, FolderOpen, CalendarClock, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import NovaTarefaForm from "./NovaTarefaForm";
 import ContratosTab from "./ContratosTab";
@@ -21,7 +21,7 @@ export default async function ClienteDetalhePage({
   searchParams,
 }: {
   params: { id: string };
-  searchParams: { aba?: string };
+  searchParams: { aba?: string; escopoMes?: string };
 }) {
   const [cliente, catalogo, config] = await Promise.all([
     prisma.cliente.findUnique({
@@ -72,13 +72,22 @@ export default async function ClienteDetalhePage({
   const inicioMesEscopo = new Date(hojeEscopo.getFullYear(), hojeEscopo.getMonth(), 1);
   const fimMesEscopo = new Date(hojeEscopo.getFullYear(), hojeEscopo.getMonth() + 1, 0, 23, 59, 59);
 
+  // Mês do Escopo é navegável (independente do mês da Visão Geral, que é sempre o atual)
+  const [anoEscopoParam, mesEscopoParam] = (searchParams.escopoMes || `${hojeEscopo.getFullYear()}-${hojeEscopo.getMonth() + 1}`)
+    .split("-")
+    .map(Number);
+  const inicioMesSelecionado = new Date(anoEscopoParam, mesEscopoParam - 1, 1);
+  const fimMesSelecionado = new Date(anoEscopoParam, mesEscopoParam, 0, 23, 59, 59);
+  const mesEscopoAnterior = new Date(anoEscopoParam, mesEscopoParam - 2, 1);
+  const mesEscopoSeguinte = new Date(anoEscopoParam, mesEscopoParam, 1);
+
   const conteudosDoMes = await prisma.conteudo.findMany({
     where: {
       clienteId: cliente.id,
       formato: { not: null },
       OR: [
-        { dataPublicacao: { gte: inicioMesEscopo, lte: fimMesEscopo } },
-        { dataPublicacao: null, dataCaptacao: { gte: inicioMesEscopo, lte: fimMesEscopo } },
+        { dataPublicacao: { gte: inicioMesSelecionado, lte: fimMesSelecionado } },
+        { dataPublicacao: null, dataCaptacao: { gte: inicioMesSelecionado, lte: fimMesSelecionado } },
       ],
     },
     select: { formato: true, status: true },
@@ -408,9 +417,25 @@ export default async function ClienteDetalhePage({
 
       {aba === "escopo" && (
         <div>
-          <p className="mb-1 text-sm font-medium text-text">
-            Escopo de {new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
-          </p>
+          <div className="mb-1 flex items-center justify-between">
+            <p className="text-sm font-medium text-text">
+              Escopo de {inicioMesSelecionado.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
+            </p>
+            <div className="flex items-center gap-1.5">
+              <Link
+                href={`/dashboard/clientes/${cliente.id}?aba=escopo&escopoMes=${mesEscopoAnterior.getFullYear()}-${mesEscopoAnterior.getMonth() + 1}`}
+                className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-card/60 text-muted hover:text-text"
+              >
+                <ChevronLeft size={13} />
+              </Link>
+              <Link
+                href={`/dashboard/clientes/${cliente.id}?aba=escopo&escopoMes=${mesEscopoSeguinte.getFullYear()}-${mesEscopoSeguinte.getMonth() + 1}`}
+                className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-card/60 text-muted hover:text-text"
+              >
+                <ChevronRight size={13} />
+              </Link>
+            </div>
+          </div>
           <p className="mb-4 text-sm text-muted">
             Contratado x entregue x planejado, calculado a partir dos Serviços Contratados e do Conteúdo — nada digitado à mão.
           </p>
