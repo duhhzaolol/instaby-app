@@ -28,3 +28,15 @@ export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTex
 export function Label({ children }: { children: React.ReactNode }) {
   return <label className="mb-1.5 block text-xs font-medium text-muted">{children}</label>;
 }
+
+export function Select({ className, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <select
+      className={cn(
+        "h-10 w-full rounded-xl border border-border bg-card/60 px-3 text-sm text-text outline-none transition-colors focus:border-accent/50 focus:ring-2 focus:ring-accent/10",
+        className
+      )}
+      {...props}
+    />
+  );
+}

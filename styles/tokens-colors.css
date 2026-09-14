@@ -1,0 +1,87 @@
+/* Instaby — color tokens. Values lifted verbatim from instaby-app/tailwind.config.ts,
+   app/globals.css and the lib/*Visual.ts mapping files. The product is dark-only. */
+:root{
+  /* ---- Painel interno (internal panel) surfaces ---- */
+  --base:#131519;            /* app background */
+  --card:#1C2028;            /* card / panel fill (usually at 60–70% alpha over --base) */
+  --hover:#282D38;           /* row + button hover fill */
+  --accent:#E63946;          /* brand red */
+  --accent-dim:#3a1414;      /* deep red used for gradient tails */
+  --text:#F9FAFB;            /* primary ink */
+  --muted:#9CA3AF;           /* secondary ink */
+  --border:rgba(255,255,255,.08);
+
+  /* ---- Páginas públicas (client-facing pages) surfaces ---- */
+  --public-base:#0B0D12;     /* deeper black for proposal / report pages */
+  --public-panel:#111827;    /* panel fill, used at 50–70% alpha */
+  --public-mid:#151822;      /* mid stop of the hero gradient */
+  --public-border:rgba(255,255,255,.06);
+  --public-cta-tail:#1a0e10; /* right/bottom stop of the final CTA gradient */
+  --dim:#6B7280;             /* microcopy, timestamps, legal */
+  --body-soft:#c2c0b6;       /* warm off-white for quotes and long paragraphs */
+
+  /* ---- Accent alpha ramp (used as tint fills and rings) ---- */
+  --accent-05:rgba(230,57,70,.05);
+  --accent-10:rgba(230,57,70,.10);
+  --accent-20:rgba(230,57,70,.20);
+  --accent-25:rgba(230,57,70,.25);  /* ::selection */
+  --accent-50:rgba(230,57,70,.50);  /* focus border */
+
+  /* ---- Semantic status ---- */
+  --success:#22C55E;
+  --success-soft:#10B981;
+  --danger:#EF4444;
+  --warning:#F59E0B;
+  --info:#3B82F6;
+  --neutral:#6B7280;
+
+  /* ---- Categorical palette (client dots, categories, charts) ---- */
+  --cat-blue:#3B82F6;
+  --cat-purple:#A855F7;
+  --cat-green:#22C55E;
+  --cat-amber:#F59E0B;
+  --cat-pink:#EC4899;
+  --cat-cyan:#06B6D4;
+  --cat-yellow:#EAB308;
+  --cat-red:#E63946;
+  --cat-orange:#F97316;
+  --cat-indigo:#6366F1;
+  --cat-gray:#9CA3AF;
+  --cat-white:#F9FAFB;
+
+  /* ---- Financial status (lib/statusFinanceiro.ts) ---- */
+  --status-pendente:#9CA3AF;
+  --status-parcial:#3B82F6;
+  --status-pago:#22C55E;
+  --status-atrasado:#EF4444;
+  --status-cancelado:#6B7280;
+
+  /* ---- Deadline urgency (lib/urgenciaPrazo.ts) ---- */
+  --urgencia-vencido:#EF4444;
+  --urgencia-hoje:#F97316;
+  --urgencia-amanha:#F59E0B;
+  --urgencia-3dias:#EAB308;
+
+  /* ---- Social networks (lib/redesSociais.ts) ---- */
+  --rede-instagram:#E1306C;
+  --rede-tiktok:#25F4EE;
+  --rede-facebook:#1877F2;
+  --rede-google:#4285F4;
+  --rede-meta-ads:#0866FF;
+
+  /* ---- Semantic aliases (prefer these in new work) ---- */
+  --surface-app:var(--base);
+  --surface-card:color-mix(in srgb, var(--card) 70%, transparent);
+  --surface-card-solid:var(--card);
+  --surface-inset:var(--base);
+  --surface-hover:var(--hover);
+  --text-body:var(--text);
+  --text-secondary:var(--muted);
+  --text-micro:var(--dim);
+  --text-accent:var(--accent);
+  --border-default:var(--border);
+  --border-strong:rgba(255,255,255,.10);
+  --border-accent:var(--accent-20);
+  --fill-accent:var(--accent);
+  --on-accent:#FFFFFF;
+}

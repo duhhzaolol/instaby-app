@@ -1,0 +1,42 @@
+/* Instaby — spacing, radius and fixed-size tokens (Tailwind 4px scale as used in the app). */
+:root{
+  --space-0-5:2px;
+  --space-1:4px;
+  --space-1-5:6px;
+  --space-2:8px;
+  --space-2-5:10px;
+  --space-3:12px;
+  --space-4:16px;
+  --space-5:20px;
+  --space-6:24px;   /* page gutter, sidebar/main padding */
+  --space-8:32px;
+  --space-10:40px;
+  --space-12:48px;
+  --space-14:56px;
+  --space-16:64px;
+
+  /* Radii — the app only uses these four */
+  --radius-lg:8px;    /* small buttons, icon tiles, inline chips */
+  --radius-xl:12px;   /* inputs, medium buttons, rows, icon buttons */
+  --radius-2xl:16px;  /* cards, panels, modals, empty states */
+  --radius-full:9999px; /* pills, dots, avatars, filter tabs */
+
+  /* Fixed sizes */
+  --sidebar-width:280px;
+  --header-height:64px;
+  --control-h-sm:32px;
+  --control-h-md:40px;
+  --control-h-lg:48px;
+  --icon-button:36px;   /* h-9 w-9 header/utility buttons */
+  --icon-tile-sm:28px;  /* h-7 w-7 metric + activity tiles */
+  --icon-tile-md:32px;  /* h-8 w-8 task tiles, avatars */
+  --icon-tile-lg:44px;  /* h-11 w-11 proposal line-item tiles */
+
+  /* Icon sizes (lucide `size` prop) */
+  --icon-11:11px; --icon-13:13px; --icon-14:14px; --icon-15:15px;
+  --icon-16:16px; --icon-17:17px; --icon-18:18px;
+
+  --content-max-public:896px; /* max-w-4xl — proposal */
+  --content-max-report:768px; /* max-w-3xl — performance report */
+  --content-max-form:384px;   /* max-w-sm — login, modals */
+}
