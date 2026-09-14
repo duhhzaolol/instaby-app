@@ -15,7 +15,6 @@ export async function POST(
     data: template.itens.map((titulo) => ({
       titulo,
       clienteId: body.clienteId || null,
-      conteudoId: body.conteudoId || null,
     })),
   });
 

@@ -18,7 +18,6 @@ export default async function EditarServicoPage({ params }: { params: { id: stri
           unidade: servico.unidade || "",
           valorUnitario: Number(servico.valorUnitario),
           clausulaContrato: servico.clausulaContrato || "",
-          formatoConteudo: servico.formatoConteudo,
         }}
       />
     </div>

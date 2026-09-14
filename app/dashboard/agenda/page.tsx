@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { headers } from "next/headers";
-import { ChevronLeft, ChevronRight, Clock, CircleDollarSign, History, Film, CalendarPlus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, CircleDollarSign, History, CalendarPlus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { AgendaGrid, EventoAgenda } from "@/components/dashboard/AgendaGrid";
 
@@ -36,7 +36,7 @@ export default async function AgendaPage({
   const mes = mesParam - 1; // 0-indexed
 
   // Horas trabalhadas fica desligada por padrão — é registro histórico, não algo que precisa de atenção futura
-  const camadasAtivas = new Set((searchParams.camadas || "cobranca,tarefa,conteudo").split(","));
+  const camadasAtivas = new Set((searchParams.camadas || "cobranca,tarefa").split(","));
 
   const inicioMes = new Date(ano, mes, 1);
   const fimMes = new Date(ano, mes + 1, 0, 23, 59, 59);
@@ -45,7 +45,7 @@ export default async function AgendaPage({
   const fimGrade = new Date(fimMes);
   fimGrade.setDate(fimGrade.getDate() + (6 - fimMes.getDay()));
 
-  const [cobrancas, tarefas, registrosTempo, conteudos] = await Promise.all([
+  const [cobrancas, tarefas, registrosTempo] = await Promise.all([
     prisma.cobranca.findMany({
       where: { vencimento: { gte: inicioGrade, lte: fimGrade } },
       include: { cliente: { select: { id: true, nome: true } } },
@@ -56,10 +56,6 @@ export default async function AgendaPage({
     }),
     prisma.registroTempo.findMany({
       where: { inicio: { gte: inicioGrade, lte: fimGrade } },
-      include: { cliente: { select: { id: true, nome: true, cor: true } } },
-    }),
-    prisma.conteudo.findMany({
-      where: { dataPublicacao: { gte: inicioGrade, lte: fimGrade } },
       include: { cliente: { select: { id: true, nome: true, cor: true } } },
     }),
   ]);
@@ -92,21 +88,6 @@ export default async function AgendaPage({
         href: t.cliente ? `/dashboard/clientes/${t.cliente.id}?aba=tarefas` : "/dashboard",
         data: chave,
         hora: horaBR(t.prazo) !== "00:00" ? horaBR(t.prazo) : null,
-      });
-    });
-  }
-
-  if (camadasAtivas.has("conteudo")) {
-    conteudos.forEach((c) => {
-      if (!c.dataPublicacao) return;
-      const chave = chaveDiaEvento(c.dataPublicacao);
-      (eventosPorDia[chave] ||= []).push({
-        id: c.id,
-        tipo: "conteudo",
-        texto: c.cliente ? `${c.titulo} · ${c.cliente.nome}` : c.titulo,
-        cor: c.cliente?.cor,
-        href: "/dashboard/conteudo",
-        data: chave,
       });
     });
   }
@@ -189,7 +170,6 @@ export default async function AgendaPage({
         {[
           { valor: "cobranca", label: "Cobrança vencendo", icone: CircleDollarSign, cor: "#f87171" },
           { valor: "tarefa", label: "Prazo de tarefa", icone: Clock, cor: "#38bdf8" },
-          { valor: "conteudo", label: "Conteúdo publicando", icone: Film, cor: "#c084fc" },
           { valor: "hora", label: "Horas trabalhadas", icone: History, cor: "#4ade80" },
         ].map((camada) => {
           const ativa = camadasAtivas.has(camada.valor);

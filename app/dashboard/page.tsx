@@ -48,7 +48,6 @@ export default async function DashboardPage() {
     orcamentosRecentes,
     faturamentoMesAnteriorAgg,
     tarefasAtrasadas,
-    conteudosAguardandoAprovacao,
     cobrancasVencidas,
     contratosAssinados,
     despesasSemClassificacao,
@@ -127,7 +126,6 @@ export default async function DashboardPage() {
       where: { status: "pago", createdAt: { gte: inicioMesAnterior(), lt: inicioMes() } },
     }),
     prisma.tarefa.count({ where: { status: { not: "feito" }, prazo: { lt: new Date() } } }),
-    prisma.conteudo.count({ where: { status: "aguardando_aprovacao" } }),
     prisma.cobranca.count({ where: { status: { in: ["pendente", "atrasado"] }, vencimento: { lt: new Date() } } }),
     prisma.contrato.findMany({
       where: { status: "assinado" },
@@ -155,7 +153,6 @@ export default async function DashboardPage() {
   const alertas = [
     { label: "Tarefas atrasadas", contagem: tarefasAtrasadas, href: "/dashboard/tarefas", cor: "#EF4444" },
     { label: "Cobranças vencidas", contagem: cobrancasVencidas, href: "/dashboard/financeiro/contas-a-receber", cor: "#EF4444" },
-    { label: "Conteúdo aguardando aprovação", contagem: conteudosAguardandoAprovacao, href: "/dashboard/conteudo", cor: "#06B6D4" },
     { label: "Contrato(s) renovando em breve", contagem: contratosRenovando, href: "/dashboard/contratos", cor: "#F59E0B" },
     { label: "Despesas sem classificação", contagem: despesasSemClassificacao, href: "/dashboard/financeiro", cor: "#F59E0B" },
     { label: "Item(ns) de onboarding bloqueados", contagem: itensOnboardingBloqueados, href: "/dashboard/clientes", cor: "#F59E0B" },

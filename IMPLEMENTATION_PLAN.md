@@ -237,3 +237,26 @@ Cronômetro, IA dentro do app, Portal do Cliente completo, integração bancári
 
 ## O que fica em aberto pra você decidir o tamanho certo
 Antes de eu seguir da Tarefa 01 em diante: dado que você trabalha sozinho, vale a pena revisar se **Contato múltiplo com flags**, **Onboarding com "responsável"/"bloqueado por"**, e **Projeto separado de Conteúdo** vão ser preenchidos de verdade no seu dia a dia, ou se viram campo vazio. Recomendo começar pela Fase 1 (Conteúdo) — é a que mais aproveita o que já construímos juntos (Calendário de Conteúdo) — e reavaliar o resto conforme usar.
+
+---
+
+## REMOÇÃO — Módulo Conteúdo (por decisão do Duhzao, pós-entrega)
+
+Depois de testar, o Duhzao não gostou do formato pipeline/kanban do módulo Conteúdo
+(Tarefa 01) e pediu pra remover — "não vou usar, vamos remover, deixar só a tarefa,
+com calendário". Removido por completo:
+
+- Entidade `Conteudo` e tudo que dependia dela: pipeline (`/dashboard/conteudo`),
+  Visão de Captações, aprovação pública (`/aprovacao/[token]`)
+- `Tarefa.conteudoId` (vínculo)
+- `Servico.formatoConteudo` (usado só pro Escopo)
+- Aba **Escopo** inteira dentro do cliente (dependia 100% do Conteúdo pra calcular
+  contratado x entregue x planejado)
+- Camada "Conteúdo" na Agenda, alerta "Conteúdo aguardando aprovação" no Dashboard
+- Item "Conteúdo" no menu lateral
+
+**O que continua**: o Calendário de conteúdo original (construído direto em cima da
+Tarefa, bem antes desse módulo — `/dashboard/tarefas/calendario`) nunca dependeu da
+entidade Conteúdo e continua funcionando exatamente como sempre funcionou. Templates
+de tarefas, Onboarding, Contatos, Links, Solicitações, Oportunidades e o resto do
+plano não foram afetados.

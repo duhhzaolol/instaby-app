@@ -24,7 +24,6 @@ export async function POST(request: NextRequest) {
       descricao: body.descricao || null,
       prioridade: body.prioridade || null,
       clienteId: body.clienteId || null,
-      conteudoId: body.conteudoId || null,
       link: body.link || null,
       prazo: body.prazo ? new Date(body.prazo) : null,
     },

@@ -1,4 +1,4 @@
-import { Wallet, FileSignature, CalendarClock, TrendingUp, TrendingDown, Clock, Film, BarChart3 } from "lucide-react";
+import { Wallet, FileSignature, CalendarClock, TrendingUp, TrendingDown, Clock, BarChart3 } from "lucide-react";
 
 type Item = { texto: string; data: string; tipo: string };
 
@@ -6,7 +6,6 @@ const ICONE_TIMELINE: Record<string, any> = {
   pagamento: Wallet,
   contrato: FileSignature,
   orcamento: FileSignature,
-  conteudo: Film,
 };
 
 function fmtData(iso?: string | null) {
@@ -24,9 +23,6 @@ export default function VisaoGeralClienteTab({
   despesasMes,
   horasMes,
   custoHoraPadrao,
-  conteudosPublicadosMes,
-  conteudosPlanejados,
-  itensFaltantes,
   proximaAtividade,
   situacaoRelatorio,
   timeline,
@@ -40,9 +36,6 @@ export default function VisaoGeralClienteTab({
   despesasMes: number;
   horasMes: number;
   custoHoraPadrao: number;
-  conteudosPublicadosMes: number;
-  conteudosPlanejados: number;
-  itensFaltantes: number;
   proximaAtividade: { titulo: string; prazo: string | null } | null;
   situacaoRelatorio: string | null;
   timeline: Item[];
@@ -120,22 +113,11 @@ export default function VisaoGeralClienteTab({
         )}
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="rounded-xl border border-border bg-card/60 p-4">
-          <p className="mb-2 flex items-center gap-1.5 text-sm font-medium text-text">
-            <Film size={14} className="text-accent" /> Conteúdo
-          </p>
-          <p className="text-sm text-muted">
-            {conteudosPublicadosMes} publicado(s) esse mês · {conteudosPlanejados} planejado(s)
-            {itensFaltantes > 0 && <span className="text-amber-400"> · {itensFaltantes} faltando no escopo</span>}
-          </p>
-        </div>
-        <div className="rounded-xl border border-border bg-card/60 p-4">
-          <p className="mb-2 flex items-center gap-1.5 text-sm font-medium text-text">
-            <BarChart3 size={14} className="text-accent" /> Relatório
-          </p>
-          <p className="text-sm text-muted">{situacaoRelatorio ? `Último período até ${situacaoRelatorio}` : "Nenhum relatório lançado ainda"}</p>
-        </div>
+      <div className="mb-6 rounded-xl border border-border bg-card/60 p-4">
+        <p className="mb-2 flex items-center gap-1.5 text-sm font-medium text-text">
+          <BarChart3 size={14} className="text-accent" /> Relatório
+        </p>
+        <p className="text-sm text-muted">{situacaoRelatorio ? `Último período até ${situacaoRelatorio}` : "Nenhum relatório lançado ainda"}</p>
       </div>
 
       {proximaAtividade && (

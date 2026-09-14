@@ -18,7 +18,6 @@ import {
   BarChart3,
   ArrowDownCircle,
   ArrowUpCircle,
-  Film,
   Trophy,
   Settings,
   Menu,
@@ -30,7 +29,6 @@ const menuPrincipal = [
   { label: "Clientes", href: "/dashboard/clientes", icon: Users },
   { label: "Agenda", href: "/dashboard/agenda", icon: Calendar },
   { label: "Tarefas", href: "/dashboard/tarefas", icon: CheckSquare },
-  { label: "Conteúdo", href: "/dashboard/conteudo", icon: Film },
   { label: "Horas", href: "/dashboard/horas", icon: Clock },
 ];
 
