@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { ValorOcultavelTexto } from "@/components/ui/ValorOcultavelTexto";
+import { ToggleOcultarValores } from "@/components/ui/ToggleOcultarValores";
 import { Button } from "@/components/ui/Button";
 
 const statusTone: Record<string, "yellow" | "green" | "gray" | "blue"> = {
@@ -48,11 +49,14 @@ export default async function ClientesPage({
           <p className="text-lg font-medium text-text">Clientes</p>
           <p className="text-sm text-muted">{clientes.length} no total</p>
         </div>
-        <Link href="/dashboard/clientes/novo">
-          <Button size="sm">
-            <Plus size={14} /> Novo cliente
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <ToggleOcultarValores />
+          <Link href="/dashboard/clientes/novo">
+            <Button size="sm">
+              <Plus size={14} /> Novo cliente
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="mb-6 flex gap-2">
