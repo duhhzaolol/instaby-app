@@ -1,4 +1,4 @@
-import { Wallet, FileSignature, CalendarClock, TrendingUp, TrendingDown, Clock, BarChart3 } from "lucide-react";
+import { Wallet, FileSignature, CalendarClock, TrendingUp, Clock, BarChart3 } from "lucide-react";
 
 type Item = { texto: string; data: string; tipo: string };
 

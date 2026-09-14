@@ -63,6 +63,9 @@ export default async function ClienteDetalhePage({
     { valor: "horas", label: "Horas" },
   ];
 
+  const orcamentosAceitos = cliente.orcamentos.filter((o) => o.status === "aceito");
+  const totalServicos = cliente.servicosContratados.reduce((soma, sc) => soma + Number(sc.valor), 0);
+
   const mensalidade = Math.max(0, totalServicos - Number(cliente.descontoMensal) + Number(cliente.acrescimoMensal));
 
   const proximaCobranca = cliente.cobrancas
