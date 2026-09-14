@@ -64,7 +64,9 @@ export default function FinanceiroClient({
   resumoPorCliente: { nome: string; cor: string | null; entradas: number; despesas: number; lucro: number }[];
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [formAberto, setFormAberto] = useState<"fixa" | "flexivel" | null>(null);
+  const [formRapidoAberto, setFormRapidoAberto] = useState(searchParams.get("nova") === "despesa");
   const [personDesde, setPersonDesde] = useState("");
   const [personAte, setPersonAte] = useState("");
 
@@ -121,6 +123,20 @@ export default function FinanceiroClient({
             </div>
           )}
         </div>
+      </div>
+
+      <div className="mb-6">
+        <button
+          onClick={() => setFormRapidoAberto((v) => !v)}
+          className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-accent/30 bg-accent/5 py-3 text-sm font-medium text-accent hover:bg-accent/10"
+        >
+          <Plus size={15} /> Lançar despesa
+        </button>
+        {formRapidoAberto && (
+          <div className="mt-3">
+            <NovaDespesaForm tipo="flexivel" clientes={clientes} onSalvo={() => setFormRapidoAberto(false)} />
+          </div>
+        )}
       </div>
 
       {/* Alerta de cobranças vencendo/vencidas */}

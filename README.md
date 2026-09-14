@@ -1,23 +1,24 @@
-# Instaby App — v86 (correção)
+# Instaby App — v87
 
-## Ocultar valores — todos os cartões atualizam juntos agora
+## Lançar despesa ficou muito mais rápido
 
 ### O problema
-Cada cartão (Mensalidade, Resultado do mês, Serviços, etc.) tinha sua própria cópia
-independente do estado "oculto" — cada um só lia o navegador (localStorage) na hora
-de aparecer na tela pela primeira vez. Clicar o botão de olho num lugar mudava só
-aquele cartão; os outros que já estavam na tela continuavam com o valor antigo, até
-você recarregar a página inteira.
-
-Foi exatamente o que aconteceu no seu print: você clicou o olho, a Mensalidade
-mostrou (porque foi ali que você clicou), mas o "Resultado do mês" continuou
-escondido, porque não tinha como saber que algo mudou.
+Pra registrar uma despesa, você precisava entrar no Financeiro e rolar a tela até
+passar dos indicadores, do "Progresso do mês", do gráfico de Entradas x Custos — só
+aí chegava nos cards de "Custos operacionais"/"Custos flexíveis" com o botão "+ Novo".
+Muito passo pra um dado que você usa toda hora.
 
 ### A correção
-Troquei o mecanismo por um estado de verdade compartilhado (usando
-`useSyncExternalStore`, o jeito correto do React pra isso) — agora clicar o botão em
-qualquer lugar da tela atualiza **todos** os cartões ao mesmo tempo, sem precisar
-recarregar a página.
+1. **Botão "Lançar despesa" logo no topo do Financeiro** — antes de qualquer gráfico,
+   um botão grande e destacado. Clica e o formulário abre ali mesmo, sem rolar nada.
+2. **Atalho do Dashboard agora funciona de verdade** — "Nova despesa" (nos atalhos
+   abaixo da Central de Comando) já leva pro Financeiro com o formulário **já
+   aberto**, pronto pra preencher. Antes só te jogava na tela, sem abrir nada.
 
-## Arquivo alterado
-- `components/ui/OcultarValores.tsx`
+Os cards antigos ("Custos operacionais"/"Custos flexíveis" com seus próprios "+Novo")
+continuam existindo do jeito que sempre foram — pra quando você quiser classificar
+específico ali. O botão novo é só um caminho mais rápido pro caso comum.
+
+## Arquivos alterados
+- `components/dashboard/FinanceiroClient.tsx`
+- `components/dashboard/DashboardClient.tsx`

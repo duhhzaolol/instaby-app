@@ -224,7 +224,7 @@ export default function DashboardClient({
           { label: "Novo conteúdo", href: "/dashboard/conteudo" },
           { label: "Registrar horas", href: "/dashboard/horas" },
           { label: "Nova cobrança", href: "/dashboard/financeiro" },
-          { label: "Nova despesa", href: "/dashboard/financeiro" },
+          { label: "Nova despesa", href: "/dashboard/financeiro?nova=despesa" },
           { label: "Novo lead", href: "/dashboard/oportunidades" },
           { label: "Novo orçamento", href: "/dashboard/clientes" },
         ].map((atalho) => (
