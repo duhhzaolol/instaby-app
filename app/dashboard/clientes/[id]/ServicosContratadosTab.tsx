@@ -7,6 +7,9 @@ import { ServicoContratadoRow, ServicoContratadoData } from "@/components/dashbo
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { Input, Label } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { DatePicker } from "@/components/ui/DatePicker";
+import { useOcultarValores, ValorSensivel } from "@/components/ui/OcultarValores";
+import { formatarTempoRenovacao } from "@/lib/formatarTempoRenovacao";
 
 type Servico = { id: string; nome: string; categoria: string; valorUnitario: number };
 type Contratado = ServicoContratadoData & { servicoId: string };
@@ -18,6 +21,7 @@ export default function ServicosContratadosTab({
   descontoMensal,
   acrescimoMensal,
   prazoContratoMeses,
+  dataInicioContrato,
   valorRenovacao,
 }: {
   clienteId: string;
@@ -26,15 +30,16 @@ export default function ServicosContratadosTab({
   descontoMensal: number;
   acrescimoMensal: number;
   prazoContratoMeses: number | null;
+  dataInicioContrato: string | null;
   valorRenovacao: number | null;
 }) {
   const router = useRouter();
+  const { oculto } = useOcultarValores();
   const [contratados, setContratados] = useState(contratadosIniciais);
   const [adicionando, setAdicionando] = useState<string | null>(null);
   const [editandoContrato, setEditandoContrato] = useState(false);
-  const [desconto, setDesconto] = useState(descontoMensal);
-  const [acrescimo, setAcrescimo] = useState(acrescimoMensal);
   const [prazo, setPrazo] = useState(prazoContratoMeses?.toString() || "");
+  const [inicio, setInicio] = useState(dataInicioContrato?.slice(0, 10) || "");
   const [renovacao, setRenovacao] = useState(valorRenovacao || 0);
   const [salvando, setSalvando] = useState(false);
 
@@ -42,7 +47,18 @@ export default function ServicosContratadosTab({
   const categorias = useMemo(() => Array.from(new Set(catalogo.map((s) => s.categoria))), [catalogo]);
 
   const totalServicos = contratados.reduce((soma, c) => soma + c.valor, 0);
-  const mensalidadeFinal = Math.max(0, totalServicos - desconto + acrescimo);
+  const mensalidadeFinalAtual = Math.max(0, totalServicos - descontoMensal + acrescimoMensal);
+  const [valorFinal, setValorFinal] = useState(mensalidadeFinalAtual);
+
+  const descontoPrevisto = valorFinal < totalServicos ? totalServicos - valorFinal : 0;
+  const acrescimoPrevisto = valorFinal > totalServicos ? valorFinal - totalServicos : 0;
+
+  let diasParaRenovar: number | null = null;
+  if (dataInicioContrato && prazoContratoMeses) {
+    const renovacaoData = new Date(dataInicioContrato);
+    renovacaoData.setMonth(renovacaoData.getMonth() + prazoContratoMeses);
+    diasParaRenovar = Math.round((renovacaoData.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  }
 
   async function adicionar(servico: Servico) {
     if (typeof servico.valorUnitario !== "number" || isNaN(servico.valorUnitario)) {
@@ -86,9 +102,10 @@ export default function ServicosContratadosTab({
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        descontoMensal: desconto,
-        acrescimoMensal: acrescimo,
+        descontoMensal: descontoPrevisto,
+        acrescimoMensal: acrescimoPrevisto,
         prazoContratoMeses: prazo || null,
+        dataInicioContrato: inicio || null,
         valorRenovacao: renovacao || null,
       }),
     });
@@ -97,7 +114,7 @@ export default function ServicosContratadosTab({
     router.refresh();
   }
 
-  const mostrarResumo = contratados.length > 0 || desconto > 0 || acrescimo > 0;
+  const mostrarResumo = contratados.length > 0 || descontoMensal > 0 || acrescimoMensal > 0;
 
   return (
     <div>
@@ -112,6 +129,7 @@ export default function ServicosContratadosTab({
             key={c.id}
             item={c}
             index={i}
+            oculto={oculto}
             onAtualizado={(patch) => atualizarLocal(c.id, patch)}
             onRemovido={() => removerLocal(c.id)}
           />
@@ -122,20 +140,17 @@ export default function ServicosContratadosTab({
         <div className="mb-6 rounded-xl border border-accent/20 bg-accent/5 p-4">
           {editandoContrato ? (
             <div>
-              <div className="mb-3 grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Desconto mensal</Label>
-                  <CurrencyInput value={desconto} onChange={setDesconto} />
-                </div>
-                <div>
-                  <Label>Acréscimo mensal</Label>
-                  <CurrencyInput value={acrescimo} onChange={setAcrescimo} />
-                </div>
-              </div>
+              <Label>Valor final da mensalidade</Label>
+              <CurrencyInput value={valorFinal} onChange={setValorFinal} className="mb-1" />
               <p className="mb-3 text-[11px] text-muted">
-                Use o acréscimo pra cobrir o que já foi combinado com o cliente mas ainda não virou serviço
-                cadastrado aqui — vai somando ao total conforme você for detalhando os serviços de verdade.
+                {descontoPrevisto > 0 && `Desconto de R$ ${descontoPrevisto.toFixed(0)} sobre o total dos serviços (R$ ${totalServicos.toFixed(0)}).`}
+                {acrescimoPrevisto > 0 && `Acréscimo de R$ ${acrescimoPrevisto.toFixed(0)} sobre o total dos serviços (R$ ${totalServicos.toFixed(0)}).`}
+                {descontoPrevisto === 0 && acrescimoPrevisto === 0 && `Igual ao total dos serviços — sem desconto nem acréscimo.`}
               </p>
+
+              <Label>Início do contrato</Label>
+              <DatePicker value={inicio} onChange={setInicio} placeholder="Quando começou" className="mb-3" limpavel />
+
               <Label>Prazo do contrato (meses)</Label>
               <Input
                 type="number"
@@ -160,36 +175,44 @@ export default function ServicosContratadosTab({
             <div>
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-xs text-muted">Total dos serviços</span>
-                <span className="text-sm text-text">R$ {totalServicos.toFixed(0)}</span>
+                <span className="text-sm text-text">
+                  <ValorSensivel oculto={oculto}>R$ {totalServicos.toFixed(0)}</ValorSensivel>
+                </span>
               </div>
-              {desconto > 0 && (
+              {descontoMensal > 0 && (
                 <div className="mb-2 flex items-center justify-between">
                   <span className="text-xs text-muted">Desconto mensal</span>
-                  <span className="text-sm text-red-400">− R$ {desconto.toFixed(0)}</span>
+                  <span className="text-sm text-red-400">
+                    − <ValorSensivel oculto={oculto}>R$ {descontoMensal.toFixed(0)}</ValorSensivel>
+                  </span>
                 </div>
               )}
-              {acrescimo > 0 && (
+              {acrescimoMensal > 0 && (
                 <div className="mb-2 flex items-center justify-between">
                   <span className="text-xs text-muted">Acréscimo mensal</span>
-                  <span className="text-sm text-emerald-400">+ R$ {acrescimo.toFixed(0)}</span>
+                  <span className="text-sm text-emerald-400">
+                    + <ValorSensivel oculto={oculto}>R$ {acrescimoMensal.toFixed(0)}</ValorSensivel>
+                  </span>
                 </div>
               )}
               <div className="mb-3 flex items-center justify-between border-t border-border pt-2">
                 <span className="text-sm font-medium text-text">Mensalidade final</span>
-                <span className="text-lg font-medium text-accent">R$ {mensalidadeFinal.toFixed(0)}</span>
+                <span className="text-lg font-medium text-accent">
+                  <ValorSensivel oculto={oculto}>R$ {mensalidadeFinalAtual.toFixed(0)}</ValorSensivel>
+                </span>
               </div>
-              {(prazoContratoMeses || valorRenovacao) && (
+              {(prazoContratoMeses || valorRenovacao || diasParaRenovar !== null) && (
                 <p className="mb-2 text-xs text-muted">
                   {prazoContratoMeses && `Contrato de ${prazoContratoMeses} meses`}
-                  {prazoContratoMeses && valorRenovacao && " · "}
-                  {valorRenovacao && `renova por R$ ${valorRenovacao.toFixed(0)}`}
+                  {diasParaRenovar !== null && ` · renova em ${formatarTempoRenovacao(diasParaRenovar)}`}
+                  {valorRenovacao && ` · renova por R$ ${valorRenovacao.toFixed(0)}`}
                 </p>
               )}
               <button
                 onClick={() => setEditandoContrato(true)}
                 className="flex items-center gap-1.5 text-xs font-medium text-accent hover:underline"
               >
-                <Pencil size={11} /> Ajustar desconto, acréscimo, prazo e renovação
+                <Pencil size={11} /> Ajustar valor, início e prazo do contrato
               </button>
             </div>
           )}

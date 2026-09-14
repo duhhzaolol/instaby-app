@@ -30,6 +30,7 @@ model Cliente {
   descontoMensal     Decimal   @default(0) // abatido do total dos serviços contratados
   acrescimoMensal    Decimal   @default(0) // somado ao total — pra cobrir serviços já combinados mas ainda não cadastrados
   prazoContratoMeses Int?
+  dataInicioContrato DateTime? // marcado manualmente na aba Serviços — usado pra calcular a renovação
   valorRenovacao     Decimal?
   exibirLogoPublico  Boolean   @default(false) // aparece na vitrine "empresas que confiam" das propostas
   createdAt          DateTime  @default(now())

@@ -1,4 +1,8 @@
+"use client";
+
 import { Wallet, FileSignature, CalendarClock, TrendingUp, Clock, BarChart3 } from "lucide-react";
+import { useOcultarValores, ValorSensivel } from "@/components/ui/OcultarValores";
+import { formatarTempoRenovacao } from "@/lib/formatarTempoRenovacao";
 
 type Item = { texto: string; data: string; tipo: string };
 
@@ -40,6 +44,7 @@ export default function VisaoGeralClienteTab({
   situacaoRelatorio: string | null;
   timeline: Item[];
 }) {
+  const { oculto } = useOcultarValores();
   const custoHoras = horasMes * custoHoraPadrao;
   const rentabilidade = receitaMes - despesasMes - custoHoras;
 
@@ -50,14 +55,23 @@ export default function VisaoGeralClienteTab({
           <p className="mb-1 flex items-center gap-1.5 text-xs text-muted">
             <Wallet size={12} /> Mensalidade
           </p>
-          <p className="text-lg font-medium text-text">R$ {mensalidade.toFixed(0)}</p>
+          <p className="text-lg font-medium text-text">
+            <ValorSensivel oculto={oculto}>R$ {mensalidade.toFixed(0)}</ValorSensivel>
+          </p>
         </div>
         <div className="rounded-xl border border-border bg-card/60 p-3.5">
           <p className="mb-1 flex items-center gap-1.5 text-xs text-muted">
             <CalendarClock size={12} /> Próxima cobrança
           </p>
           <p className="text-sm font-medium text-text">
-            {proximaCobranca ? `R$ ${proximaCobranca.valor.toFixed(0)} · ${fmtData(proximaCobranca.vencimento)}` : "Nada pendente"}
+            {proximaCobranca ? (
+              <>
+                <ValorSensivel oculto={oculto}>R$ {proximaCobranca.valor.toFixed(0)}</ValorSensivel> ·{" "}
+                {fmtData(proximaCobranca.vencimento)}
+              </>
+            ) : (
+              "Nada pendente"
+            )}
           </p>
         </div>
         <div className="rounded-xl border border-border bg-card/60 p-3.5">
@@ -67,9 +81,8 @@ export default function VisaoGeralClienteTab({
           <p className="text-sm font-medium text-text">{contratoVigente ? "Assinado" : "Sem contrato assinado"}</p>
           {proximaRenovacao && diasParaRenovar !== null && (
             <p className={`text-[11px] ${diasParaRenovar <= 30 ? "text-amber-400" : "text-muted"}`}>
-              {diasParaRenovar < 0
-                ? `Renovação vencida há ${Math.abs(diasParaRenovar)} dia(s)`
-                : `Renova em ${diasParaRenovar} dia(s)`}
+              {diasParaRenovar < 0 ? "Renovação " : "Renova em "}
+              {formatarTempoRenovacao(diasParaRenovar)}
             </p>
           )}
         </div>
@@ -88,20 +101,26 @@ export default function VisaoGeralClienteTab({
         <div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
           <div>
             <p className="text-xs text-muted">Receita</p>
-            <p className="text-base font-medium text-emerald-400">R$ {receitaMes.toFixed(0)}</p>
+            <p className="text-base font-medium text-emerald-400">
+              <ValorSensivel oculto={oculto}>R$ {receitaMes.toFixed(0)}</ValorSensivel>
+            </p>
           </div>
           <div>
             <p className="text-xs text-muted">Despesas diretas</p>
-            <p className="text-base font-medium text-red-400">R$ {despesasMes.toFixed(0)}</p>
+            <p className="text-base font-medium text-red-400">
+              <ValorSensivel oculto={oculto}>R$ {despesasMes.toFixed(0)}</ValorSensivel>
+            </p>
           </div>
           <div>
             <p className="text-xs text-muted">Custo das horas</p>
-            <p className="text-base font-medium text-red-400">R$ {custoHoras.toFixed(0)}</p>
+            <p className="text-base font-medium text-red-400">
+              <ValorSensivel oculto={oculto}>R$ {custoHoras.toFixed(0)}</ValorSensivel>
+            </p>
           </div>
           <div>
             <p className="text-xs text-muted">Rentabilidade</p>
             <p className={`text-base font-medium ${rentabilidade >= 0 ? "text-accent" : "text-red-400"}`}>
-              R$ {rentabilidade.toFixed(0)}
+              <ValorSensivel oculto={oculto}>R$ {rentabilidade.toFixed(0)}</ValorSensivel>
             </p>
           </div>
         </div>

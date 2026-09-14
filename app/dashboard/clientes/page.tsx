@@ -3,6 +3,7 @@ import { Plus, Phone } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { ValorOcultavelTexto } from "@/components/ui/ValorOcultavelTexto";
 import { Button } from "@/components/ui/Button";
 
 const statusTone: Record<string, "yellow" | "green" | "gray" | "blue"> = {
@@ -125,13 +126,17 @@ export default async function ClientesPage({
                     <div>
                       <p className="text-xs text-muted">Mensalidade</p>
                       <p className="text-sm font-medium text-text">
-                        {mensalidade > 0 ? `R$ ${mensalidade.toLocaleString("pt-BR")}` : "Sem serviços"}
+                        {mensalidade > 0 ? (
+                          <ValorOcultavelTexto>R$ {mensalidade.toLocaleString("pt-BR")}</ValorOcultavelTexto>
+                        ) : (
+                          "Sem serviços"
+                        )}
                       </p>
                     </div>
                     <div>
                       <p className="text-xs text-muted">Recebido até agora</p>
                       <p className="text-sm font-medium text-text">
-                        R$ {totalRecebido.toLocaleString("pt-BR")}
+                        <ValorOcultavelTexto>R$ {totalRecebido.toLocaleString("pt-BR")}</ValorOcultavelTexto>
                       </p>
                     </div>
                   </div>

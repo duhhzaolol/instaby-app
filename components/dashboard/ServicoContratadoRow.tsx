@@ -5,6 +5,7 @@ import { Pencil, Trash2, Minus, Plus } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { Button } from "@/components/ui/Button";
+import { ValorSensivel } from "@/components/ui/OcultarValores";
 
 export type ServicoContratadoData = {
   id: string;
@@ -16,11 +17,13 @@ export type ServicoContratadoData = {
 export function ServicoContratadoRow({
   item,
   index,
+  oculto,
   onAtualizado,
   onRemovido,
 }: {
   item: ServicoContratadoData;
   index: number;
+  oculto?: boolean;
   onAtualizado: (patch: Partial<ServicoContratadoData>) => void;
   onRemovido: () => void;
 }) {
@@ -109,7 +112,9 @@ export function ServicoContratadoRow({
         <p className="truncate text-sm text-text">{item.servico.nome}</p>
         {temDesconto && (
           <p className="text-xs text-muted">
-            <span className="line-through">R$ {(item.servico.valorUnitario * item.quantidade).toFixed(0)}</span>{" "}
+            <span className="line-through">
+              <ValorSensivel oculto={!!oculto}>R$ {(item.servico.valorUnitario * item.quantidade).toFixed(0)}</ValorSensivel>
+            </span>{" "}
             <span className="text-accent">com desconto</span>
           </p>
         )}
@@ -132,7 +137,9 @@ export function ServicoContratadoRow({
             <Plus size={12} />
           </button>
         </div>
-        <span className="text-sm font-medium text-text">R$ {item.valor.toFixed(0)}</span>
+        <span className="text-sm font-medium text-text">
+          <ValorSensivel oculto={!!oculto}>R$ {item.valor.toFixed(0)}</ValorSensivel>
+        </span>
         <button onClick={() => setEditando(true)} className="text-muted hover:text-text">
           <Pencil size={13} />
         </button>

@@ -39,6 +39,9 @@ export async function PATCH(
       ...(body.prazoContratoMeses !== undefined && {
         prazoContratoMeses: body.prazoContratoMeses ? parseInt(body.prazoContratoMeses) : null,
       }),
+      ...(body.dataInicioContrato !== undefined && {
+        dataInicioContrato: body.dataInicioContrato ? new Date(body.dataInicioContrato) : null,
+      }),
       ...(body.valorRenovacao !== undefined && {
         valorRenovacao: body.valorRenovacao || null,
       }),

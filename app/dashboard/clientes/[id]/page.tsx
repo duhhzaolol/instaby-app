@@ -9,6 +9,7 @@ import ServicosContratadosTab from "./ServicosContratadosTab";
 import RelatoriosTab from "./RelatoriosTab";
 import VisaoGeralClienteTab from "./VisaoGeralClienteTab";
 import ContatosTab from "./ContatosTab";
+import { MensalidadeChip } from "./MensalidadeChip";
 import LinksClienteTab from "./LinksClienteTab";
 import OnboardingTab from "./OnboardingTab";
 import SolicitacoesTab from "./SolicitacoesTab";
@@ -73,10 +74,11 @@ export default async function ClienteDetalhePage({
     .sort((a, b) => a.vencimento!.getTime() - b.vencimento!.getTime())[0];
 
   const contratoVigente = cliente.contratos.find((c) => c.status === "assinado");
+  const inicioContrato = cliente.dataInicioContrato || contratoVigente?.createdAt || null;
   let proximaRenovacao: Date | null = null;
   let diasParaRenovar: number | null = null;
-  if (contratoVigente && cliente.prazoContratoMeses) {
-    proximaRenovacao = new Date(contratoVigente.createdAt);
+  if (inicioContrato && cliente.prazoContratoMeses) {
+    proximaRenovacao = new Date(inicioContrato);
     proximaRenovacao.setMonth(proximaRenovacao.getMonth() + cliente.prazoContratoMeses);
     diasParaRenovar = Math.round((proximaRenovacao.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
   }
@@ -177,15 +179,7 @@ export default async function ClienteDetalhePage({
           </div>
         </div>
         <div className="flex items-center gap-3">
-          {mensalidade > 0 && (
-            <Link
-              href={`/dashboard/clientes/${cliente.id}?aba=servicos`}
-              className="rounded-lg border border-accent/20 bg-accent/5 px-3 py-1.5 text-right transition-colors hover:bg-accent/10"
-            >
-              <p className="text-[10px] text-muted">Mensalidade · editar em Serviços</p>
-              <p className="text-sm font-medium text-accent">R$ {mensalidade.toFixed(0)}</p>
-            </Link>
-          )}
+          <MensalidadeChip clienteId={cliente.id} mensalidade={mensalidade} diasParaRenovar={diasParaRenovar} />
           <Link
             href={`/dashboard/clientes/${cliente.id}/editar`}
             className="flex items-center gap-1.5 rounded-lg border border-border bg-card/60 px-3 py-1.5 text-xs text-text hover:bg-hover"
@@ -362,6 +356,7 @@ export default async function ClienteDetalhePage({
           descontoMensal={Number(cliente.descontoMensal)}
           acrescimoMensal={Number(cliente.acrescimoMensal)}
           prazoContratoMeses={cliente.prazoContratoMeses}
+          dataInicioContrato={cliente.dataInicioContrato?.toISOString() || null}
           valorRenovacao={cliente.valorRenovacao ? Number(cliente.valorRenovacao) : null}
         />
       )}
