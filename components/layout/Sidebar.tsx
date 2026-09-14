@@ -107,7 +107,7 @@ function ConteudoSidebar({ nome, email, onNavigate }: { nome: string; email: str
         <img src="/logo.png" alt="Instaby" className="h-6 w-auto" />
       </div>
 
-      <nav className="flex flex-1 flex-col gap-6">
+      <nav className="flex flex-1 flex-col gap-6 overflow-y-auto">
         <div className="flex flex-col gap-1">
           <p className="px-3 pb-1 text-[11px] uppercase tracking-wider text-muted/70">Geral</p>
           {menuPrincipal.map((item) => (
