@@ -1,23 +1,23 @@
-# Instaby App — v85
+# Instaby App — v86 (correção)
 
-## Botão de ocultar valores, dentro do cliente e na lista
+## Ocultar valores — todos os cartões atualizam juntos agora
 
 ### O problema
-O botão de olho só existia no Dashboard. Se você tivesse ativado "ocultar" lá, dentro
-do cliente os valores ficavam escondidos sem nenhum jeito de reverter ali mesmo —
-tinha que voltar pro Dashboard só pra desligar.
+Cada cartão (Mensalidade, Resultado do mês, Serviços, etc.) tinha sua própria cópia
+independente do estado "oculto" — cada um só lia o navegador (localStorage) na hora
+de aparecer na tela pela primeira vez. Clicar o botão de olho num lugar mudava só
+aquele cartão; os outros que já estavam na tela continuavam com o valor antigo, até
+você recarregar a página inteira.
+
+Foi exatamente o que aconteceu no seu print: você clicou o olho, a Mensalidade
+mostrou (porque foi ali que você clicou), mas o "Resultado do mês" continuou
+escondido, porque não tinha como saber que algo mudou.
 
 ### A correção
-- **Dentro do cliente**: o botão aparece no topo, ao lado da Mensalidade (mesmo se o
-  cliente não tiver mensalidade ainda, o botão continua lá)
-- **Lista de Clientes**: o botão aparece no topo, ao lado de "Novo cliente"
+Troquei o mecanismo por um estado de verdade compartilhado (usando
+`useSyncExternalStore`, o jeito correto do React pra isso) — agora clicar o botão em
+qualquer lugar da tela atualiza **todos** os cartões ao mesmo tempo, sem precisar
+recarregar a página.
 
-É o mesmo estado de sempre (fica salvo no navegador) — ativar em qualquer uma dessas
-telas já reflete em todas as outras, Dashboard incluso.
-
-## Arquivos novos
-- `components/ui/ToggleOcultarValores.tsx`
-
-## Arquivos alterados
-- `app/dashboard/clientes/[id]/MensalidadeChip.tsx`
-- `app/dashboard/clientes/page.tsx`
+## Arquivo alterado
+- `components/ui/OcultarValores.tsx`

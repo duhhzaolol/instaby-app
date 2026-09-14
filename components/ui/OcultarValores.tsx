@@ -1,23 +1,44 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { Eye, EyeOff } from "lucide-react";
 
 const CHAVE = "instaby:ocultar-valores";
 
-export function useOcultarValores() {
-  const [oculto, setOculto] = useState(false);
+// Estado compartilhado de verdade entre todos os componentes da página — antes cada
+// um lia o localStorage só na hora de montar, então clicar o botão num lugar não
+// atualizava os outros cartões já abertos na tela.
+let valorAtual = false;
+let inicializado = false;
+const escutadores = new Set<() => void>();
 
-  useEffect(() => {
-    setOculto(localStorage.getItem(CHAVE) === "1");
-  }, []);
+function garantirInicializado() {
+  if (inicializado || typeof window === "undefined") return;
+  valorAtual = localStorage.getItem(CHAVE) === "1";
+  inicializado = true;
+}
+
+function definir(novo: boolean) {
+  valorAtual = novo;
+  if (typeof window !== "undefined") localStorage.setItem(CHAVE, novo ? "1" : "0");
+  escutadores.forEach((fn) => fn());
+}
+
+function inscrever(fn: () => void) {
+  escutadores.add(fn);
+  return () => escutadores.delete(fn);
+}
+
+function obterEstado() {
+  garantirInicializado();
+  return valorAtual;
+}
+
+export function useOcultarValores() {
+  const oculto = useSyncExternalStore(inscrever, obterEstado, () => false);
 
   function alternar() {
-    setOculto((atual) => {
-      const novo = !atual;
-      localStorage.setItem(CHAVE, novo ? "1" : "0");
-      return novo;
-    });
+    definir(!valorAtual);
   }
 
   return { oculto, alternar };
