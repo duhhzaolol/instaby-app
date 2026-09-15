@@ -19,6 +19,9 @@ async function garantirRecorrentesDoMes() {
     });
 
     if (!jaExisteEsseMes) {
+      const diaVencimento = modelo.data.getDate();
+      const vencimento = new Date(hoje.getFullYear(), hoje.getMonth(), Math.min(diaVencimento, 28));
+
       await prisma.despesa.create({
         data: {
           descricao: modelo.descricao,
@@ -30,6 +33,8 @@ async function garantirRecorrentesDoMes() {
           clienteId: modelo.clienteId,
           recorrente: false,
           origemRecorrenteId: modelo.id,
+          status: "pendente", // nasce pendente — só vira "pago" quando você marcar de verdade
+          vencimento,
           data: inicioMes,
         },
       });

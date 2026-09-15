@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, AlertTriangle, CalendarClock, Clock3, Wallet } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { CobrancaRow, CobrancaRowData } from "@/components/dashboard/CobrancaRow";
+import { NovaContaReceberForm } from "@/components/dashboard/NovaContaReceberForm";
 
 const ABAS = [
   { valor: "abertas", label: "Pendentes + Atrasadas" },
@@ -30,7 +31,7 @@ export default async function ContasAReceberPage({
   const seisMesesAtras = new Date(hoje);
   seisMesesAtras.setMonth(seisMesesAtras.getMonth() - 6);
 
-  const [abertas, todasRelevantes] = await Promise.all([
+  const [abertas, todasRelevantes, clientes] = await Promise.all([
     prisma.cobranca.findMany({
       where: { status: { in: ["pendente", "atrasado"] } },
       include: { cliente: true, pagamentos: true },
@@ -52,6 +53,7 @@ export default async function ContasAReceberPage({
       include: { cliente: true, pagamentos: true },
       orderBy: aba === "pago" ? { createdAt: "desc" } : { vencimento: "asc" },
     }),
+    prisma.cliente.findMany({ where: { status: { not: "inativo" } }, select: { id: true, nome: true }, orderBy: { nome: "asc" } }),
   ]);
 
   const saldoDe = (c: (typeof abertas)[number]) =>
@@ -119,6 +121,8 @@ export default async function ContasAReceberPage({
           </Link>
         ))}
       </div>
+
+      <NovaContaReceberForm clientes={clientes} />
 
       {todasRelevantes.length === 0 ? (
         <p className="text-sm text-muted">Nada por aqui.</p>
