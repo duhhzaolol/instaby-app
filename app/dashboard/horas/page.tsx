@@ -3,13 +3,13 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { NovoRegistroTempoForm } from "@/components/dashboard/NovoRegistroTempoForm";
 import { RegistroTempoRow } from "@/components/dashboard/RegistroTempoRow";
+import { CalendarioHoras } from "@/components/dashboard/CalendarioHoras";
 import { formatarDuracao } from "@/lib/formatarDuracao";
 
 const NOMES_MESES = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
-const DIAS_SEMANA = ["D", "S", "T", "Q", "Q", "S", "S"];
 
 function inicioHoje() {
   const d = new Date();
@@ -101,10 +101,22 @@ export default async function HorasPage({
   const clienteSelecionado = clientes.find((c) => c.id === clienteFiltro);
 
   const porDia: Record<string, { horas: number; cor: string | null }> = {};
+  const registrosDetalhadosPorDia: Record<
+    string,
+    { id: string; atividade: string; inicio: string; fim: string | null; clienteId: string | null; clienteNome: string | null }[]
+  > = {};
   registrosCalendario.forEach((r) => {
+    const chave = chaveDia(r.inicio);
+    (registrosDetalhadosPorDia[chave] ||= []).push({
+      id: r.id,
+      atividade: r.atividade,
+      inicio: r.inicio.toISOString(),
+      fim: r.fim?.toISOString() || null,
+      clienteId: r.clienteId,
+      clienteNome: r.cliente?.nome || null,
+    });
     if (!r.fim) return;
     const horas = (r.fim.getTime() - r.inicio.getTime()) / 1000 / 60 / 60;
-    const chave = chaveDia(r.inicio);
     const bloco = (porDia[chave] ||= { horas: 0, cor: r.cliente?.cor || null });
     bloco.horas += horas;
   });
@@ -175,48 +187,15 @@ export default async function HorasPage({
         ))}
       </div>
 
-      {/* Calendário */}
-      <div className="mb-6 overflow-hidden rounded-2xl border border-border">
-        <div className="grid grid-cols-7 border-b border-border bg-card/40">
-          {DIAS_SEMANA.map((d, i) => (
-            <div key={i} className="px-2 py-2 text-center text-[11px] font-medium text-muted">
-              {d}
-            </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-7">
-          {diasGrade.map((d) => {
-            const chave = chaveDia(d);
-            const info = porDia[chave];
-            const foraDoMes = d.getMonth() !== mes;
-            const ehHoje = chave === hojeChave;
-            const cor = clienteSelecionado?.cor || info?.cor || "#E63946";
-
-            return (
-              <div
-                key={chave}
-                className={`min-h-[64px] border-b border-r border-border p-1.5 last:border-r-0 ${foraDoMes ? "bg-black/20" : ""}`}
-              >
-                <span
-                  className={`mb-1 inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] ${
-                    ehHoje ? "bg-accent text-white" : foraDoMes ? "text-muted/40" : "text-muted"
-                  }`}
-                >
-                  {d.getDate()}
-                </span>
-                {info && info.horas > 0 && (
-                  <p
-                    className="rounded px-1 py-0.5 text-[10px] font-medium"
-                    style={{ backgroundColor: `${cor}1A`, color: cor }}
-                  >
-                    {formatarDuracao(info.horas)}
-                  </p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      <CalendarioHoras
+        dias={diasGrade.map((d) => chaveDia(d))}
+        registrosPorDia={registrosDetalhadosPorDia}
+        totaisPorDia={porDia}
+        mes={mes}
+        hojeChave={hojeChave}
+        clientes={clientes}
+        corPadrao={clienteSelecionado?.cor}
+      />
 
       {clienteFiltro && ranking.find(([, b]) => b.id === clienteFiltro) && (
         <div className="mb-6 rounded-2xl border border-border bg-card/60 p-4">
