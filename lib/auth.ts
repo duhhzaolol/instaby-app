@@ -4,8 +4,24 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
 export const authOptions: AuthOptions = {
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 }, // 30 dias
+  jwt: { maxAge: 30 * 24 * 60 * 60 },
   pages: { signIn: "/login" },
+  cookies: {
+    sessionToken: {
+      name:
+        process.env.NODE_ENV === "production"
+          ? "__Secure-next-auth.session-token"
+          : "next-auth.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 30 * 24 * 60 * 60,
+      },
+    },
+  },
   providers: [
     CredentialsProvider({
       name: "Credentials",

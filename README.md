@@ -1,52 +1,41 @@
-# Instaby App — v88
+# Instaby App — v89
 
-## Financeiro revisado — Contas a Pagar/Receber agora funcionam de verdade
+## 1. Login não ficando salvo
 
-### 1. A causa raiz do "não mostra nada"
-Achei o problema: quando o mês virava, a cópia automática de uma despesa recorrente
-(tipo Aluguel) nascia com status **"Pago" por padrão**, sem querer — nunca aparecia
-em Contas a Pagar porque tecnicamente "já estava paga" assim que era criada.
+### O que corrigi
+A configuração de sessão estava sem detalhes explícitos (duração, como o cookie se
+comporta). Deixei explícito: sessão de 30 dias, cookie configurado do jeito
+recomendado pra funcionar bem em navegador mobile (`sameSite: lax`, `secure` em
+produção, nome de cookie seguro).
 
-**Corrigido**: a partir de agora, toda despesa recorrente nasce **Pendente**, com
-vencimento no mesmo dia do mês que você configurou originalmente. Assim que o mês
-virar, o Aluguel (e qualquer outra recorrente) aparece em Contas a Pagar sozinho,
-exatamente como você esperava.
+### O que você precisa conferir (eu não tenho acesso pra ver isso daqui)
+A causa mais comum desse sintoma específico — login funciona mas não persiste,
+principalmente em celular — é a variável de ambiente **`NEXTAUTH_URL`** faltando ou
+errada no Vercel. Confere em Vercel → seu projeto → Settings → Environment Variables:
 
-> Nota: despesas recorrentes que já foram geradas pra esse mês atual, antes dessa
-> correção, podem ter nascido como "Pago" incorretamente — se for o caso, edita elas
-> uma vez e muda pra "Pendente" manualmente. Daqui pra frente, geram certo sozinhas.
+```
+NEXTAUTH_URL=https://SEU-DOMINIO-REAL.com.br
+```
 
-### 2. Agora dá pra cadastrar direto nas duas telas
-- **Contas a Pagar** → botão "Nova conta a pagar" no topo — descrição, valor,
-  vencimento, categoria, cliente (opcional). Nasce sempre como Pendente.
-- **Contas a Receber** → botão "Nova conta a receber" no topo — cliente (obrigatório,
-  já que toda cobrança pertence a alguém), valor, vencimento, categoria, tipo. Nasce
-  sempre como Pendente.
+(o domínio de verdade que você usa pra acessar o app, com `https://` e sem barra no
+final). Se essa variável não existir ou estiver com domínio errado, o NextAuth tem
+comportamento instável exatamente como você descreveu. Se não existir, cria ela e
+faz um novo deploy.
 
-Confirmando o que você já intuiu: pra algo que **já foi pago**, continua sendo na
-Visão Geral do Financeiro (ou no botão "Lançar despesa" que adicionamos no topo dela)
-— lá o normal é lançar já como Pago. Contas a Pagar/Receber é pro que ainda **não**
-aconteceu.
+## 2. Lentidão no celular
 
-### 3. Revisão das rotas
-Conferi as principais (criar/editar/excluir despesa, criar/editar/excluir cobrança,
-lançar baixa parcial nos dois) — todas corretas e consistentes entre si.
+Achei uma causa real: o **logo** (`public/logo.png`) estava gigante — 2970×787px,
+74KB — carregado assim em **toda página** do app, mesmo aparecendo pequeno na tela.
+Reduzido pra 800px de largura, 14KB (81% menor, ainda nítido em qualquer tamanho que
+ele aparece no app).
 
-## Resumo do fluxo, do jeito mais simples
-- **Já pagou/recebeu** → Financeiro (Visão Geral) → "Lançar despesa" / dentro do
-  cliente → "Lançar cobrança" → status Pago
-- **Ainda vai pagar/receber** (aluguel do mês que vem, cartão de crédito, cliente que
-  ainda não pagou) → Contas a Pagar / Contas a Receber → cadastra direto ali como
-  Pendente, com a data de vencimento
-- **Recorrente** (aluguel, assinatura) → marca "recorrente" uma vez na Visão Geral, e
-  todo mês uma cópia pendente nasce sozinha em Contas a Pagar
+### O que mais pode estar pesando (não mexi ainda, avisando)
+O Dashboard faz 23 consultas ao banco de uma vez (em paralelo, mas ainda assim são
+23 idas até o Neon). Isso pode estar contribuindo pra lentidão, principalmente em
+rede de celular. Dá pra otimizar isso combinando algumas consultas — é um trabalho
+focado, então prefiro fazer numa próxima rodada se você confirmar que ainda sente
+lentidão depois dessas duas correções.
 
-## Banco
-Nenhuma mudança de schema — só correção de lógica e novas telas de cadastro.
-
-## Arquivos principais
-- `app/dashboard/financeiro/page.tsx` (correção da geração recorrente)
-- `components/dashboard/NovaContaPagarForm.tsx`,
-  `components/dashboard/NovaContaReceberForm.tsx` (novos)
-- `app/dashboard/financeiro/contas-a-pagar/page.tsx`,
-  `contas-a-receber/page.tsx`
+## Arquivos alterados
+- `lib/auth.ts`
+- `public/logo.png` (otimizado)
