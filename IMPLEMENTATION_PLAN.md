@@ -346,3 +346,43 @@ afetam o domínio público.
   sem credenciais/definição de quais plataformas, como pedido.
 - Resumo mensal do cliente — já existe (aba Visão Geral do cliente mostra o resumo do
   mês corrente); não criei uma seção nova separada pra não duplicar.
+
+---
+
+## FASE 2 — Landing Page, /link e entrada do sistema (`/app`)
+
+Depois que ele confirmou ("sim") que queria seguir pra essa parte depois da Fase 1
+(que trouxe as melhorias mais seguras no painel), entreguei a reestruturação de
+rotas públicas pedida no documento:
+
+- **`/` agora é a Landing Page pública** da Instaby (`components/landing/LandingPage.tsx`):
+  Hero, Quem somos, Serviços (os 8 do documento), Portfólio (placeholders "Em breve",
+  preparado pra receber material de verdade depois), Clientes (reaproveita
+  `exibirLogoPublico` — o mesmo campo que já existia pra propostas — e o model
+  `Depoimento`, que já existia e não tinha uso na Landing ainda), Diferenciais,
+  Processo de trabalho, CTA com WhatsApp (reaproveita `Configuracao.whatsappAgencia`,
+  mesmo campo já usado no orçamento público). Sem preços, como pedido. Animações
+  discretas com framer-motion (já era dependência do projeto).
+- **`/link` — página de links** (`components/landing/LinkPage.tsx`): estilo Linktree,
+  WhatsApp em destaque + lista de links. A lista fica num array no topo de
+  `app/link/page.tsx` — editar/adicionar link é só mexer nesse array (comentei no
+  código como fazer). Puxa o mesmo WhatsApp da agência.
+  Site e Instagram profissional preenchidos; Portfólio e Instagram pessoal ficaram
+  como placeholder até você me passar o link de cada um.
+- **`/app` — entrada do sistema administrativo**: rota nova, redireciona direto pra
+  `/dashboard` (que já é protegido pelo middleware existente). Não recriei o sistema
+  em `/app` — mantive tudo rodando de `/dashboard`, só criei um "atalho" com o nome
+  que o documento pediu. A segurança de verdade continua sendo o middleware de
+  autenticação, exatamente como o documento pediu pra não tratar `/login` como
+  proteção.
+- `/login` não mudou de lugar nem de comportamento.
+- Metadata (título/descrição pra preview de link) separada pra `/` e `/link` — antes
+  era só uma, genérica, pensada pro painel interno.
+
+### Por que não reescrevi as rotas do painel pra `/app/...`
+O documento dava a opção técnica de decidir isso ("se fizer mais sentido tecnicamente,
+use /app como entrada"). Renomear a árvore inteira de `/dashboard/...` pra `/app/...`
+tocaria em dezenas de arquivos e links internos sem ganho real (o painel já é só seu,
+não precisa de um nome bonito) — e vai contra a regra "não recriar do zero" e "não
+duplicar lógica". `/app` como atalho/redirecionamento entrega o pedido (ter uma
+entrada em `/app`) com risco quase zero.

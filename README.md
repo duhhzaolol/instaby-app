@@ -1,4 +1,23 @@
-# Instaby App — v92
+# Instaby App — v93
+
+## Fase 2 — Landing Page, /link e /app
+
+Depois da Fase 1 (v92 — painel), essa versão entrega a parte de rotas públicas do
+documento grande:
+
+- **`/`** virou a Landing Page pública da Instaby — Hero, Quem somos, Serviços,
+  Portfólio (placeholder), Clientes/depoimentos, Diferenciais, Processo, CTA
+  WhatsApp. Sem preços.
+- **`/link`** — página de links estilo Linktree (WhatsApp, Site, Instagram...).
+  Lista de links fica num array simples no topo de `app/link/page.tsx` — fácil de
+  editar/adicionar depois.
+- **`/app`** — atalho de entrada pro sistema administrativo, redireciona pra
+  `/dashboard` (que continua sendo a árvore real do painel, protegida pelo
+  middleware de sempre). Não recriei o painel embaixo de `/app` — só criei o
+  atalho com o nome que o documento pediu, sem duplicar nada.
+- `/login` não mudou.
+
+Detalhe completo na seção "FASE 2" do `IMPLEMENTATION_PLAN.md`.
 
 ## Fase 1 da atualização grande (Landing/Agenda/Financeiro conservador)
 
