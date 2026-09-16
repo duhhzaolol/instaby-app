@@ -6,6 +6,8 @@ import { Plus, CheckCircle2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Label } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { DatePicker } from "@/components/ui/DatePicker";
+import { TimePicker } from "@/components/ui/TimePicker";
 
 type Cliente = { id: string; nome: string };
 type TarefaAberta = { id: string; titulo: string; clienteId: string | null };
@@ -141,31 +143,25 @@ export function NovoRegistroTempoForm({
         <div className="mb-4 grid grid-cols-3 gap-2">
           <div>
             <Label>Data</Label>
-            <input
-              type="date"
-              value={data}
-              onChange={(e) => setData(e.target.value)}
-              className="h-10 w-full rounded-xl border border-border bg-card/60 px-2 text-sm text-text"
-            />
+            <DatePicker value={data} onChange={setData} />
           </div>
           <div>
-            <Label>Início</Label>
-            <input
-              type="time"
-              required
-              value={inicio}
-              onChange={(e) => setInicio(e.target.value)}
-              className="h-10 w-full rounded-xl border border-border bg-card/60 px-2 text-sm text-text"
-            />
+            <div className="mb-1 flex items-center justify-between">
+              <Label>Início</Label>
+              <button type="button" onClick={() => setInicio(horaAtual())} className="text-[10px] text-accent hover:underline">
+                agora
+              </button>
+            </div>
+            <TimePicker value={inicio} onChange={setInicio} placeholder="Início" />
           </div>
           <div>
-            <Label>Fim</Label>
-            <input
-              type="time"
-              value={fim}
-              onChange={(e) => setFim(e.target.value)}
-              className="h-10 w-full rounded-xl border border-border bg-card/60 px-2 text-sm text-text"
-            />
+            <div className="mb-1 flex items-center justify-between">
+              <Label>Fim</Label>
+              <button type="button" onClick={() => setFim(horaAtual())} className="text-[10px] text-accent hover:underline">
+                agora
+              </button>
+            </div>
+            <TimePicker value={fim} onChange={setFim} placeholder="Fim" />
           </div>
         </div>
 

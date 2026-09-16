@@ -9,16 +9,21 @@ const NOMES_MESES = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
+const DIAS_SEMANA = ["D", "S", "T", "Q", "Q", "S", "S"];
 
 function inicioHoje() {
   const d = new Date();
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
+function chaveDia(d: Date) {
+  return d.toISOString().slice(0, 10);
+}
+
 export default async function HorasPage({
   searchParams,
 }: {
-  searchParams: { mes?: string };
+  searchParams: { mes?: string; cliente?: string };
 }) {
   const hoje = new Date();
   const [anoParam, mesParam] = (searchParams.mes || `${hoje.getFullYear()}-${hoje.getMonth() + 1}`)
@@ -27,16 +32,22 @@ export default async function HorasPage({
   const ano = anoParam;
   const mes = mesParam - 1;
   const vendoMesAtual = ano === hoje.getFullYear() && mes === hoje.getMonth();
+  const clienteFiltro = searchParams.cliente || "";
 
   const inicioMesVisto = new Date(ano, mes, 1);
   const fimMesVisto = new Date(ano, mes + 1, 0, 23, 59, 59);
   const mesAnterior = new Date(ano, mes - 1, 1);
   const mesSeguinte = new Date(ano, mes + 1, 1);
 
-  const [clientes, registrosHoje, registrosMes, tarefasAbertas] = await Promise.all([
+  const inicioGrade = new Date(inicioMesVisto);
+  inicioGrade.setDate(inicioGrade.getDate() - inicioMesVisto.getDay());
+  const fimGrade = new Date(fimMesVisto);
+  fimGrade.setDate(fimGrade.getDate() + (6 - fimMesVisto.getDay()));
+
+  const [clientes, registrosHoje, registrosGrade, tarefasAbertas] = await Promise.all([
     prisma.cliente.findMany({
       where: { status: { not: "inativo" } },
-      select: { id: true, nome: true },
+      select: { id: true, nome: true, cor: true },
       orderBy: { nome: "asc" },
     }),
     vendoMesAtual
@@ -47,7 +58,7 @@ export default async function HorasPage({
         })
       : Promise.resolve([]),
     prisma.registroTempo.findMany({
-      where: { inicio: { gte: inicioMesVisto, lte: fimMesVisto } },
+      where: { inicio: { gte: inicioGrade, lte: fimGrade } },
       include: { cliente: { select: { id: true, nome: true, cor: true } } },
       orderBy: { inicio: "desc" },
     }),
@@ -56,6 +67,8 @@ export default async function HorasPage({
       select: { id: true, titulo: true, clienteId: true },
     }),
   ]);
+
+  const registrosMes = registrosGrade.filter((r) => r.inicio >= inicioMesVisto && r.inicio <= fimMesVisto);
 
   type BlocoCliente = { id: string; cor: string | null; total: number; atividades: Record<string, number> };
   const porCliente: Record<string, BlocoCliente> = {};
@@ -83,13 +96,35 @@ export default async function HorasPage({
 
   const ranking = Object.entries(porCliente).sort((a, b) => b[1].total - a[1].total);
 
+  // Calendário — geral (todos misturados) ou filtrado por um cliente só, sem sair da página
+  const registrosCalendario = clienteFiltro ? registrosGrade.filter((r) => r.clienteId === clienteFiltro) : registrosGrade;
+  const clienteSelecionado = clientes.find((c) => c.id === clienteFiltro);
+
+  const porDia: Record<string, { horas: number; cor: string | null }> = {};
+  registrosCalendario.forEach((r) => {
+    if (!r.fim) return;
+    const horas = (r.fim.getTime() - r.inicio.getTime()) / 1000 / 60 / 60;
+    const chave = chaveDia(r.inicio);
+    const bloco = (porDia[chave] ||= { horas: 0, cor: r.cliente?.cor || null });
+    bloco.horas += horas;
+  });
+
+  const diasGrade: Date[] = [];
+  for (let d = new Date(inicioGrade); d <= fimGrade; d.setDate(d.getDate() + 1)) diasGrade.push(new Date(d));
+  const hojeChave = chaveDia(hoje);
+
+  const linkComFiltro = (extra: Record<string, string>) => {
+    const params = new URLSearchParams({ mes: `${ano}-${mes + 1}`, ...(clienteFiltro && { cliente: clienteFiltro }), ...extra });
+    return `/dashboard/horas?${params.toString()}`;
+  };
+
   return (
     <div>
       <div className="mb-1 flex items-center justify-between">
         <p className="text-lg font-medium text-text">Horas</p>
         <div className="flex items-center gap-2">
           <Link
-            href={`/dashboard/horas?mes=${mesAnterior.getFullYear()}-${mesAnterior.getMonth() + 1}`}
+            href={linkComFiltro({ mes: `${mesAnterior.getFullYear()}-${mesAnterior.getMonth() + 1}` })}
             className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card/60 text-muted hover:text-text"
           >
             <ChevronLeft size={14} />
@@ -98,7 +133,7 @@ export default async function HorasPage({
             {NOMES_MESES[mes]} {ano}
           </p>
           <Link
-            href={`/dashboard/horas?mes=${mesSeguinte.getFullYear()}-${mesSeguinte.getMonth() + 1}`}
+            href={linkComFiltro({ mes: `${mesSeguinte.getFullYear()}-${mesSeguinte.getMonth() + 1}` })}
             className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card/60 text-muted hover:text-text"
           >
             <ChevronRight size={14} />
@@ -116,7 +151,105 @@ export default async function HorasPage({
         <span className="text-xl font-medium text-accent">{formatarDuracao(totalMes)}</span>
       </div>
 
-      {ranking.length === 0 && semCliente.length === 0 ? (
+      {/* Filtro por cliente — clica pra trocar o calendário, sem sair da tela */}
+      <div className="mb-3 flex flex-wrap gap-1.5">
+        <Link
+          href={linkComFiltro({ cliente: "" })}
+          className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+            !clienteFiltro ? "bg-accent text-white" : "border border-border bg-card/60 text-muted hover:text-text"
+          }`}
+        >
+          Todos
+        </Link>
+        {clientes.map((c) => (
+          <Link
+            key={c.id}
+            href={linkComFiltro({ cliente: c.id })}
+            className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
+              clienteFiltro === c.id ? "bg-accent text-white" : "border border-border bg-card/60 text-muted hover:text-text"
+            }`}
+          >
+            <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: c.cor || "#9CA3AF" }} />
+            {c.nome}
+          </Link>
+        ))}
+      </div>
+
+      {/* Calendário */}
+      <div className="mb-6 overflow-hidden rounded-2xl border border-border">
+        <div className="grid grid-cols-7 border-b border-border bg-card/40">
+          {DIAS_SEMANA.map((d, i) => (
+            <div key={i} className="px-2 py-2 text-center text-[11px] font-medium text-muted">
+              {d}
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7">
+          {diasGrade.map((d) => {
+            const chave = chaveDia(d);
+            const info = porDia[chave];
+            const foraDoMes = d.getMonth() !== mes;
+            const ehHoje = chave === hojeChave;
+            const cor = clienteSelecionado?.cor || info?.cor || "#E63946";
+
+            return (
+              <div
+                key={chave}
+                className={`min-h-[64px] border-b border-r border-border p-1.5 last:border-r-0 ${foraDoMes ? "bg-black/20" : ""}`}
+              >
+                <span
+                  className={`mb-1 inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] ${
+                    ehHoje ? "bg-accent text-white" : foraDoMes ? "text-muted/40" : "text-muted"
+                  }`}
+                >
+                  {d.getDate()}
+                </span>
+                {info && info.horas > 0 && (
+                  <p
+                    className="rounded px-1 py-0.5 text-[10px] font-medium"
+                    style={{ backgroundColor: `${cor}1A`, color: cor }}
+                  >
+                    {formatarDuracao(info.horas)}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {clienteFiltro && ranking.find(([, b]) => b.id === clienteFiltro) && (
+        <div className="mb-6 rounded-2xl border border-border bg-card/60 p-4">
+          {(() => {
+            const [, bloco] = ranking.find(([, b]) => b.id === clienteFiltro)!;
+            const atividades = Object.entries(bloco.atividades).sort((a, b) => b[1] - a[1]);
+            const maior = Math.max(...atividades.map(([, h]) => h));
+            return (
+              <>
+                <p className="mb-3 text-sm font-medium text-text">Atividades de {clienteSelecionado?.nome}</p>
+                <div className="flex flex-col gap-2">
+                  {atividades.map(([atividade, horas]) => (
+                    <div key={atividade}>
+                      <div className="mb-1 flex items-center justify-between text-xs">
+                        <span className="text-muted">{atividade}</span>
+                        <span className="text-text">{formatarDuracao(horas)}</span>
+                      </div>
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-base">
+                        <div
+                          className="h-full rounded-full"
+                          style={{ width: `${(horas / maior) * 100}%`, backgroundColor: clienteSelecionado?.cor || "#E63946" }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            );
+          })()}
+        </div>
+      )}
+
+      {!clienteFiltro && (ranking.length === 0 && semCliente.length === 0 ? (
         <p className="mb-6 text-sm text-muted">Nada registrado nesse mês.</p>
       ) : (
         <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -128,7 +261,7 @@ export default async function HorasPage({
             return (
               <Link
                 key={nome}
-                href={`/dashboard/horas/${bloco.id}?mes=${ano}-${mes + 1}`}
+                href={linkComFiltro({ cliente: bloco.id })}
                 className="block rounded-2xl border border-border bg-card/60 p-4 transition-colors hover:bg-hover"
                 style={{ borderLeft: `3px solid ${cor}` }}
               >
@@ -159,9 +292,9 @@ export default async function HorasPage({
             );
           })}
         </div>
-      )}
+      ))}
 
-      {semCliente.length > 0 && (
+      {!clienteFiltro && semCliente.length > 0 && (
         <div className="mb-6">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-xs uppercase tracking-wide text-muted">Sem cliente / interno</p>
@@ -190,7 +323,7 @@ export default async function HorasPage({
         </div>
       )}
 
-      {vendoMesAtual && (
+      {vendoMesAtual && !clienteFiltro && (
         <>
           <p className="mb-2 text-xs uppercase tracking-wide text-muted">Hoje</p>
           <div className="flex flex-col gap-2">
