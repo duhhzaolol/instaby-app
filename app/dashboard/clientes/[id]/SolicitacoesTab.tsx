@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X, Trash2, AlertCircle } from "lucide-react";
+import { AjudaContextual } from "@/components/ui/AjudaContextual";
 
 export type SolicitacaoData = {
   id: string;
@@ -60,6 +61,14 @@ export default function SolicitacoesTab({ clienteId, solicitacoes }: { clienteId
 
   return (
     <div>
+      <div className="mb-3 flex items-center gap-1.5">
+        <p className="text-sm font-medium text-text">Solicitações do cliente</p>
+        <AjudaContextual
+          titulo="Solicitações"
+          texto="Pedidos que o cliente fez (via WhatsApp, reunião etc.) e que você quer não esquecer. Marque como extra quando for algo fora do escopo combinado."
+          exemplo="Ex.: registre 'Trocar a foto de capa do Instagram' com prioridade alta."
+        />
+      </div>
       <div className="mb-4 flex flex-col gap-2">
         {abertas.map((s) => (
           <div key={s.id} className="rounded-xl border border-border bg-card/60 p-3.5">

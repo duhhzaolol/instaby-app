@@ -423,6 +423,7 @@ export default async function ClienteDetalhePage({
             conteudo: c.conteudo,
             status: c.status,
             orcamentoId: c.orcamentoId,
+            arquivoUrl: c.arquivoUrl,
           }))}
           orcamentosAceitos={orcamentosAceitos.map((o) => ({ id: o.id, slug: o.slug }))}
           temServicosContratados={cliente.servicosContratados.length > 0}

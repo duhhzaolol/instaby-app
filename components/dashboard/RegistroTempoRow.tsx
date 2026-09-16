@@ -14,6 +14,7 @@ export type RegistroTempoData = {
   fim: string | null;
   clienteId?: string | null;
   clienteNome?: string | null;
+  clienteCor?: string | null;
 };
 
 type Cliente = { id: string; nome: string };
@@ -132,7 +133,13 @@ export function RegistroTempoRow({
         <p className="text-sm text-text">
           {registro.atividade}
           {registro.clienteNome ? (
-            <span className="ml-2 rounded-full bg-white/5 px-1.5 py-0.5 text-[10px] text-muted">
+            <span
+              className="ml-2 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+              style={{
+                backgroundColor: `${registro.clienteCor || "#9CA3AF"}1A`,
+                color: registro.clienteCor || "#9CA3AF",
+              }}
+            >
               {registro.clienteNome}
             </span>
           ) : (

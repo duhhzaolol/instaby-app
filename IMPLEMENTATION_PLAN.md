@@ -260,3 +260,89 @@ Tarefa, bem antes desse módulo — `/dashboard/tarefas/calendario`) nunca depen
 entidade Conteúdo e continua funcionando exatamente como sempre funcionou. Templates
 de tarefas, Onboarding, Contatos, Links, Solicitações, Oportunidades e o resto do
 plano não foram afetados.
+
+---
+
+## FASE — Atualização grande (documento "Landing/Agenda/Financeiro conservador")
+
+O Duhzao mandou um documento grande pedindo várias melhorias, mas explicitamente
+conservador em algumas áreas ("não mexer", "não recriar do zero"). Essa fase entrega
+a parte de menor risco e maior impacto no dia a dia — o que envolve rotas públicas
+novas (Landing Page em `/`, página de links em `/link`, reestruturação pra `/app`)
+ficou de fora dessa entrega e depende de confirmação antes de mexer em rotas que
+afetam o domínio público.
+
+### Entregue nesta versão
+
+- **Logo clicável**: clicar no logo da Instaby (sidebar) sempre volta pra Visão Geral.
+- **Dashboard reorganizado**: Afazeres subiu pra logo depois de Hoje/Amanhã, antes de
+  onde ficava a lista "Clientes ativos". A seção "Clientes ativos" (grid de cards)
+  foi removida por ser informação duplicada do card de métrica que já existe no topo
+  (e do menu Clientes). Corrigido também um link quebrado: "Novo conteúdo" apontava
+  pra `/dashboard/conteudo`, rota que não existe mais desde a remoção do módulo
+  Conteúdo — virou "Nova tarefa".
+- **Clientes agrupados**: a listagem (quando "Todos" está selecionado) agora separa
+  em seções recolhíveis — Ativos, Avulsos, Leads, Inativos (nessa ordem, Inativos por
+  último). Clicar no título expande/recolhe. Os filtros por status continuam existindo
+  e mostram lista simples (sem agrupar) quando um status específico é escolhido.
+- **Bug corrigido — "Próxima cobrança" vazio**: a causa raiz era a mesma classe de bug
+  já corrigida nas despesas recorrentes — a mensalidade configurada num cliente nunca
+  virava de fato uma `Cobrança` todo mês (só existia "configurada", nunca lançada).
+  Criei `lib/garantirRecorrentes.ts` (unificando a lógica que já existia pras despesas
+  recorrentes) com uma segunda função, `garantirCobrancasMensaisDoMes()`, que lança uma
+  Cobrança "pendente" pro mês atual pra todo cliente ativo com mensalidade > 0, caso
+  ainda não exista uma. Roda no layout do dashboard (cobre qualquer página, não só o
+  Financeiro), com um cache em memória de 10 minutos pra não pesar a navegação.
+- **Contrato — anexar PDF assinado**: além do fluxo que já existia (gerar texto do
+  contrato a partir de serviços/orçamento, editar, marcar enviado/assinado na mão),
+  agora dá pra anexar o PDF do contrato assinado de verdade (upload via Vercel Blob,
+  mesmo mecanismo já usado pro logo do cliente). Anexar marca o contrato como
+  assinado automaticamente. Campo novo `Contrato.arquivoUrl` (aditivo).
+- **Resultado do mês do cliente**: a Rentabilidade virou o número de destaque
+  (maior, no topo do card), sem alterar nenhum cálculo existente — só reorganização
+  visual, exatamente como pedido ("não alterar os cálculos sem verificar a lógica").
+- **Ajuda contextual**: criado `components/ui/AjudaContextual.tsx` — ícone de "?" que
+  abre um popover curto (pra que serve, como usar, exemplo). Adicionado em Clientes,
+  Tarefas, Serviços (catálogo), Horas, Financeiro, Agenda, Relatórios (dentro do
+  cliente) e Solicitações (dentro do cliente). Não mexi em Oportunidades/Pipeline
+  porque isso é Comercial, e a regra explícita foi não mexer no Comercial nessa etapa.
+- **Financeiro — gráficos de linha removidos**: tirei os dois gráficos de área/linha
+  da Visão Geral do Financeiro ("Progresso do mês" e "Entradas x Custos fixos x Custos
+  flexíveis") como pedido. Os dados que eles mostravam continuam disponíveis: o
+  histórico mensal pelos cards de resumo por período, e o dia-a-dia pelo novo
+  calendário financeiro.
+- **Financeiro — calendário financeiro (novo)**: `CalendarioFinanceiro.tsx` mostra o
+  mês atual com entradas/saídas por dia (baseado em cobranças pagas e despesas não
+  canceladas já cadastradas), clicando no dia abre o detalhe de cada movimentação.
+  Nenhum cálculo dos cards (Entradas/Custos/Flexíveis/Lucro) foi alterado.
+- **Agenda reformulada**:
+  - Removida a camada de cobranças vencendo (informação financeira não aparece mais
+    na Agenda — fica só no Financeiro, como pedido).
+  - Tarefas e horas trabalhadas agora são classificadas num tipo comum (Captação,
+    Edição, Reunião, Trabalho interno, Compromisso) via `lib/tipoAtividadeAgenda.ts` —
+    isso resolve o problema relatado de "captação aparece, edição não": antes a
+    camada "hora" vinha desligada por padrão; agora todos os tipos vêm ligados por
+    padrão e horas de edição aparecem igual às de captação.
+  - Filtros por tipo de atividade substituem os antigos filtros de "camada".
+  - Clicar no dia abre um modal com todas as atividades daquele dia (por horário);
+    clicar numa atividade abre o detalhe/edição de sempre.
+  - Preparado pra futura integração com Google/Apple Calendar — o `.ics` já existente
+    (`/api/agenda.ics`) não foi alterado, continua servindo esse propósito.
+- **Horas — calendário com até 3 atividades por dia**: cada dia mostra até 3 linhas
+  tipo "Cliente – Atividade" (nome do cliente com a cor dele, em negrito), e
+  "+N atividades" quando tem mais — clicar no dia continua mostrando todas. O nome do
+  cliente também ganhou mais destaque visual (cor do cliente) na lista de registros
+  do dia (não só no calendário).
+
+### Ficou de fora desta versão (por decisão consciente)
+
+- Landing Page pública (`/`), página de links (`/link`), reestruturação de rotas pra
+  `/app`/`/painel` — o documento pede isso, mas mexe em rotas públicas e no domínio;
+  prefiro confirmar com você antes de tocar nisso, já que é maior e mais visível.
+- DRE, Contas a Pagar, Contas a Receber, Comercial (Oportunidades/Pipeline) — o
+  próprio documento pediu explicitamente pra não alterar essas áreas nessa etapa.
+- Importação de relatórios de outras plataformas — arquitetura atual (RelatorioPeriodo
+  por rede/período) já não impede isso no futuro; nenhuma integração foi implementada
+  sem credenciais/definição de quais plataformas, como pedido.
+- Resumo mensal do cliente — já existe (aba Visão Geral do cliente mostra o resumo do
+  mês corrente); não criei uma seção nova separada pra não duplicar.

@@ -12,6 +12,7 @@ export async function PATCH(
     data: {
       ...(body.conteudo !== undefined && { conteudo: body.conteudo }),
       ...(body.status !== undefined && { status: body.status }),
+      ...(body.arquivoUrl !== undefined && { arquivoUrl: body.arquivoUrl }),
     },
   });
 

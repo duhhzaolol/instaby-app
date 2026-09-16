@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { headers } from "next/headers";
-import { ChevronLeft, ChevronRight, Clock, CircleDollarSign, History, CalendarPlus } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarPlus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { AgendaGrid, EventoAgenda } from "@/components/dashboard/AgendaGrid";
+import { AjudaContextual } from "@/components/ui/AjudaContextual";
+import { TIPOS_ATIVIDADE_AGENDA, classificarTipoAtividade } from "@/lib/tipoAtividadeAgenda";
 
 const NOMES_MESES = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -13,7 +15,7 @@ function chaveDia(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
-// Usado só pra encaixar um horário salvo (cobrança/tarefa/hora) no dia certo do calendário,
+// Usado só pra encaixar um horário salvo (tarefa/hora) no dia certo do calendário,
 // já considerando o fuso de Brasília — evita virar o dia seguinte perto da meia-noite.
 function chaveDiaEvento(d: Date) {
   return d.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
@@ -26,7 +28,7 @@ function horaBR(d: Date) {
 export default async function AgendaPage({
   searchParams,
 }: {
-  searchParams: { mes?: string; camadas?: string };
+  searchParams: { mes?: string; tipos?: string };
 }) {
   const hoje = new Date();
   const [anoParam, mesParam] = (searchParams.mes || `${hoje.getFullYear()}-${hoje.getMonth() + 1}`)
@@ -35,8 +37,10 @@ export default async function AgendaPage({
   const ano = anoParam;
   const mes = mesParam - 1; // 0-indexed
 
-  // Horas trabalhadas fica desligada por padrão — é registro histórico, não algo que precisa de atenção futura
-  const camadasAtivas = new Set((searchParams.camadas || "cobranca,tarefa").split(","));
+  // Todos os tipos ativos por padrão — compromissos, serviços e horas trabalhadas juntos.
+  const tiposAtivos = new Set(
+    (searchParams.tipos || TIPOS_ATIVIDADE_AGENDA.map((t) => t.valor).join(",")).split(",")
+  );
 
   const inicioMes = new Date(ano, mes, 1);
   const fimMes = new Date(ano, mes + 1, 0, 23, 59, 59);
@@ -45,11 +49,7 @@ export default async function AgendaPage({
   const fimGrade = new Date(fimMes);
   fimGrade.setDate(fimGrade.getDate() + (6 - fimMes.getDay()));
 
-  const [cobrancas, tarefas, registrosTempo] = await Promise.all([
-    prisma.cobranca.findMany({
-      where: { vencimento: { gte: inicioGrade, lte: fimGrade } },
-      include: { cliente: { select: { id: true, nome: true } } },
-    }),
+  const [tarefas, registrosTempo] = await Promise.all([
     prisma.tarefa.findMany({
       where: { prazo: { gte: inicioGrade, lte: fimGrade } },
       include: { cliente: { select: { id: true, nome: true, cor: true } } },
@@ -62,51 +62,51 @@ export default async function AgendaPage({
 
   const eventosPorDia: Record<string, EventoAgenda[]> = {};
 
-  if (camadasAtivas.has("cobranca")) {
-    cobrancas.forEach((c) => {
-      if (!c.vencimento) return;
-      const chave = chaveDiaEvento(c.vencimento);
-      (eventosPorDia[chave] ||= []).push({
-        id: c.id,
-        tipo: "cobranca",
-        texto: `${c.cliente.nome} · R$ ${Number(c.valor).toFixed(0)}`,
-        href: `/dashboard/clientes/${c.cliente.id}?aba=financeiro`,
-        data: chave,
-      });
+  tarefas.forEach((t) => {
+    if (!t.prazo) return;
+    const tipoAtividade =
+      t.categoria === "reuniao"
+        ? "reuniao"
+        : t.categoria === "gravacao"
+        ? "captacao"
+        : classificarTipoAtividade(t.titulo, !!t.cliente);
+    if (!tiposAtivos.has(tipoAtividade)) return;
+    const chave = chaveDiaEvento(t.prazo);
+    (eventosPorDia[chave] ||= []).push({
+      id: t.id,
+      origem: "tarefa",
+      tipoAtividade,
+      texto: t.cliente ? `${t.titulo} · ${t.cliente.nome}` : t.titulo,
+      clienteNome: t.cliente?.nome || null,
+      cor: t.cliente?.cor,
+      href: t.cliente ? `/dashboard/clientes/${t.cliente.id}?aba=tarefas` : "/dashboard",
+      data: chave,
+      hora: horaBR(t.prazo) !== "00:00" ? horaBR(t.prazo) : null,
     });
-  }
+  });
 
-  if (camadasAtivas.has("tarefa")) {
-    tarefas.forEach((t) => {
-      if (!t.prazo) return;
-      const chave = chaveDiaEvento(t.prazo);
-      (eventosPorDia[chave] ||= []).push({
-        id: t.id,
-        tipo: "tarefa",
-        texto: t.cliente ? `${t.titulo} · ${t.cliente.nome}` : t.titulo,
-        cor: t.cliente?.cor,
-        href: t.cliente ? `/dashboard/clientes/${t.cliente.id}?aba=tarefas` : "/dashboard",
-        data: chave,
-        hora: horaBR(t.prazo) !== "00:00" ? horaBR(t.prazo) : null,
-      });
+  registrosTempo.forEach((r) => {
+    const tipoAtividade = classificarTipoAtividade(r.atividade, !!r.cliente);
+    if (!tiposAtivos.has(tipoAtividade)) return;
+    const chave = chaveDiaEvento(r.inicio);
+    (eventosPorDia[chave] ||= []).push({
+      id: r.id,
+      origem: "hora",
+      tipoAtividade,
+      texto: r.cliente ? `${r.atividade} · ${r.cliente.nome}` : r.atividade,
+      clienteNome: r.cliente?.nome || null,
+      cor: r.cliente?.cor,
+      href: r.cliente ? `/dashboard/horas/${r.cliente.id}` : "/dashboard/horas",
+      data: chave,
+      horaInicio: horaBR(r.inicio),
+      horaFim: r.fim ? horaBR(r.fim) : null,
     });
-  }
+  });
 
-  if (camadasAtivas.has("hora")) {
-    registrosTempo.forEach((r) => {
-      const chave = chaveDiaEvento(r.inicio);
-      (eventosPorDia[chave] ||= []).push({
-        id: r.id,
-        tipo: "hora",
-        texto: r.cliente ? `${r.atividade} · ${r.cliente.nome}` : r.atividade,
-        cor: r.cliente?.cor,
-        href: r.cliente ? `/dashboard/horas/${r.cliente.id}` : "/dashboard/horas",
-        data: chave,
-        horaInicio: horaBR(r.inicio),
-        horaFim: r.fim ? horaBR(r.fim) : null,
-      });
-    });
-  }
+  // Ordena cada dia por horário (horaInicio ou hora), pra ficar tipo "09:00 – Edição – Cliente"
+  Object.values(eventosPorDia).forEach((lista) =>
+    lista.sort((a, b) => (a.horaInicio || a.hora || "").localeCompare(b.horaInicio || b.hora || ""))
+  );
 
   const dias: string[] = [];
   for (let d = new Date(inicioGrade); d <= fimGrade; d.setDate(d.getDate() + 1)) {
@@ -126,12 +126,19 @@ export default async function AgendaPage({
     <div>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <p className="text-lg font-medium text-text">Agenda</p>
-          <p className="text-sm text-muted">Vencimentos, prazos e horas trabalhadas num só lugar</p>
+          <p className="flex items-center gap-1.5 text-lg font-medium text-text">
+            Agenda
+            <AjudaContextual
+              titulo="Agenda"
+              texto="Mostra compromissos, serviços (captação, edição, reunião) e horas trabalhadas — tudo com horário, atividade e cliente. Informações financeiras ficam só no Financeiro."
+              exemplo="Ex.: 09:00 – Edição – Dr. Lauro. Clique no dia pra ver tudo daquele dia, ou num item pra editar."
+            />
+          </p>
+          <p className="text-sm text-muted">Compromissos, serviços e horas trabalhadas num só lugar</p>
         </div>
         <div className="flex items-center gap-2">
           <Link
-            href={`/dashboard/agenda?mes=${mesAnterior.getFullYear()}-${mesAnterior.getMonth() + 1}&camadas=${Array.from(camadasAtivas).join(",")}`}
+            href={`/dashboard/agenda?mes=${mesAnterior.getFullYear()}-${mesAnterior.getMonth() + 1}&tipos=${Array.from(tiposAtivos).join(",")}`}
             className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card/60 text-muted hover:text-text"
           >
             <ChevronLeft size={15} />
@@ -140,7 +147,7 @@ export default async function AgendaPage({
             {NOMES_MESES[mes]} {ano}
           </p>
           <Link
-            href={`/dashboard/agenda?mes=${mesSeguinte.getFullYear()}-${mesSeguinte.getMonth() + 1}&camadas=${Array.from(camadasAtivas).join(",")}`}
+            href={`/dashboard/agenda?mes=${mesSeguinte.getFullYear()}-${mesSeguinte.getMonth() + 1}&tipos=${Array.from(tiposAtivos).join(",")}`}
             className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card/60 text-muted hover:text-text"
           >
             <ChevronRight size={15} />
@@ -167,31 +174,26 @@ export default async function AgendaPage({
       )}
 
       <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
-        {[
-          { valor: "cobranca", label: "Cobrança vencendo", icone: CircleDollarSign, cor: "#f87171" },
-          { valor: "tarefa", label: "Prazo de tarefa", icone: Clock, cor: "#38bdf8" },
-          { valor: "hora", label: "Horas trabalhadas", icone: History, cor: "#4ade80" },
-        ].map((camada) => {
-          const ativa = camadasAtivas.has(camada.valor);
-          const novasCamadas = new Set(camadasAtivas);
-          ativa ? novasCamadas.delete(camada.valor) : novasCamadas.add(camada.valor);
-          const Icon = camada.icone;
+        {TIPOS_ATIVIDADE_AGENDA.map((tipo) => {
+          const ativo = tiposAtivos.has(tipo.valor);
+          const novosTipos = new Set(tiposAtivos);
+          ativo ? novosTipos.delete(tipo.valor) : novosTipos.add(tipo.valor);
+          const Icon = tipo.icone;
           return (
             <Link
-              key={camada.valor}
-              href={`/dashboard/agenda?mes=${ano}-${mes + 1}&camadas=${Array.from(novasCamadas).join(",")}`}
+              key={tipo.valor}
+              href={`/dashboard/agenda?mes=${ano}-${mes + 1}&tipos=${Array.from(novosTipos).join(",")}`}
               className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 transition-colors ${
-                ativa ? "border-border bg-card/60 text-text" : "border-border/50 text-muted/50"
+                ativo ? "border-border bg-card/60 text-text" : "border-border/50 text-muted/50"
               }`}
             >
-              <Icon size={11} style={{ color: ativa ? camada.cor : undefined }} /> {camada.label}
+              <Icon size={11} style={{ color: ativo ? tipo.cor : undefined }} /> {tipo.label}
             </Link>
           );
         })}
       </div>
 
       <AgendaGrid dias={dias} eventosPorDia={eventosPorDia} mes={mes} hojeChave={hojeChave} />
-
     </div>
   );
 }

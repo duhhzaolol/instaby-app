@@ -2,12 +2,18 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
+import { garantirRecorrentesDoMes } from "@/lib/garantirRecorrentes";
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Garante despesas e mensalidades recorrentes do mês antes de renderizar
+  // qualquer página do painel (evita cobrança/despesa "sumida" dependendo
+  // de qual página é aberta primeiro).
+  await garantirRecorrentesDoMes();
+
   const session = await getServerSession(authOptions);
   const nome = session?.user?.name || "Duhzao";
   const email = session?.user?.email || "";

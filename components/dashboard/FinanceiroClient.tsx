@@ -2,17 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-  Legend,
-} from "recharts";
-import { Plus, TrendingUp, TrendingDown, Wallet, AlertTriangle, MessageCircle, Rocket } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, Wallet, AlertTriangle, MessageCircle } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -21,6 +11,8 @@ import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { CountUp } from "@/components/ui/CountUp";
 import { DespesaRow, DespesaRowData } from "@/components/dashboard/DespesaRow";
 import { CATEGORIAS_FINANCEIRAS, STATUS_DESPESA, visualDaCategoriaFinanceira } from "@/lib/categoriasFinanceiras";
+import { CalendarioFinanceiro } from "@/components/dashboard/CalendarioFinanceiro";
+import { AjudaContextual } from "@/components/ui/AjudaContextual";
 
 type Cliente = { id: string; nome: string };
 type CobrancaPendente = {
@@ -52,6 +44,9 @@ export default function FinanceiroClient({
   custosFlexiveis,
   clientes,
   resumoPorCliente,
+  movimentosMes,
+  mesAtual,
+  anoAtual,
 }: {
   periodo: string;
   resumo: { entradas: number; despesasFixas: number; despesasFlexiveis: number; lucro: number };
@@ -62,6 +57,9 @@ export default function FinanceiroClient({
   custosFlexiveis: DespesaRowData[];
   clientes: Cliente[];
   resumoPorCliente: { nome: string; cor: string | null; entradas: number; despesas: number; lucro: number }[];
+  movimentosMes: { dia: number; tipo: "entrada" | "saida"; valor: number; descricao: string; cliente: string | null }[];
+  mesAtual: number;
+  anoAtual: number;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -84,7 +82,14 @@ export default function FinanceiroClient({
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-lg font-medium text-text">Financeiro</p>
+          <p className="flex items-center gap-1.5 text-lg font-medium text-text">
+            Financeiro
+            <AjudaContextual
+              titulo="Financeiro"
+              texto="Visão geral de entradas, custos e lucro no período escolhido. O calendário mostra dia a dia o que entrou e saiu. Cobranças e despesas ficam abaixo, separadas por tipo."
+              exemplo="Ex.: clique num dia do calendário pra ver todos os recebimentos e pagamentos daquele dia."
+            />
+          </p>
           <p className="text-xs text-muted">Visão geral · a DRE está no menu ao lado</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -225,120 +230,10 @@ export default function FinanceiroClient({
         </Card>
       )}
 
-      {graficoDiario && graficoDiario.length > 1 && (
-        <Card index={99} hoverable={false} className="mb-6 p-5">
-          <p className="flex items-center gap-1.5 text-sm font-medium text-text">
-            <Rocket size={14} className="text-accent" /> Progresso do mês
-          </p>
-          <p className="mb-4 text-xs text-muted">
-            Acumulado dia a dia — entrada e lucro subindo até o fim do mês
-          </p>
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={graficoDiario} margin={{ left: -20, right: 8, top: 8 }}>
-              <defs>
-                <linearGradient id="corEntradaDiaria" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#22C55E" stopOpacity={0.3} />
-                  <stop offset="100%" stopColor="#22C55E" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="corLucroDiario" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#E63946" stopOpacity={0.3} />
-                  <stop offset="100%" stopColor="#E63946" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-              <XAxis
-                dataKey="dia"
-                stroke="#9CA3AF"
-                fontSize={11}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(d) => `dia ${d}`}
-                interval={Math.ceil(graficoDiario.length / 8)}
-              />
-              <YAxis hide />
-              <Tooltip
-                contentStyle={{
-                  background: "#1C2028",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  borderRadius: 12,
-                  fontSize: 12,
-                  color: "#F9FAFB",
-                }}
-                labelFormatter={(d) => `Dia ${d}`}
-                formatter={(v: number, nome: string) => [
-                  `R$ ${v.toLocaleString("pt-BR")}`,
-                  nome === "entradas" ? "Entradas acumuladas" : "Lucro acumulado",
-                ]}
-              />
-              <Legend
-                formatter={(v) => (v === "entradas" ? "Entradas acumuladas" : "Lucro acumulado")}
-                wrapperStyle={{ fontSize: 11, color: "#9CA3AF" }}
-              />
-              <Area
-                type="monotone"
-                dataKey="entradas"
-                stroke="#22C55E"
-                strokeWidth={2}
-                fill="url(#corEntradaDiaria)"
-                animationDuration={900}
-              />
-              <Area
-                type="monotone"
-                dataKey="lucro"
-                stroke="#E63946"
-                strokeWidth={2}
-                fill="url(#corLucroDiario)"
-                animationDuration={900}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </Card>
-      )}
-
-      <Card index={4} hoverable={false} className="mb-6 p-5">
-        <p className="text-sm font-medium text-text">Entradas x Custos fixos x Custos flexíveis</p>
-        <p className="mb-4 text-xs text-muted">Histórico dos últimos meses (os cards acima seguem o período escolhido)</p>
-        <ResponsiveContainer width="100%" height={240}>
-          <AreaChart data={grafico} margin={{ left: -20, right: 8, top: 8 }}>
-            <defs>
-              <linearGradient id="corEntradasMensal" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#22C55E" stopOpacity={0.35} />
-                <stop offset="100%" stopColor="#22C55E" stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="corFixasMensal" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#F97316" stopOpacity={0.25} />
-                <stop offset="100%" stopColor="#F97316" stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="corFlexMensal" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#E63946" stopOpacity={0.25} />
-                <stop offset="100%" stopColor="#E63946" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-            <XAxis dataKey="mes" stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} />
-            <YAxis hide />
-            <Tooltip
-              contentStyle={{
-                background: "#1C2028",
-                border: "1px solid rgba(255,255,255,0.08)",
-                borderRadius: 12,
-                fontSize: 12,
-                color: "#F9FAFB",
-              }}
-              formatter={(v: number, nome: string) => [
-                `R$ ${v.toLocaleString("pt-BR")}`,
-                nome === "entradas" ? "Entradas" : nome === "despesasFixas" ? "Custos fixos" : "Custos flexíveis",
-              ]}
-            />
-            <Legend
-              formatter={(v) => (v === "entradas" ? "Entradas" : v === "despesasFixas" ? "Custos fixos" : "Custos flexíveis")}
-              wrapperStyle={{ fontSize: 11, color: "#9CA3AF" }}
-            />
-            <Area type="monotone" dataKey="entradas" stroke="#22C55E" strokeWidth={2.5} fill="url(#corEntradasMensal)" dot={{ r: 3 }} />
-            <Area type="monotone" dataKey="despesasFixas" stroke="#F97316" strokeWidth={2} fill="url(#corFixasMensal)" dot={{ r: 3 }} />
-            <Area type="monotone" dataKey="despesasFlexiveis" stroke="#E63946" strokeWidth={2} fill="url(#corFlexMensal)" dot={{ r: 3 }} />
-          </AreaChart>
-        </ResponsiveContainer>
+      <Card index={5} hoverable={false} className="mb-6 p-5">
+        <p className="mb-1 text-sm font-medium text-text">Calendário financeiro</p>
+        <p className="mb-4 text-xs text-muted">Recebimentos e pagamentos já lançados no mês — clique num dia pra ver o detalhe.</p>
+        <CalendarioFinanceiro movimentos={movimentosMes} mes={mesAtual} ano={anoAtual} />
       </Card>
 
       <Card index={5} hoverable={false} className="mb-6 p-5">

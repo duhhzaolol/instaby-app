@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { TarefaRow } from "@/components/dashboard/TarefaRow";
 import { NovaTarefaGlobalForm } from "@/components/dashboard/NovaTarefaGlobalForm";
 import { CheckSquare, CalendarDays } from "lucide-react";
+import { AjudaContextual } from "@/components/ui/AjudaContextual";
 
 const ABAS = [
   { valor: "abertas", label: "Abertas" },
@@ -41,14 +42,21 @@ export default async function TarefasPage({
     <div>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <p className="text-lg font-medium text-text">Tarefas</p>
+          <p className="flex items-center gap-1.5 text-lg font-medium text-text">
+            Tarefas
+            <AjudaContextual
+              titulo="Tarefas"
+              texto="Lista todas as tarefas de todos os clientes. Crie uma tarefa rápida pela Visão Geral ou aqui mesmo. Tarefas com data/horário aparecem também na Agenda."
+              exemplo="Ex.: filtre por 'Abertas' pra ver só o que ainda precisa ser feito."
+            />
+          </p>
           <p className="text-sm text-muted">Todas as tarefas, de todos os clientes, num lugar só</p>
         </div>
         <Link
           href="/dashboard/tarefas/calendario"
           className="flex items-center gap-1.5 rounded-xl border border-border bg-card/60 px-3 py-2 text-sm text-text hover:bg-hover"
         >
-          <CalendarDays size={14} /> Calendário de conteúdo
+          <CalendarDays size={14} /> Calendário de tarefas
         </Link>
       </div>
 

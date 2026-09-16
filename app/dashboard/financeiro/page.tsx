@@ -4,50 +4,13 @@ import { faixaPeriodo } from "@/lib/periodoFinanceiro";
 
 const NOMES_MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 
-async function garantirRecorrentesDoMes() {
-  const hoje = new Date();
-  const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-
-  const modelos = await prisma.despesa.findMany({ where: { recorrente: true } });
-
-  for (const modelo of modelos) {
-    const jaExisteEsseMes = await prisma.despesa.findFirst({
-      where: {
-        data: { gte: inicioMes },
-        OR: [{ id: modelo.id }, { origemRecorrenteId: modelo.id }],
-      },
-    });
-
-    if (!jaExisteEsseMes) {
-      const diaVencimento = modelo.data.getDate();
-      const vencimento = new Date(hoje.getFullYear(), hoje.getMonth(), Math.min(diaVencimento, 28));
-
-      await prisma.despesa.create({
-        data: {
-          descricao: modelo.descricao,
-          valor: modelo.valor,
-          tipo: modelo.tipo,
-          categoriaFinanceira: modelo.categoriaFinanceira,
-          categoria: modelo.categoria,
-          subcategoria: modelo.subcategoria,
-          clienteId: modelo.clienteId,
-          recorrente: false,
-          origemRecorrenteId: modelo.id,
-          status: "pendente", // nasce pendente — só vira "pago" quando você marcar de verdade
-          vencimento,
-          data: inicioMes,
-        },
-      });
-    }
-  }
-}
-
 export default async function FinanceiroPage({
   searchParams,
 }: {
   searchParams: { periodo?: string; desde?: string; ate?: string };
 }) {
-  await garantirRecorrentesDoMes();
+  // Nota: a geração de despesas/cobranças recorrentes do mês roda no layout do
+  // dashboard (app/dashboard/layout.tsx), então já está garantida antes daqui.
 
   const periodo = searchParams.periodo || "mes_atual";
   const { desde, ate, meses } = faixaPeriodo(periodo, { desde: searchParams.desde, ate: searchParams.ate });
@@ -155,6 +118,40 @@ export default async function FinanceiroPage({
     .map((c) => ({ ...c, lucro: c.entradas - c.despesas }))
     .sort((a, b) => b.entradas - a.entradas);
 
+  // Calendário financeiro do mês atual — recebimentos e pagamentos já lançados no sistema
+  const inicioMesAtual = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  const fimMesAtual = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0, 23, 59, 59);
+  const movimentosMes: {
+    dia: number;
+    tipo: "entrada" | "saida";
+    valor: number;
+    descricao: string;
+    cliente: string | null;
+  }[] = [];
+  cobrancasTodas.forEach((c) => {
+    if (c.createdAt >= inicioMesAtual && c.createdAt <= fimMesAtual) {
+      movimentosMes.push({
+        dia: c.createdAt.getDate(),
+        tipo: "entrada",
+        valor: Number(c.valor),
+        descricao: c.categoria || "Cobrança",
+        cliente: c.cliente.nome,
+      });
+    }
+  });
+  despesasTodas.forEach((d) => {
+    if (d.categoriaFinanceira === "transferencia") return;
+    if (d.data >= inicioMesAtual && d.data <= fimMesAtual) {
+      movimentosMes.push({
+        dia: d.data.getDate(),
+        tipo: "saida",
+        valor: Number(d.valor),
+        descricao: d.descricao,
+        cliente: d.cliente?.nome || null,
+      });
+    }
+  });
+
   return (
     <FinanceiroClient
       periodo={periodo}
@@ -202,6 +199,9 @@ export default async function FinanceiroPage({
       }))}
       clientes={clientes}
       resumoPorCliente={resumoPorCliente}
+      movimentosMes={movimentosMes}
+      mesAtual={hoje.getMonth()}
+      anoAtual={hoje.getFullYear()}
     />
   );
 }

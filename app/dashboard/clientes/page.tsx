@@ -1,25 +1,11 @@
 import Link from "next/link";
-import { Plus, Phone } from "lucide-react";
+import { Plus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
-import { ValorOcultavelTexto } from "@/components/ui/ValorOcultavelTexto";
 import { ToggleOcultarValores } from "@/components/ui/ToggleOcultarValores";
 import { Button } from "@/components/ui/Button";
-
-const statusTone: Record<string, "yellow" | "green" | "gray" | "blue"> = {
-  lead: "yellow",
-  ativo: "green",
-  avulso: "blue",
-  inativo: "gray",
-};
-
-const statusLabel: Record<string, string> = {
-  lead: "Lead",
-  ativo: "Ativo",
-  avulso: "Avulso",
-  inativo: "Inativo",
-};
+import { ClienteCard, ClienteCardData } from "@/components/dashboard/ClienteCard";
+import { ClientesAgrupados } from "@/components/dashboard/ClientesAgrupados";
+import { AjudaContextual } from "@/components/ui/AjudaContextual";
 
 export default async function ClientesPage({
   searchParams,
@@ -42,12 +28,44 @@ export default async function ClientesPage({
     { valor: "inativo", label: "Inativo" },
   ];
 
+  const clientesFormatados: ClienteCardData[] = clientes.map((c) => {
+    const somaServicos = c.servicosContratados.reduce((soma, sc) => soma + Number(sc.valor), 0);
+    const mensalidade = Math.max(0, somaServicos - Number(c.descontoMensal) + Number(c.acrescimoMensal));
+    const totalRecebido = c.cobrancas
+      .filter((cb) => cb.status === "pago")
+      .reduce((soma, cb) => soma + Number(cb.valor), 0);
+    return {
+      id: c.id,
+      nome: c.nome,
+      whatsapp: c.whatsapp,
+      logoUrl: c.logoUrl,
+      cor: c.cor,
+      status: c.status,
+      mensalidade,
+      totalRecebido,
+    };
+  });
+
+  const grupos = [
+    { chave: "ativo", titulo: "Ativos", clientes: clientesFormatados.filter((c) => c.status === "ativo") },
+    { chave: "avulso", titulo: "Avulsos", clientes: clientesFormatados.filter((c) => c.status === "avulso") },
+    { chave: "lead", titulo: "Leads", clientes: clientesFormatados.filter((c) => c.status === "lead") },
+    { chave: "inativo", titulo: "Inativos", clientes: clientesFormatados.filter((c) => c.status === "inativo") },
+  ];
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <div>
-          <p className="text-lg font-medium text-text">Clientes</p>
-          <p className="text-sm text-muted">{clientes.length} no total</p>
+        <div className="flex items-center gap-2">
+          <div>
+            <p className="text-lg font-medium text-text">Clientes</p>
+            <p className="text-sm text-muted">{clientes.length} no total</p>
+          </div>
+          <AjudaContextual
+            titulo="Clientes"
+            texto="Aqui ficam todos os clientes da agência, organizados por status: Ativos, Avulsos, Leads e Inativos. Clique no título de um grupo para expandir ou recolher."
+            exemplo="Ex.: clique em 'Ativos' para ver só quem está com contrato em andamento."
+          />
         </div>
         <div className="flex items-center gap-2">
           <ToggleOcultarValores />
@@ -79,77 +97,15 @@ export default async function ClientesPage({
         <p className="text-sm text-muted">Nenhum cliente por aqui ainda.</p>
       )}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {clientes.map((c, i) => {
-          const somaServicos = c.servicosContratados.reduce((soma, sc) => soma + Number(sc.valor), 0);
-          const mensalidade = Math.max(0, somaServicos - Number(c.descontoMensal) + Number(c.acrescimoMensal));
-          const totalRecebido = c.cobrancas
-            .filter((cb) => cb.status === "pago")
-            .reduce((soma, cb) => soma + Number(cb.valor), 0);
-          const iniciais = c.nome
-            .split(" ")
-            .map((p) => p[0])
-            .slice(0, 2)
-            .join("")
-            .toUpperCase();
-
-          return (
-            <Link key={c.id} href={`/dashboard/clientes/${c.id}`}>
-              <Card index={i} className="p-4" style={c.cor ? { borderLeft: `3px solid ${c.cor}` } : undefined}>
-                <div className="mb-4 flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    {c.logoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={c.logoUrl}
-                        alt={c.nome}
-                        className="h-10 w-10 rounded-xl object-cover"
-                      />
-                    ) : (
-                      <div
-                        className="flex h-10 w-10 items-center justify-center rounded-xl text-sm font-semibold"
-                        style={{ backgroundColor: `${c.cor || "#E63946"}1A`, color: c.cor || "#E63946" }}
-                      >
-                        {iniciais}
-                      </div>
-                    )}
-                    <div>
-                      <p className="text-sm font-medium text-text">{c.nome}</p>
-                      {c.whatsapp && (
-                        <p className="flex items-center gap-1 text-xs text-muted">
-                          <Phone size={11} /> {c.whatsapp}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <Badge tone={statusTone[c.status]}>{statusLabel[c.status]}</Badge>
-                </div>
-
-                {(mensalidade > 0 || totalRecebido > 0) && (
-                  <div className="grid grid-cols-2 gap-2 border-t border-border pt-3">
-                    <div>
-                      <p className="text-xs text-muted">Mensalidade</p>
-                      <p className="text-sm font-medium text-text">
-                        {mensalidade > 0 ? (
-                          <ValorOcultavelTexto>R$ {mensalidade.toLocaleString("pt-BR")}</ValorOcultavelTexto>
-                        ) : (
-                          "Sem serviços"
-                        )}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted">Recebido até agora</p>
-                      <p className="text-sm font-medium text-text">
-                        <ValorOcultavelTexto>R$ {totalRecebido.toLocaleString("pt-BR")}</ValorOcultavelTexto>
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </Card>
-            </Link>
-          );
-        })}
-      </div>
+      {filtro === "todos" ? (
+        <ClientesAgrupados grupos={grupos} />
+      ) : (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {clientesFormatados.map((c, i) => (
+            <ClienteCard key={c.id} cliente={c} index={i} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

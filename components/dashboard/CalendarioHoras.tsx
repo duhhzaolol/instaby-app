@@ -51,30 +51,47 @@ export function CalendarioHoras({
             const info = totaisPorDia[chave];
             const foraDoMes = d.getMonth() !== mes;
             const ehHoje = chave === hojeChave;
-            const cor = corPadrao || info?.cor || "#E63946";
-            const temRegistro = (registrosPorDia[chave] || []).length > 0;
+            const registros = registrosPorDia[chave] || [];
+            const temRegistro = registros.length > 0;
+            const registrosOrdenados = registros.slice().sort((a, b) => a.inicio.localeCompare(b.inicio));
+            const visiveis = registrosOrdenados.slice(0, 3);
+            const restantes = registrosOrdenados.length - visiveis.length;
 
             return (
               <button
                 key={chave}
                 onClick={() => temRegistro && setDiaAberto(chave)}
                 disabled={!temRegistro}
-                className={`min-h-[64px] border-b border-r border-border p-1.5 text-left last:border-r-0 ${
+                className={`min-h-[76px] border-b border-r border-border p-1.5 text-left last:border-r-0 ${
                   foraDoMes ? "bg-black/20" : ""
                 } ${temRegistro ? "cursor-pointer hover:bg-hover" : "cursor-default"}`}
               >
-                <span
-                  className={`mb-1 inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] ${
-                    ehHoje ? "bg-accent text-white" : foraDoMes ? "text-muted/40" : "text-muted"
-                  }`}
-                >
-                  {d.getDate()}
-                </span>
-                {info && info.horas > 0 && (
-                  <p className="rounded px-1 py-0.5 text-[10px] font-medium" style={{ backgroundColor: `${cor}1A`, color: cor }}>
-                    {formatarDuracao(info.horas)}
-                  </p>
-                )}
+                <div className="mb-1 flex items-center justify-between">
+                  <span
+                    className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] ${
+                      ehHoje ? "bg-accent text-white" : foraDoMes ? "text-muted/40" : "text-muted"
+                    }`}
+                  >
+                    {d.getDate()}
+                  </span>
+                  {info && info.horas > 0 && <span className="text-[10px] text-muted">{formatarDuracao(info.horas)}</span>}
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  {visiveis.map((r) => {
+                    const cor = corPadrao || r.clienteCor || "#E63946";
+                    return (
+                      <p key={r.id} className="truncate text-[10px] leading-tight" title={`${r.clienteNome || "Instaby"} – ${r.atividade}`}>
+                        <span className="font-semibold" style={{ color: cor }}>
+                          {r.clienteNome || "Instaby"}
+                        </span>{" "}
+                        <span className="text-muted">– {r.atividade}</span>
+                      </p>
+                    );
+                  })}
+                  {restantes > 0 && (
+                    <p className="text-[10px] font-medium text-accent">+{restantes} atividade{restantes > 1 ? "s" : ""}</p>
+                  )}
+                </div>
               </button>
             );
           })}

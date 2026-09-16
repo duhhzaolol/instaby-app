@@ -3,12 +3,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Clock, CircleDollarSign, History, X, ExternalLink } from "lucide-react";
+import { X, ExternalLink } from "lucide-react";
+import { visualDoTipoAtividade, type TipoAtividadeAgenda } from "@/lib/tipoAtividadeAgenda";
 
 export type EventoAgenda = {
   id: string;
-  tipo: "cobranca" | "tarefa" | "hora";
+  origem: "tarefa" | "hora";
+  tipoAtividade: TipoAtividadeAgenda;
   texto: string;
+  clienteNome?: string | null;
   cor?: string | null;
   href: string;
   data: string; // YYYY-MM-DD
@@ -18,6 +21,12 @@ export type EventoAgenda = {
 };
 
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+function horarioTexto(e: EventoAgenda) {
+  if (e.horaInicio) return e.horaFim ? `${e.horaInicio} – ${e.horaFim}` : e.horaInicio;
+  if (e.hora) return e.hora;
+  return null;
+}
 
 export function AgendaGrid({
   dias,
@@ -31,6 +40,7 @@ export function AgendaGrid({
   hojeChave: string;
 }) {
   const router = useRouter();
+  const [diaAberto, setDiaAberto] = useState<string | null>(null);
   const [editando, setEditando] = useState<EventoAgenda | null>(null);
   const [data, setData] = useState("");
   const [hora, setHora] = useState("");
@@ -50,19 +60,13 @@ export function AgendaGrid({
     if (!editando) return;
     setSalvando(true);
 
-    if (editando.tipo === "tarefa") {
+    if (editando.origem === "tarefa") {
       await fetch(`/api/tarefas/${editando.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prazo: `${data}T${hora || "00:00"}:00-03:00` }),
       });
-    } else if (editando.tipo === "cobranca") {
-      await fetch(`/api/cobrancas/${editando.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ vencimento: `${data}T12:00:00-03:00` }),
-      });
-    } else if (editando.tipo === "hora") {
+    } else {
       await fetch(`/api/registros-tempo/${editando.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -83,19 +87,15 @@ export function AgendaGrid({
     if (!confirm("Excluir esse item?")) return;
     setSalvando(true);
 
-    const rota =
-      editando.tipo === "tarefa"
-        ? `/api/tarefas/${editando.id}`
-        : editando.tipo === "cobranca"
-        ? `/api/cobrancas/${editando.id}`
-        : `/api/registros-tempo/${editando.id}`;
-
+    const rota = editando.origem === "tarefa" ? `/api/tarefas/${editando.id}` : `/api/registros-tempo/${editando.id}`;
     await fetch(rota, { method: "DELETE" });
 
     setSalvando(false);
     setEditando(null);
     router.refresh();
   }
+
+  const eventosDoDiaAberto = diaAberto ? eventosPorDia[diaAberto] || [] : [];
 
   return (
     <>
@@ -121,37 +121,39 @@ export function AgendaGrid({
                   foraDoMes ? "bg-black/20" : ""
                 }`}
               >
-                <span
+                <button
+                  onClick={() => eventos.length > 0 && setDiaAberto(chave)}
+                  disabled={eventos.length === 0}
                   className={`mb-1 inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] ${
                     ehHoje ? "bg-accent text-white" : foraDoMes ? "text-muted/40" : "text-muted"
-                  }`}
+                  } ${eventos.length > 0 ? "hover:ring-1 hover:ring-accent/40" : ""}`}
                 >
                   {d.getDate()}
-                </span>
+                </button>
                 <div className="flex flex-col gap-1">
                   {eventos.slice(0, 3).map((e, i) => {
-                    const estilo =
-                      e.tipo === "cobranca"
-                        ? { backgroundColor: "rgba(239,68,68,0.1)", color: "#f87171" }
-                        : e.tipo === "hora"
-                        ? { backgroundColor: `${e.cor || "#22C55E"}1A`, color: e.cor || "#4ade80" }
-                        : { backgroundColor: "rgba(56,189,248,0.1)", color: "#38bdf8" };
-                    const IconeEvento = e.tipo === "cobranca" ? CircleDollarSign : e.tipo === "hora" ? History : Clock;
+                    const visual = visualDoTipoAtividade(e.tipoAtividade);
+                    const Icon = visual.icone;
                     return (
                       <button
                         key={i}
                         onClick={() => abrir(e)}
                         className="flex items-center gap-1 truncate rounded px-1 py-0.5 text-left text-[10px] hover:opacity-80"
-                        style={estilo}
+                        style={{ backgroundColor: `${e.cor || visual.cor}1A`, color: e.cor || visual.cor }}
                         title={e.texto}
                       >
-                        <IconeEvento size={9} className="shrink-0" />
+                        <Icon size={9} className="shrink-0" />
                         <span className="truncate">{e.texto}</span>
                       </button>
                     );
                   })}
                   {eventos.length > 3 && (
-                    <p className="text-[10px] text-muted">+{eventos.length - 3} mais</p>
+                    <button
+                      onClick={() => setDiaAberto(chave)}
+                      className="text-left text-[10px] text-muted hover:text-text"
+                    >
+                      +{eventos.length - 3} mais
+                    </button>
                   )}
                 </div>
               </div>
@@ -159,6 +161,54 @@ export function AgendaGrid({
           })}
         </div>
       </div>
+
+      {diaAberto && !editando && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4"
+          onClick={() => setDiaAberto(null)}
+        >
+          <div
+            className="max-h-[80vh] w-full overflow-y-auto rounded-t-2xl border border-border bg-card p-5 sm:max-w-md sm:rounded-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <p className="text-sm font-medium text-text">
+                {new Date(diaAberto + "T12:00:00").toLocaleDateString("pt-BR", {
+                  weekday: "long",
+                  day: "2-digit",
+                  month: "long",
+                })}
+              </p>
+              <button onClick={() => setDiaAberto(null)} className="text-muted hover:text-text">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="flex flex-col gap-2">
+              {eventosDoDiaAberto.map((e, i) => {
+                const visual = visualDoTipoAtividade(e.tipoAtividade);
+                const Icon = visual.icone;
+                const horario = horarioTexto(e);
+                return (
+                  <button
+                    key={i}
+                    onClick={() => abrir(e)}
+                    className="flex items-center gap-3 rounded-xl border border-border bg-base/60 px-3.5 py-2.5 text-left hover:border-accent/30"
+                  >
+                    {horario && <span className="w-16 shrink-0 text-xs font-medium text-muted">{horario}</span>}
+                    <div
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+                      style={{ backgroundColor: `${e.cor || visual.cor}1A`, color: e.cor || visual.cor }}
+                    >
+                      <Icon size={13} />
+                    </div>
+                    <p className="min-w-0 flex-1 truncate text-sm text-text">{e.texto}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {editando && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setEditando(null)}>
@@ -178,7 +228,7 @@ export function AgendaGrid({
               className="mb-3 h-10 w-full rounded-lg border border-border bg-base px-3 text-sm text-text"
             />
 
-            {editando.tipo === "tarefa" && (
+            {editando.origem === "tarefa" && (
               <>
                 <label className="mb-1 block text-xs text-muted">Horário (opcional)</label>
                 <input
@@ -190,7 +240,7 @@ export function AgendaGrid({
               </>
             )}
 
-            {editando.tipo === "hora" && (
+            {editando.origem === "hora" && (
               <div className="mb-3 grid grid-cols-2 gap-2">
                 <div>
                   <label className="mb-1 block text-xs text-muted">Início</label>

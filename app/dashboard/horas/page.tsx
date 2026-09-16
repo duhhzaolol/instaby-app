@@ -5,6 +5,7 @@ import { NovoRegistroTempoForm } from "@/components/dashboard/NovoRegistroTempoF
 import { RegistroTempoRow } from "@/components/dashboard/RegistroTempoRow";
 import { CalendarioHoras } from "@/components/dashboard/CalendarioHoras";
 import { formatarDuracao } from "@/lib/formatarDuracao";
+import { AjudaContextual } from "@/components/ui/AjudaContextual";
 
 const NOMES_MESES = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -53,7 +54,7 @@ export default async function HorasPage({
     vendoMesAtual
       ? prisma.registroTempo.findMany({
           where: { inicio: { gte: inicioHoje() } },
-          include: { cliente: { select: { nome: true } } },
+          include: { cliente: { select: { nome: true, cor: true } } },
           orderBy: { inicio: "desc" },
         })
       : Promise.resolve([]),
@@ -103,7 +104,15 @@ export default async function HorasPage({
   const porDia: Record<string, { horas: number; cor: string | null }> = {};
   const registrosDetalhadosPorDia: Record<
     string,
-    { id: string; atividade: string; inicio: string; fim: string | null; clienteId: string | null; clienteNome: string | null }[]
+    {
+      id: string;
+      atividade: string;
+      inicio: string;
+      fim: string | null;
+      clienteId: string | null;
+      clienteNome: string | null;
+      clienteCor: string | null;
+    }[]
   > = {};
   registrosCalendario.forEach((r) => {
     const chave = chaveDia(r.inicio);
@@ -114,6 +123,7 @@ export default async function HorasPage({
       fim: r.fim?.toISOString() || null,
       clienteId: r.clienteId,
       clienteNome: r.cliente?.nome || null,
+      clienteCor: r.cliente?.cor || null,
     });
     if (!r.fim) return;
     const horas = (r.fim.getTime() - r.inicio.getTime()) / 1000 / 60 / 60;
@@ -133,7 +143,14 @@ export default async function HorasPage({
   return (
     <div>
       <div className="mb-1 flex items-center justify-between">
-        <p className="text-lg font-medium text-text">Horas</p>
+        <p className="flex items-center gap-1.5 text-lg font-medium text-text">
+          Horas
+          <AjudaContextual
+            titulo="Horas"
+            texto="Registre o tempo trabalhado por atividade e cliente. O calendário mostra até 3 atividades por dia — clique no dia pra ver todas. Use os filtros de cliente pra ver só um projeto."
+            exemplo="Ex.: clique num cliente na lista de filtros pra ver só as horas dele, sem sair da página."
+          />
+        </p>
         <div className="flex items-center gap-2">
           <Link
             href={linkComFiltro({ mes: `${mesAnterior.getFullYear()}-${mesAnterior.getMonth() + 1}` })}
@@ -295,6 +312,7 @@ export default async function HorasPage({
                   fim: r.fim?.toISOString() || null,
                   clienteId: null,
                   clienteNome: null,
+                  clienteCor: null,
                 }}
               />
             ))}
@@ -319,6 +337,7 @@ export default async function HorasPage({
                   fim: r.fim?.toISOString() || null,
                   clienteId: r.clienteId,
                   clienteNome: r.cliente?.nome || null,
+                  clienteCor: r.cliente?.cor || null,
                 }}
               />
             ))}

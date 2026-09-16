@@ -309,6 +309,7 @@ model Contrato {
   orcamento   Orcamento? @relation(fields: [orcamentoId], references: [id])
   conteudo    String
   status      String     @default("rascunho") // rascunho | enviado | assinado
+  arquivoUrl  String? // link do PDF assinado anexado (upload manual ou link externo — Drive etc.)
   createdAt   DateTime   @default(now())
 }
 

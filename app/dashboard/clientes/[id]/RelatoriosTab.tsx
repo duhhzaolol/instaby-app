@@ -3,6 +3,7 @@ import { NovoRelatorioForm } from "@/components/dashboard/NovoRelatorioForm";
 import { RelatorioCard, RelatorioResumo } from "@/components/dashboard/RelatorioCard";
 import { HistoricoRelatorios } from "@/components/dashboard/HistoricoRelatorios";
 import { BarChart3 } from "lucide-react";
+import { AjudaContextual } from "@/components/ui/AjudaContextual";
 
 export default function RelatoriosTab({
   clienteId,
@@ -15,6 +16,15 @@ export default function RelatoriosTab({
 }) {
   return (
     <div>
+      <div className="mb-3 flex items-center gap-1.5">
+        <p className="text-sm font-medium text-text">Relatórios de performance</p>
+        <AjudaContextual
+          titulo="Relatórios"
+          texto="Lance manualmente os indicadores de cada rede (seguidores, alcance, etc.) por período, e o sistema calcula o crescimento em relação ao período anterior. Hoje é lançamento manual — importação automática de outras plataformas é evolução futura."
+          exemplo="Ex.: marque quais redes a Instaby gerencia pra esse cliente antes de lançar o primeiro período."
+        />
+      </div>
+
       <RedesGerenciadasForm clienteId={clienteId} redesAtuais={redesGerenciadas} />
 
       {redesGerenciadas.length === 0 ? (

@@ -103,9 +103,9 @@ function ConteudoSidebar({ nome, email, onNavigate }: { nome: string; email: str
 
   return (
     <>
-      <div className="mb-8 flex items-center gap-2 px-2">
+      <Link href="/dashboard" onClick={onNavigate} className="mb-8 flex items-center gap-2 px-2">
         <img src="/logo.png" alt="Instaby" className="h-6 w-auto" />
-      </div>
+      </Link>
 
       <nav className="flex flex-1 flex-col gap-6 overflow-y-auto">
         <div className="flex flex-col gap-1">

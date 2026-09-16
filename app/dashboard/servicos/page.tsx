@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { visualDaCategoria } from "@/lib/categoriaVisual";
+import { AjudaContextual } from "@/components/ui/AjudaContextual";
 
 export default async function ServicosPage() {
   const servicos = await prisma.servico.findMany({
@@ -17,7 +18,14 @@ export default async function ServicosPage() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <p className="text-lg font-medium text-text">Catálogo de serviços</p>
+          <p className="flex items-center gap-1.5 text-lg font-medium text-text">
+            Catálogo de serviços
+            <AjudaContextual
+              titulo="Catálogo de serviços"
+              texto="A lista de serviços que a Instaby oferece, com valor unitário. É a partir daqui que você monta orçamentos e contratos de clientes."
+              exemplo="Ex.: cadastre 'Edição de vídeo' com o valor padrão, e reutilize em qualquer orçamento."
+            />
+          </p>
           <p className="text-sm text-muted">A base pra montar qualquer orçamento em pílulas</p>
         </div>
         <Link href="/dashboard/servicos/novo">

@@ -101,7 +101,7 @@ export default async function CalendarioTarefasPage({
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-lg font-medium text-text">Calendário de conteúdo</p>
+          <p className="text-lg font-medium text-text">Calendário de tarefas</p>
           <p className="text-sm text-muted">Cronograma de tarefas — bom pra apresentar pro cliente</p>
         </div>
         <div className="flex items-center gap-2">

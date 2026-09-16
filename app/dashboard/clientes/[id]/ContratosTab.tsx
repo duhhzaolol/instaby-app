@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { FileSignature, Trash2, ExternalLink } from "lucide-react";
+import { FileSignature, Trash2, ExternalLink, Paperclip, CheckCircle2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { AjudaContextual } from "@/components/ui/AjudaContextual";
 
-type Contrato = { id: string; conteudo: string; status: string; orcamentoId: string | null };
+type Contrato = { id: string; conteudo: string; status: string; orcamentoId: string | null; arquivoUrl?: string | null };
 type OrcamentoAceito = { id: string; slug: string };
 
 const tone: Record<string, "gray" | "yellow" | "green"> = {
@@ -38,6 +39,24 @@ export default function ContratosTab({
   const [gerando, setGerando] = useState(false);
   const [expandido, setExpandido] = useState<string | null>(null);
   const [textoEditado, setTextoEditado] = useState<Record<string, string>>({});
+  const [anexando, setAnexando] = useState<string | null>(null);
+
+  async function anexarArquivo(id: string, arquivo: File) {
+    setAnexando(id);
+    const form = new FormData();
+    form.append("arquivo", arquivo);
+    const resp = await fetch("/api/upload-contrato", { method: "POST", body: form });
+    const dados = await resp.json();
+    if (dados.url) {
+      await fetch(`/api/contratos/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ arquivoUrl: dados.url, status: "assinado" }),
+      });
+    }
+    setAnexando(null);
+    router.refresh();
+  }
 
   async function gerarDoOrcamento(orcamentoId: string) {
     setGerando(true);
@@ -92,6 +111,15 @@ export default function ContratosTab({
 
   return (
     <div>
+      <div className="mb-3 flex items-center gap-1.5">
+        <p className="text-sm font-medium text-text">Contratos</p>
+        <AjudaContextual
+          titulo="Contratos"
+          texto="Gere o texto do contrato a partir dos serviços contratados ou de um orçamento aceito. Marque manualmente como enviado/assinado, ou anexe o PDF já assinado — isso marca o contrato como assinado automaticamente."
+          exemplo="Ex.: depois que o cliente assinar por fora (WhatsApp, Drive), clique em 'Anexar assinado' e suba o PDF."
+        />
+      </div>
+
       {(orcamentosAceitos.length > 0 || temServicosContratados) && (
         <div className="mb-5 flex flex-wrap gap-2">
           {temServicosContratados && (
@@ -200,6 +228,33 @@ export default function ContratosTab({
                   )}
                 </div>
               )}
+
+              <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-border pt-3 text-xs">
+                {c.arquivoUrl ? (
+                  <a
+                    href={c.arquivoUrl}
+                    target="_blank"
+                    className="flex items-center gap-1.5 font-medium text-emerald-400 hover:underline"
+                  >
+                    <CheckCircle2 size={12} /> Ver PDF assinado
+                  </a>
+                ) : (
+                  <label className="flex cursor-pointer items-center gap-1.5 font-medium text-muted hover:text-text">
+                    <Paperclip size={12} />
+                    {anexando === c.id ? "Enviando..." : "Anexar contrato assinado (PDF)"}
+                    <input
+                      type="file"
+                      accept="application/pdf,image/*"
+                      className="hidden"
+                      disabled={anexando === c.id}
+                      onChange={(e) => {
+                        const arquivo = e.target.files?.[0];
+                        if (arquivo) anexarArquivo(c.id, arquivo);
+                      }}
+                    />
+                  </label>
+                )}
+              </div>
             </Card>
           ))}
         </div>

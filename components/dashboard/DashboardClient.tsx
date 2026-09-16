@@ -9,7 +9,6 @@ import {
   Clock,
   ChevronDown,
   CalendarClock,
-  ArrowRight,
   Target,
   TrendingUp,
   FileSignature,
@@ -221,7 +220,7 @@ export default function DashboardClient({
 
       <div className="mb-6 flex flex-wrap gap-2">
         {[
-          { label: "Novo conteúdo", href: "/dashboard/conteudo" },
+          { label: "Nova tarefa", href: "/dashboard/tarefas" },
           { label: "Registrar horas", href: "/dashboard/horas" },
           { label: "Nova cobrança", href: "/dashboard/financeiro" },
           { label: "Nova despesa", href: "/dashboard/financeiro?nova=despesa" },
@@ -304,33 +303,37 @@ export default function DashboardClient({
         </div>
       )}
 
-      {clientesResumo.length > 0 && (
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-sm font-medium text-text">
+          Afazeres <span className="text-muted">({abertas.length})</span>
+        </p>
+      </div>
+
+      <div className="mb-6 flex flex-col gap-2">
+        {abertas.length === 0 && (
+          <p className="text-sm text-muted">Nada pendente — capriche no cafezinho ☕</p>
+        )}
+        {abertas.map((t, i) => (
+          <TarefaRow key={t.id} index={i} tarefa={t} clienteNome={t.clienteNome} clienteCor={t.clienteCor} />
+        ))}
+      </div>
+
+      {concluidas.length > 0 && (
         <div className="mb-6">
-          <div className="mb-3 flex items-center justify-between">
-            <p className="flex items-center gap-1.5 text-sm font-medium text-text">
-              <Users size={14} className="text-accent" /> Clientes ativos
-            </p>
-            <Link href="/dashboard/clientes" className="flex items-center gap-1 text-xs text-muted hover:text-text">
-              Ver todos <ArrowRight size={11} />
-            </Link>
-          </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-            {clientesResumo.map((c) => (
-              <Link key={c.id} href={`/dashboard/clientes/${c.id}`}>
-                <Card hoverable={false} className="p-3 transition-colors hover:bg-hover">
-                  <span
-                    className="mb-2 inline-block h-2.5 w-2.5 rounded-full"
-                    style={{ backgroundColor: c.cor || "#9CA3AF" }}
-                  />
-                  <p className="truncate text-xs font-medium text-text">{c.nome}</p>
-                  <p className="text-[11px] text-muted">
-                    {c.totalTarefas} tarefas
-                    {c.pendentes > 0 && <span className="text-accent"> · {c.pendentes} pendente{c.pendentes > 1 ? "s" : ""}</span>}
-                  </p>
-                </Card>
-              </Link>
-            ))}
-          </div>
+          <button
+            onClick={() => setVerConcluidas((v) => !v)}
+            className="mb-3 flex items-center gap-1 text-xs font-medium text-muted hover:text-text"
+          >
+            <ChevronDown size={13} className={verConcluidas ? "rotate-180 transition-transform" : "transition-transform"} />
+            Concluídas ({concluidas.length})
+          </button>
+          {verConcluidas && (
+            <div className="flex flex-col gap-2 opacity-60">
+              {concluidas.map((t, i) => (
+                <TarefaRow key={t.id} index={i} tarefa={t} clienteNome={t.clienteNome} clienteCor={t.clienteCor} />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -420,40 +423,6 @@ export default function DashboardClient({
                 })}
               </div>
             </Card>
-          )}
-        </div>
-      )}
-
-      <div className="mb-3 flex items-center justify-between">
-        <p className="text-sm font-medium text-text">
-          Afazeres <span className="text-muted">({abertas.length})</span>
-        </p>
-      </div>
-
-      <div className="mb-6 flex flex-col gap-2">
-        {abertas.length === 0 && (
-          <p className="text-sm text-muted">Nada pendente — capriche no cafezinho ☕</p>
-        )}
-        {abertas.map((t, i) => (
-          <TarefaRow key={t.id} index={i} tarefa={t} clienteNome={t.clienteNome} clienteCor={t.clienteCor} />
-        ))}
-      </div>
-
-      {concluidas.length > 0 && (
-        <div>
-          <button
-            onClick={() => setVerConcluidas((v) => !v)}
-            className="mb-3 flex items-center gap-1 text-xs font-medium text-muted hover:text-text"
-          >
-            <ChevronDown size={13} className={verConcluidas ? "rotate-180 transition-transform" : "transition-transform"} />
-            Concluídas ({concluidas.length})
-          </button>
-          {verConcluidas && (
-            <div className="flex flex-col gap-2 opacity-60">
-              {concluidas.map((t, i) => (
-                <TarefaRow key={t.id} index={i} tarefa={t} clienteNome={t.clienteNome} clienteCor={t.clienteCor} />
-              ))}
-            </div>
           )}
         </div>
       )}

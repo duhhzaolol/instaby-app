@@ -95,10 +95,18 @@ export default function VisaoGeralClienteTab({
       </div>
 
       <div className="mb-6 rounded-xl border border-accent/20 bg-accent/5 p-4">
-        <p className="mb-3 flex items-center gap-1.5 text-sm font-medium text-text">
-          <TrendingUp size={14} className="text-accent" /> Resultado do mês
-        </p>
-        <div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3 border-b border-accent/10 pb-4">
+          <p className="flex items-center gap-1.5 text-sm font-medium text-text">
+            <TrendingUp size={14} className="text-accent" /> Resultado do mês
+          </p>
+          <div className="text-right">
+            <p className="text-[11px] text-muted">Rentabilidade</p>
+            <p className={`text-2xl font-semibold leading-tight ${rentabilidade >= 0 ? "text-accent" : "text-red-400"}`}>
+              <ValorSensivel oculto={oculto}>R$ {rentabilidade.toFixed(0)}</ValorSensivel>
+            </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-3 text-center">
           <div>
             <p className="text-xs text-muted">Receita</p>
             <p className="text-base font-medium text-emerald-400">
@@ -115,12 +123,6 @@ export default function VisaoGeralClienteTab({
             <p className="text-xs text-muted">Custo das horas</p>
             <p className="text-base font-medium text-red-400">
               <ValorSensivel oculto={oculto}>R$ {custoHoras.toFixed(0)}</ValorSensivel>
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-muted">Rentabilidade</p>
-            <p className={`text-base font-medium ${rentabilidade >= 0 ? "text-accent" : "text-red-400"}`}>
-              <ValorSensivel oculto={oculto}>R$ {rentabilidade.toFixed(0)}</ValorSensivel>
             </p>
           </div>
         </div>
