@@ -1,6 +1,19 @@
-# Instaby App — v96
+# Instaby App — v97
 
-## Correção de build da v95
+## Ajuste: "Sem classificação" não devia incluir retiradas
+
+Reportado com print: o filtro "⚠️ Sem classificação" em Contas a Pagar estava
+trazendo junto lançamentos como "Pró Labore" e "perfume" marcados como "Retirada
+pessoal" — mas esses JÁ estão classificados (como transferência/retirada), só não
+entram na DRE por não serem despesa operacional. Misturar os dois na mesma bandeira
+de alerta estava errado — retirada não é um dado faltando, é uma escolha válida.
+
+Corrigido: "Sem classificação" agora é só o que realmente não tem categoria nenhuma
+(nem em Contas a Pagar, nem no aviso da DRE, nem no card do Dashboard). A DRE ganhou
+uma segunda linha, neutra (sem cor de alerta), avisando o total de retiradas/
+transferências do período separado do aviso de sem classificação.
+
+## v96 — Correção de build da v95
 
 O deploy da v95 quebrou no Vercel: erro de tipo TypeScript em
 `app/dashboard/financeiro/page.tsx` — uma consulta que eu tinha removido do

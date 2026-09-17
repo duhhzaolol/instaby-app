@@ -45,9 +45,12 @@ export default async function DrePage({
   const despesasVariaveis = somaPor("despesa_variavel");
   const despesasFinanceiras = somaPor("despesa_financeira");
   const investimentos = somaPor("investimento");
+  // Só o que realmente falta classificar — retirada/transferência já é uma classificação
+  // válida (só não conta como despesa operacional), não é um "buraco" a corrigir.
   const semClassificacao = despesas
-    .filter((d) => !d.categoriaFinanceira || d.categoriaFinanceira === "transferencia")
+    .filter((d) => !d.categoriaFinanceira)
     .reduce((s, d) => s + Number(d.valor), 0);
+  const transferencias = somaPor("transferencia");
 
   const receitaLiquida = receitaBruta - impostos;
   const lucroBruto = receitaLiquida - custos;
@@ -101,14 +104,23 @@ export default async function DrePage({
       {semClassificacao > 0 && (
         <Link
           href="/dashboard/financeiro/contas-a-pagar?categoria=sem_classificacao"
-          className="mb-5 flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3.5 hover:bg-amber-500/10"
+          className="mb-3 flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3.5 hover:bg-amber-500/10"
         >
           <AlertTriangle size={15} className="mt-0.5 shrink-0 text-amber-400" />
           <p className="text-xs text-amber-200">
-            R$ {fmt(semClassificacao)} em despesas sem classificação (ou marcadas como transferência) não entram
-            nessa DRE. <span className="underline">Clique aqui pra classificar</span> e essa conta ficar completa.
+            R$ {fmt(semClassificacao)} em despesas sem classificação não entram nessa DRE.{" "}
+            <span className="underline">Clique aqui pra classificar</span> e essa conta ficar completa.
           </p>
         </Link>
+      )}
+
+      {transferencias > 0 && (
+        <div className="mb-5 flex items-start gap-2 rounded-xl border border-border bg-card/40 p-3.5">
+          <p className="text-xs text-muted">
+            R$ {fmt(transferencias)} em retiradas/transferências no período — já classificadas, só não entram nessa
+            DRE porque não são despesa operacional (aparecem no Fluxo de Caixa normalmente).
+          </p>
+        </div>
       )}
 
       <div className="rounded-2xl border border-border bg-card/60 p-5 sm:p-6">

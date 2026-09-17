@@ -49,7 +49,9 @@ export default async function ContasAPagarPage({
       : { status: { in: ["pendente", "atrasado"] } };
 
   if (filtroCategoria === "sem_classificacao") {
-    baseWhere.OR = [{ categoriaFinanceira: null }, { categoriaFinanceira: "transferencia" }];
+    // Só o que realmente falta classificar — retirada/transferência já é uma
+    // classificação válida (aparece com seu próprio filtro na lista de categorias).
+    baseWhere.categoriaFinanceira = null;
   } else if (filtroCategoria) {
     baseWhere.categoriaFinanceira = filtroCategoria;
   }
