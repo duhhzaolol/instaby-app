@@ -1,6 +1,22 @@
-# Instaby App — v100
+# Instaby App — v101
 
-## Correção: site e /link não atualizavam sozinhos
+## Hero e "Quem somos": banner de fundo intacto, texto sempre por cima
+
+Reportado com print: o jeito que a imagem de abertura e a foto de "Quem somos"
+apareciam (empilhada embaixo do texto, ou lado a lado) não tinha nada a ver
+com a referência pedida — o certo é a foto ficar inteira, intacta, como fundo
+de um card, com o texto (que você edita) sempre por cima, igual a seção de
+Portfólio em destaque já fazia.
+
+Corrigido: as duas seções (Hero e Quem somos) agora seguem esse mesmo padrão
+— banner ocupando o card inteiro, com um gradiente escuro sutil só pra dar
+contraste, e o texto (editável no painel, sem precisar mexer na imagem)
+posicionado por cima. Tamanho recomendado do banner mudou pra 1920×1080px
+(formato bem largo) nos dois — e a orientação agora deixa claro: mande a
+imagem **sem nenhum texto escrito nela**, porque o texto já é renderizado
+por cima automaticamente.
+
+## v100 — Correção: site e /link não atualizavam sozinhos
 
 Reportado: depois de adicionar banners/fotos em Configurações → Site & Link na
 bio, o site (`/`) não mudava nada.

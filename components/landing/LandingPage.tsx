@@ -117,94 +117,101 @@ export function LandingPage({
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="relative overflow-hidden px-6 pb-24 pt-20 sm:pt-28">
-        <div
-          className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[520px] opacity-40"
-          style={{ background: "radial-gradient(ellipse at top, rgba(230,57,70,0.18), transparent 70%)" }}
-        />
-        <div className="mx-auto max-w-3xl text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-accent/20 bg-accent/5 px-3 py-1 text-xs font-medium text-accent"
-          >
-            <Sparkles size={12} /> Marketing digital com resultado de verdade
-          </motion.div>
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
-            className="mb-5 whitespace-pre-line text-4xl font-semibold leading-tight tracking-tight sm:text-5xl"
-          >
-            {titulo}
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
-            className="mx-auto mb-9 max-w-xl text-base leading-relaxed text-muted sm:text-lg"
-          >
-            {subtitulo}
-          </motion.p>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.18, ease: [0.16, 1, 0.3, 1] }}
-            className="flex flex-wrap items-center justify-center gap-3"
-          >
-            {linkWhatsapp && (
-              <a
-                href={linkWhatsapp}
-                target="_blank"
-                className="flex items-center gap-2 rounded-full bg-accent px-6 py-3 text-sm font-medium text-white shadow-glow transition-transform hover:scale-[1.02]"
-              >
-                <MessageCircle size={16} /> Falar no WhatsApp
-              </a>
-            )}
-            <a
-              href="#servicos"
-              className="flex items-center gap-2 rounded-full border border-border px-6 py-3 text-sm font-medium text-muted transition-colors hover:border-accent/30 hover:text-text"
-            >
-              Ver serviços <ArrowRight size={14} />
-            </a>
-          </motion.div>
-        </div>
-
-        {heroImagemUrl && (
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="mx-auto mt-14 max-w-4xl overflow-hidden rounded-3xl border border-border"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={heroImagemUrl} alt="Instaby" className="w-full object-cover" />
-          </motion.div>
-        )}
-      </section>
-
-      {/* Quem somos */}
-      <section className="border-t border-border/60 px-6 py-20">
-        {sobreImagemUrl ? (
-          <div className="mx-auto grid max-w-5xl grid-cols-1 items-center gap-10 lg:grid-cols-2">
-            <motion.div {...fadeUp()} className="overflow-hidden rounded-3xl border border-border">
+      {/* Hero — banner de fundo intacto, textos sempre por cima (como um card) */}
+      <section className="relative overflow-hidden px-6 pb-16 pt-20 sm:pt-28">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          className="relative mx-auto max-w-6xl overflow-hidden rounded-3xl border border-border"
+        >
+          {heroImagemUrl ? (
+            <>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={sobreImagemUrl} alt="Instaby" className="w-full object-cover" />
-            </motion.div>
-            <div>
-              <motion.p {...fadeUp()} className="mb-3 text-xs font-medium uppercase tracking-wider text-accent">
-                Quem somos
+              <img src={heroImagemUrl} alt="Instaby" className="absolute inset-0 h-full w-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/20" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+            </>
+          ) : (
+            <div
+              className="absolute inset-0"
+              style={{ background: "radial-gradient(ellipse at top left, rgba(230,57,70,0.25), transparent 65%), #0d0d0f" }}
+            />
+          )}
+
+          <div className="relative z-10 flex min-h-[460px] flex-col justify-center gap-5 p-8 sm:min-h-[560px] sm:p-14">
+            <div className="max-w-xl">
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+                className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-medium text-accent backdrop-blur"
+              >
+                <Sparkles size={12} /> Marketing digital com resultado de verdade
+              </motion.div>
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+                className="mb-5 whitespace-pre-line text-4xl font-semibold leading-tight tracking-tight text-white sm:text-5xl"
+              >
+                {titulo}
+              </motion.h1>
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                className="mb-9 max-w-xl text-base leading-relaxed text-white/75 sm:text-lg"
+              >
+                {subtitulo}
               </motion.p>
-              <motion.h2 {...fadeUp(0.05)} className="mb-5 text-2xl font-semibold sm:text-3xl">
-                Uma agência enxuta, feita pra empresas que querem atenção de verdade
-              </motion.h2>
-              <motion.p {...fadeUp(0.1)} className="whitespace-pre-line text-sm leading-relaxed text-muted sm:text-base">
-                {textoSobre}
-              </motion.p>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                className="flex flex-wrap items-center gap-3"
+              >
+                {linkWhatsapp && (
+                  <a
+                    href={linkWhatsapp}
+                    target="_blank"
+                    className="flex items-center gap-2 rounded-full bg-accent px-6 py-3 text-sm font-medium text-white shadow-glow transition-transform hover:scale-[1.02]"
+                  >
+                    <MessageCircle size={16} /> Falar no WhatsApp
+                  </a>
+                )}
+                <a
+                  href="#servicos"
+                  className="flex items-center gap-2 rounded-full border border-white/25 bg-white/5 px-6 py-3 text-sm font-medium text-white/90 backdrop-blur transition-colors hover:border-white/40 hover:text-white"
+                >
+                  Ver serviços <ArrowRight size={14} />
+                </a>
+              </motion.div>
             </div>
           </div>
+        </motion.div>
+      </section>
+
+      {/* Quem somos — mesmo tratamento do Hero: banner de fundo intacto, texto por cima */}
+      <section className="border-t border-border/60 px-6 py-20">
+        {sobreImagemUrl ? (
+          <motion.div
+            {...fadeUp()}
+            className="relative mx-auto max-w-6xl overflow-hidden rounded-3xl border border-border"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={sobreImagemUrl} alt="Instaby" className="absolute inset-0 h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-black/10" />
+            <div className="relative z-10 flex min-h-[420px] flex-col justify-center p-8 sm:min-h-[480px] sm:p-14">
+              <div className="max-w-xl">
+                <p className="mb-3 text-xs font-medium uppercase tracking-wider text-accent">Quem somos</p>
+                <h2 className="mb-5 text-2xl font-semibold text-white sm:text-3xl">
+                  Uma agência enxuta, feita pra empresas que querem atenção de verdade
+                </h2>
+                <p className="whitespace-pre-line text-sm leading-relaxed text-white/75 sm:text-base">{textoSobre}</p>
+              </div>
+            </div>
+          </motion.div>
         ) : (
           <div className="mx-auto max-w-4xl text-center">
             <motion.p {...fadeUp()} className="mb-3 text-xs font-medium uppercase tracking-wider text-accent">

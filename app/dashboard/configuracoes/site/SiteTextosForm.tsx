@@ -68,13 +68,17 @@ export default function SiteTextosForm({ config }: { config: ConfigSite }) {
           placeholder="A Instaby cuida de estratégia, conteúdo e tráfego pago..."
           className="mb-3"
         />
-        <Label>Imagem de abertura (opcional)</Label>
+        <Label>Banner de fundo (opcional)</Label>
+        <p className="mb-2 text-[11px] text-muted">
+          Envie a foto/arte sem nenhum texto escrito nela — o título e subtítulo acima já aparecem por cima do
+          banner automaticamente, então a imagem só precisa ser o cenário (câmera, gravação, etc).
+        </p>
         <UploadImagem
           value={heroImagemUrl}
           onChange={setHeroImagemUrl}
           pasta="site-hero"
-          tamanhoRecomendado="1600 × 1200px"
-          proporcao="4:3"
+          tamanhoRecomendado="1920 × 1080px"
+          proporcao="banner largo"
         />
       </div>
 
@@ -88,13 +92,16 @@ export default function SiteTextosForm({ config }: { config: ConfigSite }) {
           placeholder="A Instaby nasceu em Araras, SP..."
           className="mb-3"
         />
-        <Label>Foto (opcional — ex: você trabalhando/gravando)</Label>
+        <Label>Banner de fundo (opcional — ex: você trabalhando/gravando)</Label>
+        <p className="mb-2 text-[11px] text-muted">
+          Também sem texto escrito — o texto acima aparece por cima do banner, igual no Hero.
+        </p>
         <UploadImagem
           value={sobreImagemUrl}
           onChange={setSobreImagemUrl}
           pasta="site-sobre"
-          tamanhoRecomendado="900 × 1100px"
-          proporcao="retrato"
+          tamanhoRecomendado="1920 × 1080px"
+          proporcao="banner largo"
         />
       </div>
 
