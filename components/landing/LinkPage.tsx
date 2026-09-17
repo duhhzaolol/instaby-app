@@ -4,19 +4,29 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { MessageCircle, ExternalLink, Instagram } from "lucide-react";
 
-type LinkItem = { label: string; url: string | null };
+type LinkItem = { titulo: string; url: string; imagemUrl: string | null };
 
-function iconePara(label: string) {
-  if (label.toLowerCase().includes("instagram")) return Instagram;
+function iconePara(titulo: string) {
+  if (titulo.toLowerCase().includes("instagram")) return Instagram;
   return ExternalLink;
 }
 
-export function LinkPage({ links, whatsappAgencia }: { links: LinkItem[]; whatsappAgencia: string | null }) {
+export function LinkPage({
+  links,
+  whatsappAgencia,
+  introTexto,
+  rodapeTexto,
+}: {
+  links: LinkItem[];
+  whatsappAgencia: string | null;
+  introTexto?: string | null;
+  rodapeTexto?: string | null;
+}) {
   const linkWhatsapp = whatsappAgencia
     ? `https://wa.me/${whatsappAgencia}?text=${encodeURIComponent("Olá! Vim pela página de links da Instaby.")}`
     : null;
 
-  const disponiveis = links.filter((l) => !!l.url);
+  const disponiveis = links;
 
   return (
     <div className="flex min-h-screen flex-col items-center bg-base px-6 py-16 text-text">
@@ -37,9 +47,9 @@ export function LinkPage({ links, whatsappAgencia }: { links: LinkItem[]; whatsa
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5, delay: 0.1 }}
-        className="mb-10 text-sm text-muted"
+        className="mb-10 whitespace-pre-line text-center text-sm text-muted"
       >
-        Marketing digital com resultado de verdade
+        {introTexto || "Marketing digital com resultado de verdade"}
       </motion.p>
 
       <div className="flex w-full max-w-sm flex-col gap-3">
@@ -57,24 +67,30 @@ export function LinkPage({ links, whatsappAgencia }: { links: LinkItem[]; whatsa
         )}
 
         {disponiveis.map((l, i) => {
-          const Icon = iconePara(l.label);
-          const externo = l.url!.startsWith("http");
+          const Icon = iconePara(l.titulo);
+          const externo = l.url.startsWith("http");
           const conteudo = (
             <>
-              <Icon size={16} className="text-muted" />
-              <span className="flex-1 text-center">{l.label}</span>
+              {l.imagemUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={l.imagemUrl} alt={l.titulo} className="h-8 w-8 shrink-0 rounded-lg object-cover" />
+              ) : (
+                <Icon size={16} className="shrink-0 text-muted" />
+              )}
+              <span className="flex-1 text-center">{l.titulo}</span>
+              {l.imagemUrl && <span className="w-8 shrink-0" />}
             </>
           );
           return (
             <motion.div
-              key={l.label}
+              key={`${l.titulo}-${l.url}`}
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.15 + (i + 1) * 0.05 }}
             >
               {externo ? (
                 <a
-                  href={l.url!}
+                  href={l.url}
                   target="_blank"
                   className="flex items-center gap-2 rounded-2xl border border-border bg-card/60 px-5 py-4 text-sm font-medium text-text transition-colors hover:border-accent/30"
                 >
@@ -82,7 +98,7 @@ export function LinkPage({ links, whatsappAgencia }: { links: LinkItem[]; whatsa
                 </a>
               ) : (
                 <Link
-                  href={l.url!}
+                  href={l.url}
                   className="flex items-center gap-2 rounded-2xl border border-border bg-card/60 px-5 py-4 text-sm font-medium text-text transition-colors hover:border-accent/30"
                 >
                   {conteudo}
@@ -93,7 +109,9 @@ export function LinkPage({ links, whatsappAgencia }: { links: LinkItem[]; whatsa
         })}
       </div>
 
-      <p className="mt-16 text-xs text-muted/50">© {new Date().getFullYear()} Instaby Agência</p>
+      <p className="mt-16 whitespace-pre-line text-center text-xs text-muted/50">
+        {rodapeTexto || `© ${new Date().getFullYear()} Instaby Agência`}
+      </p>
     </div>
   );
 }

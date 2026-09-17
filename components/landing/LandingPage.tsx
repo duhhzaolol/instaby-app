@@ -51,18 +51,51 @@ function fadeUp(delay = 0) {
   };
 }
 
+type CaseTrabalho = {
+  id: string;
+  nome: string;
+  categoria: string | null;
+  imagemUrl: string | null;
+  link: string | null;
+  destaque: boolean;
+};
+
 export function LandingPage({
   logos,
   depoimentos,
   whatsappAgencia,
+  heroTitulo,
+  heroSubtitulo,
+  heroImagemUrl,
+  sobreTexto,
+  sobreImagemUrl,
+  rodapeTexto,
+  cases,
 }: {
   logos: { nome: string; logoUrl: string }[];
   depoimentos: { id: string; nomeCliente: string; texto: string }[];
   whatsappAgencia: string | null;
+  heroTitulo?: string | null;
+  heroSubtitulo?: string | null;
+  heroImagemUrl?: string | null;
+  sobreTexto?: string | null;
+  sobreImagemUrl?: string | null;
+  rodapeTexto?: string | null;
+  cases?: CaseTrabalho[];
 }) {
   const linkWhatsapp = whatsappAgencia
     ? `https://wa.me/${whatsappAgencia}?text=${encodeURIComponent("Olá! Vim pelo site da Instaby e queria saber mais sobre os serviços.")}`
     : null;
+
+  const titulo = heroTitulo || "Sua marca merece mais do que postar por postar.";
+  const subtitulo =
+    heroSubtitulo ||
+    "A Instaby cuida de estratégia, conteúdo e tráfego pago pra negócios que querem crescer com consistência — sem depender de sorte.";
+  const textoSobre =
+    sobreTexto ||
+    "A Instaby nasceu em Araras, SP, com um jeito direto de trabalhar: entender o negócio do cliente antes de qualquer criativo ou campanha, e acompanhar de perto cada resultado. Cuidamos de social media, tráfego pago, produção de vídeo e presença digital — sempre com a estratégia guiando a execução.";
+  const casesDestaque = (cases || []).filter((c) => c.destaque && c.imagemUrl);
+  const casesNormais = (cases || []).filter((c) => !c.destaque);
 
   return (
     <div className="min-h-screen bg-base text-text">
@@ -103,9 +136,9 @@ export function LandingPage({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
-            className="mb-5 text-4xl font-semibold leading-tight tracking-tight sm:text-5xl"
+            className="mb-5 whitespace-pre-line text-4xl font-semibold leading-tight tracking-tight sm:text-5xl"
           >
-            Sua marca merece mais do que postar por postar.
+            {titulo}
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -113,8 +146,7 @@ export function LandingPage({
             transition={{ duration: 0.7, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
             className="mx-auto mb-9 max-w-xl text-base leading-relaxed text-muted sm:text-lg"
           >
-            A Instaby cuida de estratégia, conteúdo e tráfego pago pra negócios que querem
-            crescer com consistência — sem depender de sorte.
+            {subtitulo}
           </motion.p>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -139,24 +171,53 @@ export function LandingPage({
             </a>
           </motion.div>
         </div>
+
+        {heroImagemUrl && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            className="mx-auto mt-14 max-w-4xl overflow-hidden rounded-3xl border border-border"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={heroImagemUrl} alt="Instaby" className="w-full object-cover" />
+          </motion.div>
+        )}
       </section>
 
       {/* Quem somos */}
       <section className="border-t border-border/60 px-6 py-20">
-        <div className="mx-auto max-w-4xl text-center">
-          <motion.p {...fadeUp()} className="mb-3 text-xs font-medium uppercase tracking-wider text-accent">
-            Quem somos
-          </motion.p>
-          <motion.h2 {...fadeUp(0.05)} className="mb-5 text-2xl font-semibold sm:text-3xl">
-            Uma agência enxuta, feita pra empresas que querem atenção de verdade
-          </motion.h2>
-          <motion.p {...fadeUp(0.1)} className="mx-auto max-w-2xl text-sm leading-relaxed text-muted sm:text-base">
-            A Instaby nasceu em Araras, SP, com um jeito direto de trabalhar: entender o negócio
-            do cliente antes de qualquer criativo ou campanha, e acompanhar de perto cada
-            resultado. Cuidamos de social media, tráfego pago, produção de vídeo e presença
-            digital — sempre com a estratégia guiando a execução.
-          </motion.p>
-        </div>
+        {sobreImagemUrl ? (
+          <div className="mx-auto grid max-w-5xl grid-cols-1 items-center gap-10 lg:grid-cols-2">
+            <motion.div {...fadeUp()} className="overflow-hidden rounded-3xl border border-border">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={sobreImagemUrl} alt="Instaby" className="w-full object-cover" />
+            </motion.div>
+            <div>
+              <motion.p {...fadeUp()} className="mb-3 text-xs font-medium uppercase tracking-wider text-accent">
+                Quem somos
+              </motion.p>
+              <motion.h2 {...fadeUp(0.05)} className="mb-5 text-2xl font-semibold sm:text-3xl">
+                Uma agência enxuta, feita pra empresas que querem atenção de verdade
+              </motion.h2>
+              <motion.p {...fadeUp(0.1)} className="whitespace-pre-line text-sm leading-relaxed text-muted sm:text-base">
+                {textoSobre}
+              </motion.p>
+            </div>
+          </div>
+        ) : (
+          <div className="mx-auto max-w-4xl text-center">
+            <motion.p {...fadeUp()} className="mb-3 text-xs font-medium uppercase tracking-wider text-accent">
+              Quem somos
+            </motion.p>
+            <motion.h2 {...fadeUp(0.05)} className="mb-5 text-2xl font-semibold sm:text-3xl">
+              Uma agência enxuta, feita pra empresas que querem atenção de verdade
+            </motion.h2>
+            <motion.p {...fadeUp(0.1)} className="mx-auto max-w-2xl whitespace-pre-line text-sm leading-relaxed text-muted sm:text-base">
+              {textoSobre}
+            </motion.p>
+          </div>
+        )}
       </section>
 
       {/* Serviços */}
@@ -189,7 +250,7 @@ export function LandingPage({
         </div>
       </section>
 
-      {/* Portfólio — preparado pra receber material de verdade depois */}
+      {/* Portfólio */}
       <section className="border-t border-border/60 px-6 py-20">
         <div className="mx-auto max-w-6xl">
           <motion.p {...fadeUp()} className="mb-3 text-center text-xs font-medium uppercase tracking-wider text-accent">
@@ -198,18 +259,84 @@ export function LandingPage({
           <motion.h2 {...fadeUp(0.05)} className="mb-12 text-center text-2xl font-semibold sm:text-3xl">
             Trabalhos em destaque
           </motion.h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            {[1, 2, 3].map((i) => (
-              <motion.div
-                key={i}
-                {...fadeUp(i * 0.05)}
-                className="flex aspect-[4/5] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-card/30 text-center"
-              >
-                <Video size={20} className="text-muted/50" />
-                <p className="px-6 text-xs text-muted/60">Em breve</p>
-              </motion.div>
-            ))}
-          </div>
+
+          {casesDestaque.length === 0 && casesNormais.length === 0 ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              {[1, 2, 3].map((i) => (
+                <motion.div
+                  key={i}
+                  {...fadeUp(i * 0.05)}
+                  className="flex aspect-[4/5] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-card/30 text-center"
+                >
+                  <Video size={20} className="text-muted/50" />
+                  <p className="px-6 text-xs text-muted/60">Em breve</p>
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {casesDestaque.map((c, i) => {
+                const CaseCard = (
+                  <motion.div
+                    {...fadeUp(i * 0.06)}
+                    className="group relative overflow-hidden rounded-2xl border border-border"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={c.imagemUrl!} alt={c.nome} className="aspect-[16/7] w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+                    <div className="absolute bottom-0 left-0 p-6">
+                      <p className="mb-1 text-xl font-semibold text-white">{c.nome}</p>
+                      {c.categoria && <p className="text-[11px] tracking-wide text-white/70">{c.categoria}</p>}
+                    </div>
+                  </motion.div>
+                );
+                return c.link ? (
+                  <a key={c.id} href={c.link} target="_blank">
+                    {CaseCard}
+                  </a>
+                ) : (
+                  <div key={c.id}>{CaseCard}</div>
+                );
+              })}
+
+              {casesNormais.length > 0 && (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  {casesNormais.map((c, i) => {
+                    const item = (
+                      <motion.div
+                        {...fadeUp(i * 0.05)}
+                        className="group relative aspect-square overflow-hidden rounded-2xl border border-border bg-card/30"
+                      >
+                        {c.imagemUrl ? (
+                          <>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={c.imagemUrl} alt={c.nome} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.05]" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+                            <div className="absolute bottom-0 left-0 p-4">
+                              <p className="text-sm font-medium text-white">{c.nome}</p>
+                              {c.categoria && <p className="text-[10px] text-white/70">{c.categoria}</p>}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex h-full flex-col items-center justify-center gap-1">
+                            <p className="text-sm font-medium text-text">{c.nome}</p>
+                            {c.categoria && <p className="text-[10px] text-muted">{c.categoria}</p>}
+                          </div>
+                        )}
+                      </motion.div>
+                    );
+                    return c.link ? (
+                      <a key={c.id} href={c.link} target="_blank">
+                        {item}
+                      </a>
+                    ) : (
+                      <div key={c.id}>{item}</div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </section>
 
@@ -341,7 +468,7 @@ export function LandingPage({
               Painel administrativo
             </Link>
           </div>
-          <p className="text-xs text-muted/60">© {new Date().getFullYear()} Instaby Agência</p>
+          <p className="text-xs text-muted/60">{rodapeTexto || `© ${new Date().getFullYear()} Instaby Agência`}</p>
         </div>
       </footer>
     </div>

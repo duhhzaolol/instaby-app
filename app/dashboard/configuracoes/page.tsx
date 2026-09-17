@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { Globe, ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import DepoimentosForm from "./DepoimentosForm";
 import WhatsappAgenciaForm from "./WhatsappAgenciaForm";
@@ -22,6 +24,24 @@ export default async function ConfiguracoesPage() {
   return (
     <div className="flex flex-col gap-8">
       <p className="text-lg font-medium text-text">Configurações</p>
+
+      <Link
+        href="/dashboard/configuracoes/site"
+        className="flex items-center justify-between rounded-2xl border border-accent/20 bg-accent/5 p-5 transition-colors hover:bg-accent/10"
+      >
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent">
+            <Globe size={18} />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-text">Site &amp; Link na bio</p>
+            <p className="text-xs text-muted">
+              Edite textos, imagens, portfólio e os links da página /link — sem precisar de código.
+            </p>
+          </div>
+        </div>
+        <ChevronRight size={16} className="text-muted" />
+      </Link>
 
       <div>
         <p className="mb-1 text-sm font-medium text-text">Meta de faturamento</p>

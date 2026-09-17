@@ -1,6 +1,37 @@
-# Instaby App — v97
+# Instaby App — v98
 
-## Ajuste: "Sem classificação" não devia incluir retiradas
+## Painel de edição do Site & Link na bio
+
+Você vai refazer o visual do site com outra IA — isso não muda aqui. O que essa
+versão entrega é a "sala de controle": um lugar dentro do painel (Configurações →
+Site & Link na bio) pra você editar o conteúdo sozinho, sem precisar mexer em código
+nem me chamar toda vez.
+
+### O que dá pra editar agora
+- **Textos e imagens do site** (`/`): frase de impacto do topo, subtítulo, imagem de
+  abertura, texto e foto de "Quem somos", e o rodapé — cada campo de imagem já
+  mostra o tamanho recomendado em pixel antes de você enviar.
+- **Portfólio**: adicione quantos trabalhos quiser, com foto de capa, categoria/tags,
+  link "Ver case" opcional, marque como "destaque" (aparece grande) e reordene com
+  as setas. Enquanto estiver vazio, o site mostra os placeholders "Em breve" de
+  sempre.
+- **Página de links** (`/link`, estilo Linktree): adicione links com foto de capa
+  (200×200px), texto e endereço, reordene com as setas, e edite a frase de abertura
+  e o rodapé da página (textos livres, sem ser link).
+
+Tudo isso é aditivo — se você não configurar nada, o site continua exatamente como
+está hoje (os textos padrão continuam no código como fallback).
+
+### Banco de dados
+Aditivo: `Configuracao` ganhou 8 campos novos (todos opcionais — hero/sobre/rodapé do
+site e intro/rodapé do link na bio); dois models novos, `CaseTrabalho` (portfólio) e
+`LinkBio` (links da página /link).
+
+### Upload de imagem
+Nova rota genérica `/api/upload-imagem` (Vercel Blob, igual ao upload de logo, mas
+sem a remoção de fundo — não faz sentido pra fotografia).
+
+## v97 — Ajuste: "Sem classificação" não devia incluir retiradas
 
 Reportado com print: o filtro "⚠️ Sem classificação" em Contas a Pagar estava
 trazendo junto lançamentos como "Pró Labore" e "perfume" marcados como "Retirada

@@ -7,18 +7,18 @@ export const metadata: Metadata = {
   description: "Todos os links da Instaby Agência em um só lugar.",
 };
 
-// Lista de links — editar aqui é o jeito de adicionar/alterar links depois.
-// Deixe "url: null" pra um link que ainda não existe (ele não aparece na página).
-const LINKS = [
-  { label: "Site", url: "/" },
-  { label: "Portfólio", url: "#" },
-  { label: "Instagram", url: "https://instagram.com/instabyagencia" },
-  { label: "Instagram pessoal (Duhzao)", url: null as string | null },
-];
-
 export default async function LinkPageRoute() {
-  const config = await prisma.configuracao.findUnique({ where: { id: "config" } });
-  const whatsappAgencia = config?.whatsappAgencia || null;
+  const [config, links] = await Promise.all([
+    prisma.configuracao.findUnique({ where: { id: "config" } }),
+    prisma.linkBio.findMany({ where: { ativo: true }, orderBy: { ordem: "asc" } }),
+  ]);
 
-  return <LinkPage links={LINKS} whatsappAgencia={whatsappAgencia} />;
+  return (
+    <LinkPage
+      links={links.map((l) => ({ titulo: l.titulo, url: l.url, imagemUrl: l.imagemUrl }))}
+      whatsappAgencia={config?.whatsappAgencia || null}
+      introTexto={config?.linkBioIntroTexto || null}
+      rodapeTexto={config?.linkBioRodapeTexto || null}
+    />
+  );
 }

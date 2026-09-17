@@ -8,13 +8,14 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
-  const [logos, depoimentos, config] = await Promise.all([
+  const [logos, depoimentos, config, cases] = await Promise.all([
     prisma.cliente.findMany({
       where: { exibirLogoPublico: true, logoUrl: { not: null } },
       select: { nome: true, logoUrl: true },
     }),
     prisma.depoimento.findMany({ where: { ativo: true }, orderBy: { id: "desc" }, take: 6 }),
     prisma.configuracao.findUnique({ where: { id: "config" } }),
+    prisma.caseTrabalho.findMany({ where: { ativo: true }, orderBy: { ordem: "asc" } }),
   ]);
 
   return (
@@ -22,6 +23,20 @@ export default async function Home() {
       logos={logos as { nome: string; logoUrl: string }[]}
       depoimentos={depoimentos}
       whatsappAgencia={config?.whatsappAgencia || null}
+      heroTitulo={config?.siteHeroTitulo || null}
+      heroSubtitulo={config?.siteHeroSubtitulo || null}
+      heroImagemUrl={config?.siteHeroImagemUrl || null}
+      sobreTexto={config?.siteSobreTexto || null}
+      sobreImagemUrl={config?.siteSobreImagemUrl || null}
+      rodapeTexto={config?.siteRodapeTexto || null}
+      cases={cases.map((c) => ({
+        id: c.id,
+        nome: c.nome,
+        categoria: c.categoria,
+        imagemUrl: c.imagemUrl,
+        link: c.link,
+        destaque: c.destaque,
+      }))}
     />
   );
 }

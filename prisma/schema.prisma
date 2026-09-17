@@ -382,4 +382,40 @@ model Configuracao {
   metaFaturamentoMensal Decimal?
   custoHoraPadrao       Decimal? // usado pra calcular rentabilidade descontando o custo das horas trabalhadas
   templateOnboarding    String[] @default([]) // itens do checklist padrão — se vazio, usa o do documento original
+  // Conteúdo editável do site público (/) — se vazio, a página usa o texto padrão embutido no código.
+  siteHeroTitulo        String?
+  siteHeroSubtitulo     String?
+  siteHeroImagemUrl     String?
+  siteSobreTexto        String?
+  siteSobreImagemUrl    String?
+  siteRodapeTexto       String?
+  // Conteúdo editável da página de links (/link)
+  linkBioIntroTexto     String?
+  linkBioRodapeTexto    String?
+}
+
+// Trabalhos do portfólio, mostrados na Landing Page pública (seção Portfólio).
+// "destaque" controla se o card aparece grande (linha inteira) ou no grid normal.
+model CaseTrabalho {
+  id        String   @id @default(uuid())
+  nome      String
+  categoria String? // ex: "SOCIAL MEDIA / TRÁFEGO / PRODUÇÃO"
+  imagemUrl String?
+  link      String? // opcional — "Ver case" leva pra cá se preenchido
+  destaque  Boolean  @default(false)
+  ordem     Int      @default(0)
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+// Itens da página de links (/link, estilo Linktree) — editável pelo próprio Duhzao,
+// sem precisar mexer em código.
+model LinkBio {
+  id        String   @id @default(uuid())
+  titulo    String
+  url       String
+  imagemUrl String? // capa opcional, recomendado 200x200px
+  ordem     Int      @default(0)
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now())
 }
