@@ -1,4 +1,17 @@
-# Instaby App — v93
+# Instaby App — v94
+
+## Ajuste pequeno + revisão final
+
+- Página pública do contrato (`/contrato/[id]`) agora mostra um selo "Ver PDF
+  assinado" ao lado do status, quando o contrato tem arquivo anexado (novidade da
+  v92) — o cliente consegue baixar o PDF de qualquer hora pelo mesmo link que já
+  tinha.
+- `AUDITORIA_FINAL.md` atualizado com o resumo da Fase 1 + Fase 2 dessa rodada
+  (estava desatualizado desde a remoção do módulo Conteúdo).
+- Revisão manual (rule de sempre: sem acesso de rede ao binário do Prisma nesse
+  sandbox, então sem build/typecheck real aqui) confirmando que não sobrou
+  referência órfã de nada removido nessa rodada inteira (gráficos do Financeiro,
+  camada financeira da Agenda, módulo Conteúdo).
 
 ## Fase 2 — Landing Page, /link e /app
 

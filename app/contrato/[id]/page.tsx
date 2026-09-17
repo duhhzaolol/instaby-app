@@ -73,6 +73,15 @@ export default async function ContratoPublicoPage({ params }: { params: { id: st
             <span className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] text-[#9CA3AF]">
               {statusLabel[contrato.status]}
             </span>
+            {contrato.arquivoUrl && (
+              <a
+                href={contrato.arquivoUrl}
+                target="_blank"
+                className="rounded-full border border-[#E63946]/30 bg-[#E63946]/10 px-2.5 py-1 text-[10px] font-medium text-[#E63946] hover:underline"
+              >
+                Ver PDF assinado
+              </a>
+            )}
           </div>
         </div>
       </div>

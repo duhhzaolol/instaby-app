@@ -80,3 +80,37 @@ Documento de fechamento, pedido no plano original de 10/09/2026. Cobre da v60 at
 - App mobile nativo
 
 **Confirmado explicitamente fora de escopo** (por instrução do documento original, não esquecimento): cronômetro de horas, IA dentro do app, chat com IA, criação automática de conteúdo por IA, comandos em linguagem natural.
+
+---
+
+## ATUALIZAÇÃO — 17/09/2026 (pós documento "Landing/Agenda/Financeiro conservador")
+
+Desde a auditoria acima (fechamento do documento de 10/09), o módulo Conteúdo foi
+removido por completo (decisão do Duhzao — não gostou do formato pipeline/kanban) e
+um novo documento grande trouxe mais uma rodada de mudanças, entregues em duas fases:
+
+**Fase 1 (painel)**: bug de "Próxima cobrança" vazia corrigido (mensalidade configurada
+não virava Cobrança de verdade todo mês); Clientes agrupados por status; Contrato
+ganhou anexo de PDF assinado (`Contrato.arquivoUrl`, Vercel Blob); ajuda contextual
+(ícone "?") em Clientes/Tarefas/Serviços/Horas/Financeiro/Agenda/Relatórios/
+Solicitações; Financeiro perdeu 2 gráficos de linha e ganhou calendário financeiro;
+Agenda reformulada (sem info financeira, tarefas+horas classificadas por tipo,
+filtros, clique no dia); Horas com calendário de até 3 atividades por dia.
+
+**Fase 2 (rotas públicas)**: `/` virou Landing Page pública de verdade (antes
+redirecionava pra `/login`); `/link` — página de links estilo Linktree; `/app` —
+atalho que redireciona pro painel real em `/dashboard` (nada duplicado).
+
+**Confirmado explicitamente fora de escopo nessa rodada** (por instrução do próprio
+documento, não esquecimento): DRE, Contas a Pagar, Contas a Receber e Comercial
+(Oportunidades/Pipeline) — nenhum mudou. Nenhum cálculo financeiro existente foi
+alterado, só reorganização visual.
+
+**Novidade no banco** (aditiva): `Contrato.arquivoUrl` (link do PDF assinado).
+
+**Limitação de ambiente que se repete**: não foi possível rodar `npx prisma generate`,
+`prisma validate` ou `next build` de verdade nesse sandbox (sem acesso de rede ao
+binário do Prisma) — toda verificação dessa rodada foi revisão manual, linha por
+linha, dos arquivos alterados, mais checagem de referências órfãs (grep) nos itens
+removidos (gráficos, camada financeira da Agenda, etc). O build de verdade acontece
+no Vercel, como já é seu fluxo.
