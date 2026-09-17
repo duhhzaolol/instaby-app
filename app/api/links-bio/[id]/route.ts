@@ -8,8 +8,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     where: { id: params.id },
     data: {
       ...(body.titulo !== undefined && { titulo: body.titulo }),
+      ...(body.descricao !== undefined && { descricao: body.descricao }),
       ...(body.url !== undefined && { url: body.url }),
       ...(body.imagemUrl !== undefined && { imagemUrl: body.imagemUrl }),
+      ...(body.destaque !== undefined && { destaque: body.destaque }),
       ...(body.ordem !== undefined && { ordem: body.ordem }),
       ...(body.ativo !== undefined && { ativo: body.ativo }),
     },

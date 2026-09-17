@@ -18,8 +18,10 @@ export async function POST(request: NextRequest) {
   const item = await prisma.linkBio.create({
     data: {
       titulo: body.titulo,
+      descricao: body.descricao || null,
       url: body.url,
       imagemUrl: body.imagemUrl || null,
+      destaque: body.destaque || false,
       ordem: (maiorOrdem._max.ordem ?? -1) + 1,
     },
   });

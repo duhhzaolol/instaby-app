@@ -74,9 +74,24 @@ export default async function SiteConfigPage() {
           Estilo Linktree — adicione quantos links quiser, com foto de capa, e reordene quando quiser.
         </p>
         <LinkBioForm
-          links={links.map((l) => ({ id: l.id, titulo: l.titulo, url: l.url, imagemUrl: l.imagemUrl, ordem: l.ordem }))}
+          links={links.map((l) => ({
+            id: l.id,
+            titulo: l.titulo,
+            descricao: l.descricao,
+            url: l.url,
+            imagemUrl: l.imagemUrl,
+            destaque: l.destaque,
+            ordem: l.ordem,
+          }))}
           introTexto={config?.linkBioIntroTexto || ""}
           rodapeTexto={config?.linkBioRodapeTexto || ""}
+          imagemUrl={config?.linkBioImagemUrl || null}
+          tagline={config?.linkBioTagline || ""}
+          tags={config?.linkBioTags || ""}
+          instagram={config?.linkBioInstagram || ""}
+          youtube={config?.linkBioYoutube || ""}
+          tiktok={config?.linkBioTiktok || ""}
+          linkedin={config?.linkBioLinkedin || ""}
         />
       </div>
     </div>

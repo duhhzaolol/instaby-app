@@ -15,10 +15,23 @@ export default async function LinkPageRoute() {
 
   return (
     <LinkPage
-      links={links.map((l) => ({ titulo: l.titulo, url: l.url, imagemUrl: l.imagemUrl }))}
+      links={links.map((l) => ({
+        titulo: l.titulo,
+        descricao: l.descricao,
+        url: l.url,
+        imagemUrl: l.imagemUrl,
+        destaque: l.destaque,
+      }))}
       whatsappAgencia={config?.whatsappAgencia || null}
       introTexto={config?.linkBioIntroTexto || null}
       rodapeTexto={config?.linkBioRodapeTexto || null}
+      imagemUrl={config?.linkBioImagemUrl || null}
+      tagline={config?.linkBioTagline || null}
+      tags={config?.linkBioTags || null}
+      instagram={config?.linkBioInstagram || null}
+      youtube={config?.linkBioYoutube || null}
+      tiktok={config?.linkBioTiktok || null}
+      linkedin={config?.linkBioLinkedin || null}
     />
   );
 }

@@ -1,6 +1,35 @@
-# Instaby App — v98
+# Instaby App — v99
 
-## Painel de edição do Site & Link na bio
+## Página /link redesenhada, seguindo a nova referência
+
+Você mandou um novo print, mais elaborado, específico pra página `/link` (foto de
+topo, nome "INSTABY" grande, tagline estilo assinatura, frase de impacto com
+sublinhado vermelho, linha de tags, links com ícone+subtítulo, um card grande de
+destaque com foto, e ícones de redes sociais no fim). Essa versão redesenha a
+página pra seguir essa referência e expande o painel de edição pra você controlar
+tudo isso sozinho, sem mexer em código.
+
+### O que dá pra editar agora em Configurações → Site & Link na bio → Página de links
+- **Foto de topo** (fundo do topo da página, recomendado 1080×1350px).
+- **Tagline pequena** (a frase estilo assinatura no canto da foto, ex: "Mais que
+  uma agência.").
+- **Frase de abertura** (o título grande com o sublinhado vermelho).
+- **Linha de tags** (texto pequeno em caixa alta, ex: "MARCA · CONTEÚDO ·
+  TRÁFEGO · RESULTADO").
+- **Redes sociais** (Instagram/YouTube/TikTok/LinkedIn) — só aparece o ícone se
+  você preencher o link.
+- **Rodapé** (texto livre).
+- Cada link agora também tem um **subtítulo opcional** (ex: "Atendimento
+  rápido") e pode ser marcado como **destaque**, o que faz ele aparecer como um
+  card grande com foto no fim da lista (tamanho recomendado 600×400px, contra
+  200×200px dos links normais).
+
+### Banco de dados
+Aditivo: `Configuracao` ganhou 7 campos novos (todos opcionais — foto/tagline/
+tags/redes sociais da página /link); `LinkBio` ganhou `descricao` (subtítulo) e
+`destaque` (Boolean). Nenhum campo existente mudou.
+
+## v98 — Painel de edição do Site & Link na bio
 
 Você vai refazer o visual do site com outra IA — isso não muda aqui. O que essa
 versão entrega é a "sala de controle": um lugar dentro do painel (Configurações →

@@ -26,6 +26,13 @@ export async function PATCH(request: NextRequest) {
       ...(body.siteRodapeTexto !== undefined && { siteRodapeTexto: body.siteRodapeTexto }),
       ...(body.linkBioIntroTexto !== undefined && { linkBioIntroTexto: body.linkBioIntroTexto }),
       ...(body.linkBioRodapeTexto !== undefined && { linkBioRodapeTexto: body.linkBioRodapeTexto }),
+      ...(body.linkBioImagemUrl !== undefined && { linkBioImagemUrl: body.linkBioImagemUrl }),
+      ...(body.linkBioTagline !== undefined && { linkBioTagline: body.linkBioTagline }),
+      ...(body.linkBioTags !== undefined && { linkBioTags: body.linkBioTags }),
+      ...(body.linkBioInstagram !== undefined && { linkBioInstagram: body.linkBioInstagram }),
+      ...(body.linkBioYoutube !== undefined && { linkBioYoutube: body.linkBioYoutube }),
+      ...(body.linkBioTiktok !== undefined && { linkBioTiktok: body.linkBioTiktok }),
+      ...(body.linkBioLinkedin !== undefined && { linkBioLinkedin: body.linkBioLinkedin }),
     },
     create: {
       id: "config",
@@ -41,6 +48,13 @@ export async function PATCH(request: NextRequest) {
       siteRodapeTexto: body.siteRodapeTexto || null,
       linkBioIntroTexto: body.linkBioIntroTexto || null,
       linkBioRodapeTexto: body.linkBioRodapeTexto || null,
+      linkBioImagemUrl: body.linkBioImagemUrl || null,
+      linkBioTagline: body.linkBioTagline || null,
+      linkBioTags: body.linkBioTags || null,
+      linkBioInstagram: body.linkBioInstagram || null,
+      linkBioYoutube: body.linkBioYoutube || null,
+      linkBioTiktok: body.linkBioTiktok || null,
+      linkBioLinkedin: body.linkBioLinkedin || null,
     },
   });
 

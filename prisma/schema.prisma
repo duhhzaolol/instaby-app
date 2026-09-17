@@ -392,6 +392,13 @@ model Configuracao {
   // Conteúdo editável da página de links (/link)
   linkBioIntroTexto     String?
   linkBioRodapeTexto    String?
+  linkBioImagemUrl      String? // foto de topo (estilo capa), atrás do nome da agência
+  linkBioTagline        String? // frase pequena estilo "escrita à mão", ex: "Mais que uma agência."
+  linkBioTags           String? // linha pequena em caixa alta, ex: "MARCA · CONTEÚDO · TRÁFEGO · RESULTADO"
+  linkBioInstagram      String? // links das redes pro carrossel de ícones no fim da página
+  linkBioYoutube        String?
+  linkBioTiktok         String?
+  linkBioLinkedin       String?
 }
 
 // Trabalhos do portfólio, mostrados na Landing Page pública (seção Portfólio).
@@ -413,8 +420,10 @@ model CaseTrabalho {
 model LinkBio {
   id        String   @id @default(uuid())
   titulo    String
+  descricao String? // subtítulo curto embaixo do título, ex: "Atendimento rápido"
   url       String
-  imagemUrl String? // capa opcional, recomendado 200x200px
+  imagemUrl String? // capa opcional, recomendado 200x200px (ou 600x400px se "destaque")
+  destaque  Boolean  @default(false) // true = aparece como card grande com foto, no fim da lista
   ordem     Int      @default(0)
   ativo     Boolean  @default(true)
   createdAt DateTime @default(now())

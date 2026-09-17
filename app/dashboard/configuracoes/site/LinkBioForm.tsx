@@ -12,34 +12,56 @@ import { EmptyState } from "@/components/ui/EmptyState";
 export type LinkBioItem = {
   id: string;
   titulo: string;
+  descricao: string | null;
   url: string;
   imagemUrl: string | null;
+  destaque: boolean;
   ordem: number;
 };
 
 function CampoLink({
   titulo,
   setTitulo,
+  descricao,
+  setDescricao,
   url,
   setUrl,
+  destaque,
+  setDestaque,
   imagemUrl,
   setImagemUrl,
 }: {
   titulo: string;
   setTitulo: (v: string) => void;
+  descricao: string;
+  setDescricao: (v: string) => void;
   url: string;
   setUrl: (v: string) => void;
+  destaque: boolean;
+  setDestaque: (v: boolean) => void;
   imagemUrl: string | null;
   setImagemUrl: (v: string | null) => void;
 }) {
   return (
     <>
       <Label>Texto do link</Label>
-      <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Portfólio" className="mb-3" />
+      <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Falar no WhatsApp" className="mb-3" />
+      <Label>Subtítulo (opcional)</Label>
+      <Input value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Atendimento rápido" className="mb-3" />
       <Label>Endereço (URL)</Label>
       <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..." className="mb-3" />
+      <label className="mb-3 flex items-center gap-2 text-xs text-muted">
+        <input type="checkbox" checked={destaque} onChange={(e) => setDestaque(e.target.checked)} />
+        Card em destaque (aparece grande, com foto, no fim da lista)
+      </label>
       <Label>Foto de capa (opcional)</Label>
-      <UploadImagem value={imagemUrl} onChange={setImagemUrl} pasta="links-bio" tamanhoRecomendado="200 × 200px" proporcao="quadrado" />
+      <UploadImagem
+        value={imagemUrl}
+        onChange={setImagemUrl}
+        pasta="links-bio"
+        tamanhoRecomendado={destaque ? "600 × 400px" : "200 × 200px"}
+        proporcao={destaque ? "wide" : "quadrado"}
+      />
     </>
   );
 }
@@ -48,28 +70,53 @@ export default function LinkBioForm({
   links,
   introTexto: introTextoInicial,
   rodapeTexto: rodapeTextoInicial,
+  imagemUrl: imagemUrlInicial,
+  tagline: taglineInicial,
+  tags: tagsInicial,
+  instagram: instagramInicial,
+  youtube: youtubeInicial,
+  tiktok: tiktokInicial,
+  linkedin: linkedinInicial,
 }: {
   links: LinkBioItem[];
   introTexto: string;
   rodapeTexto: string;
+  imagemUrl: string | null;
+  tagline: string;
+  tags: string;
+  instagram: string;
+  youtube: string;
+  tiktok: string;
+  linkedin: string;
 }) {
   const router = useRouter();
   const [aberto, setAberto] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
 
   const [titulo, setTitulo] = useState("");
+  const [descricao, setDescricao] = useState("");
   const [url, setUrl] = useState("");
+  const [destaque, setDestaque] = useState(false);
   const [imagemUrl, setImagemUrl] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 
   const [introTexto, setIntroTexto] = useState(introTextoInicial);
   const [rodapeTexto, setRodapeTexto] = useState(rodapeTextoInicial);
+  const [heroImagemUrl, setHeroImagemUrl] = useState<string | null>(imagemUrlInicial);
+  const [tagline, setTagline] = useState(taglineInicial);
+  const [tags, setTags] = useState(tagsInicial);
+  const [instagram, setInstagram] = useState(instagramInicial);
+  const [youtube, setYoutube] = useState(youtubeInicial);
+  const [tiktok, setTiktok] = useState(tiktokInicial);
+  const [linkedin, setLinkedin] = useState(linkedinInicial);
   const [salvandoTextos, setSalvandoTextos] = useState(false);
   const [textosSalvos, setTextosSalvos] = useState(false);
 
   function limpar() {
     setTitulo("");
+    setDescricao("");
     setUrl("");
+    setDestaque(false);
     setImagemUrl(null);
   }
 
@@ -80,7 +127,7 @@ export default function LinkBioForm({
     await fetch("/api/links-bio", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ titulo, url, imagemUrl }),
+      body: JSON.stringify({ titulo, descricao: descricao || null, url, imagemUrl, destaque }),
     });
     setEnviando(false);
     limpar();
@@ -123,6 +170,13 @@ export default function LinkBioForm({
       body: JSON.stringify({
         linkBioIntroTexto: introTexto || null,
         linkBioRodapeTexto: rodapeTexto || null,
+        linkBioImagemUrl: heroImagemUrl || null,
+        linkBioTagline: tagline || null,
+        linkBioTags: tags || null,
+        linkBioInstagram: instagram || null,
+        linkBioYoutube: youtube || null,
+        linkBioTiktok: tiktok || null,
+        linkBioLinkedin: linkedin || null,
       }),
     });
     setSalvandoTextos(false);
@@ -134,25 +188,70 @@ export default function LinkBioForm({
   return (
     <div>
       <div className="mb-5 rounded-2xl border border-border bg-card/60 p-4">
-        <p className="mb-3 text-sm font-medium text-text">Textos da página (não são link)</p>
-        <Label>Frase de abertura</Label>
+        <p className="mb-3 text-sm font-medium text-text">Aparência da página /link</p>
+
+        <Label>Foto de topo (fundo do topo da página)</Label>
+        <UploadImagem
+          value={heroImagemUrl}
+          onChange={setHeroImagemUrl}
+          pasta="link-bio"
+          tamanhoRecomendado="1080 × 1350px"
+          proporcao="vertical"
+        />
+
+        <div className="mt-3">
+          <Label>Tagline pequena (canto da foto, estilo assinatura)</Label>
+          <Input value={tagline} onChange={(e) => setTagline(e.target.value)} placeholder="Mais que uma agência." className="mb-3" />
+        </div>
+
+        <Label>Frase de abertura (headline)</Label>
         <Textarea
           value={introTexto}
           onChange={(e) => setIntroTexto(e.target.value)}
           rows={2}
-          placeholder="Marketing digital com resultado de verdade"
+          placeholder="Estratégia, conteúdo e resultado de verdade."
           className="mb-3"
         />
+
+        <Label>Linha de tags (opcional, em caixa alta)</Label>
+        <Input
+          value={tags}
+          onChange={(e) => setTags(e.target.value)}
+          placeholder="MARCA · CONTEÚDO · TRÁFEGO · RESULTADO"
+          className="mb-3"
+        />
+
+        <p className="mb-2 mt-4 text-xs font-medium text-muted">Redes sociais (deixe em branco pra não mostrar o ícone)</p>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>Instagram</Label>
+            <Input value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="https://instagram.com/..." className="mb-3" />
+          </div>
+          <div>
+            <Label>YouTube</Label>
+            <Input value={youtube} onChange={(e) => setYoutube(e.target.value)} placeholder="https://youtube.com/..." className="mb-3" />
+          </div>
+          <div>
+            <Label>TikTok</Label>
+            <Input value={tiktok} onChange={(e) => setTiktok(e.target.value)} placeholder="https://tiktok.com/..." className="mb-3" />
+          </div>
+          <div>
+            <Label>LinkedIn</Label>
+            <Input value={linkedin} onChange={(e) => setLinkedin(e.target.value)} placeholder="https://linkedin.com/..." className="mb-3" />
+          </div>
+        </div>
+
         <Label>Rodapé (opcional — se vazio, usa o padrão com o ano atual)</Label>
         <Textarea
           value={rodapeTexto}
           onChange={(e) => setRodapeTexto(e.target.value)}
           rows={2}
-          placeholder="© 2026 Instaby Agência"
+          placeholder="Marketing digital com resultado de verdade."
           className="mb-3"
         />
+
         <Button onClick={salvarTextos} disabled={salvandoTextos} size="sm" className="w-full">
-          {textosSalvos ? <Check size={14} /> : null} {salvandoTextos ? "Salvando..." : textosSalvos ? "Salvo!" : "Salvar textos"}
+          {textosSalvos ? <Check size={14} /> : null} {salvandoTextos ? "Salvando..." : textosSalvos ? "Salvo!" : "Salvar aparência"}
         </Button>
       </div>
 
@@ -178,7 +277,18 @@ export default function LinkBioForm({
               <X size={16} />
             </button>
           </div>
-          <CampoLink titulo={titulo} setTitulo={setTitulo} url={url} setUrl={setUrl} imagemUrl={imagemUrl} setImagemUrl={setImagemUrl} />
+          <CampoLink
+            titulo={titulo}
+            setTitulo={setTitulo}
+            descricao={descricao}
+            setDescricao={setDescricao}
+            url={url}
+            setUrl={setUrl}
+            destaque={destaque}
+            setDestaque={setDestaque}
+            imagemUrl={imagemUrl}
+            setImagemUrl={setImagemUrl}
+          />
           <Button type="submit" disabled={enviando || !titulo.trim() || !url.trim()} className="mt-3 w-full">
             {enviando ? "Salvando..." : "Adicionar"}
           </Button>
@@ -203,8 +313,10 @@ export default function LinkBioForm({
                   </div>
                 )}
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-text">{l.titulo}</p>
-                  <p className="truncate text-xs text-muted">{l.url}</p>
+                  <p className="truncate text-sm font-medium text-text">
+                    {l.titulo} {l.destaque && <span className="ml-1 text-[10px] text-accent">· destaque</span>}
+                  </p>
+                  <p className="truncate text-xs text-muted">{l.descricao || l.url}</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
                   <button
@@ -246,7 +358,9 @@ export default function LinkBioForm({
 function EditarLink({ item, onFechar }: { item: LinkBioItem; onFechar: () => void }) {
   const router = useRouter();
   const [titulo, setTitulo] = useState(item.titulo);
+  const [descricao, setDescricao] = useState(item.descricao || "");
   const [url, setUrl] = useState(item.url);
+  const [destaque, setDestaque] = useState(item.destaque);
   const [imagemUrl, setImagemUrl] = useState<string | null>(item.imagemUrl);
   const [salvando, setSalvando] = useState(false);
 
@@ -255,7 +369,7 @@ function EditarLink({ item, onFechar }: { item: LinkBioItem; onFechar: () => voi
     await fetch(`/api/links-bio/${item.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ titulo, url, imagemUrl }),
+      body: JSON.stringify({ titulo, descricao: descricao || null, url, imagemUrl, destaque }),
     });
     setSalvando(false);
     onFechar();
@@ -270,7 +384,18 @@ function EditarLink({ item, onFechar }: { item: LinkBioItem; onFechar: () => voi
           <X size={16} />
         </button>
       </div>
-      <CampoLink titulo={titulo} setTitulo={setTitulo} url={url} setUrl={setUrl} imagemUrl={imagemUrl} setImagemUrl={setImagemUrl} />
+      <CampoLink
+        titulo={titulo}
+        setTitulo={setTitulo}
+        descricao={descricao}
+        setDescricao={setDescricao}
+        url={url}
+        setUrl={setUrl}
+        destaque={destaque}
+        setDestaque={setDestaque}
+        imagemUrl={imagemUrl}
+        setImagemUrl={setImagemUrl}
+      />
       <button
         onClick={salvar}
         disabled={salvando}
