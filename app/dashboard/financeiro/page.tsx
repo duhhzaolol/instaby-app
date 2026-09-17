@@ -30,7 +30,6 @@ export default async function FinanceiroPage({
     clientes,
     entradasTotalHistorico,
     saidasTotalHistorico,
-    despesasMesAtual,
     patrimonioAtivo,
   ] = await Promise.all([
     prisma.cobranca.findMany({

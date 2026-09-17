@@ -1,6 +1,14 @@
-# Instaby App — v95
+# Instaby App — v96
 
-## Financeiro: DRE, Fluxo de Caixa e Patrimônio separados (mas conectados)
+## Correção de build da v95
+
+O deploy da v95 quebrou no Vercel: erro de tipo TypeScript em
+`app/dashboard/financeiro/page.tsx` — uma consulta que eu tinha removido do
+`Promise.all` continuou sendo esperada na lista de variáveis, desalinhando a posição
+de `patrimonioAtivo`. Corrigido (lista de variáveis e lista de consultas agora com a
+mesma quantidade, 7 cada). Não há outra mudança nessa versão além dessa correção.
+
+## v95 — Financeiro: DRE, Fluxo de Caixa e Patrimônio separados (mas conectados)
 
 Baseado no seu documento sobre não misturar o conceito da DRE com o saldo do banco.
 Resumo: a DRE mostra lucro/prejuízo da operação; o que precisa bater com a conta é o
