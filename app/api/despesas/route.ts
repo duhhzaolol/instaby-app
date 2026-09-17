@@ -34,5 +34,20 @@ export async function POST(request: NextRequest) {
     },
   });
 
+  // Se foi lançada como Investimento/Ativo e marcou pra entrar no patrimônio,
+  // já nasce o bem vinculado a essa despesa (não muda em nada a despesa em si).
+  if (body.categoriaFinanceira === "investimento" && body.adicionarAoPatrimonio) {
+    await prisma.patrimonio.create({
+      data: {
+        nome: body.descricao,
+        categoria: body.categoria || null,
+        valorAquisicao: body.valor,
+        valorAtual: body.valor,
+        data: despesa.data,
+        despesaOrigemId: despesa.id,
+      },
+    });
+  }
+
   return NextResponse.json(despesa, { status: 201 });
 }

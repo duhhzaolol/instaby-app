@@ -386,3 +386,56 @@ tocaria em dezenas de arquivos e links internos sem ganho real (o painel já é 
 não precisa de um nome bonito) — e vai contra a regra "não recriar do zero" e "não
 duplicar lógica". `/app` como atalho/redirecionamento entrega o pedido (ter uma
 entrada em `/app`) com risco quase zero.
+
+---
+
+## FASE — Financeiro: DRE separada de Fluxo de Caixa e Patrimônio (18/09/2026)
+
+> Baseado em documento enviado explicando por que a DRE não deve ser alterada pra
+> "bater com o banco" — DRE é lucro/prejuízo da operação, Fluxo de Caixa é o que
+> entra e sai de verdade da conta, Patrimônio é o que a empresa tem. Os três ficam
+> separados, mas conectados.
+
+### O que já existia e não precisou mudar
+A DRE (`app/dashboard/financeiro/dre/page.tsx`) já excluía `investimento` do lucro
+operacional/líquido e já mostrava um aviso sobre investimentos não entrarem na conta.
+Ou seja, o conceito contábil pedido no documento já estava correto — não mexi na
+lógica de cálculo da DRE, só melhorei a apresentação (ver abaixo).
+
+### Novo: Patrimônio
+- Model `Patrimonio` (nome, categoria, valorAquisicao, valorAtual, data, status
+  em_uso/vendido/baixado, despesaOrigemId opcional).
+- `/api/patrimonio` (GET/POST) e `/api/patrimonio/[id]` (PATCH/DELETE).
+- Página `/dashboard/financeiro/patrimonio`: cards de resumo (valor atual em uso,
+  total investido), cadastro manual, edição de valor atual estimado e status.
+- Ao lançar uma despesa como "Investimento/Ativo" (em `NovaContaPagarForm` ou no
+  formulário geral de despesas), aparece a pergunta "Adicionar este item ao
+  patrimônio da empresa?" — se marcado, nasce o bem já vinculado à despesa.
+
+### Novo: Fluxo de Caixa
+- Página `/dashboard/financeiro/fluxo-de-caixa`: saldo inicial (tudo pago/recebido
+  antes do período) + entradas − saídas do período = saldo final, com linha do
+  tempo de movimentações. Usa status "pago" (caixa de verdade), diferente da DRE
+  que usa competência. Totalmente separada da lógica da DRE — nenhum cálculo da
+  DRE foi tocado.
+
+### DRE — só apresentação, cálculo intacto
+- Aviso de "sem classificação" virou link clicável pra Contas a Pagar já filtrado.
+- Resumo de investimentos ganhou a conta explícita: Lucro operacional − Investimentos
+  = Geração de caixa após investimentos (exatamente o formato pedido no documento),
+  com link pro Fluxo de Caixa completo.
+
+### Financeiro — Visão Geral
+- Nova linha de 4 cards acima dos cards existentes (que não foram removidos):
+  Saldo atual (caixa acumulado desde sempre), Resultado do mês (lucro da DRE),
+  Variação de caixa (entradas − saídas pagas do mês, inclui investimentos),
+  Patrimônio (valor atual dos bens em uso, linka pra página de Patrimônio).
+
+### Contas a Pagar — filtros novos
+- Filtro por categoria financeira (incluindo "Sem classificação") e por período
+  (mês atual/anterior), aditivos às abas de status que já existiam.
+- Dashboard e DRE agora linkam direto pra `contas-a-pagar?categoria=sem_classificacao`.
+
+### Banco de dados
+Aditivo: novo model `Patrimonio` + `Despesa.patrimonio` (relação inversa). Nenhum
+campo existente mudou ou foi removido.

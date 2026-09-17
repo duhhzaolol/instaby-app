@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Plus, TrendingUp, TrendingDown, Wallet, AlertTriangle, MessageCircle } from "lucide-react";
+import Link from "next/link";
+import { Plus, TrendingUp, TrendingDown, Wallet, AlertTriangle, MessageCircle, Landmark, Gem, ArrowRightLeft } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -47,6 +48,7 @@ export default function FinanceiroClient({
   movimentosMes,
   mesAtual,
   anoAtual,
+  caixa,
 }: {
   periodo: string;
   resumo: { entradas: number; despesasFixas: number; despesasFlexiveis: number; lucro: number };
@@ -60,6 +62,7 @@ export default function FinanceiroClient({
   movimentosMes: { dia: number; tipo: "entrada" | "saida"; valor: number; descricao: string; cliente: string | null }[];
   mesAtual: number;
   anoAtual: number;
+  caixa?: { saldoAtual: number; resultadoDoMes: number; variacaoCaixaMes: number; patrimonioTotal: number };
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -151,6 +154,78 @@ export default function FinanceiroClient({
           <div>
             <p className="text-sm font-medium text-text">Tem cobrança vencendo hoje ou atrasada</p>
             <p className="text-xs text-muted">Confira a lista de pendentes embaixo e considera lembrar o cliente.</p>
+          </div>
+        </div>
+      )}
+
+      {caixa && (
+        <div className="mb-6">
+          <p className="mb-1 flex items-center gap-1.5 text-sm font-medium text-text">
+            Panorama financeiro
+            <AjudaContextual
+              titulo="Panorama financeiro"
+              texto="Saldo atual e Patrimônio são acumulados desde sempre. Resultado do mês vem da DRE (lucro/prejuízo da operação). Variação de caixa é quanto o dinheiro realmente entrou ou saiu no mês, incluindo compras de equipamento — por isso pode ser diferente do resultado da DRE."
+              exemplo="Ex.: lucro de R$ 5.000 na DRE + compra de câmera de R$ 4.000 à vista = variação de caixa de R$ 1.000 no mês."
+            />
+          </p>
+          <p className="mb-3 text-xs text-muted">Saldo e patrimônio são acumulados; resultado e variação são do mês atual.</p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+            <Card index={0} className="p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-xs text-muted">Saldo atual</p>
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-400">
+                  <Landmark size={14} />
+                </div>
+              </div>
+              <p className="text-2xl font-medium text-text">
+                <CountUp value={caixa.saldoAtual} prefix="R$ " />
+              </p>
+              <p className="mt-1 text-[11px] text-muted">Quanto existe disponível nas contas da empresa.</p>
+            </Card>
+            <Card index={1} className="p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-xs text-muted">Resultado do mês</p>
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent/10 text-accent">
+                  {caixa.resultadoDoMes >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                </div>
+              </div>
+              <p className={`text-2xl font-medium ${caixa.resultadoDoMes >= 0 ? "text-text" : "text-red-400"}`}>
+                <CountUp
+                  value={Math.abs(caixa.resultadoDoMes)}
+                  prefix={caixa.resultadoDoMes >= 0 ? "+R$ " : "−R$ "}
+                />
+              </p>
+              <p className="mt-1 text-[11px] text-muted">Lucro apresentado pela DRE.</p>
+            </Card>
+            <Card index={2} className="p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-xs text-muted">Variação de caixa</p>
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
+                  <ArrowRightLeft size={14} />
+                </div>
+              </div>
+              <p className={`text-2xl font-medium ${caixa.variacaoCaixaMes >= 0 ? "text-text" : "text-red-400"}`}>
+                <CountUp
+                  value={Math.abs(caixa.variacaoCaixaMes)}
+                  prefix={caixa.variacaoCaixaMes >= 0 ? "+R$ " : "−R$ "}
+                />
+              </p>
+              <p className="mt-1 text-[11px] text-muted">Quanto seu dinheiro realmente mudou no mês.</p>
+            </Card>
+            <Card index={3} className="p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-xs text-muted">Patrimônio</p>
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-500/10 text-violet-400">
+                  <Gem size={14} />
+                </div>
+              </div>
+              <p className="text-2xl font-medium text-text">
+                <CountUp value={caixa.patrimonioTotal} prefix="R$ " />
+              </p>
+              <Link href="/dashboard/financeiro/patrimonio" className="mt-1 block text-[11px] text-accent hover:underline">
+                Valor estimado dos ativos cadastrados →
+              </Link>
+            </Card>
           </div>
         </div>
       )}
@@ -373,8 +448,10 @@ function NovaDespesaForm({
   const [vencimento, setVencimento] = useState("");
   const [dataPagamento, setDataPagamento] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const [adicionarAoPatrimonio, setAdicionarAoPatrimonio] = useState(false);
 
   const infoCategoria = visualDaCategoriaFinanceira(categoriaFinanceira);
+  const ehInvestimento = categoriaFinanceira === "investimento";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -395,6 +472,7 @@ function NovaDespesaForm({
         vencimento: vencimento || null,
         dataPagamento: status === "pago" ? dataPagamento || data : null,
         recorrente: tipo === "fixa" ? recorrente : false,
+        adicionarAoPatrimonio: ehInvestimento && adicionarAoPatrimonio,
       }),
     });
 
@@ -507,6 +585,17 @@ function NovaDespesaForm({
           />
         </div>
       </div>
+      {ehInvestimento && (
+        <label className="mb-3 flex items-start gap-2.5 rounded-lg border border-cyan-500/20 bg-cyan-500/5 px-3 py-2.5 text-xs text-cyan-100">
+          <input
+            type="checkbox"
+            checked={adicionarAoPatrimonio}
+            onChange={(e) => setAdicionarAoPatrimonio(e.target.checked)}
+            className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-cyan-500"
+          />
+          <span>Adicionar este item ao patrimônio da empresa?</span>
+        </label>
+      )}
       {tipo === "fixa" ? (
         <label className="mb-3 flex items-center gap-2 rounded-lg border border-accent/20 bg-accent/5 px-3 py-2.5 text-xs text-text">
           <input type="checkbox" checked={recorrente} onChange={(e) => setRecorrente(e.target.checked)} />

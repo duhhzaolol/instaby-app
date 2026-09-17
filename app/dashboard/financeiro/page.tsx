@@ -20,7 +20,19 @@ export default async function FinanceiroPage({
   const desdeGrafico = new Date(hoje.getFullYear(), hoje.getMonth() - (mesesGrafico - 1), 1);
   const desdeConsulta = desde < desdeGrafico ? desde : desdeGrafico;
 
-  const [cobrancasTodas, despesasTodas, cobrancasPendentes, clientes] = await Promise.all([
+  const inicioMesAtualCalc = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  const fimMesAtualCalc = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0, 23, 59, 59);
+
+  const [
+    cobrancasTodas,
+    despesasTodas,
+    cobrancasPendentes,
+    clientes,
+    entradasTotalHistorico,
+    saidasTotalHistorico,
+    despesasMesAtual,
+    patrimonioAtivo,
+  ] = await Promise.all([
     prisma.cobranca.findMany({
       where: { status: "pago", createdAt: { gte: desdeConsulta } },
       include: { cliente: true },
@@ -37,7 +49,52 @@ export default async function FinanceiroPage({
       orderBy: { vencimento: "asc" },
     }),
     prisma.cliente.findMany({ select: { id: true, nome: true }, orderBy: { nome: "asc" } }),
+    // Saldo atual (caixa): tudo que já entrou de verdade, desde sempre
+    prisma.cobranca.aggregate({ where: { status: "pago" }, _sum: { valor: true } }),
+    // Saldo atual (caixa): tudo que já saiu de verdade, desde sempre (inclui investimentos —
+    // eles reduzem caixa igual qualquer outra saída, só não entram na DRE)
+    prisma.despesa.aggregate({ where: { status: "pago" }, _sum: { valor: true } }),
+    // Patrimônio em uso — soma do valor atual estimado
+    prisma.patrimonio.aggregate({ where: { status: "em_uso" }, _sum: { valorAtual: true } }),
   ]);
+
+  // Cobranças do mês atual por competência (mesma regra da DRE) — pra "Resultado do mês" bater com a DRE
+  const cobrancasMesAtualDRE = await prisma.cobranca.findMany({
+    where: {
+      status: { not: "cancelado" },
+      OR: [
+        { dataCompetencia: { gte: inicioMesAtualCalc, lte: fimMesAtualCalc } },
+        { AND: [{ dataCompetencia: null }, { createdAt: { gte: inicioMesAtualCalc, lte: fimMesAtualCalc } }] },
+      ],
+    },
+  });
+  const despesasMesAtualCompetencia = despesasTodas.filter(
+    (d) => d.data >= inicioMesAtualCalc && d.data <= fimMesAtualCalc
+  );
+  const receitaBrutaMes = cobrancasMesAtualDRE.reduce((s, c) => s + Number(c.valor), 0);
+  const somaPorMes = (cat: string) =>
+    despesasMesAtualCompetencia
+      .filter((d) => d.categoriaFinanceira === cat)
+      .reduce((s, d) => s + Number(d.valor), 0);
+  const resultadoDoMes =
+    receitaBrutaMes -
+    somaPorMes("imposto") -
+    somaPorMes("custo") -
+    somaPorMes("despesa_fixa") -
+    somaPorMes("despesa_variavel") -
+    somaPorMes("despesa_financeira");
+
+  // Variação de caixa do mês — entradas e saídas efetivamente pagas/recebidas (inclui investimentos)
+  const entradasCaixaMes = cobrancasTodas
+    .filter((c) => c.createdAt >= inicioMesAtualCalc && c.createdAt <= fimMesAtualCalc)
+    .reduce((s, c) => s + Number(c.valor), 0);
+  const saidasCaixaMes = despesasTodas
+    .filter((d) => d.status === "pago" && d.data >= inicioMesAtualCalc && d.data <= fimMesAtualCalc)
+    .reduce((s, d) => s + Number(d.valor), 0);
+  const variacaoCaixaMes = entradasCaixaMes - saidasCaixaMes;
+
+  const saldoAtual = Number(entradasTotalHistorico._sum.valor || 0) - Number(saidasTotalHistorico._sum.valor || 0);
+  const patrimonioTotal = Number(patrimonioAtivo._sum.valorAtual || 0);
 
   // Gráfico: sempre com pelo menos 6 meses de histórico, pra linha nunca ficar com 1 ponto só
   const mensal: Record<string, { entradas: number; despesasFixas: number; despesasFlexiveis: number }> = {};
@@ -202,6 +259,12 @@ export default async function FinanceiroPage({
       movimentosMes={movimentosMes}
       mesAtual={hoje.getMonth()}
       anoAtual={hoje.getFullYear()}
+      caixa={{
+        saldoAtual,
+        resultadoDoMes,
+        variacaoCaixaMes,
+        patrimonioTotal,
+      }}
     />
   );
 }

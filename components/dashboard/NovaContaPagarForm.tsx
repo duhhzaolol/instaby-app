@@ -19,8 +19,10 @@ export function NovaContaPagarForm({ clientes }: { clientes: Cliente[] }) {
   const [categoria, setCategoria] = useState("");
   const [clienteId, setClienteId] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const [adicionarAoPatrimonio, setAdicionarAoPatrimonio] = useState(false);
 
   const infoCategoria = visualDaCategoriaFinanceira(categoriaFinanceira);
+  const ehInvestimento = categoriaFinanceira === "investimento";
 
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
@@ -38,6 +40,7 @@ export function NovaContaPagarForm({ clientes }: { clientes: Cliente[] }) {
         categoria: categoria || null,
         clienteId: clienteId || null,
         data: vencimento || new Date().toISOString().slice(0, 10),
+        adicionarAoPatrimonio: ehInvestimento && adicionarAoPatrimonio,
       }),
     });
     setEnviando(false);
@@ -46,6 +49,7 @@ export function NovaContaPagarForm({ clientes }: { clientes: Cliente[] }) {
     setVencimento("");
     setCategoria("");
     setClienteId("");
+    setAdicionarAoPatrimonio(false);
     setAberto(false);
     router.refresh();
   }
@@ -114,6 +118,23 @@ export function NovaContaPagarForm({ clientes }: { clientes: Cliente[] }) {
           </datalist>
         </div>
       </div>
+
+      {ehInvestimento && (
+        <label className="mb-4 flex items-start gap-2.5 rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3 text-xs text-cyan-100">
+          <input
+            type="checkbox"
+            checked={adicionarAoPatrimonio}
+            onChange={(e) => setAdicionarAoPatrimonio(e.target.checked)}
+            className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-cyan-500"
+          />
+          <span>
+            Adicionar este item ao patrimônio da empresa?{" "}
+            <span className="text-cyan-200/70">
+              Cria um bem em Financeiro → Patrimônio com valor de aquisição R$ {valor.toFixed(0) || "0"}.
+            </span>
+          </span>
+        </label>
+      )}
 
       {clientes.length > 0 && (
         <select

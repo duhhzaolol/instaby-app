@@ -18,6 +18,8 @@ import {
   BarChart3,
   ArrowDownCircle,
   ArrowUpCircle,
+  Landmark,
+  Gem,
   Trophy,
   Settings,
   Menu,
@@ -35,8 +37,10 @@ const menuPrincipal = [
 const menuFinanceiro = [
   { label: "Visão geral", href: "/dashboard/financeiro", icon: Wallet },
   { label: "DRE", href: "/dashboard/financeiro/dre", icon: BarChart3 },
+  { label: "Fluxo de Caixa", href: "/dashboard/financeiro/fluxo-de-caixa", icon: Landmark },
   { label: "Contas a Pagar", href: "/dashboard/financeiro/contas-a-pagar", icon: ArrowUpCircle },
   { label: "Contas a Receber", href: "/dashboard/financeiro/contas-a-receber", icon: ArrowDownCircle },
+  { label: "Patrimônio", href: "/dashboard/financeiro/patrimonio", icon: Gem },
 ];
 
 const menuOrcamento = [

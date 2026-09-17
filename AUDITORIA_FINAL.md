@@ -114,3 +114,21 @@ binário do Prisma) — toda verificação dessa rodada foi revisão manual, lin
 linha, dos arquivos alterados, mais checagem de referências órfãs (grep) nos itens
 removidos (gráficos, camada financeira da Agenda, etc). O build de verdade acontece
 no Vercel, como já é seu fluxo.
+
+---
+
+## v95 — Financeiro: DRE, Fluxo de Caixa e Patrimônio separados
+
+A DRE já estava conceitualmente correta (investimentos já não entravam no lucro
+operacional) — não precisou de correção, só de melhor apresentação (resumo
+"lucro operacional − investimentos = geração de caixa", aviso de sem classificação
+virou link). Entregue: model + página de Patrimônio (bens/ativos da empresa, com
+opção de nascer automaticamente ao lançar uma despesa como Investimento/Ativo),
+página de Fluxo de Caixa (entradas/saídas efetivamente pagas, separada da DRE),
+4 novos cards na Visão Geral do Financeiro (Saldo atual, Resultado do mês, Variação
+de caixa, Patrimônio) e filtros de categoria/período em Contas a Pagar. Nenhum
+cálculo existente da DRE foi alterado — só itens novos e cross-links.
+
+Revisão manual (sem acesso de rede ao binário do Prisma nesse sandbox): confirmado
+que os novos arquivos importam apenas exports que existem, e que nenhuma página
+existente ficou com referência quebrada.

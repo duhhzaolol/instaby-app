@@ -3,6 +3,8 @@ import { ArrowLeft, AlertTriangle, CalendarClock, Clock3, Wallet } from "lucide-
 import { prisma } from "@/lib/prisma";
 import { DespesaRow, DespesaRowData } from "@/components/dashboard/DespesaRow";
 import { NovaContaPagarForm } from "@/components/dashboard/NovaContaPagarForm";
+import { FiltrosContasAPagar } from "@/components/dashboard/FiltrosContasAPagar";
+import { faixaPeriodo } from "@/lib/periodoFinanceiro";
 
 const ABAS = [
   { valor: "abertas", label: "Pendentes + Atrasadas" },
@@ -20,9 +22,11 @@ function fmt(v: number) {
 export default async function ContasAPagarPage({
   searchParams,
 }: {
-  searchParams: { aba?: string };
+  searchParams: { aba?: string; categoria?: string; periodo?: string };
 }) {
   const aba = searchParams.aba || "abertas";
+  const filtroCategoria = searchParams.categoria || "";
+  const filtroPeriodo = searchParams.periodo || "";
 
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
@@ -31,6 +35,30 @@ export default async function ContasAPagarPage({
   const seisMesesAtras = new Date(hoje);
   seisMesesAtras.setMonth(seisMesesAtras.getMonth() - 6);
 
+  const baseWhere: Record<string, unknown> =
+    aba === "todas"
+      ? { data: { gte: seisMesesAtras } }
+      : aba === "pago"
+      ? { status: "pago", data: { gte: seisMesesAtras } }
+      : aba === "pendente"
+      ? { status: "pendente" }
+      : aba === "atrasado"
+      ? { status: { in: ["pendente", "atrasado"] }, vencimento: { lt: hoje } }
+      : aba === "proximos"
+      ? { status: { in: ["pendente", "atrasado"] }, vencimento: { gte: hoje, lte: em7dias } }
+      : { status: { in: ["pendente", "atrasado"] } };
+
+  if (filtroCategoria === "sem_classificacao") {
+    baseWhere.OR = [{ categoriaFinanceira: null }, { categoriaFinanceira: "transferencia" }];
+  } else if (filtroCategoria) {
+    baseWhere.categoriaFinanceira = filtroCategoria;
+  }
+
+  if (filtroPeriodo === "mes_atual" || filtroPeriodo === "mes_anterior") {
+    const { desde, ate } = faixaPeriodo(filtroPeriodo);
+    baseWhere.data = { gte: desde, lte: ate };
+  }
+
   const [abertas, todasRelevantes, clientes] = await Promise.all([
     prisma.despesa.findMany({
       where: { status: { in: ["pendente", "atrasado"] } },
@@ -38,18 +66,7 @@ export default async function ContasAPagarPage({
       orderBy: { vencimento: "asc" },
     }),
     prisma.despesa.findMany({
-      where:
-        aba === "todas"
-          ? { data: { gte: seisMesesAtras } }
-          : aba === "pago"
-          ? { status: "pago", data: { gte: seisMesesAtras } }
-          : aba === "pendente"
-          ? { status: "pendente" }
-          : aba === "atrasado"
-          ? { status: { in: ["pendente", "atrasado"] }, vencimento: { lt: hoje } }
-          : aba === "proximos"
-          ? { status: { in: ["pendente", "atrasado"] }, vencimento: { gte: hoje, lte: em7dias } }
-          : { status: { in: ["pendente", "atrasado"] } },
+      where: baseWhere,
       include: { cliente: true, pagamentos: true },
       orderBy: aba === "pago" ? { data: "desc" } : { vencimento: "asc" },
     }),
@@ -108,11 +125,11 @@ export default async function ContasAPagarPage({
         </div>
       </div>
 
-      <div className="mb-5 flex flex-wrap gap-2">
+      <div className="mb-3 flex flex-wrap gap-2">
         {ABAS.map((a) => (
           <Link
             key={a.valor}
-            href={`/dashboard/financeiro/contas-a-pagar?aba=${a.valor}`}
+            href={`/dashboard/financeiro/contas-a-pagar?aba=${a.valor}${filtroCategoria ? `&categoria=${filtroCategoria}` : ""}${filtroPeriodo ? `&periodo=${filtroPeriodo}` : ""}`}
             className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
               aba === a.valor ? "bg-accent text-white" : "border border-border bg-card/60 text-muted hover:text-text"
             }`}
@@ -121,6 +138,8 @@ export default async function ContasAPagarPage({
           </Link>
         ))}
       </div>
+
+      <FiltrosContasAPagar aba={aba} categoria={filtroCategoria} periodo={filtroPeriodo} />
 
       <NovaContaPagarForm clientes={clientes} />
 

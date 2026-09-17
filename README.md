@@ -1,6 +1,44 @@
-# Instaby App — v94
+# Instaby App — v95
 
-## Ajuste pequeno + revisão final
+## Financeiro: DRE, Fluxo de Caixa e Patrimônio separados (mas conectados)
+
+Baseado no seu documento sobre não misturar o conceito da DRE com o saldo do banco.
+Resumo: a DRE mostra lucro/prejuízo da operação; o que precisa bater com a conta é o
+Fluxo de Caixa; e os bens da empresa (câmera, computador, móveis...) viraram
+Patrimônio, num lugar só.
+
+**Boa notícia**: a DRE (`/dashboard/financeiro/dre`) já estava certa nesse ponto —
+já excluía investimentos do lucro operacional e já avisava sobre isso. Não mexi na
+conta dela, só melhorei a apresentação.
+
+### Novo
+- **Patrimônio** (`/dashboard/financeiro/patrimonio`) — lista de bens da empresa,
+  com valor de aquisição e valor atual estimado (editável, pra acompanhar
+  depreciação/revenda), status (Em uso / Vendido / Baixado). Cadastro manual ou
+  automático: ao lançar uma despesa como "Investimento/Ativo", o sistema pergunta
+  "Adicionar este item ao patrimônio da empresa?" — se sim, o bem já nasce vinculado.
+- **Fluxo de Caixa** (`/dashboard/financeiro/fluxo-de-caixa`) — saldo inicial +
+  entradas − saídas efetivamente pagas/recebidas = saldo final, com a linha do
+  tempo de movimentações do período. É esse número que deve bater com o banco
+  (a DRE nunca teve esse objetivo).
+- **DRE**: aviso de "despesas sem classificação" agora é clicável, leva direto pra
+  Contas a Pagar já filtrado. O resumo de investimentos ganhou a conta explícita —
+  Lucro operacional − Investimentos = Geração de caixa após investimentos — com
+  link pro Fluxo de Caixa completo.
+- **Financeiro (Visão geral)**: 4 cards novos acima dos que já existiam (Entradas/
+  Custos/Lucro continuam do jeito que estavam) — Saldo atual, Resultado do mês,
+  Variação de caixa e Patrimônio.
+- **Contas a Pagar**: filtros novos de categoria (incluindo "Sem classificação") e
+  período (mês atual/anterior), além das abas de status que já existiam. O card de
+  "Despesas sem classificação" no Dashboard agora abre direto nesse filtro.
+
+### Banco de dados
+Aditivo: novo model `Patrimonio` (nome, categoria, valor de aquisição, valor atual,
+status, despesa de origem opcional). Nenhum campo existente mudou.
+
+Detalhe completo na seção "FASE — Financeiro" do `IMPLEMENTATION_PLAN.md`.
+
+## v94 — Ajuste pequeno + revisão final
 
 - Página pública do contrato (`/contrato/[id]`) agora mostra um selo "Ver PDF
   assinado" ao lado do status, quando o contrato tem arquivo anexado (novidade da

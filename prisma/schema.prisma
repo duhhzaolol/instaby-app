@@ -347,6 +347,24 @@ model Despesa {
   origemRecorrenteId String? // preenchido nas cópias geradas automaticamente todo mês
   data               DateTime @default(now()) // data de competência — mês a que o gasto pertence
   pagamentos         Pagamento[]
+  patrimonio         Patrimonio[]
+}
+
+// Bens/ativos da empresa — equipamentos, móveis etc. Nasce (opcionalmente) quando
+// uma despesa é lançada como "Investimento / Ativo" e você confirma que quer
+// registrar no patrimônio. Não entra na DRE (isso já era assim); esse model só
+// dá um lugar pra acompanhar o que a empresa tem, valor e estado de uso.
+model Patrimonio {
+  id              String    @id @default(uuid())
+  nome            String
+  categoria       String? // Equipamento audiovisual | Computador | Móveis | Outros
+  valorAquisicao  Decimal
+  valorAtual      Decimal // editável — você atualiza conforme deprecia/revende
+  data            DateTime  @default(now())
+  status          String    @default("em_uso") // em_uso | vendido | baixado
+  despesaOrigemId String?
+  despesaOrigem   Despesa?  @relation(fields: [despesaOrigemId], references: [id])
+  createdAt       DateTime  @default(now())
 }
 
 // Depoimentos fixos — aparecem em toda página de orçamento

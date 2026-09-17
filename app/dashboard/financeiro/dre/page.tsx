@@ -99,13 +99,16 @@ export default async function DrePage({
       </div>
 
       {semClassificacao > 0 && (
-        <div className="mb-5 flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3.5">
+        <Link
+          href="/dashboard/financeiro/contas-a-pagar?categoria=sem_classificacao"
+          className="mb-5 flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3.5 hover:bg-amber-500/10"
+        >
           <AlertTriangle size={15} className="mt-0.5 shrink-0 text-amber-400" />
           <p className="text-xs text-amber-200">
             R$ {fmt(semClassificacao)} em despesas sem classificação (ou marcadas como transferência) não entram
-            nessa DRE. Classifica elas no Financeiro pra essa conta ficar completa.
+            nessa DRE. <span className="underline">Clique aqui pra classificar</span> e essa conta ficar completa.
           </p>
-        </div>
+        </Link>
       )}
 
       <div className="rounded-2xl border border-border bg-card/60 p-5 sm:p-6">
@@ -144,11 +147,33 @@ export default async function DrePage({
       </div>
 
       {investimentos > 0 && (
-        <div className="mt-5 rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3.5">
-          <p className="text-xs text-cyan-200">
+        <div className="mt-5 rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-4">
+          <p className="mb-3 text-xs text-cyan-200">
             Investimentos/Ativos do período: <strong>R$ {fmt(investimentos)}</strong> — reduziram seu caixa, mas
-            não entram nessa DRE (não são despesa operacional).
+            não entram nessa DRE (não são despesa operacional). Veja quanto isso muda no caixa de verdade:
           </p>
+          <div className="flex flex-col gap-1 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-muted">Lucro operacional</span>
+              <span className="text-text">R$ {fmt(lucroOperacional)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted">Investimentos realizados</span>
+              <span className="text-red-400">− R$ {fmt(investimentos)}</span>
+            </div>
+            <div className="flex items-center justify-between border-t border-cyan-500/20 pt-1.5 font-medium">
+              <span className="text-cyan-200">Geração de caixa após investimentos</span>
+              <span className={lucroOperacional - investimentos >= 0 ? "text-emerald-400" : "text-red-400"}>
+                R$ {fmt(lucroOperacional - investimentos)}
+              </span>
+            </div>
+          </div>
+          <Link
+            href="/dashboard/financeiro/fluxo-de-caixa"
+            className="mt-3 inline-block text-[11px] text-cyan-300 hover:underline"
+          >
+            Ver Fluxo de Caixa completo →
+          </Link>
         </div>
       )}
     </div>

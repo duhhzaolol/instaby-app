@@ -154,7 +154,7 @@ export default async function DashboardPage() {
     { label: "Tarefas atrasadas", contagem: tarefasAtrasadas, href: "/dashboard/tarefas", cor: "#EF4444" },
     { label: "Cobranças vencidas", contagem: cobrancasVencidas, href: "/dashboard/financeiro/contas-a-receber", cor: "#EF4444" },
     { label: "Contrato(s) renovando em breve", contagem: contratosRenovando, href: "/dashboard/contratos", cor: "#F59E0B" },
-    { label: "Despesas sem classificação", contagem: despesasSemClassificacao, href: "/dashboard/financeiro", cor: "#F59E0B" },
+    { label: "Despesas sem classificação", contagem: despesasSemClassificacao, href: "/dashboard/financeiro/contas-a-pagar?aba=todas&categoria=sem_classificacao", cor: "#F59E0B" },
     { label: "Item(ns) de onboarding bloqueados", contagem: itensOnboardingBloqueados, href: "/dashboard/clientes", cor: "#F59E0B" },
     { label: "Oportunidade(s) sem próxima ação", contagem: oportunidadesSemProximaAcao, href: "/dashboard/oportunidades", cor: "#9CA3AF" },
   ].filter((a) => a.contagem > 0);
