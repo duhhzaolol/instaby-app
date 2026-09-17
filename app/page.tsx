@@ -7,6 +7,13 @@ export const metadata: Metadata = {
   description: "Social media, tráfego pago, produção de vídeo e presença digital para negócios que querem crescer com consistência.",
 };
 
+// Sem isso, a Vercel gera essa página como estática (uma "foto" tirada no
+// deploy) e ela nunca muda sozinha quando você edita algo em Configurações →
+// Site & Link na bio — só mudaria no próximo deploy. Com isso, ela busca os
+// dados de novo a cada visita, então uma edição salva no painel aparece na
+// hora, sem precisar de novo deploy.
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const [logos, depoimentos, config, cases] = await Promise.all([
     prisma.cliente.findMany({

@@ -7,6 +7,10 @@ export const metadata: Metadata = {
   description: "Todos os links da Instaby Agência em um só lugar.",
 };
 
+// Mesmo motivo do app/page.tsx: sem isso, essa página fica "congelada" na
+// versão do último deploy e edições feitas no painel não aparecem sozinhas.
+export const dynamic = "force-dynamic";
+
 export default async function LinkPageRoute() {
   const [config, links] = await Promise.all([
     prisma.configuracao.findUnique({ where: { id: "config" } }),

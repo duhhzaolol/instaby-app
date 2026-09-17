@@ -1,6 +1,26 @@
-# Instaby App — v99
+# Instaby App — v100
 
-## Página /link redesenhada, seguindo a nova referência
+## Correção: site e /link não atualizavam sozinhos
+
+Reportado: depois de adicionar banners/fotos em Configurações → Site & Link na
+bio, o site (`/`) não mudava nada.
+
+Causa: `/` e `/link` não tinham nenhuma instrução dizendo "busque os dados de
+novo a cada visita" — por padrão, a Vercel trata essas páginas como estáticas
+(gera uma "foto" delas no momento do deploy e serve sempre essa mesma foto).
+Então salvar algo no painel funcionava certinho no banco, só não aparecia no
+site até o próximo deploy.
+
+Corrigido: as duas páginas ganharam `export const dynamic = "force-dynamic"`,
+que faz elas buscarem o conteúdo direto do banco a cada visita — qualquer
+edição salva no painel (textos, imagens, links) aparece no site na hora, sem
+precisar de novo deploy.
+
+(Separado disso: também foi resolvido o erro de "No token found" no upload de
+fotos — faltava conectar um Blob Store ao projeto na Vercel, feito direto no
+painel da Vercel.)
+
+## v99 — Página /link redesenhada, seguindo a nova referência
 
 Você mandou um novo print, mais elaborado, específico pra página `/link` (foto de
 topo, nome "INSTABY" grande, tagline estilo assinatura, frase de impacto com
