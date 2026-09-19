@@ -1,4 +1,38 @@
-# Instaby App — v101
+# Instaby App — v102
+
+## Site: banners de ponta a ponta, sem cartão/linhas, e Serviços compactos
+
+Mandou instruções detalhadas com uma referência visual pra deixar o site mais
+fiel ao layout combinado. Aplicado (itens 1 a 4 do que você mandou — a
+mensagem cortou no meio do item de Serviços, então Portfólio/Diferenciais/
+Processo/CTA/Rodapé ficaram de fora dessa rodada, aguardando o resto do
+pedido):
+
+- **Hero e "Quem somos"**: o banner agora ocupa a seção inteira, de ponta a
+  ponta (sem cartão, sem cantos arredondados, sem borda, sem margem lateral
+  cortando a imagem). O texto continua sempre por cima, editável no painel.
+- **Removidas as linhas divisórias e as grandes faixas vazias** entre todas
+  as seções do site (não só Hero/Sobre) — o espaçamento interno continua,
+  só não tem mais a linha cinza nem o respiro exagerado.
+- **Painel de imagens do site** (Configurações → Site & Link na bio) ficou
+  bem mais completo pra cada banner (Hero e "Quem somos"): nome da seção +
+  onde aparece, prévia, tamanho recomendado em largura×altura, proporção,
+  formatos aceitos e limite do arquivo, e uma orientação curta de composição
+  (ex: "sem texto, assunto principal à direita"). Também dá pra ajustar o
+  **ponto de enquadramento** da imagem (grade de 9 posições + prévia do
+  corte) e enviar uma **imagem alternativa pro celular**, com suas próprias
+  orientações — se não enviar, o site usa a imagem principal recortada pelo
+  ponto de enquadramento escolhido.
+- **Serviços**: cabeçalho com título alinhado à esquerda e descrição + "Ver
+  todos os serviços" à direita (só desktop); grade 4 colunas × 2 linhas em
+  telas largas, 2 colunas no tablet, 1 no celular; cartões menores, com
+  menos espaço interno, fundo quase preto e bordas discretas.
+
+### Banco de dados
+Aditivo: `Configuracao` ganhou 4 campos novos opcionais (`siteHeroImagemUrlMobile`,
+`siteHeroFoco`, `siteSobreImagemUrlMobile`, `siteSobreFoco`).
+
+## v101
 
 ## Hero e "Quem somos": banner de fundo intacto, texto sempre por cima
 

@@ -33,8 +33,12 @@ export default async function Home() {
       heroTitulo={config?.siteHeroTitulo || null}
       heroSubtitulo={config?.siteHeroSubtitulo || null}
       heroImagemUrl={config?.siteHeroImagemUrl || null}
+      heroImagemUrlMobile={config?.siteHeroImagemUrlMobile || null}
+      heroFoco={config?.siteHeroFoco || null}
       sobreTexto={config?.siteSobreTexto || null}
       sobreImagemUrl={config?.siteSobreImagemUrl || null}
+      sobreImagemUrlMobile={config?.siteSobreImagemUrlMobile || null}
+      sobreFoco={config?.siteSobreFoco || null}
       rodapeTexto={config?.siteRodapeTexto || null}
       cases={cases.map((c) => ({
         id: c.id,

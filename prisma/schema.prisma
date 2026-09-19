@@ -386,8 +386,12 @@ model Configuracao {
   siteHeroTitulo        String?
   siteHeroSubtitulo     String?
   siteHeroImagemUrl     String?
+  siteHeroImagemUrlMobile String? // opcional — se vazio, usa a imagem principal (recortada) também no celular
+  siteHeroFoco          String? // ponto de enquadramento da imagem, ex: "75% 50%" (objectPosition CSS) — padrão "50% 50%"
   siteSobreTexto        String?
   siteSobreImagemUrl    String?
+  siteSobreImagemUrlMobile String? // opcional — mesma lógica do Hero
+  siteSobreFoco         String? // ponto de enquadramento, ex: "50% 30%"
   siteRodapeTexto       String?
   // Conteúdo editável da página de links (/link)
   linkBioIntroTexto     String?

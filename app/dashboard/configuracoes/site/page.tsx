@@ -42,8 +42,12 @@ export default async function SiteConfigPage() {
             siteHeroTitulo: config?.siteHeroTitulo || null,
             siteHeroSubtitulo: config?.siteHeroSubtitulo || null,
             siteHeroImagemUrl: config?.siteHeroImagemUrl || null,
+            siteHeroImagemUrlMobile: config?.siteHeroImagemUrlMobile || null,
+            siteHeroFoco: config?.siteHeroFoco || null,
             siteSobreTexto: config?.siteSobreTexto || null,
             siteSobreImagemUrl: config?.siteSobreImagemUrl || null,
+            siteSobreImagemUrlMobile: config?.siteSobreImagemUrlMobile || null,
+            siteSobreFoco: config?.siteSobreFoco || null,
             siteRodapeTexto: config?.siteRodapeTexto || null,
           }}
         />
