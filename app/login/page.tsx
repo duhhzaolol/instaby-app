@@ -1,15 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/Card";
 import { Input, Label } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 
+// useSearchParams precisa estar dentro de um Suspense no App Router, senão a
+// Vercel quebra o build ("useSearchParams() should be wrapped in a suspense
+// boundary") — mesma classe de erro que já travou um deploy antes neste projeto.
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState("");
@@ -33,7 +45,13 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/dashboard");
+    // Volta pra página que a pessoa tentava acessar antes de cair no login (o
+    // middleware manda isso em ?callbackUrl=...) — só aceita um caminho interno
+    // do próprio painel, nunca um endereço externo, pra não abrir brecha de
+    // redirecionamento pra outro site.
+    const callbackUrl = searchParams.get("callbackUrl");
+    const destino = callbackUrl && callbackUrl.startsWith("/dashboard") ? callbackUrl : "/dashboard";
+    router.push(destino);
   }
 
   return (

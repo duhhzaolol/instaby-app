@@ -1,4 +1,75 @@
-# Instaby App — v105
+# Instaby App — v106
+
+## Segurança: as rotas de API não pediam login (falha grave, corrigida)
+
+Você pediu uma análise de segurança pensando em deixar o `/link` no ar com
+domínio próprio. O achado real não tinha a ver com o `/link` em si — é mais
+sério que isso, e já valia mesmo antes de qualquer domínio novo.
+
+**O que estava errado:** as páginas do painel (`/dashboard/...`) sempre
+exigiram login (isso já funcionava, via middleware). O problema é que as
+mais de 60 rotas de API que essas páginas usam por trás (`/api/clientes`,
+`/api/despesas`, `/api/cobrancas`, `/api/contratos`, `/api/configuracao`,
+`/api/cases`, etc.) **não verificavam login nenhum**. Isso é a categoria
+"Broken Access Control", apontada pela OWASP como a falha mais comum em
+aplicações web ([OWASP Top 10:2025 — A01](https://owasp.org/Top10/2025/A01_2025-Broken_Access_Control/),
+[Auth0 sobre o tema](https://auth0.com/blog/why-broken-access-control-still-dominates-owasp-top-10/)).
+
+Na prática: qualquer pessoa que descobrisse o endereço de uma dessas rotas
+(visível no próprio código do navegador, sem nenhum segredo) conseguia, sem
+fazer login, ler a lista completa de clientes (nome, WhatsApp, CNPJ),
+despesas, cobranças, contratos e a configuração do site — e em vários casos
+também **criar, editar ou apagar** esses dados. Isso já era verdade hoje, no
+endereço `.vercel.app` atual, não é algo que só ia começar a valer com o
+domínio próprio.
+
+**O que eu corrigi:** reescrevi o `middleware.ts` (a camada que roda antes de
+qualquer página ou rota de API) seguindo o padrão recomendado pela própria
+documentação oficial do NextAuth/Auth.js
+([Securing pages and API routes](https://next-auth.js.org/tutorials/securing-pages-and-api-routes)):
+agora **toda rota de API exige uma sessão válida por padrão**, e só passa
+sem login uma lista pequena e explícita do que precisa mesmo ser público:
+
+- Cliente abrindo/aceitando uma proposta de orçamento pelo link (`/api/orcamento/[slug]` e `.../aceitar`)
+- Cliente deixando um comentário no relatório público (`/api/relatorios/[id]`, só o PATCH)
+- O feed de agenda (`.ics`) e as rotas de manutenção (`/api/setup`, `/api/resetar-senha`, etc.), que já exigiam um `?secret=` próprio
+
+Importante: mesmo dentro dessas rotas "públicas", só o método específico que
+precisa ser público ficou liberado — por exemplo, **ver** uma proposta
+continua público, mas **apagar** essa mesma proposta agora exige login, algo
+que antes também estava completamente aberto.
+
+De brinde, corrigi também: o login agora volta pra página que você tentava
+acessar antes de cair na tela de entrada (em vez de sempre te jogar pro
+`/dashboard`), validando que esse destino é sempre uma página interna do
+próprio painel — nunca um endereço de fora — pra não abrir uma brecha de
+redirecionamento.
+
+### O que eu validei
+Revisei manualmente todas as ~64 rotas de API do projeto, uma por uma, pra
+listar exatamente quais precisam ficar públicas e por quê — não tem como
+rodar o build nem simular uma sessão aqui no sandbox, então o teste real é
+depois do deploy (veja abaixo o que conferir).
+
+### Depois de subir, teste assim
+1. Sem estar logado (aba anônima), tente abrir `/dashboard` e um link direto
+   de API, ex: `seusite.com/api/clientes` — os dois devem recusar (o
+   dashboard te manda pro login, a API responde "Não autenticado").
+2. Ainda deslogado, abra um link de proposta ou relatório que você já tenha
+   mandado pra um cliente de verdade — tem que continuar abrindo normal.
+3. Logado, confirme que o painel inteiro continua funcionando normal
+   (criar/editar clientes, despesas, etc.) — nada nessa mudança altera o que
+   você já faz logado, só fecha o que ficava aberto pra quem não loga.
+
+### Recomendação extra (não fiz sozinho, mas vale considerar)
+As rotas `/api/setup`, `/api/resetar-senha`, `/api/reset-catalogo` e
+`/api/reset-catalogo-total` são protegidas por um `SETUP_SECRET` que só você
+tem — confirme que essa variável no Vercel é uma senha longa e aleatória
+(não algo como "123" ou o nome da agência), e considere apagar essas rotas
+do projeto depois que não precisar mais delas, já que uma delas troca a
+senha de login sozinha se alguém souber o secret.
+
+## v105
 
 ## Cor dos textos sobre os banners, escolhível pelo painel
 
