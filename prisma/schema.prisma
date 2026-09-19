@@ -388,11 +388,28 @@ model Configuracao {
   siteHeroImagemUrl     String?
   siteHeroImagemUrlMobile String? // opcional — se vazio, usa a imagem principal (recortada) também no celular
   siteHeroFoco          String? // ponto de enquadramento da imagem, ex: "75% 50%" (objectPosition CSS) — padrão "50% 50%"
+  siteHeroTituloDestaque String? // trecho do siteHeroTitulo que fica dourado, ex: "resultado"
+  siteHeroIndicadores   Json? // até 3 indicadores do Hero: [{"valor":"+50","legenda":"projetos entregues"}] — vazio/null = linha oculta
+  siteServicos          Json? // override dos 8 cartões de Serviços: [{"nome":..,"descricao":..,"destino":..}] — índice ausente/vazio usa o padrão embutido
+  siteDiferenciais      Json? // override dos 4 itens da faixa de Diferenciais: [{"titulo":..,"texto":..}] — mesma lógica
   siteSobreTexto        String?
   siteSobreImagemUrl    String?
   siteSobreImagemUrlMobile String? // opcional — mesma lógica do Hero
   siteSobreFoco         String? // ponto de enquadramento, ex: "50% 30%"
-  siteRodapeTexto       String?
+  siteSobreBotaoTexto   String? // ex: "Conheça nossa história"
+  siteSobreBotaoUrl     String?
+  siteProcessoTexto     String?
+  siteProcessoBotaoTexto String?
+  siteProcessoBotaoUrl  String?
+  siteCtaTitulo         String?
+  siteCtaTexto          String?
+  siteCtaBotaoTexto     String?
+  siteCtaImagemUrl      String?
+  siteCtaImagemUrlMobile String?
+  siteCtaFoco           String?
+  siteRodapeRegiao      String? // ex: "Araras · Campinas · São Paulo"
+  siteRodapeDireitos    String? // ex: "© 2026 Instaby Agência. Todos os direitos reservados."
+  siteRodapeTexto       String? // frase institucional do rodapé
   // Conteúdo editável da página de links (/link)
   linkBioIntroTexto     String?
   linkBioRodapeTexto    String?
@@ -412,7 +429,12 @@ model CaseTrabalho {
   nome      String
   categoria String? // ex: "SOCIAL MEDIA / TRÁFEGO / PRODUÇÃO"
   imagemUrl String?
-  link      String? // opcional — "Ver case" leva pra cá se preenchido
+  imagemFoco String? // ponto de enquadramento da capa, ex: "50% 30%"
+  descricao String? // texto curto — usado no card e no destaque principal
+  descricaoCompleta String? // texto longo — usado na página de case (/portfolio/[id]) quando não há link externo
+  botaoTexto String? // ex: "Ver case completo" — se vazio, usa esse padrão
+  resultados Json? // indicadores opcionais do destaque: [{"valor":"+478","legenda":"cliques em 15 dias"}]
+  link      String? // opcional — se preenchido, o botão do case leva pra esse link externo em vez da página /portfolio/[id]
   destaque  Boolean  @default(false)
   ordem     Int      @default(0)
   ativo     Boolean  @default(true)

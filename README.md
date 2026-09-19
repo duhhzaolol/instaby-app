@@ -1,4 +1,106 @@
-# Instaby App — v102
+# Instaby App — v103
+
+## Redesign completo do site, seguindo o material de referência completo (14 itens)
+
+Implementação da especificação completa que você mandou de novo em `.txt`
+(a versão sem corte). Cobre estrutura, visual, separação imagem/texto,
+cabeçalho, Hero, Serviços, "Quem somos" + Diferenciais, Portfólio, Processo,
+chamada final e Rodapé — tudo editável pelo painel, nada hard-coded como
+imagem com texto embutido.
+
+**Pronto e funcionando (código revisado manualmente — ver observação sobre
+testes no fim):**
+
+- **Cabeçalho**: logo, menu com 5 itens (Início/Serviços/Portfólio/Sobre/
+  Contato), botão "Falar no WhatsApp" com contorno vermelho, e menu mobile
+  (hambúrguer) com os mesmos links.
+- **Hero**: banner de fundo de ponta a ponta (com foco de imagem e versão
+  mobile opcional), badge pequeno, título com uma palavra/trecho em dourado
+  (você escolhe qual, no painel), subtítulo, botões "Falar no WhatsApp" e
+  "Ver serviços", e uma linha de até 3 indicadores — **fica oculta
+  automaticamente enquanto você não preencher valor+legenda dos dois campos
+  de pelo menos um indicador**, então não aparece nenhum número inventado.
+- **Serviços**: os 8 serviços (nome, descrição e destino de cada um editáveis
+  no painel), grade 4×2, cabeçalho com título à esquerda e "Ver todos os
+  serviços" à direita.
+- **"Quem somos"**: banner de fundo + texto por cima (mesmo padrão do Hero),
+  agora com um botão de chamada (texto e destino editáveis).
+- **Diferenciais**: faixa compacta com os 4 itens (Proximidade, Agilidade,
+  Transparência, Foco em resultado) logo abaixo do "Quem somos", cada um
+  editável.
+- **Portfólio**: o(s) trabalho(s) marcado(s) como "destaque" aparece(m)
+  grande, com nome, categoria, descrição, botão e (se você preencher)
+  resultados num painel sobre a imagem; com mais de um destaque, aparecem
+  contador e setas pra alternar. Os demais trabalhos aparecem no grid normal.
+  Cada trabalho tem uma página própria em `/portfolio/[id]` (nova) — usada
+  quando o campo "link" do trabalho está vazio; se você preencher um link
+  externo, o botão vai pra esse link em vez da página interna. **Com poucos
+  cases cadastrados, o site mostra só o que existe — não duplica nada pra
+  preencher espaço.**
+- **Processo**: faixa vermelha escura, com os 4 passos fixos (Diagnóstico →
+  Estratégia → Execução → Acompanhamento) e um texto+botão editáveis do lado
+  do título.
+- **Chamada final**: banner de fundo (imagem própria, diferente do Hero/
+  Sobre) com título, texto e botão editáveis por cima.
+- **Rodapé**: logo, os mesmos links de navegação + `/link` + painel, ícones
+  de redes sociais (reaproveitando os links já cadastrados na aparência da
+  página `/link` — Instagram/YouTube/TikTok/LinkedIn), região de atendimento
+  e direitos autorais editáveis separadamente, e a frase institucional.
+- **Painel** (Configurações → Site & Link na bio): reorganizado em blocos por
+  seção, com 3 formulários novos (Serviços, Diferenciais, Processo/chamada
+  final) somados aos já existentes. Cada campo de imagem mostra prévia,
+  onde ela aparece, tamanho recomendado (largura×altura), proporção,
+  formatos aceitos, limite de tamanho do arquivo e uma dica curta de
+  composição — além do ajustador de ponto de enquadramento e da imagem
+  alternativa pro celular, quando fazem sentido pra aquele campo.
+
+**O que eu validei:** conferi manualmente (não tem como rodar `npm run
+build`/`prisma generate` neste ambiente, mas isso já era assim antes) que:
+o esquema do banco só ganhou campos novos e opcionais — nada foi removido
+ou renomeado; toda leitura/gravação de API bate com os nomes desses campos;
+e a contagem de itens dos `Promise.all` em `app/page.tsx` e nas páginas do
+painel está correta (esse é o tipo exato de erro que já quebrou um build de
+produção antes neste projeto). O que eu **não** validei é a aparência
+renderizada de fato — não tenho como abrir o site e comparar visualmente com
+a imagem de referência daqui; isso só se confirma depois do deploy.
+
+**O que ainda falta pra bater 100% com a referência, e não está pronto:**
+- **Indicador de item ativo no menu ao rolar a página** ("scroll-spy") — o
+  menu tem os 5 links, mas não destaca automaticamente qual seção você está
+  vendo.
+- **"Ver todos os serviços" e "Ver todos os cases"** hoje continuam
+  apontando pra dentro da própria página (âncora `#servicos`/`#portfolio`) —
+  a referência sugere que podem ser páginas dedicadas, mas isso não foi
+  pedido explicitamente nem existe conteúdo pra elas ainda. Me avise se quer
+  que eu crie páginas de listagem completas pra Serviços e/ou Portfólio.
+- **Validação automática de resolução de imagem enviada** (avisar se a foto
+  está com qualidade baixa pro tamanho recomendado) não foi implementada —
+  o painel só mostra o tamanho recomendado como texto, não mede a imagem.
+
+**Conteúdo/imagens reais que só você pode fornecer** (nenhum dado fictício
+foi publicado como se fosse real):
+- Foto **sem texto/botão embutido** pra fundo do Hero, do "Quem somos" e da
+  chamada final — hoje, sem elas, cada seção usa um fundo neutro/gradiente.
+- Números reais dos indicadores do Hero (projetos entregues, clientes
+  atendidos, etc.) — ficam ocultos até você preencher.
+- Conteúdo real dos trabalhos do portfólio: os 3 cadastrados agora são só
+  exemplos de teste (como você avisou) — nome, categoria, descrição,
+  imagem, resultados e (se quiser) descrição completa de cada case real.
+- Se algum dia quiser simular uma conversa de WhatsApp na imagem da chamada
+  final, ela precisa ser fictícia — nunca uma print de conversa real.
+
+### Banco de dados
+Aditivo, sem remover nem renomear nada: `Configuracao` ganhou
+`siteHeroTituloDestaque`, `siteHeroIndicadores` (Json), `siteServicos`
+(Json), `siteDiferenciais` (Json), `siteSobreBotaoTexto`, `siteSobreBotaoUrl`,
+`siteProcessoTexto`, `siteProcessoBotaoTexto`, `siteProcessoBotaoUrl`,
+`siteCtaTitulo`, `siteCtaTexto`, `siteCtaBotaoTexto`, `siteCtaImagemUrl`,
+`siteCtaImagemUrlMobile`, `siteCtaFoco`, `siteRodapeRegiao`,
+`siteRodapeDireitos`. `CaseTrabalho` ganhou `imagemFoco`, `descricao`,
+`descricaoCompleta`, `botaoTexto`, `resultados` (Json). Nova rota pública
+`/portfolio/[id]`.
+
+## v102
 
 ## Site: banners de ponta a ponta, sem cartão/linhas, e Serviços compactos
 

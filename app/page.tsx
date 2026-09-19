@@ -32,19 +32,45 @@ export default async function Home() {
       whatsappAgencia={config?.whatsappAgencia || null}
       heroTitulo={config?.siteHeroTitulo || null}
       heroSubtitulo={config?.siteHeroSubtitulo || null}
+      heroTituloDestaque={config?.siteHeroTituloDestaque || null}
       heroImagemUrl={config?.siteHeroImagemUrl || null}
       heroImagemUrlMobile={config?.siteHeroImagemUrlMobile || null}
       heroFoco={config?.siteHeroFoco || null}
+      heroIndicadores={(config?.siteHeroIndicadores as { valor: string; legenda: string }[] | null) || null}
+      servicos={(config?.siteServicos as { nome: string; descricao: string; destino: string }[] | null) || null}
+      diferenciais={(config?.siteDiferenciais as { titulo: string; texto: string }[] | null) || null}
       sobreTexto={config?.siteSobreTexto || null}
       sobreImagemUrl={config?.siteSobreImagemUrl || null}
       sobreImagemUrlMobile={config?.siteSobreImagemUrlMobile || null}
       sobreFoco={config?.siteSobreFoco || null}
+      sobreBotaoTexto={config?.siteSobreBotaoTexto || null}
+      sobreBotaoUrl={config?.siteSobreBotaoUrl || null}
+      processoTexto={config?.siteProcessoTexto || null}
+      processoBotaoTexto={config?.siteProcessoBotaoTexto || null}
+      processoBotaoUrl={config?.siteProcessoBotaoUrl || null}
+      ctaTitulo={config?.siteCtaTitulo || null}
+      ctaTexto={config?.siteCtaTexto || null}
+      ctaBotaoTexto={config?.siteCtaBotaoTexto || null}
+      ctaImagemUrl={config?.siteCtaImagemUrl || null}
+      ctaImagemUrlMobile={config?.siteCtaImagemUrlMobile || null}
+      ctaFoco={config?.siteCtaFoco || null}
+      rodapeRegiao={config?.siteRodapeRegiao || null}
+      rodapeDireitos={config?.siteRodapeDireitos || null}
       rodapeTexto={config?.siteRodapeTexto || null}
+      instagram={config?.linkBioInstagram || null}
+      youtube={config?.linkBioYoutube || null}
+      tiktok={config?.linkBioTiktok || null}
+      linkedin={config?.linkBioLinkedin || null}
       cases={cases.map((c) => ({
         id: c.id,
         nome: c.nome,
         categoria: c.categoria,
         imagemUrl: c.imagemUrl,
+        imagemFoco: c.imagemFoco,
+        descricao: c.descricao,
+        descricaoCompleta: c.descricaoCompleta,
+        botaoTexto: c.botaoTexto,
+        resultados: (c.resultados as { valor: string; legenda: string }[] | null) || null,
         link: c.link,
         destaque: c.destaque,
       }))}
