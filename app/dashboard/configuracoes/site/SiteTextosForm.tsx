@@ -27,6 +27,8 @@ type ConfigSite = {
   siteRodapeRegiao: string | null;
   siteRodapeDireitos: string | null;
   siteRodapeTexto: string | null;
+  siteCorTitulo: string | null;
+  siteCorTexto: string | null;
 };
 
 const INDICADORES_VAZIOS: Indicador[] = [
@@ -55,6 +57,8 @@ export default function SiteTextosForm({ config }: { config: ConfigSite }) {
   const [rodapeRegiao, setRodapeRegiao] = useState(config.siteRodapeRegiao || "");
   const [rodapeDireitos, setRodapeDireitos] = useState(config.siteRodapeDireitos || "");
   const [rodapeTexto, setRodapeTexto] = useState(config.siteRodapeTexto || "");
+  const [corTitulo, setCorTitulo] = useState(config.siteCorTitulo || "#FFFFFF");
+  const [corTexto, setCorTexto] = useState(config.siteCorTexto || "#FFFFFF");
   const [salvando, setSalvando] = useState(false);
   const [salvo, setSalvo] = useState(false);
 
@@ -86,6 +90,8 @@ export default function SiteTextosForm({ config }: { config: ConfigSite }) {
         siteRodapeRegiao: rodapeRegiao || null,
         siteRodapeDireitos: rodapeDireitos || null,
         siteRodapeTexto: rodapeTexto || null,
+        siteCorTitulo: corTitulo || null,
+        siteCorTexto: corTexto || null,
       }),
     });
     setSalvando(false);
@@ -276,6 +282,49 @@ export default function SiteTextosForm({ config }: { config: ConfigSite }) {
               proporcao="4:5, vertical"
             />
           </div>
+        </div>
+      </div>
+
+      <div className="border-t border-border pt-5">
+        <p className="mb-1 text-sm font-medium text-text">Cor dos textos sobre os banners</p>
+        <p className="mb-4 text-[11px] leading-relaxed text-muted">
+          Controla de uma vez a cor de todo texto que fica em cima das fotos de fundo (abertura, "Quem somos" e
+          chamada final) — título, subtítulo, legendas dos indicadores. Clique no quadrado pra escolher a cor, ou
+          cole um código hex. Se sua foto de fundo for clara, mude pra uma cor escura aqui pra continuar legível.
+        </p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <Label>Cor dos títulos</Label>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={corTitulo}
+                onChange={(e) => setCorTitulo(e.target.value)}
+                className="h-10 w-12 shrink-0 cursor-pointer rounded-lg border border-border/60 bg-transparent p-1"
+              />
+              <Input value={corTitulo} onChange={(e) => setCorTitulo(e.target.value)} placeholder="#FFFFFF" />
+            </div>
+          </div>
+          <div>
+            <Label>Cor dos textos e legendas</Label>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={corTexto}
+                onChange={(e) => setCorTexto(e.target.value)}
+                className="h-10 w-12 shrink-0 cursor-pointer rounded-lg border border-border/60 bg-transparent p-1"
+              />
+              <Input value={corTexto} onChange={(e) => setCorTexto(e.target.value)} placeholder="#FFFFFF" />
+            </div>
+          </div>
+        </div>
+        <div className="mt-3 rounded-xl p-4" style={{ background: "linear-gradient(135deg, #2a2a2e, #0d0d0f)" }}>
+          <p className="mb-1 text-sm font-semibold" style={{ color: corTitulo || "#FFFFFF" }}>
+            Prévia do título
+          </p>
+          <p className="text-xs" style={{ color: corTexto || "#FFFFFF", opacity: 0.75 }}>
+            Prévia do texto — é assim que vai aparecer sobre a foto de fundo.
+          </p>
         </div>
       </div>
 

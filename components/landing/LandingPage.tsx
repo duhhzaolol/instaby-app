@@ -69,6 +69,18 @@ function fadeUp(delay = 0) {
   };
 }
 
+// Aplica opacidade a uma cor hex (#RRGGBB), virando rgba(...) — usado nos textos
+// sobre os banners (Hero/Sobre/Contato final), que sempre têm uma versão "suave"
+// (subtítulo, legenda) além da cor cheia do título.
+function comAlpha(hex: string, alpha: number) {
+  const limpo = (hex || "#FFFFFF").replace("#", "");
+  const valido = /^[0-9a-fA-F]{6}$/.test(limpo) ? limpo : "FFFFFF";
+  const r = parseInt(valido.slice(0, 2), 16);
+  const g = parseInt(valido.slice(2, 4), 16);
+  const b = parseInt(valido.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 // Divide um título em [antes, trecho em destaque, depois] pra pintar o trecho de dourado.
 function partirTitulo(titulo: string, destaque?: string | null) {
   if (!destaque) return { antes: titulo, meio: "", depois: "" };
@@ -131,6 +143,8 @@ export function LandingPage({
   rodapeRegiao,
   rodapeDireitos,
   rodapeTexto,
+  corTitulo,
+  corTexto,
   instagram,
   youtube,
   tiktok,
@@ -167,6 +181,8 @@ export function LandingPage({
   rodapeRegiao?: string | null;
   rodapeDireitos?: string | null;
   rodapeTexto?: string | null;
+  corTitulo?: string | null;
+  corTexto?: string | null;
   instagram?: string | null;
   youtube?: string | null;
   tiktok?: string | null;
@@ -185,6 +201,11 @@ export function LandingPage({
     heroSubtitulo ||
     "Estratégia, produção e tráfego pago para negócios que querem crescer com consistência.";
   const { antes, meio, depois } = partirTitulo(titulo, heroTituloDestaque);
+  // Cor dos textos que ficam sobre os banners (Hero/Sobre/Contato final) — configurável
+  // no painel. Aplicada via style (não só classe do Tailwind), pra nunca depender de
+  // opacidade de classe e sempre garantir o contraste que você escolher.
+  const corTituloFinal = corTitulo || "#FFFFFF";
+  const corTextoFinal = corTexto || "#FFFFFF";
   const heroFocoFinal = heroFoco || "50% 50%";
   const sobreFocoFinal = sobreFoco || "50% 50%";
   const ctaFocoFinal = ctaFoco || "50% 50%";
@@ -336,7 +357,8 @@ export function LandingPage({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-              className="mb-5 whitespace-pre-line text-4xl font-semibold leading-tight tracking-tight text-white sm:text-5xl"
+              className="mb-5 whitespace-pre-line text-4xl font-semibold leading-tight tracking-tight sm:text-5xl"
+              style={{ color: corTituloFinal }}
             >
               {antes}
               {meio && <span className="text-amber-400">{meio}</span>}
@@ -346,7 +368,8 @@ export function LandingPage({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className="mb-9 max-w-xl text-base leading-relaxed text-white/75 sm:text-lg"
+              className="mb-9 max-w-xl text-base leading-relaxed sm:text-lg"
+              style={{ color: comAlpha(corTextoFinal, 0.75) }}
             >
               {subtitulo}
             </motion.p>
@@ -382,8 +405,12 @@ export function LandingPage({
               >
                 {indicadoresValidos.map((ind, i) => (
                   <div key={i}>
-                    <p className="text-xl font-semibold text-white">{ind.valor}</p>
-                    <p className="text-xs text-white/60">{ind.legenda}</p>
+                    <p className="text-xl font-semibold" style={{ color: corTituloFinal }}>
+                      {ind.valor}
+                    </p>
+                    <p className="text-xs" style={{ color: comAlpha(corTextoFinal, 0.6) }}>
+                      {ind.legenda}
+                    </p>
                   </div>
                 ))}
               </motion.div>
@@ -469,10 +496,15 @@ export function LandingPage({
             <div className="relative z-10 mx-auto flex min-h-[440px] max-w-6xl flex-col justify-center px-6 py-16 sm:min-h-[500px] sm:py-20">
               <motion.div {...fadeUp()} className="max-w-xl">
                 <p className="mb-3 text-xs font-medium uppercase tracking-wider text-accent">Quem somos</p>
-                <h2 className="mb-5 text-2xl font-semibold text-white sm:text-3xl">
+                <h2 className="mb-5 text-2xl font-semibold sm:text-3xl" style={{ color: corTituloFinal }}>
                   Uma agência enxuta, feita pra quem quer resultado de verdade.
                 </h2>
-                <p className="mb-6 whitespace-pre-line text-sm leading-relaxed text-white/75 sm:text-base">{textoSobre}</p>
+                <p
+                  className="mb-6 whitespace-pre-line text-sm leading-relaxed sm:text-base"
+                  style={{ color: comAlpha(corTextoFinal, 0.75) }}
+                >
+                  {textoSobre}
+                </p>
                 <a
                   href={sobreBotaoUrlFinal}
                   target={sobreBotaoUrlFinal.startsWith("http") ? "_blank" : undefined}
@@ -783,8 +815,12 @@ export function LandingPage({
         <div className="relative z-10 mx-auto flex min-h-[380px] max-w-6xl flex-col justify-center px-6 py-16 sm:min-h-[420px] sm:py-20">
           <motion.div {...fadeUp()} className="max-w-lg">
             <p className="mb-3 text-xs font-medium uppercase tracking-wider text-accent">Vamos conversar?</p>
-            <h2 className="mb-4 text-2xl font-semibold text-white sm:text-3xl">{ctaTituloFinal}</h2>
-            <p className="mb-7 text-sm leading-relaxed text-white/75 sm:text-base">{ctaTextoFinal}</p>
+            <h2 className="mb-4 text-2xl font-semibold sm:text-3xl" style={{ color: corTituloFinal }}>
+              {ctaTituloFinal}
+            </h2>
+            <p className="mb-7 text-sm leading-relaxed sm:text-base" style={{ color: comAlpha(corTextoFinal, 0.75) }}>
+              {ctaTextoFinal}
+            </p>
             {linkWhatsapp ? (
               <a
                 href={linkWhatsapp}

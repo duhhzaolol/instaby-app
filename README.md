@@ -1,4 +1,32 @@
-# Instaby App — v104
+# Instaby App — v105
+
+## Cor dos textos sobre os banners, escolhível pelo painel
+
+Pedido: poder escolher a cor de todos os textos que ficam em cima das fotos de
+fundo (abertura, "Quem somos" e chamada final), de um jeito prático.
+
+- Em Configurações → Site & Link na bio, novo bloco **"Cor dos textos sobre
+  os banners"**, com dois seletores de cor (clique no quadrado ou cole um
+  código hex): um pra **títulos** e outro pra **textos/legendas**. Um controla
+  de uma vez só a cor em todas as três seções com foto de fundo — não precisa
+  configurar seção por seção. Tem uma prévia ao vivo logo abaixo dos
+  seletores.
+- Também tornei essas cores mais robustas no código: antes elas vinham de
+  classes do Tailwind (`text-white`, `text-white/75`); agora são aplicadas
+  diretamente no elemento, então sempre saem exatamente na cor que você
+  escolher, sem depender de nenhuma classe.
+- Sobre o print que você mandou (só o parágrafo do "Quem somos" aparecendo
+  escuro, título e botão normais): o padrão é bem típico de **texto
+  selecionado no navegador** (um clique-arrasto ou triple-click sem querer)
+  — o navegador troca a cor de seleção e pode parecer preto. Se depois de
+  configurar a cor aqui ainda aparecer escuro sem estar selecionado, me avisa
+  com um print novo que eu vou fundo nisso.
+
+### Banco de dados
+Aditivo: `Configuracao` ganhou `siteCorTitulo` e `siteCorTexto` (ambos hex,
+opcionais — vazio usa branco, o padrão de antes).
+
+## v104
 
 ## Correção: datas erradas depois das 21h (fuso de Brasília vs. UTC)
 

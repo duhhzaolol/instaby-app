@@ -410,6 +410,8 @@ model Configuracao {
   siteRodapeRegiao      String? // ex: "Araras · Campinas · São Paulo"
   siteRodapeDireitos    String? // ex: "© 2026 Instaby Agência. Todos os direitos reservados."
   siteRodapeTexto       String? // frase institucional do rodapé
+  siteCorTitulo         String? // hex, ex: "#FFFFFF" — cor dos títulos sobre os banners (Hero/Sobre/Contato final)
+  siteCorTexto          String? // hex, ex: "#FFFFFF" — cor dos parágrafos/legendas sobre os banners
   // Conteúdo editável da página de links (/link)
   linkBioIntroTexto     String?
   linkBioRodapeTexto    String?

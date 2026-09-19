@@ -58,6 +58,8 @@ export default async function SiteConfigPage() {
             siteRodapeRegiao: config?.siteRodapeRegiao || null,
             siteRodapeDireitos: config?.siteRodapeDireitos || null,
             siteRodapeTexto: config?.siteRodapeTexto || null,
+            siteCorTitulo: config?.siteCorTitulo || null,
+            siteCorTexto: config?.siteCorTexto || null,
           }}
         />
       </div>

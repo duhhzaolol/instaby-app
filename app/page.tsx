@@ -57,6 +57,8 @@ export default async function Home() {
       rodapeRegiao={config?.siteRodapeRegiao || null}
       rodapeDireitos={config?.siteRodapeDireitos || null}
       rodapeTexto={config?.siteRodapeTexto || null}
+      corTitulo={config?.siteCorTitulo || null}
+      corTexto={config?.siteCorTexto || null}
       instagram={config?.linkBioInstagram || null}
       youtube={config?.linkBioYoutube || null}
       tiktok={config?.linkBioTiktok || null}
