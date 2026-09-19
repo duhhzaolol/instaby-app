@@ -10,8 +10,17 @@ const NOMES_MESES = [
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
 
+// Grid puro (dias construídos como meia-noite local, sem hora real) — ok em ISO.
 function chaveDia(d: Date) {
   return d.toISOString().slice(0, 10);
+}
+
+// "Hoje" e o dia de um registro real (com hora) precisam do fuso de Brasília, não do
+// fuso do servidor (Vercel roda em UTC) — sem isso, depois das 21h (horário de
+// Brasília) o servidor já está no dia seguinte em UTC, e a tela marcava o dia errado
+// como "hoje" (mesma classe de bug já corrigida na Agenda e em /dashboard/horas).
+function chaveDiaEvento(d: Date) {
+  return d.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
 }
 
 export default async function HorasClientePage({
@@ -24,8 +33,9 @@ export default async function HorasClientePage({
   const cliente = await prisma.cliente.findUnique({ where: { id: params.clienteId } });
   if (!cliente) notFound();
 
-  const hoje = new Date();
-  const [anoParam, mesParam] = (searchParams.mes || `${hoje.getFullYear()}-${hoje.getMonth() + 1}`)
+  const hojeChave = chaveDiaEvento(new Date());
+  const [anoHoje, mesHojeNum] = hojeChave.split("-").map(Number);
+  const [anoParam, mesParam] = (searchParams.mes || `${anoHoje}-${mesHojeNum}`)
     .split("-")
     .map(Number);
   const ano = anoParam;
@@ -48,7 +58,7 @@ export default async function HorasClientePage({
   registros.forEach((r) => {
     if (!r.fim) return;
     const horas = (r.fim.getTime() - r.inicio.getTime()) / 1000 / 60 / 60;
-    const chave = chaveDia(r.inicio);
+    const chave = chaveDiaEvento(r.inicio);
     (porDia[chave] ||= []).push({ atividade: r.atividade, horas });
     if (r.inicio >= inicioMes && r.inicio <= fimMes) totalMes += horas;
   });
@@ -60,7 +70,6 @@ export default async function HorasClientePage({
 
   const mesAnterior = new Date(ano, mes - 1, 1);
   const mesSeguinte = new Date(ano, mes + 1, 1);
-  const hojeChave = chaveDia(hoje);
   const cor = cliente.cor || "#E63946";
 
   return (

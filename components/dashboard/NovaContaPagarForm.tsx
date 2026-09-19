@@ -39,7 +39,9 @@ export function NovaContaPagarForm({ clientes }: { clientes: Cliente[] }) {
         categoriaFinanceira,
         categoria: categoria || null,
         clienteId: clienteId || null,
-        data: vencimento || new Date().toISOString().slice(0, 10),
+        // Data local do navegador (não UTC) — depois das 21h (horário de Brasília),
+        // toISOString() já cai no dia seguinte e a despesa nascia com a data errada.
+        data: vencimento || new Date().toLocaleDateString("en-CA"),
         adicionarAoPatrimonio: ehInvestimento && adicionarAoPatrimonio,
       }),
     });

@@ -12,13 +12,25 @@ const NOMES_MESES = [
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
 
+// "Hoje" no fuso de Brasília, não no fuso do servidor (Vercel roda em UTC) — sem isso,
+// depois das 21h (horário de Brasília) o servidor já está no dia seguinte em UTC, e a
+// tela mostrava a data errada como "hoje" (mesma classe de bug já corrigida na Agenda).
+function hojeChaveBR() {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+}
+
 function inicioHoje() {
-  const d = new Date();
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  return new Date(`${hojeChaveBR()}T00:00:00-03:00`);
 }
 
 function chaveDia(d: Date) {
   return d.toISOString().slice(0, 10);
+}
+
+// Pra agrupar um registro (com horário real) no dia certo do calendário, considerando
+// o fuso de Brasília — evita cair no dia seguinte perto da meia-noite.
+function chaveDiaEvento(d: Date) {
+  return d.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
 }
 
 export default async function HorasPage({
@@ -26,13 +38,14 @@ export default async function HorasPage({
 }: {
   searchParams: { mes?: string; cliente?: string };
 }) {
-  const hoje = new Date();
-  const [anoParam, mesParam] = (searchParams.mes || `${hoje.getFullYear()}-${hoje.getMonth() + 1}`)
+  const hojeChave = hojeChaveBR();
+  const [anoHoje, mesHojeNum] = hojeChave.split("-").map(Number);
+  const [anoParam, mesParam] = (searchParams.mes || `${anoHoje}-${mesHojeNum}`)
     .split("-")
     .map(Number);
   const ano = anoParam;
   const mes = mesParam - 1;
-  const vendoMesAtual = ano === hoje.getFullYear() && mes === hoje.getMonth();
+  const vendoMesAtual = ano === anoHoje && mes === mesHojeNum - 1;
   const clienteFiltro = searchParams.cliente || "";
 
   const inicioMesVisto = new Date(ano, mes, 1);
@@ -115,7 +128,7 @@ export default async function HorasPage({
     }[]
   > = {};
   registrosCalendario.forEach((r) => {
-    const chave = chaveDia(r.inicio);
+    const chave = chaveDiaEvento(r.inicio);
     (registrosDetalhadosPorDia[chave] ||= []).push({
       id: r.id,
       atividade: r.atividade,
@@ -133,7 +146,6 @@ export default async function HorasPage({
 
   const diasGrade: Date[] = [];
   for (let d = new Date(inicioGrade); d <= fimGrade; d.setDate(d.getDate() + 1)) diasGrade.push(new Date(d));
-  const hojeChave = chaveDia(hoje);
 
   const linkComFiltro = (extra: Record<string, string>) => {
     const params = new URLSearchParams({ mes: `${ano}-${mes + 1}`, ...(clienteFiltro && { cliente: clienteFiltro }), ...extra });

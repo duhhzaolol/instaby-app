@@ -88,7 +88,9 @@ export function TarefaRow({
     });
 
     if (registrarHoras && horaInicioConclusao && horaFimConclusao) {
-      const hoje = new Date().toISOString().slice(0, 10);
+      // Data local do navegador (não UTC) — depois das 21h, toISOString() já cai no dia
+      // seguinte e a hora lançada ia pro dia errado.
+      const hoje = new Date().toLocaleDateString("en-CA");
       await fetch("/api/registros-tempo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

@@ -29,7 +29,9 @@ export function NovoRegistroTempoForm({
   const [atividade, setAtividade] = useState("");
   const [clienteId, setClienteId] = useState("");
   const [tarefaId, setTarefaId] = useState("");
-  const [data, setData] = useState(new Date().toISOString().slice(0, 10));
+  // Data local do navegador (não UTC) — depois das 21h (horário de Brasília),
+  // toISOString() já cai no dia seguinte e o formulário abria com a data errada.
+  const [data, setData] = useState(new Date().toLocaleDateString("en-CA"));
   const [inicio, setInicio] = useState("");
   const [fim, setFim] = useState(horaAtual());
   const [enviando, setEnviando] = useState(false);

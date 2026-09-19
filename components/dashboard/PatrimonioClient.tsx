@@ -34,7 +34,9 @@ function NovoBemForm({ onSalvo }: { onSalvo: () => void }) {
   const [nome, setNome] = useState("");
   const [categoria, setCategoria] = useState(CATEGORIAS_PATRIMONIO[0]);
   const [valorAquisicao, setValorAquisicao] = useState(0);
-  const [data, setData] = useState(new Date().toISOString().slice(0, 10));
+  // Data local do navegador (não UTC) — depois das 21h (horário de Brasília),
+  // toISOString() já cai no dia seguinte e o formulário abria com a data errada.
+  const [data, setData] = useState(new Date().toLocaleDateString("en-CA"));
   const [enviando, setEnviando] = useState(false);
 
   async function salvar(e: React.FormEvent) {

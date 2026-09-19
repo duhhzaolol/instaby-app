@@ -1,4 +1,38 @@
-# Instaby App — v103
+# Instaby App — v104
+
+## Correção: datas erradas depois das 21h (fuso de Brasília vs. UTC)
+
+Reportado com print: no calendário de Horas, ainda não era dia 19 e o app já
+marcava o dia 19 como "hoje". Causa raiz: várias telas calculavam "hoje" (ou
+a data de um registro) convertendo direto pra UTC (`toISOString()`), sem
+considerar o fuso de Brasília (UTC-3). Como o servidor da Vercel roda em UTC,
+depois das 21h daqui (horário de Brasília) o relógio dele já virou o dia
+seguinte — então qualquer cálculo de "hoje" feito assim ficava um dia
+adiantado, todo santo dia, das 21h à meia-noite.
+
+Essa mesma classe de bug já tinha sido corrigida antes na Agenda (por isso lá
+não acontecia) — mas ainda estava presente em outras 6 telas:
+
+- **Horas** (calendário geral e por cliente): "hoje" errado destacado no
+  calendário, e um registro de horas lançado depois das 21h podia cair
+  agrupado no dia seguinte.
+- **Concluir tarefa com "registrar horas"**: se você concluísse uma tarefa
+  depois das 21h e marcasse pra registrar o tempo gasto, o registro nascia
+  com a data do dia seguinte.
+- **Formulário "Registrar horas" (novo registro avulso)**, **Patrimônio
+  (novo bem)**, **Nova despesa (Financeiro)** e **Nova conta a pagar**: o
+  campo de data já abria pré-preenchido com o dia seguinte, depois das 21h.
+
+Corrigido usando o fuso de Brasília explicitamente em todos esses pontos —
+nas telas que rodam no servidor, com `timeZone: "America/Sao_Paulo"`; nos
+formulários que rodam no navegador, com a data local do próprio navegador
+(que já é a de Brasília) em vez de convertida pra UTC.
+
+### O que eu validei
+Revisão manual de cada arquivo alterado — não tem como rodar o build aqui.
+Nenhuma mudança de schema nessa versão, só lógica de data.
+
+## v103
 
 ## Redesign completo do site, seguindo o material de referência completo (14 itens)
 

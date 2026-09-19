@@ -438,7 +438,9 @@ function NovaDespesaForm({
   const [descricao, setDescricao] = useState("");
   const [valor, setValor] = useState(0);
   const [clienteId, setClienteId] = useState("");
-  const [data, setData] = useState(new Date().toISOString().slice(0, 10));
+  // Data local do navegador (não UTC) — depois das 21h (horário de Brasília),
+  // toISOString() já cai no dia seguinte e o formulário abria com a data errada.
+  const [data, setData] = useState(new Date().toLocaleDateString("en-CA"));
   const [recorrente, setRecorrente] = useState(tipo === "fixa");
   const [categoriaFinanceira, setCategoriaFinanceira] = useState(
     tipo === "fixa" ? "despesa_fixa" : "despesa_variavel"
