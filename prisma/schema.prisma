@@ -9,11 +9,13 @@ datasource db {
 
 // Login único (você) — mesmo padrão do JM Team
 model Usuario {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  senha     String
-  nome      String
-  createdAt DateTime @default(now())
+  id               String    @id @default(uuid())
+  email            String    @unique
+  senha            String
+  nome             String
+  createdAt        DateTime  @default(now())
+  tentativasFalhas Int       @default(0) // contador de senhas erradas seguidas — zera a cada acerto
+  bloqueadoAte     DateTime? // se preenchido e no futuro, login fica bloqueado até essa hora (proteção contra força bruta)
 }
 
 model Cliente {

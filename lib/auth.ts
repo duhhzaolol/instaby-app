@@ -35,10 +35,43 @@ export const authOptions: AuthOptions = {
         const usuario = await prisma.usuario.findUnique({
           where: { email: credentials.email },
         });
+        // Mesmo se o e-mail não existir, não revela isso pra quem tenta —
+        // sempre "e-mail ou senha incorretos", nunca "esse e-mail não existe".
         if (!usuario) return null;
 
+        // Proteção contra força bruta: depois de 5 senhas erradas seguidas,
+        // bloqueia esse login por 15 minutos, mesmo que a senha certa venha
+        // em seguida — impede um script de ficar tentando milhares de senhas.
+        if (usuario.bloqueadoAte && usuario.bloqueadoAte > new Date()) {
+          return null;
+        }
+
         const senhaValida = await bcrypt.compare(credentials.senha, usuario.senha);
-        if (!senhaValida) return null;
+
+        if (!senhaValida) {
+          const tentativas = usuario.tentativasFalhas + 1;
+          const LIMITE_TENTATIVAS = 5;
+          const BLOQUEIO_MINUTOS = 15;
+          await prisma.usuario.update({
+            where: { id: usuario.id },
+            data: {
+              tentativasFalhas: tentativas >= LIMITE_TENTATIVAS ? 0 : tentativas,
+              bloqueadoAte:
+                tentativas >= LIMITE_TENTATIVAS
+                  ? new Date(Date.now() + BLOQUEIO_MINUTOS * 60 * 1000)
+                  : usuario.bloqueadoAte,
+            },
+          });
+          return null;
+        }
+
+        // Login certo — zera qualquer contador/bloqueio que tivesse acumulado.
+        if (usuario.tentativasFalhas > 0 || usuario.bloqueadoAte) {
+          await prisma.usuario.update({
+            where: { id: usuario.id },
+            data: { tentativasFalhas: 0, bloqueadoAte: null },
+          });
+        }
 
         return { id: usuario.id, email: usuario.email, name: usuario.nome };
       },

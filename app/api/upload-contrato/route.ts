@@ -13,6 +13,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ erro: "Arquivo muito grande (máximo 10MB)" }, { status: 400 });
   }
 
+  // Contrato pode ser PDF, imagem (foto do papel assinado) ou Word — mas nada
+  // executável ou que o navegador tente rodar como página (html/svg com script).
+  const TIPOS_PERMITIDOS = [
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ];
+  if (!TIPOS_PERMITIDOS.includes(arquivo.type) && !arquivo.type.startsWith("image/")) {
+    return NextResponse.json({ erro: "Envie um PDF, Word ou imagem" }, { status: 400 });
+  }
+
   const nomeUnico = `contratos/${Date.now()}-${arquivo.name.replace(/[^a-zA-Z0-9.]/g, "-")}`;
 
   const blob = await put(nomeUnico, arquivo, {

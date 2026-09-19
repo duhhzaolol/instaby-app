@@ -13,6 +13,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ erro: "Arquivo muito grande (máximo 5MB)" }, { status: 400 });
   }
 
+  if (!arquivo.type.startsWith("image/")) {
+    return NextResponse.json({ erro: "Envie apenas arquivos de imagem" }, { status: 400 });
+  }
+
   const nomeUnico = `logos/${Date.now()}-${arquivo.name.replace(/[^a-zA-Z0-9.]/g, "-")}`;
 
   const blob = await put(nomeUnico, arquivo, {

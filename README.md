@@ -1,4 +1,86 @@
-# Instaby App — v106
+# Instaby App — v107
+
+## Segurança parte 2: hash de senha, cookies, força bruta, links públicos e headers
+
+Continuação da auditoria de segurança do v106 — dessa vez cobrindo especificamente
+os pontos que você pediu: hash de senha, proteção de cookie, tentativas de força
+bruta, e se algo sensível aparece "no Inspecionar" do navegador.
+
+**O que já estava certo (conferido, não mudei):**
+- Senha nunca é guardada em texto puro — é hash com `bcrypt` (fator de custo 10),
+  então nem olhando direto no banco dá pra ver a senha real.
+- O cookie de sessão (`__Secure-next-auth.session-token`) já tinha as três
+  proteções corretas: `httpOnly` (JavaScript da página não consegue ler o
+  cookie, nem um script malicioso injetado), `secure` (só trafega por HTTPS)
+  e `sameSite: lax` (dificulta um site externo forçar uma ação no seu painel).
+- Não achei nenhuma chave de API, senha ou segredo aparecendo em código que
+  roda no navegador — tudo que é sensível fica só no servidor.
+- Todos os IDs usados em links (cliente, orçamento, relatório, case) são UUID
+  aleatório, não sequencial — ninguém adivinha o "próximo" ID trocando um
+  número na URL.
+
+**O que corrigi:**
+
+1. **Força bruta no login** (`lib/auth.ts`) — antes, dava pra tentar senha
+   infinitas vezes sem nenhum limite. Agora, depois de 5 senhas erradas
+   seguidas pro mesmo login, ele fica bloqueado por 15 minutos (mesmo que a
+   senha certa venha em seguida) — impede um script de ficar testando milhares
+   de combinações. Acertar a senha zera o contador normalmente.
+
+2. **Link de orçamento previsível** (`lib/slug.ts`) — esse foi o achado mais
+   sério dessa segunda rodada. O link público `/orcamento/{slug}` (que o
+   cliente abre e usa pra aceitar a proposta, sem precisar de login — de
+   propósito) tinha um sufixo aleatório gerado com só 4 caracteres e por um
+   método (`Math.random()`) que não é seguro pra isso — combinado com o nome
+   do cliente (que muitas vezes é público, tipo o nome da empresa), um script
+   conseguiria tentar todas as combinações possíveis e cair no orçamento — e
+   até aceitar a proposta — de outro cliente seu. Troquei pro gerador
+   criptográfico do próprio Node (`crypto.randomBytes`) com um sufixo bem mais
+   longo — na prática, impossível de adivinhar por tentativa e erro.
+
+3. **Upload de arquivo sem checar o tipo** (`upload-imagem`, `upload-logo`,
+   `upload-contrato`) — antes aceitava qualquer arquivo, bastava o tamanho
+   estar dentro do limite. Agora exige que seja realmente uma imagem (ou, no
+   caso de contrato, imagem/PDF/Word) — evita que alguém suba um arquivo
+   disfarçado que o navegador tentaria rodar como página.
+
+4. **Cabeçalhos de segurança** (`next.config.js`) — adicionei os cabeçalhos
+   HTTP que praticamente todo checklist de segurança pede: `X-Frame-Options`
+   (impede seu painel ser aberto escondido dentro de outro site — proteção
+   contra "clickjacking"), `X-Content-Type-Options` (impede o navegador de
+   tentar "adivinhar" o tipo de um arquivo de um jeito perigoso),
+   `Referrer-Policy` (não vaza a URL completa ao clicar num link pra fora) e
+   `Strict-Transport-Security` (reforça que o navegador nunca tente acessar
+   seu domínio por HTTP, só HTTPS — a Vercel já força isso, esse cabeçalho é
+   uma segunda camada). Não adicionei uma política de `Content-Security-Policy`
+   completa porque ela é fácil de configurar errado e travar imagens ou
+   estilos do site sem eu conseguir testar isso localmente antes — prefiro
+   deixar isso pra uma etapa separada, testando com calma.
+
+**Sobre criptografia "em trânsito" e no banco:** o tráfego entre o navegador e
+a Vercel já é sempre HTTPS (a própria Vercel cuida disso, automaticamente, em
+qualquer domínio — inclusive o seu domínio próprio quando você configurar). A
+conexão do servidor com o banco (Neon) também já é criptografada por padrão
+(Neon exige SSL na string de conexão). Isso não depende de código do projeto,
+é a infraestrutura que já garante.
+
+**Recomendação que não mudei via código (decisão sua):** as rotas de manutenção
+(`/api/resetar-senha`, `/api/setup` etc.) recebem o segredo (`SETUP_SECRET`) na
+própria URL, via `?secret=...`. Isso significa que esse segredo pode acabar
+salvo no histórico do navegador ou nos logs da Vercel. Como são rotas de uso
+raro e manual, não mudei o formato pra não complicar seu fluxo — mas vale: (a)
+usar um `SETUP_SECRET` bem longo e aleatório, (b) nunca compartilhar essa URL
+com ninguém, e (c) se puder, trocar esse segredo de tempos em tempos.
+
+**Teste depois de subir:**
+1. Tentar logar errado 5x seguidas → a 6ª tentativa (mesmo com a senha certa)
+   deve continuar negando por alguns minutos.
+2. Pegar um link de orçamento novo que você gerar a partir de agora e conferir
+   que o sufixo no final é bem mais longo que antes.
+3. Testar upload de imagem/logo/contrato normalmente pra confirmar que
+   continua funcionando.
+
+## v106
 
 ## Segurança: as rotas de API não pediam login (falha grave, corrigida)
 
