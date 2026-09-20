@@ -221,7 +221,11 @@ export default function LinkBioForm({
           className="mb-3"
         />
 
-        <p className="mb-2 mt-4 text-xs font-medium text-muted">Redes sociais (deixe em branco pra não mostrar o ícone)</p>
+        <p className="mb-2 mt-4 text-xs font-medium text-muted">
+          Redes sociais (deixe em branco pra não mostrar o ícone) — aparecem só no rodapé do site (/), não na página
+          de links. Pra Instagram/YouTube/TikTok/LinkedIn aparecerem como card grande na lista de /link, cadastre
+          como um link normal ali embaixo (o ícone certo é escolhido sozinho pelo título).
+        </p>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label>Instagram</Label>

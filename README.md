@@ -1,4 +1,40 @@
-# Instaby App — v108
+# Instaby App — v109
+
+## Página /link: tudo virou card grande, sem bolinha de rede social
+
+Você queria que TODOS os links da página `/link` ficassem no mesmo formato do
+card vermelho "Falar no WhatsApp" — retângulo comprido, borda arredondada,
+numa lista única, sem os ícones redondos pequenos — tipo Linktree mesmo, e
+reorganizável.
+
+**O que era o ícone redondo**: era um bloco separado (Instagram/YouTube/TikTok/
+LinkedIn), que vinha de 4 campos fixos de configuração, fora da lista de links
+que você edita/reordena. Por isso não dava pra deixar do tamanho dos outros
+nem reordenar junto.
+
+**O que mudei** (`components/landing/LinkPage.tsx` + `LinkBioForm.tsx`):
+- Removi esse bloco de ícones redondos da página `/link` por completo.
+- Agora **todo link da página `/link` vem da mesma lista** (a que você já usa
+  com "+ Adicionar link", reordenar com as setas, marcar como destaque etc) —
+  e todos saem no mesmo formato grande, tipo o card do WhatsApp.
+- O ícone de cada link é escolhido sozinho pelo título — cadastre um link
+  chamado "Instagram" que ele já sai com o ícone do Instagram, "TikTok" com o
+  ícone certo, "Falar no WhatsApp" com o ícone de balão, e assim por diante
+  (não precisa escolher o ícone manualmente).
+
+**O que você precisa fazer** (dado que já estava preenchido nos campos antigos
+de Instagram/YouTube/TikTok/LinkedIn não migra sozinho pra lista — são coisas
+diferentes agora): em Configurações → Site & Link na bio → "Página de links
+(/link)", use "+ Adicionar link" pra cada rede que você quer que apareça na
+lista (título "Instagram", URL do seu perfil, por exemplo) — aí já nasce como
+card grande, e você reordena/exclui como qualquer outro link.
+
+**Os 4 campos antigos (Instagram/YouTube/TikTok/LinkedIn) continuam existindo**
+e ainda servem pra uma coisa: o rodapé do site principal (`/`), que continua
+mostrando os ícones pequenos ali — isso eu não mexi, só a página `/link`. Deixei
+um aviso no próprio painel explicando essa diferença, pra não confundir de novo.
+
+## v108
 
 ## Cartões de "Serviços" (site, mobile) — visual mais destacado
 

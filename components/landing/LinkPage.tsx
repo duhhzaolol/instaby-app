@@ -8,6 +8,7 @@ import {
   Instagram,
   Youtube,
   Linkedin,
+  Music2,
   Briefcase,
   Star,
   FileText,
@@ -23,30 +24,21 @@ type LinkItem = {
   destaque: boolean;
 };
 
+// O ícone de cada link na lista é escolhido pelo título — então "Instagram",
+// "TikTok" etc, cadastrados como um link normal em vez de ficarem no bloco
+// separado de redes sociais, já saem com o ícone certo automaticamente.
 function iconePara(titulo: string) {
   const t = titulo.toLowerCase();
-  if (t.includes("whatsapp") || t.includes("orçamento") || t.includes("orcamento")) return MessageCircle;
+  if (t.includes("whatsapp")) return MessageCircle;
   if (t.includes("instagram")) return Instagram;
   if (t.includes("youtube")) return Youtube;
+  if (t.includes("tiktok")) return Music2;
   if (t.includes("linkedin")) return Linkedin;
   if (t.includes("portfólio") || t.includes("portfolio") || t.includes("trabalho")) return Briefcase;
   if (t.includes("case") || t.includes("depoimento") || t.includes("avalia")) return Star;
   if (t.includes("serviço") || t.includes("servico")) return Megaphone;
-  if (t.includes("orçamento") || t.includes("proposta") || t.includes("contrato")) return FileText;
+  if (t.includes("orçamento") || t.includes("orcamento") || t.includes("proposta") || t.includes("contrato")) return FileText;
   return ExternalLink;
-}
-
-function TagIcon({ href, Icon }: { href: string; Icon: typeof Instagram }) {
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/80 backdrop-blur transition-colors hover:border-accent/50 hover:text-white"
-    >
-      <Icon size={16} />
-    </a>
-  );
 }
 
 export function LinkPage({
@@ -57,10 +49,6 @@ export function LinkPage({
   imagemUrl,
   tagline,
   tags,
-  instagram,
-  youtube,
-  tiktok,
-  linkedin,
 }: {
   links: LinkItem[];
   whatsappAgencia: string | null;
@@ -69,10 +57,6 @@ export function LinkPage({
   imagemUrl?: string | null;
   tagline?: string | null;
   tags?: string | null;
-  instagram?: string | null;
-  youtube?: string | null;
-  tiktok?: string | null;
-  linkedin?: string | null;
 }) {
   const linkWhatsapp = whatsappAgencia
     ? `https://wa.me/${whatsappAgencia}?text=${encodeURIComponent("Olá! Vim pela página de links da Instaby.")}`
@@ -80,7 +64,6 @@ export function LinkPage({
 
   const normais = links.filter((l) => !l.destaque);
   const destaques = links.filter((l) => l.destaque);
-  const temSociais = instagram || youtube || tiktok || linkedin;
 
   return (
     <div className="flex min-h-screen flex-col items-center bg-[#0a0a0c] text-white">
@@ -270,29 +253,6 @@ export function LinkPage({
             </motion.div>
           );
         })}
-
-        {temSociais && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.4, delay: 0.3 }}
-            className="mt-8 flex items-center gap-3"
-          >
-            {instagram && <TagIcon href={instagram} Icon={Instagram} />}
-            {youtube && <TagIcon href={youtube} Icon={Youtube} />}
-            {tiktok && (
-              <a
-                href={tiktok}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/5 text-[13px] font-bold text-white/80 backdrop-blur transition-colors hover:border-accent/50 hover:text-white"
-              >
-                TT
-              </a>
-            )}
-            {linkedin && <TagIcon href={linkedin} Icon={Linkedin} />}
-          </motion.div>
-        )}
 
         <div className="mt-12 flex flex-col items-center gap-1 text-center">
           <p className="text-[11px] uppercase tracking-[0.2em] text-white/30">Araras · Campinas · São Paulo</p>

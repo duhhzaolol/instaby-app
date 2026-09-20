@@ -32,10 +32,6 @@ export default async function LinkPageRoute() {
       imagemUrl={config?.linkBioImagemUrl || null}
       tagline={config?.linkBioTagline || null}
       tags={config?.linkBioTags || null}
-      instagram={config?.linkBioInstagram || null}
-      youtube={config?.linkBioYoutube || null}
-      tiktok={config?.linkBioTiktok || null}
-      linkedin={config?.linkBioLinkedin || null}
     />
   );
 }
