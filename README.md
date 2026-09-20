@@ -1,4 +1,38 @@
-# Instaby App — v107
+# Instaby App — v108
+
+## Cartões de "Serviços" (site, mobile) — visual mais destacado
+
+Você pediu pra melhorar o visual dos cartões de Serviços no site em mobile —
+gostou do formato, mas achou que faltava algo, e perguntou se um fundo com cor
+ou um contorno melhor ficaria melhor visualmente.
+
+**O problema**: os cartões tinham fundo quase preto (`bg-black/40`) em cima de
+uma seção que já é quase preta — o resultado é o que aparece no seu print,
+os cartões praticamente se misturam com o fundo, sobra só uma linha bem fraca
+de contorno.
+
+**O que mudei** (`components/landing/LandingPage.tsx`, só CSS/Tailwind, sem
+mexer em conteúdo nem em dado nenhum):
+- Fundo do cartão passou a ser um cinza-claro bem sutil e transparente
+  (`bg-white/[0.04]`) em vez de quase preto — separa visualmente do fundo da
+  seção sem parecer um "card" genérico de app.
+- Um brilho fino por dentro, na borda de cima (`inset shadow`), pra dar
+  profundidade — truque comum em painéis escuros (Linear, Vercel, Stripe)
+  pra não ficar "chapado".
+- Ao tocar/passar o mouse: o cartão sobe levemente, a borda fica vermelha
+  (cor da marca) e aparece uma sombra vermelha suave por baixo — dá a sensação
+  de resposta ao toque, sem depender só da mudança de cor de borda que já
+  existia (mudança bem sutil, difícil de notar).
+- O ícone (quadradinho vermelho) fica com fundo mais forte no hover, virando
+  vermelho sólido com o ícone branco — chama mais atenção pro card ativo.
+
+Por que essa direção e não, por exemplo, um contorno mais grosso: um contorno
+mais forte sozinho deixa o card parecendo uma caixa vazia; um fundo com
+alguma cor (mesmo sutil) + um brilho interno é o que dá aquela sensação de
+"painel com peso" que os sites de referência que você mandou também usam —
+mantém a estética preto/vermelho da marca sem introduzir uma cor nova.
+
+## v107
 
 ## Segurança parte 2: hash de senha, cookies, força bruta, links públicos e headers
 

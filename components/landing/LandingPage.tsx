@@ -459,9 +459,9 @@ export function LandingPage({
                   href={s.destino}
                   target={s.destino.startsWith("http") ? "_blank" : undefined}
                   {...fadeUp((i % 4) * 0.05)}
-                  className="rounded-xl border border-white/10 bg-black/40 p-4 transition-colors hover:border-accent/30"
+                  className="group rounded-xl border border-white/10 bg-white/[0.04] p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] transition-all duration-300 hover:-translate-y-0.5 hover:border-accent/40 hover:bg-white/[0.07] hover:shadow-[0_10px_28px_-10px_rgba(230,57,70,0.45)]"
                 >
-                  <div className="mb-2.5 flex h-8 w-8 items-center justify-center rounded-lg bg-accent/10 text-accent">
+                  <div className="mb-2.5 flex h-8 w-8 items-center justify-center rounded-lg bg-accent/15 text-accent transition-colors group-hover:bg-accent group-hover:text-white">
                     <Icon size={15} />
                   </div>
                   <p className="mb-1 text-sm font-medium text-text">{s.nome}</p>
