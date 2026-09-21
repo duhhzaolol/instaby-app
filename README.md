@@ -1,4 +1,37 @@
-# Instaby App — v109
+# Instaby App — v110
+
+## Correção: erro ao adicionar serviço contratado (e o mesmo bug em qualquer outra tela)
+
+Você reportou: ao adicionar um serviço num cliente novo, às vezes dava
+"Application error: a client-side exception has occurred" — mas ao voltar e
+entrar de novo na página, o serviço aparecia certinho, já tinha sido salvo.
+
+**Causa raiz:** todo campo de dinheiro no banco (`valor`, `valorUnitario`,
+`descontoMensal` etc.) é guardado num tipo especial do Prisma chamado
+`Decimal` (mais preciso que o `number` comum do JavaScript pra dinheiro). O
+problema: quando uma rota de API devolve um registro assim **direto**, logo
+depois de criar ou editar algo, esse `Decimal` se transforma sozinho numa
+**string** dentro do JSON (`"150.00"` em vez de `150`). A tela recebe esse
+valor como texto e quebra na hora de somar ou formatar com `.toFixed()` —
+só usava a rota (a resposta imediata do "adicionar"), não usava a página
+inteira. Por isso funcionava perfeitamente depois de atualizar a página:
+nesse caminho (carregar a página do zero) o código já convertia esse valor
+certinho pra número — só a resposta "ao vivo" do clique de adicionar que não
+passava por essa conversão.
+
+**A correção não foi só nessa tela** — apliquei um ajuste central (`lib/prisma.ts`)
+que resolve isso pra sempre, em qualquer lugar do sistema, presente ou
+futuro: agora, toda vez que qualquer rota de API responde com um valor desses,
+ele já vem como número de verdade, não como texto. Antes desse ajuste, esse
+mesmo tipo de erro podia acontecer (silenciosamente, ou às vezes visivelmente)
+em qualquer tela que atualiza um valor em dinheiro sem recarregar a página
+inteira — Financeiro, Patrimônio, Pacotes, Orçamentos, Contas a pagar/receber.
+Não precisei mexer em nenhuma dessas telas uma por uma — a correção é numa
+única raiz compartilhada por todas.
+
+Sem mudança de schema/banco nessa versão — só código.
+
+## v109
 
 ## Página /link: tudo virou card grande, sem bolinha de rede social
 
