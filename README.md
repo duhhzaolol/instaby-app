@@ -1,4 +1,29 @@
-# Instaby App — v111
+# Instaby App — v112
+
+## Correção: "Lucro" do Financeiro não batia com o saldo real em caixa
+
+Você notou que, na tela Financeiro (visão geral), o card "Lucro" não batia
+com "Variação de caixa" nem com o que realmente sobra na conta. Achei a
+causa: "Entradas" contava só cobrança já **recebida** (pago), mas "Custos
+fixos"/"Custos flexíveis" contavam **toda** despesa não cancelada — inclusive
+pendente/atrasada, que ainda nem saiu do banco. Misturar "só o que já entrou"
+com "tudo que devo, pago ou não" faz o "Lucro" não fazer sentido — ele nunca
+ia bater com o caixa de verdade.
+
+Corrigido: agora "Custos fixos", "Custos flexíveis" e "Lucro" só contam
+despesa **já paga**, igual "Entradas" já fazia — batendo com "Variação de
+caixa". Apliquei a mesma correção no "Resumo por cliente" (a tabela por
+cliente tinha exatamente o mesmo problema). As listas detalhadas de despesas
+mais embaixo continuam mostrando tudo — pago e pendente — como sempre
+mostraram; só os números-resumo dos cards mudaram. Adicionei uma legenda
+curta acima desses cards explicando isso, pra não confundir de novo.
+
+Nada mudou na DRE nem no Fluxo de Caixa (já estavam corretos e consistentes
+com seus respectivos propósitos — competência e caixa puro).
+
+Sem mudança de schema/banco nessa versão — só código.
+
+## v111
 
 ## Horário de início "sumido" no Registrar horas + todo campo de data agora abre o calendário
 

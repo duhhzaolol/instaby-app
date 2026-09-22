@@ -122,11 +122,17 @@ export default async function FinanceiroPage({
   const totalEntradas = cobrancas.reduce((s, c) => s + Number(c.valor), 0);
   const custosFixos = despesas.filter((d) => d.tipo === "fixa");
   const custosFlexiveis = despesas.filter((d) => d.tipo !== "fixa");
+  // "Entradas" só conta cobrança já recebida (status pago) — então, pra "Lucro"
+  // fazer sentido junto dela (e bater com "Variação de caixa"), os custos aqui
+  // também só podem contar despesa já paga. Antes essa soma incluía despesa
+  // pendente/atrasada junto com receita só do que já entrou, misturando duas
+  // bases diferentes — por isso o "Lucro" não batia com o saldo real em caixa.
+  // As listas de despesas abaixo continuam mostrando tudo (pago e pendente).
   const totalFixas = custosFixos
-    .filter((d) => d.categoriaFinanceira !== "transferencia")
+    .filter((d) => d.categoriaFinanceira !== "transferencia" && d.status === "pago")
     .reduce((s, d) => s + Number(d.valor), 0);
   const totalFlexiveis = custosFlexiveis
-    .filter((d) => d.categoriaFinanceira !== "transferencia")
+    .filter((d) => d.categoriaFinanceira !== "transferencia" && d.status === "pago")
     .reduce((s, d) => s + Number(d.valor), 0);
 
   // Acúmulo dia a dia do mês selecionado (só faz sentido pra "este mês" / "mês anterior")
@@ -167,6 +173,11 @@ export default async function FinanceiroPage({
   despesas.forEach((d) => {
     if (!d.clienteId || !d.cliente) return;
     if (d.categoriaFinanceira === "transferencia") return;
+    // Mesma correção do resumo geral: "entradas" aqui só conta cobrança paga
+    // (a query já filtra status "pago"), então "despesas" também só pode contar
+    // despesa paga — senão o "lucro" por cliente fica com a mesma mistura de
+    // bases que o card geral tinha.
+    if (d.status !== "pago") return;
     porCliente[d.clienteId] ||= { nome: d.cliente.nome, cor: d.cliente.cor, entradas: 0, despesas: 0 };
     porCliente[d.clienteId].despesas += Number(d.valor);
   });

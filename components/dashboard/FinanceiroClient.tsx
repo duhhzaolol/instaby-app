@@ -221,6 +221,10 @@ export default function FinanceiroClient({
         </div>
       )}
 
+      <p className="mb-2 text-xs text-muted">
+        Só considera o que já foi recebido/pago de fato — pode ser diferente da soma das listas aqui embaixo, que
+        mostram também cobrança e despesa ainda pendente ou atrasada.
+      </p>
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-4">
         <Card index={0} className="p-4">
           <div className="mb-3 flex items-center justify-between">
