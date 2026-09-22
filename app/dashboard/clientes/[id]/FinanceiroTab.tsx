@@ -8,6 +8,7 @@ import { DespesaRow, DespesaRowData } from "@/components/dashboard/DespesaRow";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { Input, Label } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { DatePicker } from "@/components/ui/DatePicker";
 import { CATEGORIAS_RECEITA } from "@/lib/categoriasFinanceiras";
 
 export default function FinanceiroTab({
@@ -64,6 +65,12 @@ function NovaCobrancaForm({ clienteId, onSalvo }: { clienteId: string; onSalvo: 
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // O DatePicker é um botão, não um <input> nativo — não dá pra contar com
+    // o "required" do HTML pra impedir envio sem data, então valida aqui.
+    if (!data) {
+      alert("Escolhe uma data.");
+      return;
+    }
     setEnviando(true);
 
     await fetch(`/api/clientes/${clienteId}/cobrancas`, {
@@ -96,7 +103,7 @@ function NovaCobrancaForm({ clienteId, onSalvo }: { clienteId: string; onSalvo: 
         </div>
         <div>
           <Label>Data</Label>
-          <Input required type="date" value={data} onChange={(e) => setData(e.target.value)} />
+          <DatePicker value={data} onChange={setData} />
         </div>
       </div>
       <div className="mb-3 grid grid-cols-2 gap-2">

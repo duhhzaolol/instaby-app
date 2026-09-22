@@ -47,7 +47,9 @@ export function TarefaRow({
   const [salvando, setSalvando] = useState(false);
 
   const [confirmandoConclusao, setConfirmandoConclusao] = useState(false);
-  const [horaInicioConclusao, setHoraInicioConclusao] = useState("");
+  // Início também nasce no horário atual (igual sempre foi) — só o Fim tinha
+  // esse padrão, o Início abria em branco, parecendo "errado"/aleatório.
+  const [horaInicioConclusao, setHoraInicioConclusao] = useState(horaAtual());
   const [horaFimConclusao, setHoraFimConclusao] = useState(horaAtual());
   const [registrandoConclusao, setRegistrandoConclusao] = useState(false);
 

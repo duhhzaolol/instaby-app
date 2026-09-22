@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input, Label } from "@/components/ui/Input";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
+import { DatePicker } from "@/components/ui/DatePicker";
 import { CountUp } from "@/components/ui/CountUp";
 import { DespesaRow, DespesaRowData } from "@/components/dashboard/DespesaRow";
 import { CATEGORIAS_FINANCEIRAS, STATUS_DESPESA, visualDaCategoriaFinanceira } from "@/lib/categoriasFinanceiras";
@@ -109,19 +110,9 @@ export default function FinanceiroClient({
           ))}
           {periodo === "personalizado" && (
             <div className="flex items-center gap-1.5">
-              <input
-                type="date"
-                value={personDesde}
-                onChange={(e) => setPersonDesde(e.target.value)}
-                className="h-8 rounded-lg border border-border bg-card/60 px-2 text-xs text-text"
-              />
+              <DatePicker value={personDesde} onChange={setPersonDesde} className="w-36" />
               <span className="text-xs text-muted">até</span>
-              <input
-                type="date"
-                value={personAte}
-                onChange={(e) => setPersonAte(e.target.value)}
-                className="h-8 rounded-lg border border-border bg-card/60 px-2 text-xs text-text"
-              />
+              <DatePicker value={personAte} onChange={setPersonAte} className="w-36" />
               <button
                 onClick={aplicarPersonalizado}
                 className="h-8 rounded-lg bg-accent px-3 text-xs font-medium text-white"
@@ -554,23 +545,13 @@ function NovaDespesaForm({
         {(status === "pendente" || status === "atrasado") && (
           <div>
             <Label>Vencimento</Label>
-            <input
-              type="date"
-              value={vencimento}
-              onChange={(e) => setVencimento(e.target.value)}
-              className="h-10 w-full rounded-xl border border-border bg-card/60 px-3 text-sm text-text"
-            />
+            <DatePicker value={vencimento} onChange={setVencimento} />
           </div>
         )}
         {status === "pago" && (
           <div>
             <Label>Data do pagamento (se diferente)</Label>
-            <input
-              type="date"
-              value={dataPagamento}
-              onChange={(e) => setDataPagamento(e.target.value)}
-              className="h-10 w-full rounded-xl border border-border bg-card/60 px-3 text-sm text-text"
-            />
+            <DatePicker value={dataPagamento} onChange={setDataPagamento} />
           </div>
         )}
       </div>
@@ -579,12 +560,7 @@ function NovaDespesaForm({
         <CurrencyInput value={valor} onChange={setValor} />
         <div>
           <label className="mb-1 block text-[11px] text-muted">Data de competência</label>
-          <input
-            type="date"
-            value={data}
-            onChange={(e) => setData(e.target.value)}
-            className="h-10 w-full rounded-xl border border-border bg-card/60 px-3 text-sm text-text"
-          />
+          <DatePicker value={data} onChange={setData} />
         </div>
       </div>
       {ehInvestimento && (

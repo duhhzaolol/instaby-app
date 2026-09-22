@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { X, ExternalLink } from "lucide-react";
 import { visualDoTipoAtividade, type TipoAtividadeAgenda } from "@/lib/tipoAtividadeAgenda";
+import { DatePicker } from "@/components/ui/DatePicker";
 
 export type EventoAgenda = {
   id: string;
@@ -221,12 +222,7 @@ export function AgendaGrid({
             </div>
 
             <label className="mb-1 block text-xs text-muted">Data</label>
-            <input
-              type="date"
-              value={data}
-              onChange={(e) => setData(e.target.value)}
-              className="mb-3 h-10 w-full rounded-lg border border-border bg-base px-3 text-sm text-text"
-            />
+            <DatePicker value={data} onChange={setData} className="mb-3" />
 
             {editando.origem === "tarefa" && (
               <>

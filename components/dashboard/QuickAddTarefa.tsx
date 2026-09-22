@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { DatePicker } from "@/components/ui/DatePicker";
 
 type Cliente = { id: string; nome: string };
 
@@ -52,13 +53,7 @@ export function QuickAddTarefa({ clientes }: { clientes: Cliente[] }) {
             </option>
           ))}
         </select>
-        <input
-          type="date"
-          value={prazo}
-          onChange={(e) => setPrazo(e.target.value)}
-          title="Prazo (opcional)"
-          className="h-11 rounded-xl border border-border bg-base/60 px-3 text-sm text-text sm:w-36"
-        />
+        <DatePicker value={prazo} onChange={setPrazo} placeholder="Prazo" className="sm:w-36" />
         <button
           type="submit"
           disabled={enviando || !titulo.trim()}

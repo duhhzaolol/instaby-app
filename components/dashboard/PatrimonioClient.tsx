@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X, Pencil, Check, Gem } from "lucide-react";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
+import { DatePicker } from "@/components/ui/DatePicker";
 import { Card } from "@/components/ui/Card";
 
 type Bem = {
@@ -81,12 +82,7 @@ function NovoBemForm({ onSalvo }: { onSalvo: () => void }) {
             </option>
           ))}
         </select>
-        <input
-          type="date"
-          value={data}
-          onChange={(e) => setData(e.target.value)}
-          className="h-10 w-full rounded-xl border border-border bg-base/60 px-3 text-sm text-text"
-        />
+        <DatePicker value={data} onChange={setData} />
       </div>
       <div className="mb-4">
         <CurrencyInput value={valorAquisicao} onChange={setValorAquisicao} placeholder="Valor de aquisição" />

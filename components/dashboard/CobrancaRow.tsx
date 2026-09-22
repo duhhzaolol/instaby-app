@@ -6,6 +6,7 @@ import { Pencil, Trash2, Plus } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
+import { DatePicker } from "@/components/ui/DatePicker";
 import { Button } from "@/components/ui/Button";
 import { calcularStatusEfetivo, LABEL_STATUS_EFETIVO } from "@/lib/statusFinanceiro";
 
@@ -98,12 +99,7 @@ export function CobrancaRow({
       <Card index={index} hoverable={false} className="p-3.5">
         <div className="mb-2 grid grid-cols-2 gap-2">
           <CurrencyInput value={valor} onChange={setValor} />
-          <input
-            type="date"
-            value={vencimento}
-            onChange={(e) => setVencimento(e.target.value)}
-            className="h-10 rounded-xl border border-border bg-card/60 px-3 text-sm text-text"
-          />
+          <DatePicker value={vencimento} onChange={setVencimento} />
         </div>
         <select
           value={tipo}

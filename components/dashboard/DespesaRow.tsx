@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Pencil, Trash2, Repeat, Plus } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
+import { DatePicker } from "@/components/ui/DatePicker";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { CATEGORIAS_FINANCEIRAS, STATUS_DESPESA, visualDaCategoriaFinanceira } from "@/lib/categoriasFinanceiras";
@@ -139,15 +140,7 @@ export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index:
               </option>
             ))}
           </select>
-          {status === "pendente" && (
-            <input
-              type="date"
-              value={vencimento}
-              onChange={(e) => setVencimento(e.target.value)}
-              title="Vencimento"
-              className="h-10 w-full rounded-xl border border-border bg-card/60 px-3 text-sm text-text"
-            />
-          )}
+          {status === "pendente" && <DatePicker value={vencimento} onChange={setVencimento} placeholder="Vencimento" />}
         </div>
         <p className="mb-2 text-[11px] text-muted">
           "Atrasado" não se escolhe mais aqui — calculado sozinho quando o vencimento passa e ainda tem saldo.
@@ -157,12 +150,7 @@ export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index:
           <CurrencyInput value={valor} onChange={setValor} />
           <div>
             <label className="mb-1 block text-[10px] text-muted">Competência</label>
-            <input
-              type="date"
-              value={data}
-              onChange={(e) => setData(e.target.value)}
-              className="h-10 w-full rounded-xl border border-border bg-card/60 px-3 text-sm text-text"
-            />
+            <DatePicker value={data} onChange={setData} />
           </div>
         </div>
         <div className="flex gap-2">

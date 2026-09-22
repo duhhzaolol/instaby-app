@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Input, Label } from "@/components/ui/Input";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
+import { DatePicker } from "@/components/ui/DatePicker";
 import { SeletorCor } from "@/components/ui/SeletorCor";
 import { UploadLogo } from "@/components/ui/UploadLogo";
 import { Button } from "@/components/ui/Button";
@@ -131,11 +132,7 @@ export default function NovoClientePage() {
                 </div>
                 <div>
                   <Label>Vencimento</Label>
-                  <Input
-                    type="date"
-                    value={proximoVencimento}
-                    onChange={(e) => setProximoVencimento(e.target.value)}
-                  />
+                  <DatePicker value={proximoVencimento} onChange={setProximoVencimento} />
                 </div>
               </div>
               <p className="mt-2 text-[11px] text-muted">

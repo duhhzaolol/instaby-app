@@ -1,4 +1,36 @@
-# Instaby App — v110
+# Instaby App — v111
+
+## Horário de início "sumido" no Registrar horas + todo campo de data agora abre o calendário
+
+Dois pedidos seus nessa versão.
+
+**1) "Início" no Registrar horas parecia aleatório** — na real, ele não estava
+aleatório, estava **em branco por padrão** (só o campo "Fim" nascia com o
+horário atual). Um campo em branco, sem rótulo claro do que fazer, dá essa
+sensação de "bugado"/aleatório. Voltei o comportamento de antes: os dois
+campos (Início e Fim) já abrem com o horário atual, e você ajusta o Início
+pra quando realmente começou. Corrigido nos dois lugares onde isso acontece:
+o formulário "Registrar horas" avulso e o "Marcar feito e registrar horas"
+direto na tarefa.
+
+**2) Todo campo de data agora abre o calendário, igual o de Horas** — você
+pediu isso pro site inteiro, e valia mesmo: vários formulários ainda usavam o
+seletor de data nativo do navegador (que muda de aparência dependendo do
+navegador/celular, sem gerar aquele calendário bonito que você já via em
+Horas). Troquei TODOS — contei 16 campos, em 13 telas diferentes — pelo
+mesmo componente de calendário: novo cliente (vencimento), editar cliente
+(vencimento), aba Financeiro do cliente (data da cobrança), Agenda (editar
+data de um item), tarefa rápida (prazo), linha de cobrança (vencimento),
+Financeiro geral (período personalizado, vencimento, data do pagamento,
+competência — 4 campos), Patrimônio (data de aquisição), Novo relatório
+(início/fim do período), linha de despesa (vencimento, competência).
+
+Agora é visualmente consistente em qualquer lugar do sistema que peça uma
+data: você clica, abre o calendário, escolhe o dia — sem exceção.
+
+Sem mudança de schema/banco nessa versão — só código.
+
+## v110
 
 ## Correção: erro ao adicionar serviço contratado (e o mesmo bug em qualquer outra tela)
 

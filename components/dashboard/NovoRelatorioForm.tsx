@@ -6,6 +6,7 @@ import { Plus, UploadCloud, Check } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Input, Label, Textarea } from "@/components/ui/Input";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
+import { DatePicker } from "@/components/ui/DatePicker";
 import { Button } from "@/components/ui/Button";
 import { REDES, visualDaRede } from "@/lib/redesSociais";
 import { importarRelatorioAds } from "@/lib/parseRelatorioAds";
@@ -137,11 +138,11 @@ export function NovoRelatorioForm({ clienteId, redesGerenciadas }: { clienteId: 
         <div className="mb-3 grid grid-cols-2 gap-2">
           <div>
             <Label>Início do período</Label>
-            <Input type="date" required value={inicio} onChange={(e) => setInicio(e.target.value)} />
+            <DatePicker value={inicio} onChange={setInicio} />
           </div>
           <div>
             <Label>Fim do período</Label>
-            <Input type="date" required value={fim} onChange={(e) => setFim(e.target.value)} />
+            <DatePicker value={fim} onChange={setFim} />
           </div>
         </div>
 
