@@ -198,14 +198,14 @@ export function Sidebar({ nome, email, pode }: { nome: string; email: string; po
   return (
     <>
       {/* Desktop */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[280px] flex-col border-r border-border bg-base/95 px-4 py-6 backdrop-blur-xs md:flex">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[280px] flex-col border-r border-border bg-base/95 px-4 py-6 backdrop-blur-xs md:flex print:hidden">
         <ConteudoSidebar nome={nome} email={email} pode={pode} />
       </aside>
 
       {/* Botão mobile */}
       <button
         onClick={() => setAberto(true)}
-        className="fixed left-4 top-4 z-30 flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card/80 text-text backdrop-blur-xs md:hidden"
+        className="fixed left-4 top-4 z-30 flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card/80 text-text backdrop-blur-xs md:hidden print:hidden"
       >
         <Menu size={16} />
       </button>

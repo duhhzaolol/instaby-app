@@ -7,6 +7,7 @@ import WhatsappAgenciaForm from "./WhatsappAgenciaForm";
 import LogosClientesForm from "./LogosClientesForm";
 import MetaFaturamentoForm from "./MetaFaturamentoForm";
 import CustoHoraForm from "./CustoHoraForm";
+import InstrucoesCobrancaForm from "./InstrucoesCobrancaForm";
 import TemplateOnboardingForm from "./TemplateOnboardingForm";
 import TemplatesTarefasForm from "./TemplatesTarefasForm";
 
@@ -86,6 +87,15 @@ export default async function ConfiguracoesPage() {
               o tempo trabalhado, não só o dinheiro que entrou e saiu.
             </p>
             <CustoHoraForm custoAtual={config?.custoHoraPadrao ? Number(config.custoHoraPadrao) : 0} />
+          </div>
+
+          <div>
+            <p className="mb-1 text-sm font-medium text-text">Instruções de pagamento</p>
+            <p className="mb-4 text-sm text-muted">
+              PIX, dados bancários ou qualquer instrução que você queira que apareça no resumo de cobrança em PDF
+              (Contas a Receber → botão "Resumo" numa cobrança). Deixe em branco pra essa seção não aparecer.
+            </p>
+            <InstrucoesCobrancaForm instrucoesAtuais={config?.instrucoesCobranca || ""} />
           </div>
 
           <div>

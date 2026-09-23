@@ -1,4 +1,29 @@
-# Instaby App — v117
+# Instaby App — v118
+
+## Resumo de cobrança em PDF, pra enviar pro cliente atrasado (ou qualquer um)
+
+Em **Contas a Receber**, toda cobrança pendente ou atrasada agora tem um
+botão **"Resumo"**. Ele abre uma página limpa (sem menu, sem nada do painel)
+com: nome do cliente, valor cobrado, vencimento, situação (com quantos dias
+de atraso, se for o caso), os serviços inclusos na mensalidade dele com os
+valores, e — se você preencher — suas instruções de pagamento (PIX, dados
+bancários etc.).
+
+Nessa página tem um botão **"Imprimir / Salvar PDF"** que abre a caixa de
+impressão do navegador — você escolhe "Salvar como PDF" (ou "Microsoft Print
+to PDF" no Windows) em vez de uma impressora, e o PDF fica salvo no seu
+computador/celular pra você anexar e mandar pro cliente por WhatsApp, e-mail
+etc. Não é um PDF gerado automaticamente/anexado sozinho — você que decide
+quando e pra quem mandar.
+
+Pra configurar suas instruções de pagamento (aparecem no resumo se
+preenchidas): **Configurações → Instruções de pagamento**, novo campo de
+texto livre.
+
+Banco: `Configuracao` ganhou `instrucoesCobranca` (texto livre, opcional) —
+aditivo.
+
+## v117
 
 ## Tráfego Pago, fase 3 (última): registro manual de resultado/performance
 

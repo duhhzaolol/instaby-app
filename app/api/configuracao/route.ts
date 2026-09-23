@@ -56,6 +56,7 @@ export async function PATCH(request: NextRequest) {
       ...(body.linkBioYoutube !== undefined && { linkBioYoutube: body.linkBioYoutube }),
       ...(body.linkBioTiktok !== undefined && { linkBioTiktok: body.linkBioTiktok }),
       ...(body.linkBioLinkedin !== undefined && { linkBioLinkedin: body.linkBioLinkedin }),
+      ...(body.instrucoesCobranca !== undefined && { instrucoesCobranca: body.instrucoesCobranca }),
     },
     create: {
       id: "config",
@@ -101,6 +102,7 @@ export async function PATCH(request: NextRequest) {
       linkBioYoutube: body.linkBioYoutube || null,
       linkBioTiktok: body.linkBioTiktok || null,
       linkBioLinkedin: body.linkBioLinkedin || null,
+      instrucoesCobranca: body.instrucoesCobranca || null,
     },
   });
 

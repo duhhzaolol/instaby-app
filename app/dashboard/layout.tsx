@@ -37,10 +37,10 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen bg-base">
       <Sidebar nome={nome} email={email} pode={pode} />
-      <div className="md:pl-[280px]">
+      <div className="md:pl-[280px] print:pl-0">
         <Header nomePrimeiro={primeiroNome} />
-        <main className="px-6 py-8">{children}</main>
-        <footer className="mt-12 border-t border-border px-6 py-8 text-center text-xs text-muted/60">
+        <main className="px-6 py-8 print:px-0 print:py-0">{children}</main>
+        <footer className="mt-12 border-t border-border px-6 py-8 text-center text-xs text-muted/60 print:hidden">
           <img src="/logo.png" alt="Instaby" className="mx-auto mb-2 h-4 w-auto opacity-40 grayscale" />
           Instaby App · painel interno da agência
         </footer>

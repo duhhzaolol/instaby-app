@@ -494,6 +494,9 @@ model Configuracao {
   linkBioYoutube        String?
   linkBioTiktok         String?
   linkBioLinkedin       String?
+  // Texto livre com instruções de pagamento (ex: chave PIX, dados bancários) — aparece
+  // no resumo de cobrança em PDF que você manda pro cliente. Vazio = seção não aparece.
+  instrucoesCobranca    String?
 }
 
 // Trabalhos do portfólio, mostrados na Landing Page pública (seção Portfólio).

@@ -47,7 +47,7 @@ export function Header({ nomePrimeiro }: { nomePrimeiro: string }) {
   const novo = linkNovo(pathname, aba);
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border bg-base/80 pl-16 pr-6 backdrop-blur-xs md:pl-6">
+    <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border bg-base/80 pl-16 pr-6 backdrop-blur-xs md:pl-6 print:hidden">
       <div>
         <p className="text-xs text-muted">
           Dashboard{partes.length > 0 && " / "}

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2, Plus } from "lucide-react";
+import Link from "next/link";
+import { Pencil, Trash2, Plus, FileText } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
@@ -148,6 +149,16 @@ export function CobrancaRow({
         </div>
         <div className="flex items-center gap-3">
           <Badge tone={toneEfetivo[statusEfetivo]}>{LABEL_STATUS_EFETIVO[statusEfetivo]}</Badge>
+          {statusEfetivo !== "pago" && statusEfetivo !== "cancelado" && (
+            <Link
+              href={`/dashboard/financeiro/cobrancas/${cobranca.id}/resumo`}
+              target="_blank"
+              title="Ver resumo pra enviar pro cliente"
+              className="flex items-center gap-1 text-xs font-medium text-accent hover:underline"
+            >
+              <FileText size={11} /> Resumo
+            </Link>
+          )}
           {statusEfetivo !== "pago" && statusEfetivo !== "cancelado" && (
             <button onClick={() => setLancandoBaixa((v) => !v)} className="flex items-center gap-1 text-xs font-medium text-accent hover:underline">
               <Plus size={11} /> Baixa
