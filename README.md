@@ -1,4 +1,25 @@
-# Instaby App — v115
+# Instaby App — v116
+
+## Tráfego Pago, fase 2: rotina de tarefas do gestor de tráfego
+
+Segunda parte do módulo (depois de Campanha + verba na v115), seguindo a
+ordem combinada. Em vez de criar um sistema novo, reaproveitei o sistema de
+Tarefas que já existe — ele já tinha uma categoria "Campanha" pronta (ícone
+de megafone, verde) que ninguém tinha usado ainda.
+
+A tela **Tráfego Pago** ganhou duas abas: **Campanhas** (o que já existia na
+v115) e **Rotina** — uma lista de tarefas só com categoria "Campanha"
+(ex: trocar criativo, revisar públicos, ajustar verba), com os mesmos
+filtros Abertas/Concluídas/Todas que a tela de Tarefas já usa, e um botão
+pra criar tarefa rápida já vinculada à categoria certa (sem precisar
+escolher categoria toda vez). Essas tarefas continuam aparecendo também na
+tela de Tarefas normal e na Agenda, como qualquer outra — a Rotina do
+Tráfego é só um recorte focado pra quem só cuida disso.
+
+Sem mudança de schema — só reaproveitou o que já existia (`Tarefa` +
+categoria "campanha"), com a mesma trava de permissão/cliente de sempre.
+
+## v115
 
 ## Novo módulo: Tráfego Pago (fase 1 — Campanha + verba por cliente)
 

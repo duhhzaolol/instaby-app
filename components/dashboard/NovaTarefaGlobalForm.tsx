@@ -8,12 +8,24 @@ import { DatePicker } from "@/components/ui/DatePicker";
 
 type Cliente = { id: string; nome: string; cor: string | null };
 
-export function NovaTarefaGlobalForm({ clientes }: { clientes: Cliente[] }) {
+export function NovaTarefaGlobalForm({
+  clientes,
+  categoriaFixa,
+  placeholder,
+  textoBotao,
+}: {
+  clientes: Cliente[];
+  // Quando informado, trava a categoria (esconde o seletor) — usado no
+  // formulário de rotina do Tráfego Pago, que sempre cria tarefa categoria "campanha".
+  categoriaFixa?: string;
+  placeholder?: string;
+  textoBotao?: string;
+}) {
   const router = useRouter();
   const [aberto, setAberto] = useState(false);
   const [titulo, setTitulo] = useState("");
   const [clienteId, setClienteId] = useState("");
-  const [categoria, setCategoria] = useState("");
+  const [categoria, setCategoria] = useState(categoriaFixa || "");
   const [prazo, setPrazo] = useState("");
   const [hora, setHora] = useState("");
   const [observacao, setObservacao] = useState("");
@@ -22,7 +34,7 @@ export function NovaTarefaGlobalForm({ clientes }: { clientes: Cliente[] }) {
   function limpar() {
     setTitulo("");
     setClienteId("");
-    setCategoria("");
+    setCategoria(categoriaFixa || "");
     setPrazo("");
     setHora("");
     setObservacao("");
@@ -39,7 +51,7 @@ export function NovaTarefaGlobalForm({ clientes }: { clientes: Cliente[] }) {
       body: JSON.stringify({
         titulo,
         clienteId: clienteId || null,
-        categoria: categoria || null,
+        categoria: (categoriaFixa || categoria) || null,
         descricao: observacao || null,
         prazo: prazo ? `${prazo}T${hora || "00:00"}:00-03:00` : null,
       }),
@@ -57,7 +69,7 @@ export function NovaTarefaGlobalForm({ clientes }: { clientes: Cliente[] }) {
         onClick={() => setAberto(true)}
         className="mb-5 flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-border bg-card/40 py-3 text-sm text-muted hover:border-accent/40 hover:text-text"
       >
-        <Plus size={15} /> Nova tarefa
+        <Plus size={15} /> {textoBotao || "Nova tarefa"}
       </button>
     );
   }
@@ -76,11 +88,11 @@ export function NovaTarefaGlobalForm({ clientes }: { clientes: Cliente[] }) {
         required
         value={titulo}
         onChange={(e) => setTitulo(e.target.value)}
-        placeholder="O que precisa ser feito?"
+        placeholder={placeholder || "O que precisa ser feito?"}
         className="mb-3 h-10 w-full rounded-xl border border-border bg-base/60 px-3.5 text-sm text-text outline-none focus:border-accent/50"
       />
 
-      <div className="mb-3 grid grid-cols-2 gap-2">
+      <div className={`mb-3 grid gap-2 ${categoriaFixa ? "grid-cols-1" : "grid-cols-2"}`}>
         <select
           value={clienteId}
           onChange={(e) => setClienteId(e.target.value)}
@@ -93,18 +105,20 @@ export function NovaTarefaGlobalForm({ clientes }: { clientes: Cliente[] }) {
             </option>
           ))}
         </select>
-        <select
-          value={categoria}
-          onChange={(e) => setCategoria(e.target.value)}
-          className="h-10 w-full rounded-xl border border-border bg-base/60 px-3 text-sm text-text"
-        >
-          <option value="">Categoria (opcional)</option>
-          {CATEGORIAS_TAREFA.map((c) => (
-            <option key={c.valor} value={c.valor}>
-              {c.label}
-            </option>
-          ))}
-        </select>
+        {!categoriaFixa && (
+          <select
+            value={categoria}
+            onChange={(e) => setCategoria(e.target.value)}
+            className="h-10 w-full rounded-xl border border-border bg-base/60 px-3 text-sm text-text"
+          >
+            <option value="">Categoria (opcional)</option>
+            {CATEGORIAS_TAREFA.map((c) => (
+              <option key={c.valor} value={c.valor}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       <div className="mb-3 grid grid-cols-2 gap-2">
