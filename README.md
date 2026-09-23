@@ -1,4 +1,48 @@
-# Instaby App — v112
+# Instaby App — v113
+
+## Multiusuário: cada pessoa da equipe com o próprio login e acesso configurável
+
+Você comentou que vai trazer um editor e um gestor de tráfego pago pra equipe, e
+pediu acesso configurável por pessoa (igual aos prints do concorrente que você
+mandou). Essa versão traz a base disso:
+
+**Configurações → Equipe** (novo, só aparece pra quem tem permissão de
+gerenciar equipe): cadastra cada pessoa com nome, e-mail e senha próprios, e
+liga/desliga por pessoa:
+- **Ver Financeiro** — vê a área Financeiro e valores em R$.
+- **Lançar cobrança/despesa** — cria e edita cobrança, despesa, contas a pagar/receber.
+- **Comercial** — Oportunidades, Orçamentos, Contratos, Catálogo e Pacotes.
+- **Tráfego Pago** — preparado pro módulo novo (ainda não construído, ver abaixo).
+- **Configurações** — site, catálogo, automações etc.
+- **Gerenciar equipe** — pode criar/editar outros logins (dê com cuidado).
+- **Todos os clientes / só os atribuídos** — se desligado, a pessoa escolhe manualmente quais clientes vê, e só enxerga a Clientes e o cadastro desses.
+
+O seu login continua com **acesso total automático** (não precisa configurar
+nada pra você, e ninguém consegue restringir ou remover esse acesso pela
+tela). O menu lateral também passou a mostrar só as seções que a pessoa logada
+tem permissão de ver.
+
+**O que já está protegido nessa versão:** menu lateral, acesso direto por URL
+às seções Financeiro/Comercial/Configurações/Equipe, e a lista + página de
+cada cliente (quem não tem "todos os clientes" só vê e só abre os que foi
+atribuído).
+
+**O que ainda não está protegido, sendo transparente:** as rotas de API por
+trás de Financeiro/Comercial (ex: criar despesa direto por chamada, sem passar
+pela tela) hoje só exigem estar logado, não checam ainda a permissão
+específica da pessoa — e Tarefas/Agenda/Horas ainda não filtram por cliente
+atribuído. Isso é seguro pro uso combinado com a tela normal, mas ainda não é
+trava de segurança contra alguém tecnicamente curioso mexendo direto na API.
+Recomendo eu fechar isso numa próxima versão antes de dar acesso a alguém em
+quem você não confia 100%, mas pro editor/gestor de tráfego que você está
+trazendo agora, já dá pra usar.
+
+Banco: `Usuario` ganhou `cargo`, `master`, `ativo` e as capacidades acima
+(todas aditivas — seu usuário existente já nasce com `master=true`
+automaticamente, sem precisar mexer em nada); nova tabela `ClienteUsuario`
+(quem vê qual cliente).
+
+## v112
 
 ## Correção: "Lucro" do Financeiro não batia com o saldo real em caixa
 

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { ClienteCard, ClienteCardData } from "@/components/dashboard/ClienteCard";
 import { ClientesAgrupados } from "@/components/dashboard/ClientesAgrupados";
 import { AjudaContextual } from "@/components/ui/AjudaContextual";
+import { getUsuarioAtual, clienteIdsPermitidos } from "@/lib/permissoes";
 
 export default async function ClientesPage({
   searchParams,
@@ -14,8 +15,14 @@ export default async function ClientesPage({
 }) {
   const filtro = searchParams.status || "todos";
 
+  const usuarioAtual = await getUsuarioAtual();
+  const idsPermitidos = usuarioAtual ? await clienteIdsPermitidos(usuarioAtual) : null;
+
   const clientes = await prisma.cliente.findMany({
-    where: filtro !== "todos" ? { status: filtro } : undefined,
+    where: {
+      ...(filtro !== "todos" ? { status: filtro } : {}),
+      ...(idsPermitidos ? { id: { in: idsPermitidos } } : {}),
+    },
     orderBy: { createdAt: "desc" },
     include: { cobrancas: true, servicosContratados: { where: { ativo: true } } },
   });

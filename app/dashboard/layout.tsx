@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { garantirRecorrentesDoMes } from "@/lib/garantirRecorrentes";
+import { getUsuarioAtual, permissoesDe } from "@/lib/permissoes";
 
 export default async function DashboardLayout({
   children,
@@ -19,9 +20,23 @@ export default async function DashboardLayout({
   const email = session?.user?.email || "";
   const primeiroNome = nome.split(" ")[0];
 
+  const usuarioAtual = await getUsuarioAtual();
+  const pode = usuarioAtual
+    ? permissoesDe(usuarioAtual)
+    : {
+        master: true,
+        verFinanceiro: true,
+        gerenciarFinanceiro: true,
+        verComercial: true,
+        gerenciarTrafego: true,
+        gerenciarEquipe: true,
+        gerenciarConfiguracoes: true,
+        todosClientes: true,
+      };
+
   return (
     <div className="min-h-screen bg-base">
-      <Sidebar nome={nome} email={email} />
+      <Sidebar nome={nome} email={email} pode={pode} />
       <div className="md:pl-[280px]">
         <Header nomePrimeiro={primeiroNome} />
         <main className="px-6 py-8">{children}</main>

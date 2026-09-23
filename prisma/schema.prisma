@@ -7,15 +7,47 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Login único (você) — mesmo padrão do JM Team
+// Login da equipe — nasceu como login único (você) e virou multiusuário.
+// master = você: acesso total, nunca é restringido por nenhuma capacidade abaixo.
+// Quem não é master só enxerga/faz o que as capacidades individuais permitirem —
+// são por pessoa (não por "cargo padrão"), então dois "Editor" podem ter acessos
+// diferentes entre si. `cargo` aqui é só um rótulo livre (aparece na tela, não
+// controla nada sozinho).
 model Usuario {
   id               String    @id @default(uuid())
   email            String    @unique
   senha            String
   nome             String
+  cargo            String    @default("Adm Master") // rótulo livre: "Editor", "Gestor de Tráfego" etc.
+  master           Boolean   @default(true) // true só quem tem acesso total e não pode ser restringido
+  ativo            Boolean   @default(true) // false = login desativado, sem excluir o histórico da pessoa
+
+  // Capacidades — cada uma liga uma área do sistema. Ignoradas (sempre liberado) se master=true.
+  verFinanceiro          Boolean @default(false) // vê a área Financeiro e valores em R$ pelo resto do app
+  gerenciarFinanceiro    Boolean @default(false) // lançar/editar cobrança, despesa, conta a pagar/receber
+  verComercial           Boolean @default(false) // Oportunidades, Orçamentos, Contratos, Catálogo, Pacotes
+  gerenciarTrafego       Boolean @default(false) // módulo Tráfego Pago
+  gerenciarEquipe        Boolean @default(false) // Configurações > Equipe (criar/editar outros logins)
+  gerenciarConfiguracoes Boolean @default(false) // resto de Configurações (site, catálogo, automações etc.)
+  todosClientes          Boolean @default(true) // false = só enxerga os clientes listados em clientesPermitidos
+
+  clientesPermitidos ClienteUsuario[]
+
   createdAt        DateTime  @default(now())
   tentativasFalhas Int       @default(0) // contador de senhas erradas seguidas — zera a cada acerto
   bloqueadoAte     DateTime? // se preenchido e no futuro, login fica bloqueado até essa hora (proteção contra força bruta)
+}
+
+// Atribuição de cliente a um usuário não-master com todosClientes=false —
+// só passa a enxergar aquele cliente (Clientes, Tarefas, Agenda, Horas) se estiver aqui.
+model ClienteUsuario {
+  id        String  @id @default(uuid())
+  usuarioId String
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+  clienteId String
+  cliente   Cliente @relation(fields: [clienteId], references: [id])
+
+  @@unique([usuarioId, clienteId])
 }
 
 model Cliente {
@@ -50,6 +82,7 @@ model Cliente {
   links               LinkCliente[]
   onboarding          Onboarding?
   solicitacoes        Solicitacao[]
+  usuariosPermitidos  ClienteUsuario[]
 }
 
 // Relatório de performance por rede e por período — dado lançado manualmente (Fase 1).

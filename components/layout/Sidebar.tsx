@@ -24,7 +24,19 @@ import {
   Settings,
   Menu,
   X,
+  Megaphone,
 } from "lucide-react";
+
+export type Permissoes = {
+  master: boolean;
+  verFinanceiro: boolean;
+  gerenciarFinanceiro: boolean;
+  verComercial: boolean;
+  gerenciarTrafego: boolean;
+  gerenciarEquipe: boolean;
+  gerenciarConfiguracoes: boolean;
+  todosClientes: boolean;
+};
 
 const menuPrincipal = [
   { label: "Visão geral", href: "/dashboard", icon: LayoutGrid },
@@ -50,6 +62,8 @@ const menuOrcamento = [
   { label: "Orçamentos", href: "/dashboard/orcamentos", icon: FileText },
   { label: "Contratos", href: "/dashboard/contratos", icon: FileSignature },
 ];
+
+const menuTrafego = [{ label: "Tráfego Pago", href: "/dashboard/trafego", icon: Megaphone }];
 
 const menuConfig = [{ label: "Configurações", href: "/dashboard/configuracoes", icon: Settings }];
 
@@ -84,13 +98,23 @@ function ItemMenu({
   );
 }
 
-function ConteudoSidebar({ nome, email, onNavigate }: { nome: string; email: string; onNavigate?: () => void }) {
+function ConteudoSidebar({
+  nome,
+  email,
+  pode,
+  onNavigate,
+}: {
+  nome: string;
+  email: string;
+  pode: Permissoes;
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
 
   const todosHrefs = [
     ...menuPrincipal.map((i) => i.href),
-    ...menuFinanceiro.map((i) => i.href),
-    ...menuOrcamento.map((i) => i.href),
+    ...(pode.verFinanceiro ? menuFinanceiro.map((i) => i.href) : []),
+    ...(pode.verComercial ? menuOrcamento.map((i) => i.href) : []),
     ...menuConfig.map((i) => i.href),
   ];
   const melhorMatch = todosHrefs
@@ -119,19 +143,23 @@ function ConteudoSidebar({ nome, email, onNavigate }: { nome: string; email: str
           ))}
         </div>
 
-        <div className="flex flex-col gap-1">
-          <p className="px-3 pb-1 text-[11px] uppercase tracking-wider text-muted/70">Financeiro</p>
-          {menuFinanceiro.map((item) => (
-            <ItemMenu key={item.href} item={item} ativo={!!ativo(item.href)} onClick={onNavigate} />
-          ))}
-        </div>
+        {pode.verFinanceiro && (
+          <div className="flex flex-col gap-1">
+            <p className="px-3 pb-1 text-[11px] uppercase tracking-wider text-muted/70">Financeiro</p>
+            {menuFinanceiro.map((item) => (
+              <ItemMenu key={item.href} item={item} ativo={!!ativo(item.href)} onClick={onNavigate} />
+            ))}
+          </div>
+        )}
 
-        <div className="flex flex-col gap-1">
-          <p className="px-3 pb-1 text-[11px] uppercase tracking-wider text-muted/70">Comercial</p>
-          {menuOrcamento.map((item) => (
-            <ItemMenu key={item.href} item={item} ativo={!!ativo(item.href)} onClick={onNavigate} />
-          ))}
-        </div>
+        {pode.verComercial && (
+          <div className="flex flex-col gap-1">
+            <p className="px-3 pb-1 text-[11px] uppercase tracking-wider text-muted/70">Comercial</p>
+            {menuOrcamento.map((item) => (
+              <ItemMenu key={item.href} item={item} ativo={!!ativo(item.href)} onClick={onNavigate} />
+            ))}
+          </div>
+        )}
 
         <div className="flex flex-col gap-1">
           <p className="px-3 pb-1 text-[11px] uppercase tracking-wider text-muted/70">Configurações</p>
@@ -154,14 +182,14 @@ function ConteudoSidebar({ nome, email, onNavigate }: { nome: string; email: str
   );
 }
 
-export function Sidebar({ nome, email }: { nome: string; email: string }) {
+export function Sidebar({ nome, email, pode }: { nome: string; email: string; pode: Permissoes }) {
   const [aberto, setAberto] = useState(false);
 
   return (
     <>
       {/* Desktop */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[280px] flex-col border-r border-border bg-base/95 px-4 py-6 backdrop-blur-xs md:flex">
-        <ConteudoSidebar nome={nome} email={email} />
+        <ConteudoSidebar nome={nome} email={email} pode={pode} />
       </aside>
 
       {/* Botão mobile */}
@@ -196,7 +224,7 @@ export function Sidebar({ nome, email }: { nome: string; email: string }) {
               >
                 <X size={16} />
               </button>
-              <ConteudoSidebar nome={nome} email={email} onNavigate={() => setAberto(false)} />
+              <ConteudoSidebar nome={nome} email={email} pode={pode} onNavigate={() => setAberto(false)} />
             </motion.aside>
           </>
         )}

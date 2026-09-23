@@ -16,6 +16,8 @@ import SolicitacoesTab from "./SolicitacoesTab";
 import { TarefaRow } from "@/components/dashboard/TarefaRow";
 import { OrcamentoRow } from "@/components/dashboard/OrcamentoRow";
 import { Clock } from "lucide-react";
+import { getUsuarioAtual, permissoesDe, podeVerCliente } from "@/lib/permissoes";
+import { redirect } from "next/navigation";
 
 export default async function ClienteDetalhePage({
   params,
@@ -24,6 +26,11 @@ export default async function ClienteDetalhePage({
   params: { id: string };
   searchParams: { aba?: string };
 }) {
+  const usuarioAtual = await getUsuarioAtual();
+  if (!usuarioAtual) redirect("/login");
+  if (!(await podeVerCliente(usuarioAtual, params.id))) notFound();
+  const pode = permissoesDe(usuarioAtual);
+
   const [cliente, catalogo, config] = await Promise.all([
     prisma.cliente.findUnique({
       where: { id: params.id },
@@ -48,8 +55,7 @@ export default async function ClienteDetalhePage({
 
   if (!cliente) notFound();
 
-  const aba = searchParams.aba || "visao_geral";
-  const abas = [
+  const abasBase = [
     { valor: "visao_geral", label: "Visão Geral" },
     { valor: "contatos", label: "Contatos" },
     { valor: "links", label: "Links" },
@@ -63,6 +69,15 @@ export default async function ClienteDetalhePage({
     { valor: "contratos", label: "Contratos" },
     { valor: "horas", label: "Horas" },
   ];
+  const abas = abasBase.filter((a) => {
+    if (a.valor === "financeiro") return pode.verFinanceiro;
+    if (a.valor === "orcamentos" || a.valor === "contratos") return pode.verComercial;
+    return true;
+  });
+  const abaPedida = searchParams.aba || "visao_geral";
+  // Se pedirem por URL uma aba que essa pessoa não pode ver, cai pra Visão Geral
+  // em vez de renderizar o conteúdo restrito.
+  const aba = abas.some((a) => a.valor === abaPedida) ? abaPedida : "visao_geral";
 
   const orcamentosAceitos = cliente.orcamentos.filter((o) => o.status === "aceito");
   const totalServicos = cliente.servicosContratados.reduce((soma, sc) => soma + Number(sc.valor), 0);
