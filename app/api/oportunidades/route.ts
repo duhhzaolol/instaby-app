@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { exigirPermissaoApi } from "@/lib/permissoes";
 
 export async function GET() {
+  const { erro } = await exigirPermissaoApi("verComercial");
+  if (erro) return erro;
+
   const oportunidades = await prisma.oportunidade.findMany({ orderBy: { createdAt: "desc" } });
   return NextResponse.json(oportunidades);
 }
 
 export async function POST(request: NextRequest) {
+  const { erro } = await exigirPermissaoApi("verComercial");
+  if (erro) return erro;
+
   const body = await request.json();
   if (!body.nome) {
     return NextResponse.json({ erro: "Nome é obrigatório" }, { status: 400 });

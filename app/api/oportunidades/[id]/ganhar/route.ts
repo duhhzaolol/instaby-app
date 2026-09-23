@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { exigirPermissaoApi } from "@/lib/permissoes";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const { erro } = await exigirPermissaoApi("verComercial");
+  if (erro) return erro;
+
   const oportunidade = await prisma.oportunidade.findUnique({ where: { id: params.id } });
   if (!oportunidade) {
     return NextResponse.json({ erro: "Oportunidade não encontrada" }, { status: 404 });

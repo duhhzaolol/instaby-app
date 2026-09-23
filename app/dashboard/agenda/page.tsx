@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { AgendaGrid, EventoAgenda } from "@/components/dashboard/AgendaGrid";
 import { AjudaContextual } from "@/components/ui/AjudaContextual";
 import { TIPOS_ATIVIDADE_AGENDA, classificarTipoAtividade } from "@/lib/tipoAtividadeAgenda";
+import { getUsuarioAtual, clienteIdsPermitidos } from "@/lib/permissoes";
 
 const NOMES_MESES = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -49,13 +50,21 @@ export default async function AgendaPage({
   const fimGrade = new Date(fimMes);
   fimGrade.setDate(fimGrade.getDate() + (6 - fimMes.getDay()));
 
+  const usuarioAtual = await getUsuarioAtual();
+  const idsPermitidos = usuarioAtual ? await clienteIdsPermitidos(usuarioAtual) : null;
+  // Igual em Tarefas/Horas: quem não tem "todos os clientes" só vê itens sem cliente
+  // (internos) ou dos clientes liberados pra ele — nunca a agenda inteira da agência.
+  const filtroCliente = idsPermitidos
+    ? { OR: [{ clienteId: null }, { clienteId: { in: idsPermitidos } }] }
+    : {};
+
   const [tarefas, registrosTempo] = await Promise.all([
     prisma.tarefa.findMany({
-      where: { prazo: { gte: inicioGrade, lte: fimGrade } },
+      where: { prazo: { gte: inicioGrade, lte: fimGrade }, ...filtroCliente },
       include: { cliente: { select: { id: true, nome: true, cor: true } } },
     }),
     prisma.registroTempo.findMany({
-      where: { inicio: { gte: inicioGrade, lte: fimGrade } },
+      where: { inicio: { gte: inicioGrade, lte: fimGrade }, ...filtroCliente },
       include: { cliente: { select: { id: true, nome: true, cor: true } } },
     }),
   ]);

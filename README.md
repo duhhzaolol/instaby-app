@@ -1,4 +1,29 @@
-# Instaby App — v113
+# Instaby App — v114
+
+## Fechando os dois pontos que a v113 deixou avisado como pendente
+
+Na v113 eu avisei que tinha ficado faltando: (1) as rotas de API do
+Financeiro/Comercial não checavam ainda a permissão específica da pessoa
+(só exigiam login), e (2) Tarefas/Agenda/Horas não filtravam por cliente
+atribuído. Essa versão fecha os dois, sem mudança de schema/banco — só código:
+
+**1) Rotas de API do Financeiro e Comercial agora checam a permissão certa**,
+não só se a pessoa está logada: despesas, cobranças, pagamentos, patrimônio →
+exigem `Ver Financeiro`/`Lançar cobrança/despesa`; oportunidades, orçamentos,
+contratos, catálogo, pacotes → exigem `Comercial`. Quem não tem a permissão
+recebe erro (403), mesmo chamando a API diretamente, sem passar pela tela.
+
+**2) Tarefas, Agenda e Horas agora filtram por cliente atribuído**, igual já
+acontecia em Clientes: quem não tem "todos os clientes" só vê/edita tarefas,
+eventos da agenda e registros de horas dos clientes que foi atribuído (tarefas
+e horas sem cliente vinculado — internas da agência — continuam visíveis pra
+todo mundo). Isso vale tanto na tela quanto tentando mexer direto pela API.
+
+Com isso, os dois avisos "ainda não protegido" da v113 estão fechados: agora
+dá pra dar acesso a alguém sem depender só da pessoa usar a tela do jeito
+certo.
+
+## v113
 
 ## Multiusuário: cada pessoa da equipe com o próprio login e acesso configurável
 

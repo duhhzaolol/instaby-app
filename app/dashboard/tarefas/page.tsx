@@ -4,6 +4,7 @@ import { TarefaRow } from "@/components/dashboard/TarefaRow";
 import { NovaTarefaGlobalForm } from "@/components/dashboard/NovaTarefaGlobalForm";
 import { CheckSquare, CalendarDays } from "lucide-react";
 import { AjudaContextual } from "@/components/ui/AjudaContextual";
+import { getUsuarioAtual, clienteIdsPermitidos } from "@/lib/permissoes";
 
 const ABAS = [
   { valor: "abertas", label: "Abertas" },
@@ -18,12 +19,18 @@ export default async function TarefasPage({
 }) {
   const filtro = searchParams.status || "abertas";
 
+  const usuarioAtual = await getUsuarioAtual();
+  const idsPermitidos = usuarioAtual ? await clienteIdsPermitidos(usuarioAtual) : null;
+  // Tarefa sem cliente (interna/geral) continua visível pra todo mundo — só
+  // restringe a que é de um cliente específico fora da lista permitida.
+  const filtroCliente = idsPermitidos ? { OR: [{ clienteId: null }, { clienteId: { in: idsPermitidos } }] } : {};
+
   const where =
     filtro === "feito"
-      ? { status: "feito" }
+      ? { status: "feito", ...filtroCliente }
       : filtro === "todas"
-      ? {}
-      : { status: { not: "feito" } };
+      ? { ...filtroCliente }
+      : { status: { not: "feito" }, ...filtroCliente };
 
   const [tarefas, clientes] = await Promise.all([
     prisma.tarefa.findMany({
@@ -32,7 +39,7 @@ export default async function TarefasPage({
       orderBy: { createdAt: "desc" },
     }),
     prisma.cliente.findMany({
-      where: { status: { not: "inativo" } },
+      where: { status: { not: "inativo" }, ...(idsPermitidos ? { id: { in: idsPermitidos } } : {}) },
       select: { id: true, nome: true, cor: true },
       orderBy: { nome: "asc" },
     }),

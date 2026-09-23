@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getUsuarioAtual, podeVerCliente } from "@/lib/permissoes";
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const usuario = await getUsuarioAtual();
+  if (!usuario) return NextResponse.json({ erro: "Não autenticado" }, { status: 401 });
+  const existente = await prisma.tarefa.findUnique({ where: { id: params.id } });
+  if (!existente) return NextResponse.json({ erro: "Não encontrada" }, { status: 404 });
+  if (existente.clienteId && !(await podeVerCliente(usuario, existente.clienteId))) {
+    return NextResponse.json({ erro: "Não autorizado" }, { status: 403 });
+  }
+
   const body = await request.json();
 
   const tarefa = await prisma.tarefa.update({
@@ -26,6 +35,13 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const usuario = await getUsuarioAtual();
+  if (!usuario) return NextResponse.json({ erro: "Não autenticado" }, { status: 401 });
+  const existente = await prisma.tarefa.findUnique({ where: { id: params.id } });
+  if (existente?.clienteId && !(await podeVerCliente(usuario, existente.clienteId))) {
+    return NextResponse.json({ erro: "Não autorizado" }, { status: 403 });
+  }
+
   await prisma.tarefa.delete({ where: { id: params.id } });
   return NextResponse.json({ ok: true });
 }

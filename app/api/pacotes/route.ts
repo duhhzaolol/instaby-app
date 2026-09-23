@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { exigirPermissaoApi } from "@/lib/permissoes";
 
 export async function GET() {
+  const { erro } = await exigirPermissaoApi("verComercial");
+  if (erro) return erro;
+
   const pacotes = await prisma.pacote.findMany({
     include: { itens: { include: { servico: true } } },
     orderBy: { createdAt: "desc" },
@@ -10,6 +14,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const { erro } = await exigirPermissaoApi("verComercial");
+  if (erro) return erro;
+
   const body = await request.json();
 
   if (!body.nome || !body.itens || body.itens.length === 0) {

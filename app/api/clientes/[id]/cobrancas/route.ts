@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { exigirPermissaoApi } from "@/lib/permissoes";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const { erro } = await exigirPermissaoApi("gerenciarFinanceiro");
+  if (erro) return erro;
+
   const body = await request.json();
 
   if (!body.valor) {

@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { exigirPermissaoApi } from "@/lib/permissoes";
 
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const { erro } = await exigirPermissaoApi("verComercial");
+  if (erro) return erro;
+
   await prisma.pacoteItem.deleteMany({ where: { pacoteId: params.id } });
   await prisma.pacote.delete({ where: { id: params.id } });
   return NextResponse.json({ ok: true });
@@ -14,6 +18,9 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const { erro } = await exigirPermissaoApi("verComercial");
+  if (erro) return erro;
+
   const body = await request.json();
 
   const pacote = await prisma.pacote.update({

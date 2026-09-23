@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { gerarSlug } from "@/lib/slug";
+import { exigirPermissaoApi } from "@/lib/permissoes";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const { erro } = await exigirPermissaoApi("verComercial");
+  if (erro) return erro;
+
   const orcamentos = await prisma.orcamento.findMany({
     where: { clienteId: params.id },
     include: { itens: true },
@@ -18,6 +22,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const { erro } = await exigirPermissaoApi("verComercial");
+  if (erro) return erro;
+
   const body = await request.json();
   // body.itens = [{ servicoId, quantidade, valor }]
 

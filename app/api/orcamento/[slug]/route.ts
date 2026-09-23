@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { exigirPermissaoApi } from "@/lib/permissoes";
 
 export async function GET(
   request: NextRequest,
@@ -24,6 +25,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { slug: string } }
 ) {
+  const { erro } = await exigirPermissaoApi("verComercial");
+  if (erro) return erro;
+
   const orcamento = await prisma.orcamento.findUnique({ where: { slug: params.slug } });
   if (!orcamento) {
     return NextResponse.json({ erro: "Orçamento não encontrado" }, { status: 404 });

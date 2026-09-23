@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
+import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -39,6 +40,23 @@ export async function exigirPermissao(flag: keyof ReturnType<typeof permissoesDe
   const pode = permissoesDe(usuario);
   if (!pode[flag]) redirect("/dashboard");
   return usuario;
+}
+
+// Versão pra rota de API — o middleware já garante que tem sessão válida, aqui
+// só confere a capacidade específica. Devolve { erro } (responda com ele e pare)
+// ou { usuario } pronto pra usar no resto da rota.
+export async function exigirPermissaoApi(
+  flag: keyof ReturnType<typeof permissoesDe>
+): Promise<{ usuario: Usuario; erro?: undefined } | { usuario?: undefined; erro: NextResponse }> {
+  const usuario = await getUsuarioAtual();
+  if (!usuario) {
+    return { erro: NextResponse.json({ erro: "Não autenticado" }, { status: 401 }) };
+  }
+  const pode = permissoesDe(usuario);
+  if (!pode[flag]) {
+    return { erro: NextResponse.json({ erro: "Não autorizado" }, { status: 403 }) };
+  }
+  return { usuario };
 }
 
 // Lista de IDs de cliente que essa pessoa pode ver — null significa "todos"

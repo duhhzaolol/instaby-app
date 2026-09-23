@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { exigirPermissaoApi } from "@/lib/permissoes";
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const { erro } = await exigirPermissaoApi("verComercial");
+  if (erro) return erro;
+
   const body = await request.json();
 
   if (
@@ -37,6 +41,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const { erro } = await exigirPermissaoApi("verComercial");
+  if (erro) return erro;
+
   try {
     await prisma.servico.delete({ where: { id: params.id } });
     return NextResponse.json({ ok: true });

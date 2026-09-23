@@ -6,6 +6,7 @@ import { RegistroTempoRow } from "@/components/dashboard/RegistroTempoRow";
 import { CalendarioHoras } from "@/components/dashboard/CalendarioHoras";
 import { formatarDuracao } from "@/lib/formatarDuracao";
 import { AjudaContextual } from "@/components/ui/AjudaContextual";
+import { getUsuarioAtual, clienteIdsPermitidos } from "@/lib/permissoes";
 
 const NOMES_MESES = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -58,26 +59,30 @@ export default async function HorasPage({
   const fimGrade = new Date(fimMesVisto);
   fimGrade.setDate(fimGrade.getDate() + (6 - fimMesVisto.getDay()));
 
+  const usuarioAtual = await getUsuarioAtual();
+  const idsPermitidos = usuarioAtual ? await clienteIdsPermitidos(usuarioAtual) : null;
+  const filtroCliente = idsPermitidos ? { OR: [{ clienteId: null }, { clienteId: { in: idsPermitidos } }] } : {};
+
   const [clientes, registrosHoje, registrosGrade, tarefasAbertas] = await Promise.all([
     prisma.cliente.findMany({
-      where: { status: { not: "inativo" } },
+      where: { status: { not: "inativo" }, ...(idsPermitidos ? { id: { in: idsPermitidos } } : {}) },
       select: { id: true, nome: true, cor: true },
       orderBy: { nome: "asc" },
     }),
     vendoMesAtual
       ? prisma.registroTempo.findMany({
-          where: { inicio: { gte: inicioHoje() } },
+          where: { inicio: { gte: inicioHoje() }, ...filtroCliente },
           include: { cliente: { select: { nome: true, cor: true } } },
           orderBy: { inicio: "desc" },
         })
       : Promise.resolve([]),
     prisma.registroTempo.findMany({
-      where: { inicio: { gte: inicioGrade, lte: fimGrade } },
+      where: { inicio: { gte: inicioGrade, lte: fimGrade }, ...filtroCliente },
       include: { cliente: { select: { id: true, nome: true, cor: true } } },
       orderBy: { inicio: "desc" },
     }),
     prisma.tarefa.findMany({
-      where: { status: { not: "feito" } },
+      where: { status: { not: "feito" }, ...filtroCliente },
       select: { id: true, titulo: true, clienteId: true },
     }),
   ]);

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { exigirPermissaoApi } from "@/lib/permissoes";
 
 export async function GET() {
+  const { erro } = await exigirPermissaoApi("verFinanceiro");
+  if (erro) return erro;
+
   const patrimonio = await prisma.patrimonio.findMany({
     orderBy: { data: "desc" },
     include: { despesaOrigem: true },
@@ -10,6 +14,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const { erro } = await exigirPermissaoApi("gerenciarFinanceiro");
+  if (erro) return erro;
+
   const body = await request.json();
 
   if (!body.nome || !body.valorAquisicao) {
