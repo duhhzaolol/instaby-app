@@ -6,6 +6,7 @@ import { Plus, X, Pencil, Check, Trash2, Megaphone } from "lucide-react";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { Card } from "@/components/ui/Card";
+import ResultadosCampanha from "@/components/dashboard/ResultadosCampanha";
 
 type Cliente = { id: string; nome: string; cor: string | null };
 
@@ -436,6 +437,7 @@ export default function TrafegoClient({
                   </button>
                 </div>
               </div>
+              <ResultadosCampanha campanhaId={c.id} />
             </Card>
           )
         )}

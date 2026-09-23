@@ -1,4 +1,31 @@
-# Instaby App — v116
+# Instaby App — v117
+
+## Tráfego Pago, fase 3 (última): registro manual de resultado/performance
+
+Fecha o módulo de Tráfego Pago, seguindo a ordem combinada (Campanha+verba →
+Rotina → Resultado/performance).
+
+Dentro de cada campanha, em **Tráfego Pago → Campanhas** (ou na aba Tráfego
+Pago de cada cliente), agora tem um botão **"Resultados"** que expande um
+histórico de lançamentos por período, com: verba investida, impressões,
+cliques, resultados (leads/vendas/conversões — o que fizer sentido pro
+objetivo daquela campanha) e observações. CTR e custo por resultado são
+calculados automaticamente a partir do que você lança.
+
+Isso é **lançamento manual mesmo** — não é integração com a API do Meta/Google
+Ads (isso continua sendo outro projeto, de aprovação, como já tínhamos falado
+sobre a publicação automática). Você olha o painel de anúncios e digita os
+números aqui, do jeito que já faz nos Relatórios de redes sociais.
+
+Banco: nova tabela `ResultadoCampanha`, ligada à campanha (aditiva). Rotas de
+API (`/api/campanhas/[id]/resultados` e `/api/resultados-campanha/[id]`) já
+nascem com a mesma trava de permissão/cliente das outras áreas do Tráfego
+Pago.
+
+**Com essa versão, o módulo de Tráfego Pago está com as 3 fases combinadas
+prontas**: Campanha+verba, Rotina de tarefas, e Resultado/performance.
+
+## v116
 
 ## Tráfego Pago, fase 2: rotina de tarefas do gestor de tráfego
 

@@ -418,6 +418,25 @@ model Campanha {
   dataFim      DateTime?
   observacoes  String?
   createdAt    DateTime  @default(now())
+
+  resultados ResultadoCampanha[]
+}
+
+// Resultado de campanha — lançado manualmente pelo gestor de tráfego (fase 3 do módulo).
+// Não vem de integração com Meta/Google Ads (isso é outro projeto de aprovação de API),
+// é só o registro do que ele mesmo olha no painel de anúncios e digita aqui.
+model ResultadoCampanha {
+  id             String    @id @default(uuid())
+  campanhaId     String
+  campanha       Campanha  @relation(fields: [campanhaId], references: [id])
+  inicio         DateTime
+  fim            DateTime
+  verbaInvestida Decimal?
+  impressoes     Int?
+  cliques        Int?
+  resultados     Int? // leads/vendas/conversões — o que contar depende do objetivo da campanha
+  observacoes    String?
+  createdAt      DateTime  @default(now())
 }
 
 // Depoimentos fixos — aparecem em toda página de orçamento
