@@ -15,6 +15,7 @@ import OnboardingTab from "./OnboardingTab";
 import SolicitacoesTab from "./SolicitacoesTab";
 import { TarefaRow } from "@/components/dashboard/TarefaRow";
 import { OrcamentoRow } from "@/components/dashboard/OrcamentoRow";
+import TrafegoClient from "@/components/dashboard/TrafegoClient";
 import { Clock } from "lucide-react";
 import { getUsuarioAtual, permissoesDe, podeVerCliente } from "@/lib/permissoes";
 import { redirect } from "next/navigation";
@@ -47,6 +48,7 @@ export default async function ClienteDetalhePage({
         links: { orderBy: { createdAt: "asc" } },
         onboarding: { include: { itens: { orderBy: { ordem: "asc" } } } },
         solicitacoes: { orderBy: { createdAt: "desc" } },
+        campanhas: { orderBy: { createdAt: "desc" } },
       },
     }),
     prisma.servico.findMany({ orderBy: [{ categoria: "asc" }, { nome: "asc" }] }),
@@ -68,10 +70,12 @@ export default async function ClienteDetalhePage({
     { valor: "orcamentos", label: "Orçamentos" },
     { valor: "contratos", label: "Contratos" },
     { valor: "horas", label: "Horas" },
+    { valor: "trafego", label: "Tráfego Pago" },
   ];
   const abas = abasBase.filter((a) => {
     if (a.valor === "financeiro") return pode.verFinanceiro;
     if (a.valor === "orcamentos" || a.valor === "contratos") return pode.verComercial;
+    if (a.valor === "trafego") return pode.gerenciarTrafego;
     return true;
   });
   const abaPedida = searchParams.aba || "visao_geral";
@@ -478,6 +482,26 @@ export default async function ClienteDetalhePage({
             </Link>
           </div>
         </div>
+      )}
+      {aba === "trafego" && (
+        <TrafegoClient
+          campanhas={cliente.campanhas.map((c) => ({
+            id: c.id,
+            clienteId: c.clienteId,
+            clienteNome: cliente.nome,
+            clienteCor: cliente.cor,
+            nome: c.nome,
+            plataforma: c.plataforma,
+            objetivo: c.objetivo,
+            verbaMensal: Number(c.verbaMensal),
+            status: c.status,
+            dataInicio: c.dataInicio.toISOString(),
+            dataFim: c.dataFim?.toISOString() || null,
+            observacoes: c.observacoes,
+          }))}
+          clientes={[{ id: cliente.id, nome: cliente.nome, cor: cliente.cor }]}
+          clienteFixo={cliente.id}
+        />
       )}
     </div>
   );

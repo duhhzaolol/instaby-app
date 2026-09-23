@@ -83,6 +83,7 @@ model Cliente {
   onboarding          Onboarding?
   solicitacoes        Solicitacao[]
   usuariosPermitidos  ClienteUsuario[]
+  campanhas           Campanha[]
 }
 
 // Relatório de performance por rede e por período — dado lançado manualmente (Fase 1).
@@ -400,6 +401,23 @@ model Patrimonio {
   despesaOrigemId String?
   despesaOrigem   Despesa?  @relation(fields: [despesaOrigemId], references: [id])
   createdAt       DateTime  @default(now())
+}
+
+// Tráfego pago — gestão da campanha (verba, plataforma, período). A verba não passa
+// pela agência (vai direto do cliente pra plataforma), então não tem ligação com Financeiro.
+model Campanha {
+  id           String    @id @default(uuid())
+  clienteId    String
+  cliente      Cliente   @relation(fields: [clienteId], references: [id])
+  nome         String
+  plataforma   String // meta_ads | google_ads | tiktok_ads | outro
+  objetivo     String? // conversao | alcance | trafego | engajamento | leads | vendas | outro
+  verbaMensal  Decimal   @default(0)
+  status       String    @default("ativa") // ativa | pausada | encerrada
+  dataInicio   DateTime  @default(now())
+  dataFim      DateTime?
+  observacoes  String?
+  createdAt    DateTime  @default(now())
 }
 
 // Depoimentos fixos — aparecem em toda página de orçamento

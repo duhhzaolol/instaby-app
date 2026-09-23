@@ -1,4 +1,36 @@
-# Instaby App — v114
+# Instaby App — v115
+
+## Novo módulo: Tráfego Pago (fase 1 — Campanha + verba por cliente)
+
+Primeira parte do módulo de Tráfego Pago pro gestor de tráfego que você vai
+contratar, seguindo a ordem combinada (campanha+verba → depois tarefas/rotina
+→ por último registro de resultado/performance).
+
+**Configurações → capacidade "Tráfego Pago" já existia** desde a v113
+(preparada, sem tela ainda) — agora ela dá acesso de verdade a uma seção nova
+**Tráfego Pago** no menu, mais uma aba **Tráfego Pago** dentro de cada
+cliente.
+
+Cada campanha guarda: cliente, nome, plataforma (Meta Ads/Google Ads/TikTok
+Ads/Outra), objetivo, verba mensal, status (ativa/pausada/encerrada), período
+(início e fim opcional) e observações. Como você confirmou que a verba não
+passa pela agência — vai direto do cliente pra plataforma —, isso **não tem
+nenhuma ligação com o Financeiro**, é só organização e controle do seu
+trabalho de gestão mesmo.
+
+Segue o mesmo modelo de permissão das outras áreas: quem tem a capacidade
+"Tráfego Pago" vê a seção e a aba; quem só tem clientes específicos
+atribuídos só vê/edita campanha dos clientes dele — reforçado tanto na tela
+quanto nas rotas de API (`/api/campanhas`).
+
+Banco: nova tabela `Campanha` (aditiva, sem mexer em nada existente).
+
+**Ainda não incluído nessa fase, por combinado:** tarefas/rotina do gestor de
+tráfego (vai reaproveitar o sistema de Tarefas já existente, que já tem a
+categoria "campanha") e registro de resultado/performance — ficam pras
+próximas fases do módulo.
+
+## v114
 
 ## Fechando os dois pontos que a v113 deixou avisado como pendente
 

@@ -115,6 +115,7 @@ function ConteudoSidebar({
     ...menuPrincipal.map((i) => i.href),
     ...(pode.verFinanceiro ? menuFinanceiro.map((i) => i.href) : []),
     ...(pode.verComercial ? menuOrcamento.map((i) => i.href) : []),
+    ...(pode.gerenciarTrafego ? menuTrafego.map((i) => i.href) : []),
     ...menuConfig.map((i) => i.href),
   ];
   const melhorMatch = todosHrefs
@@ -156,6 +157,15 @@ function ConteudoSidebar({
           <div className="flex flex-col gap-1">
             <p className="px-3 pb-1 text-[11px] uppercase tracking-wider text-muted/70">Comercial</p>
             {menuOrcamento.map((item) => (
+              <ItemMenu key={item.href} item={item} ativo={!!ativo(item.href)} onClick={onNavigate} />
+            ))}
+          </div>
+        )}
+
+        {pode.gerenciarTrafego && (
+          <div className="flex flex-col gap-1">
+            <p className="px-3 pb-1 text-[11px] uppercase tracking-wider text-muted/70">Tráfego</p>
+            {menuTrafego.map((item) => (
               <ItemMenu key={item.href} item={item} ativo={!!ativo(item.href)} onClick={onNavigate} />
             ))}
           </div>
