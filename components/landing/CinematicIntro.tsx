@@ -1,15 +1,66 @@
 "use client";
 
-// Abertura cinematográfica do site: uma seção "grudada" na tela (sticky) por 300vh
-// de rolagem — enquanto a pessoa rola, a câmera cresce e se aproxima, até a tela
-// "entrar" pela lente (flash) e revelar o Hero logo em seguida. Sem bibliotecas de
-// 3D/WebGL (não instaláveis nesse projeto) — só framer-motion (useScroll +
-// useTransform), já usado no resto do app, com SVG vetorial pra câmera e pros
-// elementos flutuantes.
+// Abertura do site: ícones espalhados (conteúdo, redes, tráfego) flutuam soltos
+// e, conforme a pessoa rola um pouco (não é mais um scroll longo de 3 telas),
+// convergem pro centro e "viram" o logo da Instaby. Curto de propósito — é só
+// uma virada de chave, não uma cena longa. No final, a cena inteira (não só um
+// flash por cima) esmaece em opacidade — quando o sticky solta, já não sobra
+// nada opaco pra "puxar" visualmente, então a virada pro Hero é um fade de
+// verdade, não um corte seco revelado pelo scroll.
+//
+// Cada ícone tem sua própria trajetória (posição inicial → centro), por isso
+// vira um sub-componente (IconeConvergindo): chamar useTransform dentro de um
+// .map() quebraria as regras de hooks do React — delegar pra um componente
+// próprio, instanciado uma vez por ícone, é a forma correta e seguindo o mesmo
+// padrão de qualquer lista de componentes.
 
 import { useRef } from "react";
-import { motion, useScroll, useTransform } from "framer-motion";
-import { ElementoFlutuante, SvgLenteMini, SvgTripeMini, SvgAneisMini, SvgCamera } from "./FloatingGear";
+import { motion, useScroll, useTransform, type MotionValue } from "framer-motion";
+import { Instagram, Youtube, Play, TrendingUp, Heart, Film } from "lucide-react";
+
+type ConfigIcone = {
+  Icon: React.ComponentType<{ size?: number }>;
+  x: number;
+  y: number;
+  rotate: number;
+  // alguns só aparecem em telas maiores, pra não lotar um celular estreito
+  soDesktop?: boolean;
+};
+
+const ICONES: ConfigIcone[] = [
+  { Icon: Instagram, x: -150, y: -120, rotate: -14 },
+  { Icon: Youtube, x: 150, y: -140, rotate: 12 },
+  { Icon: Play, x: -180, y: 90, rotate: 9, soDesktop: true },
+  { Icon: TrendingUp, x: 170, y: 110, rotate: -10, soDesktop: true },
+  { Icon: Heart, x: -60, y: -185, rotate: -6 },
+  { Icon: Film, x: 70, y: 175, rotate: 14 },
+];
+
+function IconeConvergindo({
+  scrollYProgress,
+  config,
+}: {
+  scrollYProgress: MotionValue<number>;
+  config: ConfigIcone;
+}) {
+  const x = useTransform(scrollYProgress, [0, 0.5], [config.x, 0]);
+  const y = useTransform(scrollYProgress, [0, 0.5], [config.y, 0]);
+  const rotate = useTransform(scrollYProgress, [0, 0.5], [config.rotate, 0]);
+  const scale = useTransform(scrollYProgress, [0, 0.4, 0.56], [1, 0.9, 0.3]);
+  const opacity = useTransform(scrollYProgress, [0, 0.38, 0.56], [1, 1, 0]);
+  const Icon = config.Icon;
+
+  return (
+    <motion.div
+      style={{ x, y, rotate, scale, opacity }}
+      className={`absolute left-1/2 top-1/2 z-10 -ml-6 -mt-6 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/15 bg-white/[0.04] text-white/70 backdrop-blur-sm sm:-ml-7 sm:-mt-7 sm:h-14 sm:w-14 ${
+        config.soDesktop ? "hidden sm:flex" : ""
+      }`}
+    >
+      <Icon size={20} />
+    </motion.div>
+  );
+}
 
 export function CinematicIntro({
   titulo,
@@ -24,27 +75,26 @@ export function CinematicIntro({
     offset: ["start start", "end end"],
   });
 
-  // Câmera: começa em tamanho normal, cresce e "engole" o quadro.
-  const escalaCamera = useTransform(scrollYProgress, [0, 0.55, 0.88], [1, 2.4, 8.5]);
-  const yCamera = useTransform(scrollYProgress, [0, 0.88], [0, -30]);
-  const rotacaoCamera = useTransform(scrollYProgress, [0, 0.88], [-3, 2]);
+  // A cena inteira — fundo, ícones, logo e texto — esmaece no final. É essa
+  // opacidade (aplicada no próprio bloco sticky, não só num overlay por cima)
+  // que garante o fade real na virada pro Hero.
+  const opacidadeCena = useTransform(scrollYProgress, [0, 0.78, 1], [1, 1, 0]);
 
-  // Texto de abertura: entra rápido, some antes da câmera dominar a tela.
-  const opacidadeTexto = useTransform(scrollYProgress, [0, 0.1, 0.3, 0.4], [0, 1, 1, 0]);
-  const yTexto = useTransform(scrollYProgress, [0, 0.1], [20, 0]);
+  // Logo: nasce pequeno/transparente e ganha forma junto com a chegada dos ícones.
+  const escalaLogo = useTransform(scrollYProgress, [0.3, 0.58], [0.5, 1]);
+  const opacidadeLogo = useTransform(scrollYProgress, [0.3, 0.5], [0, 1]);
+  const glowLogo = useTransform(scrollYProgress, [0.42, 0.58], [0, 1]);
 
-  // Flash final — a sensação de "entrar na lente", revelando o Hero por trás.
-  const opacidadeFlash = useTransform(scrollYProgress, [0.74, 0.93, 1], [0, 1, 1]);
-
-  // Elementos flutuantes desaparecem conforme a câmera cresce.
-  const opacidadeFlutuantes = useTransform(scrollYProgress, [0, 0.3, 0.55], [1, 1, 0]);
+  // Texto: entra logo depois do logo se formar.
+  const opacidadeTexto = useTransform(scrollYProgress, [0.6, 0.72], [0, 1]);
+  const yTexto = useTransform(scrollYProgress, [0.6, 0.72], [16, 0]);
 
   // Indicador de "role" — só faz sentido no início.
-  const opacidadeIndicador = useTransform(scrollYProgress, [0, 0.06, 0.16], [0, 1, 0]);
+  const opacidadeIndicador = useTransform(scrollYProgress, [0, 0.06, 0.18], [0, 1, 0]);
 
   return (
-    <div ref={containerRef} className="relative h-[300vh]">
-      <div className="sticky top-0 h-screen w-full overflow-hidden bg-[#08080a]">
+    <div ref={containerRef} className="relative h-[170vh]">
+      <motion.div style={{ opacity: opacidadeCena }} className="sticky top-0 h-screen w-full overflow-hidden bg-[#08080a]">
         {/* grade neon sutil de fundo */}
         <div
           aria-hidden
@@ -61,55 +111,52 @@ export function CinematicIntro({
           style={{ background: "radial-gradient(ellipse at center, rgba(230,57,70,0.14), transparent 60%)" }}
         />
 
-        {/* elementos flutuantes decorativos */}
-        <motion.div style={{ opacity: opacidadeFlutuantes }} className="absolute inset-0">
-          <ElementoFlutuante className="left-[6%] top-[22%] hidden sm:block" duracao={7} delay={0}>
-            <SvgLenteMini />
-          </ElementoFlutuante>
-          <ElementoFlutuante className="right-[8%] top-[64%] hidden sm:block" duracao={9} delay={1.2}>
-            <SvgTripeMini />
-          </ElementoFlutuante>
-          <ElementoFlutuante className="left-[12%] bottom-[16%]" duracao={8} delay={0.6}>
-            <SvgAneisMini />
-          </ElementoFlutuante>
-          <ElementoFlutuante className="right-[14%] top-[18%]" duracao={6.5} delay={0.3}>
-            <SvgAneisMini className="h-8 w-8 opacity-70" />
-          </ElementoFlutuante>
-        </motion.div>
+        {/* ícones espalhados, convergindo pro centro */}
+        {ICONES.map((config, i) => (
+          <IconeConvergindo key={i} scrollYProgress={scrollYProgress} config={config} />
+        ))}
 
-        {/* texto de abertura */}
+        {/* glow por trás do logo, cresce junto com ele */}
         <motion.div
-          style={{ opacity: opacidadeTexto, y: yTexto }}
-          className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 px-6 text-center"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="Instaby" className="h-7 w-auto sm:h-8" />
-          <h1 className="max-w-xs text-2xl font-semibold leading-tight text-white sm:max-w-2xl sm:text-4xl">
-            {titulo || "Enquadramos a sua marca."}
-          </h1>
-          <p className="max-w-[280px] text-sm text-white/60 sm:max-w-md sm:text-base">
-            {subtitulo || "Criação de conteúdo, captação e tráfego pago — sob o mesmo foco."}
-          </p>
-        </motion.div>
-
-        {/* câmera central */}
-        <motion.div
-          style={{ scale: escalaCamera, y: yCamera, rotate: rotacaoCamera }}
+          aria-hidden
+          style={{ opacity: glowLogo }}
           className="absolute inset-0 z-10 flex items-center justify-center"
         >
-          <SvgCamera className="h-[42vh] w-[42vh] max-h-[380px] max-w-[380px] sm:h-[50vh] sm:w-[50vh]" />
+          <div
+            className="h-40 w-40 rounded-full blur-3xl sm:h-56 sm:w-56"
+            style={{ background: "radial-gradient(circle, rgba(230,57,70,0.45), transparent 70%)" }}
+          />
         </motion.div>
 
-        {/* flash / íris final */}
-        <motion.div aria-hidden style={{ opacity: opacidadeFlash }} className="absolute inset-0 z-30 bg-[#08080a]" />
+        {/* logo, montado pelos ícones */}
+        <motion.div
+          style={{ scale: escalaLogo, opacity: opacidadeLogo }}
+          className="absolute inset-0 z-20 flex items-center justify-center"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="Instaby" className="h-10 w-auto sm:h-14" />
+        </motion.div>
+
+        {/* texto de abertura, entra depois do logo formado */}
+        <motion.div
+          style={{ opacity: opacidadeTexto, y: yTexto }}
+          className="absolute inset-x-0 top-[64%] z-20 flex flex-col items-center gap-3 px-6 text-center"
+        >
+          <h1 className="max-w-xs text-xl font-semibold leading-tight text-white sm:max-w-2xl sm:text-3xl">
+            {titulo || "Tudo pela sua marca, num só lugar."}
+          </h1>
+          <p className="max-w-[280px] text-sm text-white/60 sm:max-w-md sm:text-base">
+            {subtitulo || "Conteúdo, captação e tráfego pago — cada peça, trabalhando junto pelo seu resultado."}
+          </p>
+        </motion.div>
 
         <motion.div
           style={{ opacity: opacidadeIndicador }}
           className="absolute bottom-8 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 text-[11px] uppercase tracking-widest text-white/40"
         >
-          role pra entrar
+          role pra continuar
         </motion.div>
-      </div>
+      </motion.div>
     </div>
   );
 }

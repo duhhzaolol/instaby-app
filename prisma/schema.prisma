@@ -487,6 +487,9 @@ model Configuracao {
   siteProcessoTexto     String?
   siteProcessoBotaoTexto String?
   siteProcessoBotaoUrl  String?
+  siteProcessoImagemUrl String? // foto de fundo opcional da faixa "Processo" — some atrás do gradiente vermelho, não substitui ele
+  siteProcessoImagemUrlMobile String? // opcional — mesma lógica do Hero/Sobre
+  siteProcessoFoco      String? // ponto de enquadramento, ex: "50% 30%"
   siteCtaTitulo         String?
   siteCtaTexto          String?
   siteCtaBotaoTexto     String?

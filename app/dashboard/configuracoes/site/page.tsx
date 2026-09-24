@@ -66,10 +66,10 @@ export default async function SiteConfigPage() {
       </div>
 
       <div>
-        <p className="mb-1 text-sm font-medium text-text">Abertura cinematográfica, pilares e álbuns</p>
+        <p className="mb-1 text-sm font-medium text-text">Abertura, pilares e álbuns</p>
         <p className="mb-4 text-sm text-muted">
-          A animação da câmera na primeira tela, os 3 pilares em destaque logo depois (Tráfego Pago, Criação de
-          Conteúdo e Captação) e o cabeçalho da seção de álbuns.
+          A animação de abertura na primeira tela (ícones se juntando até formar o logo), os 3 pilares em destaque
+          logo depois (Tráfego Pago, Criação de Conteúdo e Captação) e o cabeçalho da seção de álbuns.
         </p>
         <CinematicoForm
           config={{
@@ -126,6 +126,9 @@ export default async function SiteConfigPage() {
             siteProcessoTexto: config?.siteProcessoTexto || null,
             siteProcessoBotaoTexto: config?.siteProcessoBotaoTexto || null,
             siteProcessoBotaoUrl: config?.siteProcessoBotaoUrl || null,
+            siteProcessoImagemUrl: config?.siteProcessoImagemUrl || null,
+            siteProcessoImagemUrlMobile: config?.siteProcessoImagemUrlMobile || null,
+            siteProcessoFoco: config?.siteProcessoFoco || null,
             siteCtaTitulo: config?.siteCtaTitulo || null,
             siteCtaTexto: config?.siteCtaTexto || null,
             siteCtaBotaoTexto: config?.siteCtaBotaoTexto || null,

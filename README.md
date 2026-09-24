@@ -1,4 +1,61 @@
-# Instaby App — v125
+# Instaby App — v126
+
+## Retorno sobre a LP — ajustes ponto a ponto no que você comentou
+
+Você mandou um retorno bem detalhado depois de ver a v124/v125 no ar. Fui item
+por item do que você falou, na ordem que comentou:
+
+**Abertura — trocada por completo.** Tirei a câmera aproximando (você não
+gostou, "vamos esquecer essa ideia") e troquei pelo conceito novo que você
+descreveu: ícones soltos (Instagram, YouTube, vídeo, tráfego, curtida,
+filme) flutuando espalhados pela tela, que convergem pro centro e "viram" o
+logo da Instaby conforme você rola um pouco — bem mais curto que antes (era
+quase 3 telas de rolagem, agora é menos de 2), porque você pediu "mexe um
+pouquinho", não uma cena longa. Texto de abertura continua editável no mesmo
+lugar de sempre (Configurações → Site), só troquei o texto padrão (não fazia
+mais sentido falar de "lente" sem a câmera).
+
+**A transição pra o resto do site também mudou.** O problema que você
+descreveu — parecia a página antiga "colada" subindo por cima — era a
+abertura antiga revelando o Hero só por causa do scroll natural, sem
+nenhum fade de verdade por trás. Troquei: agora a cena inteira da abertura
+esmaece em opacidade (não só um flash por cima), e o Hero nasce transparente
+e vai a 100% assim que aparece na tela — a sensação agora é de fundido
+(fade), não de troca de página.
+
+**Os "círculos boiando" que você não entendeu** eram as formas abstratas de
+lente/tripé/anéis/abertura espalhadas pelo site (Serviços, Sobre, Pilares,
+Processo, Contato). Troquei todas por coisas reconhecíveis: um selo "REC"
+(ponto vermelho piscando + texto) na seção Serviços, e ícones de verdade
+(Instagram, vídeo, tráfego) nas outras — mesma ideia visual da abertura
+nova, então tudo conversa entre si agora.
+
+**Cards de Serviços no celular.** Confirmei: a mesma grade 4×2 que fica ótima
+no computador virava uma lista vertical gigante no celular (a grade só
+"quebra" pra 2 colunas a partir de telas maiores). No celular agora é um
+carrossel horizontal com swipe — desliza pros lados, sem precisar rolar uma
+tela inteira pra cada cartão.
+
+**Seção Clientes, mais viva.** Os logos dos clientes agora deslizam num
+carrossel contínuo (mesma técnica que você já curtiu nos Álbuns — passa
+sozinho, para quando o mouse passa por cima), cada logo com uma "plaquinha"
+com brilho vermelho sutil ao passar o mouse, e um glow ambiente atrás da
+seção inteira. Pilares, Sobre, Álbuns e a chamada final ("sua marca pode
+estar aqui também") ficaram exatamente como estavam — você gostou dessas
+partes, não mexi em nada nelas.
+
+**Processo — foto de fundo opcional.** Você comentou que talvez ficasse bom
+uma foto atrás, mantendo o vermelho. Adicionei isso como opcional em
+Configurações → Site → Processo: sem foto, continua exatamente como está
+hoje (só o gradiente vermelho escuro); com foto, ela aparece atrás desse
+mesmo gradiente (mais transparente), então o "vermelhinho" que você gostou
+não desaparece.
+
+Tudo aditivo no banco (3 campos novos, opcionais) e testado item por item
+antes de empacotar, depois do susto do build quebrado na v125 — sem nenhum
+`for...of` novo em cima de Map/Set em lugar nenhum do que mexi.
+
+# v125
 
 ## Correção de build — o deploy não subia
 

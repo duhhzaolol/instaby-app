@@ -12,6 +12,9 @@ type Config = {
   siteProcessoTexto: string | null;
   siteProcessoBotaoTexto: string | null;
   siteProcessoBotaoUrl: string | null;
+  siteProcessoImagemUrl: string | null;
+  siteProcessoImagemUrlMobile: string | null;
+  siteProcessoFoco: string | null;
   siteCtaTitulo: string | null;
   siteCtaTexto: string | null;
   siteCtaBotaoTexto: string | null;
@@ -25,6 +28,9 @@ export default function ProcessoCtaForm({ config }: { config: Config }) {
   const [processoTexto, setProcessoTexto] = useState(config.siteProcessoTexto || "");
   const [processoBotaoTexto, setProcessoBotaoTexto] = useState(config.siteProcessoBotaoTexto || "");
   const [processoBotaoUrl, setProcessoBotaoUrl] = useState(config.siteProcessoBotaoUrl || "");
+  const [processoImagemUrl, setProcessoImagemUrl] = useState<string | null>(config.siteProcessoImagemUrl);
+  const [processoImagemUrlMobile, setProcessoImagemUrlMobile] = useState<string | null>(config.siteProcessoImagemUrlMobile);
+  const [processoFoco, setProcessoFoco] = useState(config.siteProcessoFoco || "50% 50%");
   const [ctaTitulo, setCtaTitulo] = useState(config.siteCtaTitulo || "");
   const [ctaTexto, setCtaTexto] = useState(config.siteCtaTexto || "");
   const [ctaBotaoTexto, setCtaBotaoTexto] = useState(config.siteCtaBotaoTexto || "");
@@ -44,6 +50,9 @@ export default function ProcessoCtaForm({ config }: { config: Config }) {
         siteProcessoTexto: processoTexto || null,
         siteProcessoBotaoTexto: processoBotaoTexto || null,
         siteProcessoBotaoUrl: processoBotaoUrl || null,
+        siteProcessoImagemUrl: processoImagemUrl,
+        siteProcessoImagemUrlMobile: processoImagemUrlMobile,
+        siteProcessoFoco: processoFoco || null,
         siteCtaTitulo: ctaTitulo || null,
         siteCtaTexto: ctaTexto || null,
         siteCtaBotaoTexto: ctaBotaoTexto || null,
@@ -78,6 +87,54 @@ export default function ProcessoCtaForm({ config }: { config: Config }) {
           <div>
             <Label>Destino do botão</Label>
             <Input value={processoBotaoUrl} onChange={(e) => setProcessoBotaoUrl(e.target.value)} placeholder="deixe vazio pra usar o WhatsApp" />
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-xl border border-border/60 bg-base/40 p-3">
+          <p className="mb-1 text-xs font-medium text-text">Foto de fundo (opcional)</p>
+          <p className="mb-3 text-[11px] leading-relaxed text-muted">
+            Sem foto, a faixa continua só com o gradiente vermelho escuro de sempre. Com foto, ela aparece atrás
+            desse mesmo gradiente (mais transparente) — o "vermelhinho" continua, só ganha uma imagem por trás.
+          </p>
+          <div className="mb-3 grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-muted">
+            <p>
+              <span className="text-text">Tamanho recomendado:</span> 1920 × 1080px
+            </p>
+            <p>
+              <span className="text-text">Proporção:</span> 16:9
+            </p>
+            <p>
+              <span className="text-text">Formatos aceitos:</span> JPG, PNG ou WebP
+            </p>
+            <p>
+              <span className="text-text">Tamanho máximo do arquivo:</span> 8MB
+            </p>
+          </div>
+          <UploadImagem
+            value={processoImagemUrl}
+            onChange={setProcessoImagemUrl}
+            pasta="site-processo"
+            tamanhoRecomendado="1920 × 1080px"
+            proporcao="16:9"
+          />
+          {processoImagemUrl && (
+            <div className="mt-3">
+              <Label>Ponto de enquadramento</Label>
+              <FocoImagem imagemUrl={processoImagemUrl} valor={processoFoco} onChange={setProcessoFoco} />
+            </div>
+          )}
+          <div className="mt-4 border-t border-border/60 pt-3">
+            <p className="mb-1 text-xs font-medium text-text">Imagem alternativa pro celular (opcional)</p>
+            <p className="mb-2 text-[11px] text-muted">
+              <span className="text-text">Tamanho recomendado:</span> 1080 × 1350px (proporção 4:5, vertical)
+            </p>
+            <UploadImagem
+              value={processoImagemUrlMobile}
+              onChange={setProcessoImagemUrlMobile}
+              pasta="site-processo-mobile"
+              tamanhoRecomendado="1080 × 1350px"
+              proporcao="4:5, vertical"
+            />
           </div>
         </div>
       </div>

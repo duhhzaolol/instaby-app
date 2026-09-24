@@ -102,18 +102,18 @@ export default function CinematicoForm({ config }: { config: ConfigCinematico })
   return (
     <div className="flex flex-col gap-5 rounded-2xl border border-border bg-card/60 p-5">
       <div>
-        <p className="mb-1 text-sm font-medium text-text">Abertura cinematográfica (a câmera, antes do Hero)</p>
+        <p className="mb-1 text-sm font-medium text-text">Abertura (ícones se juntando até formar o logo)</p>
         <p className="mb-3 text-[11px] leading-relaxed text-muted">
-          O título e o subtítulo que aparecem por cima da animação da câmera, na primeira tela do site — antes da
-          pessoa começar a rolar a página. O visual da câmera em si (ilustração, cores, movimento) é fixo, só esse
-          texto é editável por aqui.
+          O título e o subtítulo que aparecem assim que o logo termina de se formar, na primeira tela do site — um
+          pouco antes do Hero. A animação em si (ícones, cores, movimento) é fixa, só esse texto é editável por
+          aqui.
         </p>
         <Label>Título de impacto</Label>
         <Textarea
           value={aberturaTitulo}
           onChange={(e) => setAberturaTitulo(e.target.value)}
           rows={2}
-          placeholder="Enquadramos a sua marca."
+          placeholder="Tudo pela sua marca, num só lugar."
           className="mb-3"
         />
         <Label>Subtítulo (linha de apoio, menor)</Label>
@@ -121,7 +121,7 @@ export default function CinematicoForm({ config }: { config: ConfigCinematico })
           value={aberturaSubtitulo}
           onChange={(e) => setAberturaSubtitulo(e.target.value)}
           rows={2}
-          placeholder="Criação de conteúdo, captação e tráfego pago — sob o mesmo foco."
+          placeholder="Conteúdo, captação e tráfego pago — cada peça, trabalhando junto pelo seu resultado."
         />
       </div>
 

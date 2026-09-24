@@ -21,11 +21,12 @@ import {
   Menu,
   X,
   ChevronDown,
+  TrendingUp,
 } from "lucide-react";
 import { CinematicIntro } from "./CinematicIntro";
 import { PilaresCarroChefe } from "./PilaresCarroChefe";
 import { AlbunsCarrossel } from "./AlbunsCarrossel";
-import { ElementoFlutuante, SvgLenteMini, SvgTripeMini, SvgAneisMini, SvgAperturaMini } from "./FloatingGear";
+import { ElementoFlutuante, SvgRec, IconeFlutuanteMini } from "./FloatingGear";
 
 const ICONES_SERVICOS = [Instagram, Megaphone, Video, Film, LayoutTemplate, MapPin, Lightbulb, Smartphone];
 
@@ -170,6 +171,9 @@ export function LandingPage({
   processoTexto,
   processoBotaoTexto,
   processoBotaoUrl,
+  processoImagemUrl,
+  processoImagemUrlMobile,
+  processoFoco,
   ctaTitulo,
   ctaTexto,
   ctaBotaoTexto,
@@ -213,6 +217,9 @@ export function LandingPage({
   processoTexto?: string | null;
   processoBotaoTexto?: string | null;
   processoBotaoUrl?: string | null;
+  processoImagemUrl?: string | null;
+  processoImagemUrlMobile?: string | null;
+  processoFoco?: string | null;
   ctaTitulo?: string | null;
   ctaTexto?: string | null;
   ctaBotaoTexto?: string | null;
@@ -254,6 +261,7 @@ export function LandingPage({
   const heroFocoFinal = heroFoco || "50% 50%";
   const sobreFocoFinal = sobreFoco || "50% 50%";
   const ctaFocoFinal = ctaFoco || "50% 50%";
+  const processoFocoFinal = processoFoco || "50% 50%";
   const indicadoresValidos = (heroIndicadores || []).filter((i) => i.valor?.trim() && i.legenda?.trim());
 
   const servicosFinal = SERVICOS_PADRAO.map((padrao, i) => ({
@@ -294,7 +302,7 @@ export function LandingPage({
 
   return (
     <div className="min-h-screen bg-base text-text">
-      {/* Abertura cinematográfica — a câmera aproxima conforme rola, "entra na lente" e revela o Hero */}
+      {/* Abertura — ícones flutuando convergem e formam o logo conforme rola um pouco */}
       <CinematicIntro titulo={aberturaTitulo} subtitulo={aberturaSubtitulo} />
 
       {/* Cabeçalho */}
@@ -359,7 +367,14 @@ export function LandingPage({
       </header>
 
       {/* Hero — banner ocupa a seção inteira, de ponta a ponta; texto sempre por cima */}
-      <section id="inicio" className="relative w-full overflow-hidden">
+      <motion.section
+        id="inicio"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, amount: 0.15 }}
+        transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+        className="relative w-full overflow-hidden"
+      >
         {heroImagemUrl ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -392,7 +407,8 @@ export function LandingPage({
           <div className="max-w-xl">
             <motion.div
               initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.3 }}
               transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
               className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-medium text-accent backdrop-blur"
             >
@@ -400,7 +416,8 @@ export function LandingPage({
             </motion.div>
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.3 }}
               transition={{ duration: 0.7, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
               className="mb-5 whitespace-pre-line text-4xl font-semibold leading-tight tracking-tight sm:text-5xl"
               style={{ color: corTituloFinal }}
@@ -411,7 +428,8 @@ export function LandingPage({
             </motion.h1>
             <motion.p
               initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.3 }}
               transition={{ duration: 0.7, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
               className="mb-9 max-w-xl text-base leading-relaxed sm:text-lg"
               style={{ color: comAlpha(corTextoFinal, 0.75) }}
@@ -420,7 +438,8 @@ export function LandingPage({
             </motion.p>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.3 }}
               transition={{ duration: 0.7, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
               className="flex flex-wrap items-center gap-3"
             >
@@ -444,7 +463,8 @@ export function LandingPage({
             {indicadoresValidos.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.3 }}
                 transition={{ duration: 0.7, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
                 className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-3"
               >
@@ -466,13 +486,14 @@ export function LandingPage({
         <motion.a
           href="#servicos"
           initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.6 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
           className="absolute bottom-6 right-6 z-10 hidden items-center gap-1.5 text-xs text-white/50 hover:text-white/80 sm:flex"
         >
           role para explorar <ChevronDown size={13} className="animate-bounce" />
         </motion.a>
-      </section>
+      </motion.section>
 
       {/* Pilares — os 3 carros-chefe, Tráfego Pago em destaque */}
       <PilaresCarroChefe pilares={pilaresFinal} linkContato={linkContatoPilar} />
@@ -481,7 +502,7 @@ export function LandingPage({
       <section id="servicos" className="relative overflow-hidden bg-[#0b0b0d] px-6 py-16">
         <GradeNeon />
         <ElementoFlutuante className="right-[5%] top-[10%] hidden lg:block" duracao={8}>
-          <SvgLenteMini className="h-12 w-12" />
+          <SvgRec />
         </ElementoFlutuante>
         <div className="relative mx-auto max-w-6xl">
           <div className="mb-8 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-end">
@@ -499,7 +520,30 @@ export function LandingPage({
               </p>
             </motion.div>
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Celular: carrossel horizontal com swipe — a mesma grade 4×2 virava lista gigante */}
+          <p className="mb-2 text-[10px] uppercase tracking-wider text-muted/50 sm:hidden">Deslize pra ver mais →</p>
+          <div className="-mx-6 mb-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-6 pb-2 sm:hidden">
+            {servicosFinal.map((s, i) => {
+              const Icon = s.icone;
+              return (
+                <a
+                  key={i}
+                  href={s.destino}
+                  target={s.destino.startsWith("http") ? "_blank" : undefined}
+                  className="group w-[78%] shrink-0 snap-start rounded-xl border border-white/10 bg-white/[0.04] p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] active:border-accent/40"
+                >
+                  <div className="mb-2.5 flex h-8 w-8 items-center justify-center rounded-lg bg-accent/15 text-accent">
+                    <Icon size={15} />
+                  </div>
+                  <p className="mb-1 text-sm font-medium text-text">{s.nome}</p>
+                  <p className="text-xs leading-relaxed text-muted">{s.descricao}</p>
+                </a>
+              );
+            })}
+          </div>
+
+          {/* Tablet/desktop: grade de sempre */}
+          <div className="hidden gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-4">
             {servicosFinal.map((s, i) => {
               const Icon = s.icone;
               return (
@@ -525,7 +569,7 @@ export function LandingPage({
       {/* Quem somos — mesmo tratamento do Hero: banner de ponta a ponta, texto por cima */}
       <section id="sobre" className="relative w-full overflow-hidden">
         <ElementoFlutuante className="left-[4%] top-[14%] hidden lg:block" duracao={9} delay={0.4}>
-          <SvgTripeMini className="text-white/10" />
+          <IconeFlutuanteMini Icon={Film} />
         </ElementoFlutuante>
         {sobreImagemUrl ? (
           <>
@@ -610,55 +654,100 @@ export function LandingPage({
 
       {/* Clientes / depoimentos */}
       {(logos.length > 0 || depoimentos.length > 0) && (
-        <section className="relative overflow-hidden bg-[#0b0b0d] px-6 py-16">
+        <section className="relative overflow-hidden bg-[#0b0b0d] py-16">
           <GradeNeon />
-          <div className="relative mx-auto max-w-6xl">
+          {/* glow ambiente — o "brilhante" que faltava aqui */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute left-1/2 top-20 h-72 w-72 -translate-x-1/2 rounded-full opacity-30 blur-3xl"
+            style={{ background: "radial-gradient(circle, rgba(230,57,70,0.35), transparent 70%)" }}
+          />
+
+          <div className="relative mx-auto max-w-6xl px-6">
             <motion.p {...fadeUp()} className="mb-3 text-center text-xs font-medium uppercase tracking-wider text-accent">
               Clientes
             </motion.p>
-            <motion.h2 {...fadeUp(0.05)} className="mb-12 text-center text-2xl font-semibold sm:text-3xl">
+            <motion.h2 {...fadeUp(0.05)} className="mb-10 text-center text-2xl font-semibold sm:text-3xl">
               Marcas que confiam na Instaby
             </motion.h2>
+          </div>
 
-            {logos.length > 0 && (
-              <motion.div {...fadeUp(0.1)} className="mb-12 flex flex-wrap items-center justify-center gap-8">
-                {logos.map((l) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={l.nome}
-                    src={l.logoUrl}
-                    alt={l.nome}
-                    className="h-10 w-auto opacity-70 grayscale transition-opacity hover:opacity-100 hover:grayscale-0"
-                  />
+          {logos.length > 0 && (
+            <motion.div {...fadeUp(0.1)} className="group/marquee relative mb-12 overflow-hidden py-2">
+              {/* fade nas bordas — sumiço suave, sem corte seco */}
+              <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-[#0b0b0d] to-transparent sm:w-28" />
+              <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-[#0b0b0d] to-transparent sm:w-28" />
+              <div
+                className="flex w-max items-center gap-5 animate-marquee-esquerda group-hover/marquee:[animation-play-state:paused]"
+                style={{ animationDuration: `${Math.max(logos.length * 4, 18)}s` }}
+              >
+                {[...logos, ...logos].map((l, i) => (
+                  <div
+                    key={`${l.nome}-${i}`}
+                    className="group flex shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] px-8 py-5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] transition-all duration-300 hover:border-accent/40 hover:bg-white/[0.06] hover:shadow-[0_0_32px_-8px_rgba(230,57,70,0.45)]"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={l.logoUrl}
+                      alt={l.nome}
+                      className="h-9 w-auto opacity-60 grayscale transition-all duration-300 group-hover:opacity-100 group-hover:grayscale-0"
+                    />
+                  </div>
                 ))}
-              </motion.div>
-            )}
+              </div>
+            </motion.div>
+          )}
 
-            {depoimentos.length > 0 && (
+          {depoimentos.length > 0 && (
+            <div className="relative mx-auto max-w-6xl px-6">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {depoimentos.map((d, i) => (
                   <motion.div
                     key={d.id}
                     {...fadeUp((i % 3) * 0.06)}
-                    className="rounded-2xl border border-border bg-card/60 p-5"
+                    className="rounded-2xl border border-border bg-card/60 p-5 transition-colors duration-300 hover:border-accent/30"
                   >
                     <p className="mb-3 text-sm leading-relaxed text-muted">"{d.texto}"</p>
                     <p className="text-xs font-medium text-text">{d.nomeCliente}</p>
                   </motion.div>
                 ))}
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </section>
       )}
 
-      {/* Processo de trabalho — faixa vermelha escura */}
-      <section
-        className="relative overflow-hidden px-6 py-16"
-        style={{ background: "linear-gradient(135deg, #3a0a0f, #1a0507 60%, #0d0304)" }}
-      >
+      {/* Processo de trabalho — faixa vermelha escura, com foto de fundo opcional */}
+      <section className="relative overflow-hidden px-6 py-16">
+        {processoImagemUrl ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={processoImagemUrlMobile || processoImagemUrl}
+              alt="Instaby"
+              className="absolute inset-0 h-full w-full object-cover sm:hidden"
+              style={{ objectPosition: processoFocoFinal }}
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={processoImagemUrl}
+              alt="Instaby"
+              className="absolute inset-0 hidden h-full w-full object-cover sm:block"
+              style={{ objectPosition: processoFocoFinal }}
+            />
+            <div
+              className="absolute inset-0"
+              style={{ background: "linear-gradient(135deg, rgba(58,10,15,0.92), rgba(26,5,7,0.88) 60%, rgba(13,3,4,0.92))" }}
+            />
+          </>
+        ) : (
+          <div
+            className="absolute inset-0"
+            style={{ background: "linear-gradient(135deg, #3a0a0f, #1a0507 60%, #0d0304)" }}
+          />
+        )}
         <ElementoFlutuante className="right-[6%] bottom-[10%] hidden lg:block" duracao={10} delay={0.5}>
-          <SvgAperturaMini className="h-16 w-16 text-white/10" />
+          <IconeFlutuanteMini Icon={TrendingUp} className="border-white/10 text-white/20" />
         </ElementoFlutuante>
         <div className="relative mx-auto max-w-6xl">
           <div className="mb-12 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
@@ -699,7 +788,7 @@ export function LandingPage({
       {/* Contato final — banner de fundo, texto e botão por cima */}
       <section id="contato" className="relative w-full overflow-hidden">
         <ElementoFlutuante className="right-[6%] top-[16%] hidden lg:block" duracao={8.5} delay={0.7}>
-          <SvgAneisMini className="h-10 w-10" />
+          <IconeFlutuanteMini Icon={Instagram} />
         </ElementoFlutuante>
         {ctaImagemUrl ? (
           <>

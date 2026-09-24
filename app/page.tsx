@@ -48,6 +48,9 @@ export default async function Home() {
       processoTexto={config?.siteProcessoTexto || null}
       processoBotaoTexto={config?.siteProcessoBotaoTexto || null}
       processoBotaoUrl={config?.siteProcessoBotaoUrl || null}
+      processoImagemUrl={config?.siteProcessoImagemUrl || null}
+      processoImagemUrlMobile={config?.siteProcessoImagemUrlMobile || null}
+      processoFoco={config?.siteProcessoFoco || null}
       ctaTitulo={config?.siteCtaTitulo || null}
       ctaTexto={config?.siteCtaTexto || null}
       ctaBotaoTexto={config?.siteCtaBotaoTexto || null}

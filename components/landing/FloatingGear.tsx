@@ -71,6 +71,40 @@ export function SvgAperturaMini({ className = "" }: { className?: string }) {
   );
 }
 
+// Selo "REC" (ponto vermelho pulsando + texto) — referência de câmera bem mais
+// legível que um contorno abstrato; ninguém confunde isso com "um círculo boiando
+// sem explicação". Usa animate-pulse do próprio Tailwind (sem depender de mais
+// nenhuma engrenagem de animação).
+export function SvgRec({ className = "" }: { className?: string }) {
+  return (
+    <div
+      className={`flex items-center gap-1.5 rounded-full border border-white/15 bg-black/40 px-3 py-1.5 backdrop-blur-sm ${className}`}
+    >
+      <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-accent" />
+      <span className="text-[10px] font-bold tracking-widest text-white/70">REC</span>
+    </div>
+  );
+}
+
+// Versão flutuante mini de qualquer ícone (lucide-react) — usada nas mesmas
+// seções que antes tinham lente/tripé/anéis/abertura, agora com ícones
+// reconhecíveis (Instagram, vídeo, tráfego...) em vez de formas abstratas.
+export function IconeFlutuanteMini({
+  Icon,
+  className = "",
+}: {
+  Icon: React.ComponentType<{ size?: number }>;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-white/25 backdrop-blur-sm ${className}`}
+    >
+      <Icon size={18} />
+    </div>
+  );
+}
+
 // Câmera principal, estilo vetor minimalista — inspirada numa mirrorless com lente
 // zoom (referência: Sony ZV-E10 II + Tamron 17-70mm), vista de frente, olhando
 // direto pra lente — combina com o efeito de "entrar na lente" da abertura.

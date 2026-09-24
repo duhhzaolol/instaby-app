@@ -6,8 +6,8 @@
 // na grade completa de Serviços, logo depois desta seção — só não vem primeiro.
 
 import { motion } from "framer-motion";
-import { Megaphone, Sparkles, Video, ArrowRight, ArrowUpRight } from "lucide-react";
-import { ElementoFlutuante, SvgAperturaMini, SvgLenteMini } from "./FloatingGear";
+import { Megaphone, Sparkles, Video, ArrowRight, ArrowUpRight, TrendingUp, Play } from "lucide-react";
+import { ElementoFlutuante, IconeFlutuanteMini } from "./FloatingGear";
 
 type Indicador = { valor: string; legenda: string };
 type Pilar = { nome: string; texto: string; indicadores?: Indicador[] };
@@ -30,10 +30,10 @@ export function PilaresCarroChefe({ pilares, linkContato }: { pilares: Pilar[]; 
   return (
     <section className="relative overflow-hidden bg-[#0b0b0d] px-6 py-16 sm:py-20">
       <ElementoFlutuante className="right-[4%] top-[8%] hidden lg:block" duracao={9}>
-        <SvgAperturaMini className="h-14 w-14" />
+        <IconeFlutuanteMini Icon={TrendingUp} />
       </ElementoFlutuante>
       <ElementoFlutuante className="left-[3%] bottom-[10%] hidden lg:block" duracao={7.5} delay={0.8}>
-        <SvgLenteMini className="h-10 w-10" />
+        <IconeFlutuanteMini Icon={Play} />
       </ElementoFlutuante>
 
       <div className="relative mx-auto max-w-6xl">
