@@ -54,6 +54,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       cliques: numOuNulo(body.cliques),
       resultados: numOuNulo(body.resultados),
       observacoes: body.observacoes || null,
+      planosFechados: numOuNulo(body.planosFechados),
+      valorRetorno: numOuNulo(body.valorRetorno),
       origem: "manual",
     },
     create: {
@@ -65,6 +67,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       cliques: numOuNulo(body.cliques),
       resultados: numOuNulo(body.resultados),
       observacoes: body.observacoes || null,
+      planosFechados: numOuNulo(body.planosFechados),
+      valorRetorno: numOuNulo(body.valorRetorno),
       origem: "manual",
     },
   });

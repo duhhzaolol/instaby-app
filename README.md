@@ -1,4 +1,49 @@
-# Instaby App — v121
+# Instaby App — v122
+
+## Tráfego Pago: totais corrigidos pro seu fluxo real de exportação + Retorno (ROI)
+
+Ajuste pedido antes de continuar a repaginação visual — três mudanças, todas só
+no módulo Tráfego Pago.
+
+**1. Os totais não somam mais exportações do mesmo mês.** Como você contou, o
+fluxo real é exportar do Meta sempre a partir do dia 1 do mês, com a data final
+crescendo (dia 1 ao 10, depois dia 1 ao 20, depois dia 1 ao 30...). Cada
+exportação nova já contém as anteriores — antes, o painel somava todas cegamente
+e inflava o total. Agora: quando várias entradas do mesmo mês começam no mesmo
+dia (esse padrão de "mês corrido"), só a mais recente conta nos números de
+Investido/Resultados/Impressões/Custo-por-resultado — as antigas continuam
+salvas e aparecem certinho no gráfico de tendência, então nada se perde, só não
+duplica mais. Se um dia você (ou alguém da equipe) lançar dias avulsos e
+separados dentro do mesmo mês, esses continuam sendo somados normalmente entre
+si — a lógica só "trava" a soma quando percebe que é o mesmo período crescendo.
+Não precisa reimportar nada — os dados que já estão salvos passam a ser
+somados do jeito certo automaticamente.
+
+**2. O "R$0/mês" confuso ficou mais claro.** Esse número era a *meta* de verba
+mensal da campanha (definida na hora de criar, editável), diferente do
+*Investido* de verdade (que vem dos resultados lançados/importados). Como
+ficava sem rótulo nenhum do lado da campanha, dava a entender que era o
+investimento real. Agora: some quando a campanha não tem meta definida (a
+maioria hoje, então os cartões ficam mais limpos), e quando você preenche uma
+meta, aparece rotulado como "**Meta:** R$ X/mês" pra não confundir com
+"Investido" (que continua só dentro de Resultados).
+
+**3. Nova seção de Retorno.** No formulário de lançar/editar resultado, um
+bloco separado "Fechamento do mês" com dois campos opcionais: quantos planos
+fecharam naquele período e quanto isso gerou em R$. Pensado pro fechamento que
+você faz no fim do mês — pega os leads do período, quantos viraram contrato, e
+quanto voltou. O painel de Resultados ganhou um 5º cartão, "Retorno", com o
+total em R$ e, embaixo, quantos planos fecharam e quantas vezes o investimento
+voltou (ex: "40 planos · 5.2x") — a história de investimento x retorno que
+você queria mostrar. Isso é só o registro manual do fechamento; os relatórios,
+auto-postagem no Instagram, engajamento e monitoramento de concorrência
+continuam de fora por enquanto, como combinado.
+
+Sem quebra de dados — schema só ganhou campos novos opcionais, nada existente
+mudou de lugar. Com isso resolvido, a repaginação visual do resto do painel
+volta a ser o próximo passo.
+
+## v121
 
 ## Repaginação visual — começando pela Visão Geral (Dashboard)
 

@@ -34,6 +34,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       ...(body.cliques !== undefined && { cliques: numOuNulo(body.cliques) }),
       ...(body.resultados !== undefined && { resultados: numOuNulo(body.resultados) }),
       ...(body.observacoes !== undefined && { observacoes: body.observacoes || null }),
+      ...(body.planosFechados !== undefined && { planosFechados: numOuNulo(body.planosFechados) }),
+      ...(body.valorRetorno !== undefined && { valorRetorno: numOuNulo(body.valorRetorno) }),
     },
   });
 

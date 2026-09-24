@@ -443,6 +443,11 @@ model ResultadoCampanha {
   indicadorResultado String? // texto do Meta explicando o que "resultados" significa aqui (ex: "Conversas por mensagem iniciadas")
   origem            String    @default("manual") // manual | meta_import
   observacoes       String?
+  // Fechamento do mês — preenchido à parte (geralmente na última exportação do período):
+  // quantos leads desse período viraram contrato de fato, e quanto isso gerou de receita.
+  // Mostra o "investimento x retorno" do tráfego pago, não só custo/resultado bruto.
+  planosFechados    Int?
+  valorRetorno      Decimal?
   createdAt         DateTime  @default(now())
 
   @@unique([campanhaId, inicio, fim])

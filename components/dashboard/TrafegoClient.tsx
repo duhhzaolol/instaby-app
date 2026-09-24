@@ -147,7 +147,7 @@ function CamposCampanha({
       </div>
 
       <div className="mb-3 grid grid-cols-2 gap-2">
-        <CurrencyInput value={verbaMensal} onChange={setVerbaMensal} placeholder="Verba mensal" />
+        <CurrencyInput value={verbaMensal} onChange={setVerbaMensal} placeholder="Meta mensal (opcional)" />
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value)}
@@ -423,7 +423,11 @@ export default function TrafegoClient({
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="text-right">
-                    <p className="text-sm font-medium text-text">R$ {fmt(c.verbaMensal)}/mês</p>
+                    {c.verbaMensal > 0 && (
+                      <p className="text-sm font-medium text-text">
+                        <span className="font-normal text-muted">Meta:</span> R$ {fmt(c.verbaMensal)}/mês
+                      </p>
+                    )}
                     <p
                       className={`text-[11px] ${
                         c.status === "ativa" ? "text-emerald-400" : c.status === "pausada" ? "text-amber-400" : "text-muted"

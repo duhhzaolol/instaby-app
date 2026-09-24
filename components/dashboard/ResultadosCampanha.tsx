@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ChevronDown, ChevronUp, Plus, X, Check, Trash2, Pencil, TrendingUp, DollarSign, Target, Percent, Eye } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, X, Check, Trash2, Pencil, TrendingUp, DollarSign, Target, Percent, Eye, Trophy } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { DatePicker } from "@/components/ui/DatePicker";
@@ -14,6 +14,9 @@ import { DatePicker } from "@/components/ui/DatePicker";
 // ΔE 11.6 (deutan), bem acima do alvo de 8 — seguro mesmo lado a lado.
 const COR_CUSTO = "#E63946";
 const COR_RESULTADOS = "#0D9488";
+// Âmbar pro fechamento/retorno — mesma cor já usada em status "pausada" no resto do
+// módulo, então não é uma cor nova no vocabulário do app; aqui marca "resultado em R$".
+const COR_RETORNO = "#F59E0B";
 
 function compactar(v: number): string {
   const sinal = v < 0 ? "-" : "";
@@ -39,6 +42,8 @@ type Resultado = {
   indicadorResultado: string | null;
   origem: string;
   observacoes: string | null;
+  planosFechados: number | null;
+  valorRetorno: number | null;
 };
 
 function fmt(v: number) {
@@ -58,6 +63,8 @@ function NovoResultadoForm({ campanhaId, onSalvo }: { campanhaId: string; onSalv
   const [cliques, setCliques] = useState("");
   const [resultados, setResultados] = useState("");
   const [observacoes, setObservacoes] = useState("");
+  const [planosFechados, setPlanosFechados] = useState("");
+  const [valorRetorno, setValorRetorno] = useState(0);
   const [enviando, setEnviando] = useState(false);
 
   async function salvar(e: React.FormEvent) {
@@ -75,6 +82,8 @@ function NovoResultadoForm({ campanhaId, onSalvo }: { campanhaId: string; onSalv
         cliques: numOuNulo(cliques),
         resultados: numOuNulo(resultados),
         observacoes: observacoes || null,
+        planosFechados: numOuNulo(planosFechados),
+        valorRetorno: valorRetorno || null,
       }),
     });
     setEnviando(false);
@@ -130,6 +139,22 @@ function NovoResultadoForm({ campanhaId, onSalvo }: { campanhaId: string; onSalv
         placeholder="Observações (opcional)"
         className="mb-2 w-full rounded-xl border border-border bg-base/60 px-3 py-2 text-sm text-text outline-none placeholder:text-muted/50"
       />
+      <div className="mb-2 rounded-xl border border-amber-500/20 bg-amber-500/5 p-2.5">
+        <p className="mb-2 flex items-center gap-1.5 text-[11px] font-medium text-amber-400">
+          <Trophy size={11} /> Fechamento do mês (opcional)
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          <input
+            type="number"
+            min={0}
+            value={planosFechados}
+            onChange={(e) => setPlanosFechados(e.target.value)}
+            placeholder="Planos fechados"
+            className="h-10 w-full rounded-xl border border-border bg-base/60 px-3 text-sm text-text"
+          />
+          <CurrencyInput value={valorRetorno} onChange={setValorRetorno} placeholder="Retorno gerado" />
+        </div>
+      </div>
       <button
         type="submit"
         disabled={enviando}
@@ -154,6 +179,8 @@ function EditarResultadoForm({
   const [cliques, setCliques] = useState(resultado.cliques?.toString() || "");
   const [resultados, setResultados] = useState(resultado.resultados?.toString() || "");
   const [observacoes, setObservacoes] = useState(resultado.observacoes || "");
+  const [planosFechados, setPlanosFechados] = useState(resultado.planosFechados?.toString() || "");
+  const [valorRetorno, setValorRetorno] = useState(resultado.valorRetorno || 0);
   const [enviando, setEnviando] = useState(false);
 
   async function salvar() {
@@ -167,6 +194,8 @@ function EditarResultadoForm({
         cliques: numOuNulo(cliques),
         resultados: numOuNulo(resultados),
         observacoes: observacoes || null,
+        planosFechados: numOuNulo(planosFechados),
+        valorRetorno: valorRetorno || null,
       }),
     });
     setEnviando(false);
@@ -227,6 +256,22 @@ function EditarResultadoForm({
         placeholder="Observações (opcional)"
         className="mb-2 w-full rounded-xl border border-border bg-base/60 px-3 py-2 text-sm text-text outline-none placeholder:text-muted/50"
       />
+      <div className="mb-2 rounded-xl border border-amber-500/20 bg-amber-500/5 p-2.5">
+        <p className="mb-2 flex items-center gap-1.5 text-[11px] font-medium text-amber-400">
+          <Trophy size={11} /> Fechamento do mês (opcional)
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          <input
+            type="number"
+            min={0}
+            value={planosFechados}
+            onChange={(e) => setPlanosFechados(e.target.value)}
+            placeholder="Planos fechados"
+            className="h-10 w-full rounded-xl border border-border bg-base/60 px-3 text-sm text-text"
+          />
+          <CurrencyInput value={valorRetorno} onChange={setValorRetorno} placeholder="Retorno gerado" />
+        </div>
+      </div>
       <div className="flex gap-2">
         <button
           onClick={excluir}
@@ -283,6 +328,15 @@ function LinhaResultado({ resultado }: { resultado: Resultado }) {
           <p className="mt-0.5 text-[11px] text-muted/70">Resultado = {resultado.indicadorResultado}</p>
         )}
         {resultado.observacoes && <p className="mt-0.5 text-[11px] text-muted/70">{resultado.observacoes}</p>}
+        {(resultado.planosFechados != null || resultado.valorRetorno != null) && (
+          <p className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-amber-400">
+            <Trophy size={10} />
+            {resultado.planosFechados != null &&
+              `${fmt(resultado.planosFechados)} ${resultado.planosFechados === 1 ? "plano fechado" : "planos fechados"}`}
+            {resultado.planosFechados != null && resultado.valorRetorno != null && " · "}
+            {resultado.valorRetorno != null && `R$ ${fmt(resultado.valorRetorno)} de retorno`}
+          </p>
+        )}
       </div>
       <button
         onClick={() => setEditando(true)}
@@ -299,12 +353,14 @@ function Estatistica({
   cor,
   label,
   valor,
+  sub,
   index,
 }: {
   Icon: any;
   cor: string;
   label: string;
   valor: string;
+  sub?: string;
   index: number;
 }) {
   return (
@@ -319,6 +375,7 @@ function Estatistica({
         <p className="text-[10px] font-medium uppercase tracking-wide text-muted">{label}</p>
       </div>
       <p className="text-lg font-semibold text-text">{valor}</p>
+      {sub && <p className="mt-0.5 text-[10px] text-muted">{sub}</p>}
     </motion.div>
   );
 }
@@ -388,6 +445,35 @@ function MiniAreaChart({
   );
 }
 
+// Soma sem duplicar exportações "mês corrido": o fluxo real é exportar sempre a partir
+// do dia 1 do mês, com data final crescente (1–10, depois 1–20, depois 1–30...) — cada
+// exportação nova já inclui as anteriores, então somar todas infla o total. Agrupa por
+// mês do início; se o grupo inteiro compartilha o mesmo início, é esse caso — conta só a
+// entrada mais recente (maior fim). Se os inícios diferem dentro do mesmo grupo (ex:
+// exportação dia a dia, ou lançamentos manuais de períodos pontuais), são períodos de
+// fato distintos — soma todos normalmente.
+function agruparPorMes(lista: Resultado[]): Resultado[] {
+  const porMes = new Map<string, Resultado[]>();
+  for (const r of lista) {
+    const d = new Date(r.inicio);
+    const chave = `${d.getUTCFullYear()}-${d.getUTCMonth()}`;
+    const grupo = porMes.get(chave);
+    if (grupo) grupo.push(r);
+    else porMes.set(chave, [r]);
+  }
+
+  const contados: Resultado[] = [];
+  for (const grupo of porMes.values()) {
+    const iniciosUnicos = new Set(grupo.map((r) => new Date(r.inicio).getTime()));
+    if (grupo.length > 1 && iniciosUnicos.size === 1) {
+      contados.push(grupo.reduce((a, b) => (new Date(b.fim) > new Date(a.fim) ? b : a)));
+    } else {
+      contados.push(...grupo);
+    }
+  }
+  return contados;
+}
+
 function PainelResultados({ resultados }: { resultados: Resultado[] }) {
   const ordenados = [...resultados].sort((a, b) => new Date(a.fim).getTime() - new Date(b.fim).getTime());
   const dados = ordenados.map((r) => ({
@@ -396,14 +482,29 @@ function PainelResultados({ resultados }: { resultados: Resultado[] }) {
     resultados: r.resultados,
   }));
 
-  const totalInvestido = ordenados.reduce((s, r) => s + (r.verbaInvestida ? Number(r.verbaInvestida) : 0), 0);
-  const totalResultados = ordenados.reduce((s, r) => s + (r.resultados || 0), 0);
-  const totalImpressoes = ordenados.reduce((s, r) => s + (r.impressoes || 0), 0);
+  // Totais usam a lista deduplicada (contados) — o gráfico acima continua no `ordenados`
+  // bruto, com todas as entradas, pra manter a curva de progressão do mês funcionando.
+  const contados = agruparPorMes(ordenados);
+  const totalInvestido = contados.reduce((s, r) => s + (r.verbaInvestida ? Number(r.verbaInvestida) : 0), 0);
+  const totalResultados = contados.reduce((s, r) => s + (r.resultados || 0), 0);
+  const totalImpressoes = contados.reduce((s, r) => s + (r.impressoes || 0), 0);
   const custoPorResultado = totalResultados > 0 ? totalInvestido / totalResultados : null;
+
+  const totalPlanosFechados = contados.reduce((s, r) => s + (r.planosFechados || 0), 0);
+  const totalRetorno = contados.reduce((s, r) => s + (r.valorRetorno ? Number(r.valorRetorno) : 0), 0);
+  const roi = totalInvestido > 0 && totalRetorno > 0 ? totalRetorno / totalInvestido : null;
+  const retornoSub =
+    totalPlanosFechados > 0 && roi != null
+      ? `${totalPlanosFechados} ${totalPlanosFechados === 1 ? "plano" : "planos"} · ${roi.toFixed(1)}x`
+      : totalPlanosFechados > 0
+      ? `${totalPlanosFechados} ${totalPlanosFechados === 1 ? "plano" : "planos"}`
+      : roi != null
+      ? `${roi.toFixed(1)}x o investido`
+      : undefined;
 
   return (
     <div className="mt-2">
-      <div className="mb-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="mb-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
         <Estatistica Icon={DollarSign} cor={COR_CUSTO} label="Investido" valor={fmtMoedaCompacta(totalInvestido)} index={0} />
         <Estatistica Icon={Target} cor={COR_RESULTADOS} label="Resultados" valor={compactar(totalResultados)} index={1} />
         <Estatistica
@@ -414,6 +515,14 @@ function PainelResultados({ resultados }: { resultados: Resultado[] }) {
           index={2}
         />
         <Estatistica Icon={Eye} cor="#9CA3AF" label="Impressões" valor={compactar(totalImpressoes)} index={3} />
+        <Estatistica
+          Icon={Trophy}
+          cor={COR_RETORNO}
+          label="Retorno"
+          valor={totalRetorno > 0 ? fmtMoedaCompacta(totalRetorno) : "—"}
+          sub={retornoSub}
+          index={4}
+        />
       </div>
 
       {dados.length >= 2 && (
