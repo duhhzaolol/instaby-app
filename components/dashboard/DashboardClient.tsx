@@ -7,21 +7,90 @@ import {
   UserPlus,
   Wallet,
   Clock,
-  ChevronDown,
   CalendarClock,
   Target,
   TrendingUp,
+  TrendingDown,
   FileSignature,
   FileText,
   Sparkles,
   AlertTriangle,
 } from "lucide-react";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { Card } from "@/components/ui/Card";
 import { CountUp } from "@/components/ui/CountUp";
 import { QuickCommandCenter } from "@/components/dashboard/QuickCommandCenter";
-import { TarefaRow, TarefaRowData } from "@/components/dashboard/TarefaRow";
+import QuadroTarefas from "@/components/dashboard/QuadroTarefas";
+import type { TarefaRowData } from "@/components/dashboard/TarefaRow";
 import { visualDaCategoriaTarefa } from "@/lib/categoriaTarefaVisual";
 import { useOcultarValores, BotaoOcultarValores, ValorSensivel } from "@/components/ui/OcultarValores";
+
+function compactar(v: number): string {
+  const sinal = v < 0 ? "-" : "";
+  const abs = Math.abs(v);
+  if (abs >= 1_000_000) return `${sinal}${(abs / 1_000_000).toFixed(1).replace(".", ",")}M`;
+  if (abs >= 1_000) return `${sinal}${(abs / 1_000).toFixed(1).replace(".", ",")}K`;
+  return `${sinal}${Math.round(abs).toLocaleString("pt-BR")}`;
+}
+
+function GraficoFaturamento({ dados, oculto }: { dados: { mes: string; valor: number }[]; oculto: boolean }) {
+  const temDados = dados.some((d) => d.valor > 0);
+
+  return (
+    <Card hoverable={false} className="mb-6 p-4">
+      <p className="mb-3 flex items-center gap-1.5 text-sm font-medium text-text">
+        <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
+        Faturamento — últimos 6 meses
+      </p>
+      {oculto ? (
+        <div className="flex h-[200px] items-center justify-center text-sm tracking-widest text-muted">
+          ••••••••••
+        </div>
+      ) : !temDados ? (
+        <p className="flex h-[200px] items-center justify-center text-center text-xs text-muted">
+          Ainda sem cobranças pagas suficientes pra montar o gráfico.
+        </p>
+      ) : (
+        <ResponsiveContainer width="100%" height={200}>
+          <AreaChart data={dados} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
+            <defs>
+              <linearGradient id="grad-faturamento-dash" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#E63946" stopOpacity={0.3} />
+                <stop offset="100%" stopColor="#E63946" stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.06)" />
+            <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} />
+            <YAxis
+              tick={{ fontSize: 10, fill: "#9CA3AF" }}
+              axisLine={false}
+              tickLine={false}
+              width={40}
+              tickFormatter={(v) => compactar(Number(v))}
+            />
+            <Tooltip
+              cursor={{ stroke: "#E63946", strokeWidth: 1, strokeOpacity: 0.35 }}
+              contentStyle={{ fontSize: 12, borderRadius: 10, background: "#1C2028", border: "1px solid rgba(255,255,255,.08)" }}
+              labelStyle={{ color: "#9CA3AF", marginBottom: 2 }}
+              formatter={(v: any) => [`R$ ${Number(v).toLocaleString("pt-BR")}`, "Faturamento"]}
+            />
+            <Area
+              type="monotone"
+              dataKey="valor"
+              stroke="#E63946"
+              strokeWidth={2}
+              fill="url(#grad-faturamento-dash)"
+              dot={{ r: 3, fill: "#E63946", stroke: "#1C2028", strokeWidth: 2 }}
+              activeDot={{ r: 5, fill: "#E63946", stroke: "#1C2028", strokeWidth: 2 }}
+              isAnimationActive
+              animationDuration={800}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      )}
+    </Card>
+  );
+}
 
 type Metrics = {
   clientesAtivos: number;
@@ -76,6 +145,7 @@ export default function DashboardClient({
   performancePorCliente,
   atividades,
   variacaoFaturamento,
+  faturamentoPorMes,
 }: {
   metrics: Metrics;
   tarefas: Tarefa[];
@@ -88,12 +158,9 @@ export default function DashboardClient({
   performancePorCliente: PerformanceCliente[];
   atividades: Atividade[];
   variacaoFaturamento: number | null;
+  faturamentoPorMes: { mes: string; valor: number }[];
 }) {
   const { oculto, alternar } = useOcultarValores();
-  const [verConcluidas, setVerConcluidas] = useState(false);
-
-  const abertas = tarefas.filter((t) => t.status !== "feito");
-  const concluidas = tarefas.filter((t) => t.status === "feito");
 
   const cards = [
     {
@@ -120,6 +187,7 @@ export default function DashboardClient({
       sensivel: true,
       href: "/dashboard/financeiro",
       cor: "#22C55E",
+      delta: variacaoFaturamento,
     },
     {
       label: "Cobranças pendentes",
@@ -153,20 +221,34 @@ export default function DashboardClient({
                     <Icon size={14} />
                   </div>
                 </div>
-                <p className="text-xl font-medium text-text">
-                  {c.sensivel ? (
-                    <ValorSensivel oculto={oculto}>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-xl font-medium text-text">
+                    {c.sensivel ? (
+                      <ValorSensivel oculto={oculto}>
+                        <CountUp value={c.value} prefix={c.prefix} />
+                      </ValorSensivel>
+                    ) : (
                       <CountUp value={c.value} prefix={c.prefix} />
-                    </ValorSensivel>
-                  ) : (
-                    <CountUp value={c.value} prefix={c.prefix} />
+                    )}
+                  </p>
+                  {"delta" in c && c.delta !== null && c.delta !== undefined && !oculto && (
+                    <span
+                      className={`flex items-center gap-0.5 text-[11px] font-medium ${
+                        c.delta >= 0 ? "text-emerald-400" : "text-red-400"
+                      }`}
+                    >
+                      {c.delta >= 0 ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+                      {Math.abs(c.delta)}%
+                    </span>
                   )}
-                </p>
+                </div>
               </Card>
             </Link>
           );
         })}
       </div>
+
+      <GraficoFaturamento dados={faturamentoPorMes} oculto={oculto} />
 
       {alertas.length > 0 && (
         <div className="mb-6 rounded-2xl border border-border bg-card/60 p-4">
@@ -303,39 +385,7 @@ export default function DashboardClient({
         </div>
       )}
 
-      <div className="mb-3 flex items-center justify-between">
-        <p className="text-sm font-medium text-text">
-          Afazeres <span className="text-muted">({abertas.length})</span>
-        </p>
-      </div>
-
-      <div className="mb-6 flex flex-col gap-2">
-        {abertas.length === 0 && (
-          <p className="text-sm text-muted">Nada pendente — capriche no cafezinho ☕</p>
-        )}
-        {abertas.map((t, i) => (
-          <TarefaRow key={t.id} index={i} tarefa={t} clienteNome={t.clienteNome} clienteCor={t.clienteCor} />
-        ))}
-      </div>
-
-      {concluidas.length > 0 && (
-        <div className="mb-6">
-          <button
-            onClick={() => setVerConcluidas((v) => !v)}
-            className="mb-3 flex items-center gap-1 text-xs font-medium text-muted hover:text-text"
-          >
-            <ChevronDown size={13} className={verConcluidas ? "rotate-180 transition-transform" : "transition-transform"} />
-            Concluídas ({concluidas.length})
-          </button>
-          {verConcluidas && (
-            <div className="flex flex-col gap-2 opacity-60">
-              {concluidas.map((t, i) => (
-                <TarefaRow key={t.id} index={i} tarefa={t} clienteNome={t.clienteNome} clienteCor={t.clienteCor} />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      <QuadroTarefas tarefas={tarefas} />
 
       {variacaoFaturamento !== null && (
         <div className="mb-6 overflow-hidden rounded-2xl border border-accent/20 bg-gradient-to-br from-accent/10 via-card to-card p-5">

@@ -1,4 +1,47 @@
-# Instaby App — v120
+# Instaby App — v121
+
+## Repaginação visual — começando pela Visão Geral (Dashboard)
+
+Você pediu pra repaginar o painel inteiro (gráficos mais bonitos, elementos
+que dão pra arrastar, mais vida — mantendo preto/cinza/vermelho/branco).
+Como são mais de 15 telas, combinamos começar por **uma só** — a Visão
+Geral, que é a que você mais vê — pra você aprovar o estilo antes de eu
+espalhar pro resto do painel. O que mudou nela:
+
+**Gráfico de faturamento novo.** Logo abaixo dos números do topo, um
+gráfico de área dos últimos 6 meses de faturamento, no mesmo estilo do
+Tráfego Pago (gradiente vermelho, animado, tooltip ao passar o mouse).
+Como você decidiu manter o Financeiro do jeito que está (números +
+calendário, sem gráfico) — esse é o lugar novo onde a parte gráfica
+"bonita e atual" que você pediu fica em destaque. Respeita o botão de
+ocultar valores (fica todo borrado/oculto igual o resto).
+
+**Cartão de Faturamento do mês ganhou uma setinha** mostrando a variação
+percentual comparado ao mês anterior (verde subindo, vermelho descendo) —
+o mesmo número que já aparecia no card "Insight Instaby" mais embaixo,
+agora também de relance no topo.
+
+**Afazeres virou um quadro com arraste de verdade (Kanban).** Em vez da
+lista única de antes, agora são 3 colunas — A fazer / Em andamento / Feito
+— e você arrasta o cartão da tarefa de uma coluna pra outra pra mudar o
+status, soltando com o mouse mesmo. Arrastar pra "Feito" ainda pergunta se
+quer registrar as horas (igual já funcionava antes, só que agora pelo
+arraste). Delete continua disponível (ícone de lixeira que aparece ao
+passar o mouse no cartão). A edição mais detalhada (descrição, prioridade,
+prazo) continua na tela Tarefas — o quadro aqui é pra bater o olho e mudar
+status rápido. Não usei nenhuma biblioteca nova de arrastar-e-soltar (o
+sandbox não tem acesso de rede pra instalar pacote) — é feito com a API
+nativa de drag-and-drop do navegador, então funciona liso no computador;
+no celular, como toque não tem "arrastar" nativo do jeito clássico, o
+status ainda dá pra trocar abrindo a tarefa (seletor), só o arraste em si
+que é mais um recurso de desktop por enquanto.
+
+Sem mudança de banco. Aprovando esse estilo, na sequência eu aplico o
+mesmo padrão nas outras telas do dia a dia (Clientes, Financeiro,
+Comercial, Tráfego Pago, Tarefas/Agenda/Horas) — Configurações/Equipe
+ficam pra uma rodada posterior, como combinado.
+
+## v120
 
 ## Correção: valor investido importado do Meta vinha errado (10x maior)
 

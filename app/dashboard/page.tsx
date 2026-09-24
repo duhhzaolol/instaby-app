@@ -11,6 +11,11 @@ function inicioMesAnterior() {
   return new Date(d.getFullYear(), d.getMonth() - 1, 1);
 }
 
+function inicioMesesAtras(n: number) {
+  const d = new Date();
+  return new Date(d.getFullYear(), d.getMonth() - n, 1);
+}
+
 function inicioHoje() {
   const d = new Date();
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -53,6 +58,7 @@ export default async function DashboardPage() {
     despesasSemClassificacao,
     itensOnboardingBloqueados,
     oportunidadesAbertas,
+    cobrancasPagasUltimosMeses,
   ] = await Promise.all([
     prisma.cliente.count({ where: { status: "ativo" } }),
     prisma.cliente.count({ where: { status: "lead" } }),
@@ -134,6 +140,12 @@ export default async function DashboardPage() {
     prisma.despesa.count({ where: { categoriaFinanceira: null, status: { not: "cancelado" } } }),
     prisma.itemOnboarding.count({ where: { status: "bloqueado", onboarding: { status: "em_andamento" } } }),
     prisma.oportunidade.findMany({ where: { status: { notIn: ["ganho", "perdido"] } } }),
+    // Pra montar o gráfico de faturamento do Dashboard — agrupado por mês em JS logo
+    // abaixo, porque "group by mês" não tem um jeito direto no Prisma sem SQL cru.
+    prisma.cobranca.findMany({
+      where: { status: "pago", createdAt: { gte: inicioMesesAtras(5) } },
+      select: { valor: true, createdAt: true },
+    }),
   ]);
 
   const metaFaturamento = config?.metaFaturamentoMensal ? Number(config.metaFaturamentoMensal) : 0;
@@ -172,6 +184,24 @@ export default async function DashboardPage() {
     .sort((a, b) => b.valor - a.valor)
     .slice(0, 6)
     .map((c) => ({ ...c, percentual: totalPorClientes > 0 ? Math.round((c.valor / totalPorClientes) * 100) : 0 }));
+
+  // Últimos 6 meses (incluindo o atual), sempre na ordem cronológica, mesmo os meses
+  // sem nenhuma cobrança paga ainda (entram com R$ 0 — não somem do eixo).
+  const baldes: { chave: string; mes: string; valor: number }[] = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = inicioMesesAtras(i);
+    baldes.push({
+      chave: `${d.getFullYear()}-${d.getMonth()}`,
+      mes: d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", ""),
+      valor: 0,
+    });
+  }
+  cobrancasPagasUltimosMeses.forEach((c) => {
+    const chave = `${c.createdAt.getFullYear()}-${c.createdAt.getMonth()}`;
+    const balde = baldes.find((b) => b.chave === chave);
+    if (balde) balde.valor += Number(c.valor);
+  });
+  const faturamentoPorMes = baldes.map((b) => ({ mes: b.mes, valor: b.valor }));
 
   type Atividade = { id: string; texto: string; cliente: string; valor?: number; data: Date; tipo: string };
   const atividades: Atividade[] = [
@@ -261,6 +291,7 @@ export default async function DashboardPage() {
       performancePorCliente={performancePorCliente}
       variacaoFaturamento={variacaoFaturamento}
       atividades={atividades.map((a) => ({ ...a, data: a.data.toISOString() }))}
+      faturamentoPorMes={faturamentoPorMes}
     />
   );
 }
