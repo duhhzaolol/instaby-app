@@ -52,7 +52,17 @@ function encontrarColuna(cabecalhos: string[], variantes: string[]) {
 
 function numeroSeguro(valor: any): number {
   if (valor === null || valor === undefined || valor === "") return 0;
-  const limpo = String(valor).replace(/\./g, "").replace(",", ".").replace(/[^\d.-]/g, "");
+  let texto = String(valor).trim();
+  if (texto === "") return 0;
+  // Esse relatório de campanhas do Meta vem em formato internacional — ponto é decimal,
+  // sem separador de milhar (ex: "10.19", "0.16119048") — diferente do relatório antigo
+  // de redes sociais (lib/parseRelatorioAds.ts), que usa vírgula decimal. Só tratamos
+  // ponto como separador de milhar quando também aparece vírgula (aí sim é formato BR,
+  // tipo "1.234,56"); senão o ponto fica como decimal mesmo.
+  if (texto.includes(",")) {
+    texto = texto.replace(/\./g, "").replace(",", ".");
+  }
+  const limpo = texto.replace(/[^\d.-]/g, "");
   const n = parseFloat(limpo);
   return isNaN(n) ? 0 : n;
 }

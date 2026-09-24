@@ -2,10 +2,30 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronUp, Plus, X, Check, Trash2, Pencil, TrendingUp } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { motion } from "framer-motion";
+import { ChevronDown, ChevronUp, Plus, X, Check, Trash2, Pencil, TrendingUp, DollarSign, Target, Percent, Eye } from "lucide-react";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { DatePicker } from "@/components/ui/DatePicker";
+
+// Cores da mini-visão de tendência — vermelho da marca pra custo (dinheiro saindo),
+// verde-azulado pra resultado (o que "entra" de retorno). Validadas com o script de
+// contraste/CVD do design system (dataviz skill) contra o fundo do card (#1C2028):
+// ΔE 11.6 (deutan), bem acima do alvo de 8 — seguro mesmo lado a lado.
+const COR_CUSTO = "#E63946";
+const COR_RESULTADOS = "#0D9488";
+
+function compactar(v: number): string {
+  const sinal = v < 0 ? "-" : "";
+  const abs = Math.abs(v);
+  if (abs >= 1_000_000) return `${sinal}${(abs / 1_000_000).toFixed(1).replace(".", ",")}M`;
+  if (abs >= 1_000) return `${sinal}${(abs / 1_000).toFixed(1).replace(".", ",")}K`;
+  if (abs >= 10 || Number.isInteger(abs)) return `${sinal}${Math.round(abs).toLocaleString("pt-BR")}`;
+  return `${sinal}${abs.toFixed(2).replace(".", ",")}`;
+}
+function fmtMoedaCompacta(v: number): string {
+  return `R$ ${compactar(v)}`;
+}
 
 type Resultado = {
   id: string;
@@ -274,44 +294,146 @@ function LinhaResultado({ resultado }: { resultado: Resultado }) {
   );
 }
 
-function GraficoResultados({ resultados }: { resultados: Resultado[] }) {
-  const dados = [...resultados]
-    .sort((a, b) => new Date(a.fim).getTime() - new Date(b.fim).getTime())
-    .map((r) => ({
-      data: new Date(r.fim).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "America/Sao_Paulo" }),
-      custo: r.verbaInvestida != null ? Number(r.verbaInvestida) : null,
-      resultados: r.resultados,
-    }));
+function Estatistica({
+  Icon,
+  cor,
+  label,
+  valor,
+  index,
+}: {
+  Icon: any;
+  cor: string;
+  label: string;
+  valor: string;
+  index: number;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, delay: index * 0.05 }}
+      className="rounded-xl border border-border bg-base/40 p-3"
+    >
+      <div className="mb-1.5 flex items-center gap-1.5">
+        <Icon size={11} style={{ color: cor }} />
+        <p className="text-[10px] font-medium uppercase tracking-wide text-muted">{label}</p>
+      </div>
+      <p className="text-lg font-semibold text-text">{valor}</p>
+    </motion.div>
+  );
+}
 
-  if (dados.length < 2) return null;
+function MiniAreaChart({
+  titulo,
+  dados,
+  dataKey,
+  cor,
+  formatador,
+}: {
+  titulo: string;
+  dados: { data: string; custo: number | null; resultados: number | null }[];
+  dataKey: "custo" | "resultados";
+  cor: string;
+  formatador: (v: number) => string;
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-base/40 p-3">
+      <p className="mb-2 flex items-center gap-1.5 text-[11px] font-medium text-muted">
+        <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: cor }} />
+        {titulo}
+      </p>
+      <ResponsiveContainer width="100%" height={130}>
+        <AreaChart data={dados} margin={{ top: 4, right: 6, left: -18, bottom: 0 }}>
+          <defs>
+            <linearGradient id={`grad-${dataKey}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={cor} stopOpacity={0.25} />
+              <stop offset="100%" stopColor={cor} stopOpacity={0.02} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.06)" />
+          <XAxis dataKey="data" tick={{ fontSize: 9, fill: "#9CA3AF" }} axisLine={false} tickLine={false} minTickGap={20} />
+          <YAxis
+            tick={{ fontSize: 9, fill: "#9CA3AF" }}
+            axisLine={false}
+            tickLine={false}
+            width={36}
+            tickFormatter={(v) => formatador(Number(v))}
+          />
+          <Tooltip
+            cursor={{ stroke: cor, strokeWidth: 1, strokeOpacity: 0.35 }}
+            contentStyle={{
+              fontSize: 11,
+              borderRadius: 10,
+              background: "#1C2028",
+              border: "1px solid rgba(255,255,255,.08)",
+            }}
+            labelStyle={{ color: "#9CA3AF", marginBottom: 2 }}
+            formatter={(valor: any) => [formatador(Number(valor)), titulo]}
+          />
+          <Area
+            type="monotone"
+            dataKey={dataKey}
+            stroke={cor}
+            strokeWidth={2}
+            fill={`url(#grad-${dataKey})`}
+            dot={false}
+            activeDot={{ r: 4, fill: cor, stroke: "#1C2028", strokeWidth: 2 }}
+            connectNulls
+            isAnimationActive
+            animationDuration={700}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function PainelResultados({ resultados }: { resultados: Resultado[] }) {
+  const ordenados = [...resultados].sort((a, b) => new Date(a.fim).getTime() - new Date(b.fim).getTime());
+  const dados = ordenados.map((r) => ({
+    data: new Date(r.fim).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "America/Sao_Paulo" }),
+    custo: r.verbaInvestida != null ? Number(r.verbaInvestida) : null,
+    resultados: r.resultados,
+  }));
+
+  const totalInvestido = ordenados.reduce((s, r) => s + (r.verbaInvestida ? Number(r.verbaInvestida) : 0), 0);
+  const totalResultados = ordenados.reduce((s, r) => s + (r.resultados || 0), 0);
+  const totalImpressoes = ordenados.reduce((s, r) => s + (r.impressoes || 0), 0);
+  const custoPorResultado = totalResultados > 0 ? totalInvestido / totalResultados : null;
 
   return (
-    <div className="mt-2 rounded-xl border border-border bg-base/40 p-3">
-      <p className="mb-2 text-[11px] font-medium text-muted">Custo e resultados ao longo do tempo</p>
-      <ResponsiveContainer width="100%" height={160}>
-        <LineChart data={dados} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border, #2a2a2a)" />
-          <XAxis dataKey="data" tick={{ fontSize: 10 }} />
-          <YAxis yAxisId="custo" tick={{ fontSize: 10 }} />
-          <YAxis yAxisId="resultados" orientation="right" tick={{ fontSize: 10 }} />
-          <Tooltip
-            contentStyle={{ fontSize: 11, borderRadius: 8 }}
-            formatter={(valor: any, nome: string) =>
-              nome === "custo" ? [`R$ ${fmt(Number(valor))}`, "Custo"] : [fmt(Number(valor)), "Resultados"]
-            }
+    <div className="mt-2">
+      <div className="mb-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <Estatistica Icon={DollarSign} cor={COR_CUSTO} label="Investido" valor={fmtMoedaCompacta(totalInvestido)} index={0} />
+        <Estatistica Icon={Target} cor={COR_RESULTADOS} label="Resultados" valor={compactar(totalResultados)} index={1} />
+        <Estatistica
+          Icon={Percent}
+          cor="#9CA3AF"
+          label="Custo/resultado"
+          valor={custoPorResultado != null ? fmtMoedaCompacta(custoPorResultado) : "—"}
+          index={2}
+        />
+        <Estatistica Icon={Eye} cor="#9CA3AF" label="Impressões" valor={compactar(totalImpressoes)} index={3} />
+      </div>
+
+      {dados.length >= 2 && (
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <MiniAreaChart
+            titulo="Custo por período"
+            dados={dados}
+            dataKey="custo"
+            cor={COR_CUSTO}
+            formatador={fmtMoedaCompacta}
           />
-          <Line yAxisId="custo" type="monotone" dataKey="custo" stroke="#F59E0B" strokeWidth={2} dot={false} connectNulls />
-          <Line
-            yAxisId="resultados"
-            type="monotone"
+          <MiniAreaChart
+            titulo="Resultados por período"
+            dados={dados}
             dataKey="resultados"
-            stroke="#22C55E"
-            strokeWidth={2}
-            dot={false}
-            connectNulls
+            cor={COR_RESULTADOS}
+            formatador={compactar}
           />
-        </LineChart>
-      </ResponsiveContainer>
+        </div>
+      )}
     </div>
   );
 }
@@ -362,7 +484,7 @@ export default function ResultadosCampanha({ campanhaId }: { campanhaId: string 
             <p className="mt-2 text-xs text-muted">Nenhum resultado lançado ainda pra essa campanha.</p>
           )}
 
-          {!carregando && resultados && <GraficoResultados resultados={resultados} />}
+          {!carregando && resultados && resultados.length > 0 && <PainelResultados resultados={resultados} />}
 
           {!carregando &&
             resultados?.map((r) => <LinhaResultado key={r.id} resultado={r} />)}

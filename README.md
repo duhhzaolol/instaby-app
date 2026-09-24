@@ -1,4 +1,46 @@
-# Instaby App — v119
+# Instaby App — v120
+
+## Correção: valor investido importado do Meta vinha errado (10x maior)
+
+Bug real, confirmado com print seu comparando o app com o Gerenciador de Anúncios:
+uma campanha com **R$ 10,19** gastos aparecia no app como **R$ 1.019**. Causa: o
+relatório de campanhas do Meta exporta os números em formato internacional (ponto
+= casa decimal, ex: "10.19"), só que a função que eu tinha usado pra ler o arquivo
+foi copiada da importação antiga (relatório de redes sociais), que espera formato
+brasileiro (vírgula = casa decimal, ponto = milhar) — "10.19" virava "1019" por
+engano. Corrigido: a leitura agora distingue os dois formatos automaticamente.
+
+**Isso não exige nenhuma ação manual sua** — é só reimportar o mesmo arquivo de
+23/09 que você já subiu (ou qualquer um que tenha vindo com valor errado): como
+cada resultado é único por campanha + dia exato, reimportar **atualiza** o valor
+errado com o certo, não duplica.
+
+## Tráfego Pago: parte visual (KPIs + gráficos) refeita
+
+Você pediu pra deixar essa parte "mais legal", com números mais visíveis e
+gráfico melhor — troquei tudo. Dentro de "Resultados" de cada campanha agora tem:
+
+- **4 números grandes em destaque** (estilo "cartão de indicador"): total
+  investido, total de resultados, custo médio por resultado e impressões —
+  somando todos os períodos lançados/importados daquela campanha.
+- **Dois gráficos de área lado a lado** (em vez de um só com dois eixos, que
+  fica confuso de ler): "Custo por período" em vermelho (cor da marca) e
+  "Resultados por período" em verde-azulado — cada um com gradiente suave,
+  tooltip ao passar o mouse mostrando o valor exato do dia, e uma pequena
+  animação de entrada. Aparecem a partir de 2 lançamentos na campanha.
+
+Mantive a paleta preto/cinza/vermelho/branco da marca — as duas cores novas
+(vermelho de custo, verde-azulado de resultado) foram conferidas com um
+validador de contraste/daltonismo pra garantir que dá pra diferenciar uma da
+outra mesmo lado a lado. Isso é a mesma base visual que dá pra evoluir depois
+com mais animação, como você comentou que pretende ("essa plataforma que a
+gente está desenvolvendo") — a estrutura (KPIs + gráfico por card) já fica
+pronta pra crescer.
+
+Sem mudança de banco nessa versão — só correção de leitura de número e troca
+da parte visual.
+
+## v119
 
 ## Importar campanhas do Meta Ads automaticamente (Tráfego Pago)
 
