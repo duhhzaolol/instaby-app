@@ -61,6 +61,23 @@
   }
 }
 
+/* Mesma técnica do .animate-marquee (conteúdo duplicado 2x + translação contínua),
+   só que da direita pra esquerda — usada no carrossel de Álbuns da home. Mantida
+   separada da .animate-marquee original pra não mexer em nada que já está no ar. */
+@keyframes marquee-esquerda {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.animate-marquee-esquerda {
+  animation-name: marquee-esquerda;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
 @keyframes gentle-pulse {
   0%, 100% { opacity: 0.5; transform: scale(0.97); }
   50% { opacity: 1; transform: scale(1); }

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import SiteTextosForm from "./SiteTextosForm";
+import CinematicoForm from "./CinematicoForm";
 import ServicosForm from "./ServicosForm";
 import DiferenciaisForm from "./DiferenciaisForm";
 import ProcessoCtaForm from "./ProcessoCtaForm";
@@ -60,6 +61,23 @@ export default async function SiteConfigPage() {
             siteRodapeTexto: config?.siteRodapeTexto || null,
             siteCorTitulo: config?.siteCorTitulo || null,
             siteCorTexto: config?.siteCorTexto || null,
+          }}
+        />
+      </div>
+
+      <div>
+        <p className="mb-1 text-sm font-medium text-text">Abertura cinematográfica, pilares e álbuns</p>
+        <p className="mb-4 text-sm text-muted">
+          A animação da câmera na primeira tela, os 3 pilares em destaque logo depois (Tráfego Pago, Criação de
+          Conteúdo e Captação) e o cabeçalho da seção de álbuns.
+        </p>
+        <CinematicoForm
+          config={{
+            siteAberturaTitulo: config?.siteAberturaTitulo || null,
+            siteAberturaSubtitulo: config?.siteAberturaSubtitulo || null,
+            sitePilares: (config?.sitePilares as { nome: string; texto: string; indicadores?: { valor: string; legenda: string }[] }[] | null) || null,
+            siteAlbunsTitulo: config?.siteAlbunsTitulo || null,
+            siteAlbunsTexto: config?.siteAlbunsTexto || null,
           }}
         />
       </div>

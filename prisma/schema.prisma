@@ -498,6 +498,15 @@ model Configuracao {
   siteRodapeTexto       String? // frase institucional do rodapé
   siteCorTitulo         String? // hex, ex: "#FFFFFF" — cor dos títulos sobre os banners (Hero/Sobre/Contato final)
   siteCorTexto          String? // hex, ex: "#FFFFFF" — cor dos parágrafos/legendas sobre os banners
+  // Abertura cinematográfica (câmera) que roda antes do Hero, na home pública.
+  siteAberturaTitulo    String? // linha de impacto que aparece durante a animação de abertura
+  siteAberturaSubtitulo String? // linha de apoio, menor, embaixo do título da abertura
+  // Os 3 pilares em destaque logo após o Hero: [{"nome":..,"texto":..,"indicadores":[{"valor":..,"legenda":..}]}]
+  // Índice 0 = Tráfego Pago (carro-chefe, bloco maior — só ele usa "indicadores"), 1 = Criação de Conteúdo,
+  // 2 = Captação. Índice ausente/vazio usa o padrão embutido no código.
+  sitePilares           Json?
+  siteAlbunsTitulo      String? // título da seção de álbuns/portfólio (carrossel)
+  siteAlbunsTexto       String? // texto de apoio da seção de álbuns
   // Conteúdo editável da página de links (/link)
   linkBioIntroTexto     String?
   linkBioRodapeTexto    String?

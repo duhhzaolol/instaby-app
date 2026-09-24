@@ -15,8 +15,6 @@ import {
   Lightbulb,
   Smartphone,
   ArrowRight,
-  ArrowLeft,
-  ArrowUpRight,
   MessageCircle,
   CheckCircle2,
   Sparkles,
@@ -24,6 +22,10 @@ import {
   X,
   ChevronDown,
 } from "lucide-react";
+import { CinematicIntro } from "./CinematicIntro";
+import { PilaresCarroChefe } from "./PilaresCarroChefe";
+import { AlbunsCarrossel } from "./AlbunsCarrossel";
+import { ElementoFlutuante, SvgLenteMini, SvgTripeMini, SvgAneisMini, SvgAperturaMini } from "./FloatingGear";
 
 const ICONES_SERVICOS = [Instagram, Megaphone, Video, Film, LayoutTemplate, MapPin, Lightbulb, Smartphone];
 
@@ -52,10 +54,27 @@ const PROCESSO = [
   { passo: "04", titulo: "Acompanhamento", texto: "Relatórios periódicos e ajuste de rota conforme os resultados." },
 ];
 
+const PILARES_PADRAO: Pilar[] = [
+  {
+    nome: "Tráfego Pago",
+    texto:
+      "Campanhas no Meta Ads e Google Ads com estratégia, teste e otimização constante — o motor que traz cliente novo pro seu negócio todos os dias.",
+    indicadores: [],
+  },
+  {
+    nome: "Criação de Conteúdo",
+    texto: "Planejamento e produção de conteúdo com identidade — o que sua marca fala, mostra e posta no dia a dia.",
+  },
+  {
+    nome: "Captação",
+    texto: "Fotos e vídeos com direção e equipamento profissional — em estúdio ou externa, prontos pra virar conteúdo e campanha.",
+  },
+];
+
 const NAV = [
   { label: "Início", href: "#inicio" },
   { label: "Serviços", href: "#servicos" },
-  { label: "Portfólio", href: "#portfolio" },
+  { label: "Álbuns", href: "#portfolio" },
   { label: "Sobre", href: "#sobre" },
   { label: "Contato", href: "#contato" },
 ];
@@ -93,10 +112,27 @@ function partirTitulo(titulo: string, destaque?: string | null) {
   };
 }
 
+// Grade neon sutil, reaproveitada em algumas seções escuras pra dar continuidade
+// visual com a abertura cinematográfica (câmera) lá no topo.
+function GradeNeon() {
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-0 opacity-[0.06]"
+      style={{
+        backgroundImage:
+          "linear-gradient(rgba(230,57,70,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(230,57,70,0.6) 1px, transparent 1px)",
+        backgroundSize: "46px 46px",
+      }}
+    />
+  );
+}
+
 type Indicador = { valor: string; legenda: string };
 type ServicoOverride = { nome: string; descricao: string; destino: string };
 type DiferencialOverride = { titulo: string; texto: string };
 type Resultado = { valor: string; legenda: string };
+type Pilar = { nome: string; texto: string; indicadores?: Indicador[] };
 
 type CaseTrabalho = {
   id: string;
@@ -150,6 +186,11 @@ export function LandingPage({
   tiktok,
   linkedin,
   cases,
+  aberturaTitulo,
+  aberturaSubtitulo,
+  pilares,
+  albunsTitulo,
+  albunsTexto,
 }: {
   logos: { nome: string; logoUrl: string }[];
   depoimentos: { id: string; nomeCliente: string; texto: string }[];
@@ -188,9 +229,13 @@ export function LandingPage({
   tiktok?: string | null;
   linkedin?: string | null;
   cases?: CaseTrabalho[];
+  aberturaTitulo?: string | null;
+  aberturaSubtitulo?: string | null;
+  pilares?: Pilar[] | null;
+  albunsTitulo?: string | null;
+  albunsTexto?: string | null;
 }) {
   const [menuAberto, setMenuAberto] = useState(false);
-  const [destaqueAtual, setDestaqueAtual] = useState(0);
 
   const linkWhatsapp = whatsappAgencia
     ? `https://wa.me/${whatsappAgencia}?text=${encodeURIComponent("Olá! Vim pelo site da Instaby e queria saber mais sobre os serviços.")}`
@@ -223,6 +268,12 @@ export function LandingPage({
     texto: diferenciais?.[i]?.texto || padrao.texto,
   }));
 
+  const pilaresFinal: Pilar[] = PILARES_PADRAO.map((padrao, i) => ({
+    nome: pilares?.[i]?.nome || padrao.nome,
+    texto: pilares?.[i]?.texto || padrao.texto,
+    indicadores: pilares?.[i]?.indicadores?.length ? pilares![i].indicadores : padrao.indicadores,
+  }));
+
   const textoSobre =
     sobreTexto ||
     "A Instaby nasceu em Araras, SP, com um jeito direto de trabalhar: entender o negócio do cliente antes de qualquer criativo ou campanha, e acompanhar de perto cada resultado. Cuidamos de social media, tráfego pago, produção de vídeo e presença digital — sempre com a estratégia guiando a execução.";
@@ -238,22 +289,14 @@ export function LandingPage({
   const ctaTextoFinal = ctaTexto || "Conta um pouco sobre seu negócio e a gente te mostra como pode ajudar.";
   const ctaBotaoTextoFinal = ctaBotaoTexto || "Chamar no WhatsApp";
 
-  const casesDestaque = (cases || []).filter((c) => c.destaque && c.imagemUrl);
-  const casesNormais = (cases || []).filter((c) => !c.destaque);
   const temSociais = instagram || youtube || tiktok || linkedin;
-
-  const destaqueAtivo = casesDestaque[destaqueAtual] || null;
-
-  function irParaDestaque(dir: "prev" | "next") {
-    if (casesDestaque.length < 2) return;
-    setDestaqueAtual((i) => {
-      if (dir === "next") return (i + 1) % casesDestaque.length;
-      return (i - 1 + casesDestaque.length) % casesDestaque.length;
-    });
-  }
+  const linkContatoPilar = linkWhatsapp || "#contato";
 
   return (
     <div className="min-h-screen bg-base text-text">
+      {/* Abertura cinematográfica — a câmera aproxima conforme rola, "entra na lente" e revela o Hero */}
+      <CinematicIntro titulo={aberturaTitulo} subtitulo={aberturaSubtitulo} />
+
       {/* Cabeçalho */}
       <header className="sticky top-0 z-40 border-b border-border/60 bg-base/85 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
@@ -342,6 +385,8 @@ export function LandingPage({
             style={{ background: "radial-gradient(ellipse at top left, rgba(230,57,70,0.25), transparent 65%), #0d0d0f" }}
           />
         )}
+        {/* linha de brilho no topo — ecoa o flash da abertura */}
+        <div className="absolute inset-x-0 top-0 z-10 h-px bg-gradient-to-r from-transparent via-accent/70 to-transparent" />
 
         <div className="relative z-10 mx-auto flex min-h-[560px] max-w-6xl flex-col justify-center gap-5 px-6 py-20 sm:min-h-[680px] sm:py-28">
           <div className="max-w-xl">
@@ -429,25 +474,29 @@ export function LandingPage({
         </motion.a>
       </section>
 
-      {/* Serviços — organização compacta, sem depender de foto */}
-      <section id="servicos" className="bg-[#0b0b0d] px-6 py-16">
-        <div className="mx-auto max-w-6xl">
+      {/* Pilares — os 3 carros-chefe, Tráfego Pago em destaque */}
+      <PilaresCarroChefe pilares={pilaresFinal} linkContato={linkContatoPilar} />
+
+      {/* Serviços — o restante do que a Instaby faz, sem depender de foto */}
+      <section id="servicos" className="relative overflow-hidden bg-[#0b0b0d] px-6 py-16">
+        <GradeNeon />
+        <ElementoFlutuante className="right-[5%] top-[10%] hidden lg:block" duracao={8}>
+          <SvgLenteMini className="h-12 w-12" />
+        </ElementoFlutuante>
+        <div className="relative mx-auto max-w-6xl">
           <div className="mb-8 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-end">
             <div>
               <motion.p {...fadeUp()} className="mb-2 text-xs font-medium uppercase tracking-wider text-accent">
-                Serviços
+                E também
               </motion.p>
               <motion.h2 {...fadeUp(0.05)} className="text-2xl font-semibold sm:text-3xl">
-                O que a Instaby faz por você
+                Tudo o que sua marca precisa, num só lugar
               </motion.h2>
             </div>
             <motion.div {...fadeUp(0.1)} className="max-w-xs sm:text-right">
               <p className="mb-2 text-xs leading-relaxed text-muted">
-                Tudo o que seu negócio precisa pra se destacar no digital, em um só lugar.
+                Do planejamento à execução — cada serviço pensado pra somar com os outros, não pra funcionar sozinho.
               </p>
-              <a href="#servicos" className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline">
-                Ver todos os serviços <ArrowRight size={12} />
-              </a>
             </motion.div>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -475,6 +524,9 @@ export function LandingPage({
 
       {/* Quem somos — mesmo tratamento do Hero: banner de ponta a ponta, texto por cima */}
       <section id="sobre" className="relative w-full overflow-hidden">
+        <ElementoFlutuante className="left-[4%] top-[14%] hidden lg:block" duracao={9} delay={0.4}>
+          <SvgTripeMini className="text-white/10" />
+        </ElementoFlutuante>
         {sobreImagemUrl ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -516,7 +568,7 @@ export function LandingPage({
             </div>
           </>
         ) : (
-          <div className="mx-auto max-w-4xl px-6 py-16 text-center sm:py-20">
+          <div className="relative mx-auto max-w-4xl px-6 py-16 text-center sm:py-20">
             <motion.p {...fadeUp()} className="mb-3 text-xs font-medium uppercase tracking-wider text-accent">
               Quem somos
             </motion.p>
@@ -553,161 +605,14 @@ export function LandingPage({
         </div>
       </section>
 
-      {/* Portfólio */}
-      <section id="portfolio" className="bg-base px-6 py-16">
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-8 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-end">
-            <div>
-              <motion.p {...fadeUp()} className="mb-2 text-xs font-medium uppercase tracking-wider text-accent">
-                Portfólio
-              </motion.p>
-              <motion.h2 {...fadeUp(0.05)} className="text-2xl font-semibold sm:text-3xl">
-                Trabalhos que falam por nós.
-              </motion.h2>
-            </div>
-            <motion.div {...fadeUp(0.1)} className="max-w-xs sm:text-right">
-              <p className="mb-2 text-xs leading-relaxed text-muted">
-                Cada projeto é uma parceria. Mais que posts, entregamos posicionamento, conteúdo e resultado.
-              </p>
-              <a href="#portfolio" className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline">
-                Ver todos os cases <ArrowRight size={12} />
-              </a>
-            </motion.div>
-          </div>
-
-          {casesDestaque.length === 0 && casesNormais.length === 0 ? (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              {[1, 2, 3].map((i) => (
-                <motion.div
-                  key={i}
-                  {...fadeUp(i * 0.05)}
-                  className="flex aspect-[4/5] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-card/30 text-center"
-                >
-                  <Video size={20} className="text-muted/50" />
-                  <p className="px-6 text-xs text-muted/60">Em breve</p>
-                </motion.div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col gap-4">
-              {destaqueAtivo && (
-                <motion.div {...fadeUp()} className="relative overflow-hidden rounded-2xl border border-border">
-                  <Link href={destaqueAtivo.link ? "#" : `/portfolio/${destaqueAtivo.id}`} onClick={(e) => destaqueAtivo.link && e.preventDefault()}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={destaqueAtivo.imagemUrl!}
-                      alt={destaqueAtivo.nome}
-                      className="aspect-[16/7] w-full object-cover"
-                      style={{ objectPosition: destaqueAtivo.imagemFoco || "50% 50%" }}
-                    />
-                  </Link>
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent" />
-                  <div className="absolute bottom-0 left-0 max-w-md p-6">
-                    <p className="mb-1 text-xl font-semibold text-white">{destaqueAtivo.nome}</p>
-                    {destaqueAtivo.categoria && <p className="mb-2 text-[11px] tracking-wide text-white/70">{destaqueAtivo.categoria}</p>}
-                    {destaqueAtivo.descricao && <p className="mb-4 text-sm text-white/80">{destaqueAtivo.descricao}</p>}
-                    {destaqueAtivo.link ? (
-                      <a
-                        href={destaqueAtivo.link}
-                        target="_blank"
-                        className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-xs font-medium text-black"
-                      >
-                        {destaqueAtivo.botaoTexto || "Ver case completo"} <ArrowUpRight size={13} />
-                      </a>
-                    ) : (
-                      <Link
-                        href={`/portfolio/${destaqueAtivo.id}`}
-                        className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-xs font-medium text-black"
-                      >
-                        {destaqueAtivo.botaoTexto || "Ver case completo"} <ArrowUpRight size={13} />
-                      </Link>
-                    )}
-                  </div>
-
-                  {destaqueAtivo.resultados && destaqueAtivo.resultados.length > 0 && (
-                    <div className="absolute right-4 top-4 flex flex-col gap-2 rounded-xl bg-black/50 p-3 backdrop-blur">
-                      {destaqueAtivo.resultados.slice(0, 3).map((r, i) => (
-                        <div key={i} className="text-right">
-                          <p className="text-base font-semibold text-white">{r.valor}</p>
-                          <p className="text-[10px] text-white/60">{r.legenda}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {casesDestaque.length > 1 && (
-                    <div className="absolute bottom-4 right-4 flex items-center gap-2 rounded-full bg-black/50 px-2 py-1 backdrop-blur">
-                      <button onClick={() => irParaDestaque("prev")} className="flex h-6 w-6 items-center justify-center rounded-full text-white/80 hover:text-white">
-                        <ArrowLeft size={12} />
-                      </button>
-                      <span className="text-[10px] text-white/70">
-                        {String(destaqueAtual + 1).padStart(2, "0")}/{String(casesDestaque.length).padStart(2, "0")}
-                      </span>
-                      <button onClick={() => irParaDestaque("next")} className="flex h-6 w-6 items-center justify-center rounded-full text-white/80 hover:text-white">
-                        <ArrowRight size={12} />
-                      </button>
-                    </div>
-                  )}
-                </motion.div>
-              )}
-
-              {casesNormais.length > 0 && (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                  {casesNormais.map((c, i) => {
-                    const destino = c.link || `/portfolio/${c.id}`;
-                    const externo = !!c.link;
-                    const item = (
-                      <motion.div
-                        {...fadeUp(i * 0.05)}
-                        className="group relative aspect-square overflow-hidden rounded-2xl border border-border bg-card/30"
-                      >
-                        {c.imagemUrl ? (
-                          <>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={c.imagemUrl}
-                              alt={c.nome}
-                              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.05]"
-                              style={{ objectPosition: c.imagemFoco || "50% 50%" }}
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
-                            <div className="absolute bottom-0 left-0 flex w-full items-end justify-between p-4">
-                              <div>
-                                <p className="text-sm font-medium text-white">{c.nome}</p>
-                                {c.categoria && <p className="text-[10px] text-white/70">{c.categoria}</p>}
-                              </div>
-                              <ArrowUpRight size={14} className="shrink-0 text-white/70" />
-                            </div>
-                          </>
-                        ) : (
-                          <div className="flex h-full flex-col items-center justify-center gap-1">
-                            <p className="text-sm font-medium text-text">{c.nome}</p>
-                            {c.categoria && <p className="text-[10px] text-muted">{c.categoria}</p>}
-                          </div>
-                        )}
-                      </motion.div>
-                    );
-                    return externo ? (
-                      <a key={c.id} href={destino} target="_blank">
-                        {item}
-                      </a>
-                    ) : (
-                      <Link key={c.id} href={destino}>
-                        {item}
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </section>
+      {/* Álbuns — carrossel deslizante contínuo, reaproveitando o Portfólio já cadastrado */}
+      <AlbunsCarrossel cases={cases || []} titulo={albunsTitulo} texto={albunsTexto} />
 
       {/* Clientes / depoimentos */}
       {(logos.length > 0 || depoimentos.length > 0) && (
-        <section className="bg-[#0b0b0d] px-6 py-16">
-          <div className="mx-auto max-w-6xl">
+        <section className="relative overflow-hidden bg-[#0b0b0d] px-6 py-16">
+          <GradeNeon />
+          <div className="relative mx-auto max-w-6xl">
             <motion.p {...fadeUp()} className="mb-3 text-center text-xs font-medium uppercase tracking-wider text-accent">
               Clientes
             </motion.p>
@@ -749,10 +654,13 @@ export function LandingPage({
 
       {/* Processo de trabalho — faixa vermelha escura */}
       <section
-        className="px-6 py-16"
+        className="relative overflow-hidden px-6 py-16"
         style={{ background: "linear-gradient(135deg, #3a0a0f, #1a0507 60%, #0d0304)" }}
       >
-        <div className="mx-auto max-w-6xl">
+        <ElementoFlutuante className="right-[6%] bottom-[10%] hidden lg:block" duracao={10} delay={0.5}>
+          <SvgAperturaMini className="h-16 w-16 text-white/10" />
+        </ElementoFlutuante>
+        <div className="relative mx-auto max-w-6xl">
           <div className="mb-12 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
             <div>
               <motion.p {...fadeUp()} className="mb-2 text-xs font-medium uppercase tracking-wider text-amber-400">
@@ -790,6 +698,9 @@ export function LandingPage({
 
       {/* Contato final — banner de fundo, texto e botão por cima */}
       <section id="contato" className="relative w-full overflow-hidden">
+        <ElementoFlutuante className="right-[6%] top-[16%] hidden lg:block" duracao={8.5} delay={0.7}>
+          <SvgAneisMini className="h-10 w-10" />
+        </ElementoFlutuante>
         {ctaImagemUrl ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -842,7 +753,8 @@ export function LandingPage({
       </section>
 
       {/* Rodapé */}
-      <footer className="px-6 py-10">
+      <footer className="relative px-6 py-10">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
         <div className="mx-auto flex max-w-6xl flex-col gap-6">
           <div className="flex flex-col items-center justify-between gap-5 sm:flex-row sm:items-start">
             {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -1,4 +1,59 @@
-# Instaby App — v123
+# Instaby App — v124
+
+## Landing page cinematográfica — a reforma completa do site público
+
+A reforma da sua LP, do jeito que você descreveu: abertura com câmera, os 3
+carros-chefe em destaque, álbuns num carrossel dinâmico, e o site inteiro com
+uma pegada mais neon/vermelha. Antes de montar, te chamei pra fechar 4 pontos
+(álbuns reaproveitando o Portfólio de hoje, câmera ilustrada em vez de esperar
+foto, reforma do site inteiro, e Tráfego Pago com destaque maior) — segue
+exatamente essas escolhas.
+
+**Abertura com a câmera.** Antes de tudo, uma tela cheia que fica "grudada" na
+tela enquanto você rola — a câmera (ilustração vetorial, inspirada na sua
+ZV-E10 II com a Tamron 17-70, estilo minimalista/neon, com o anel vermelho da
+marca) cresce e se aproxima, até a tela clarear e revelar o Hero por trás — a
+sensação de "entrar na lente" que você pediu. Título e subtítulo dessa tela são
+editáveis (Configurações → Site). Como você não mandou foto de referência,
+usei uma ilustração própria; se quiser me mandar fotos reais da sua câmera
+depois, eu troco a ilustração por elas sem mexer no resto da animação. É tudo
+feito com o framer-motion que o projeto já usa (scroll-linked) — nada de
+biblioteca 3D nova, que eu não conseguiria instalar aqui.
+
+**Os 3 carros-chefe, logo depois do Hero.** Tráfego Pago em bloco grande,
+com espaço pra números/resultados (edite em Configurações → Site — até 3
+indicadores tipo "+120 / campanhas ativas"), e Criação de Conteúdo + Captação
+ao lado, menores. Fotos em estúdio e o resto dos serviços continuam na grade
+completa de Serviços, logo em seguida — só não vêm primeiro, como você pediu.
+
+**Álbuns.** Reaproveita 100% o que você já cadastra em Configurações → Site →
+Portfólio (mesmos cases, capa, categoria, resultados) — só mudei a forma como
+aparece: um banner que desliza sozinho, contínuo, estilo Netflix (passa
+devagar, para quando o mouse passa por cima, cada card continua clicável).
+Cadastrou um trabalho novo lá, ele já entra no carrossel automaticamente —
+nada fixo no código.
+
+**O resto do site.** Deixei tudo com a mesma pegada nova: câmeras/lentes/tripés
+flutuando discretamente em algumas seções (Serviços, Sobre, Processo, Contato),
+uma textura sutil de grade neon nos fundos escuros, e alguns brilhos vermelhos
+a mais nos cartões e botões — sem mexer na lógica de banners/imagens
+configuráveis que já funcionava (Hero, Sobre, Contato final continuam exatamente
+como você já configura hoje).
+
+**Tudo conectado nas Configurações**, como você pediu — nova seção
+"Abertura cinematográfica, pilares e álbuns" dentro de Configurações → Site,
+com: título/subtítulo da abertura, nome/texto dos 3 pilares (+ indicadores do
+Tráfego Pago), e título/texto da seção de álbuns. Se algum texto ficar ruim ou
+a cor não bater, você mexe por lá — sem precisar mexer em código. 5 campos
+novos no banco, todos opcionais (nada quebra se ficarem vazios — o site usa
+texto padrão até você preencher).
+
+Não toquei no painel administrativo nessa rodada, só no site público (`/`) e
+na tela de Configurações → Site. Quando quiser seguir com o resto do redesign
+do painel (Financeiro, Comercial, Tráfego Pago, Tarefas, Agenda, Horas), é só
+falar.
+
+## v123
 
 ## Repaginação visual — Clientes (lista + Visão Geral)
 

@@ -63,6 +63,11 @@ export default async function Home() {
       youtube={config?.linkBioYoutube || null}
       tiktok={config?.linkBioTiktok || null}
       linkedin={config?.linkBioLinkedin || null}
+      aberturaTitulo={config?.siteAberturaTitulo || null}
+      aberturaSubtitulo={config?.siteAberturaSubtitulo || null}
+      pilares={(config?.sitePilares as { nome: string; texto: string; indicadores?: { valor: string; legenda: string }[] }[] | null) || null}
+      albunsTitulo={config?.siteAlbunsTitulo || null}
+      albunsTexto={config?.siteAlbunsTexto || null}
       cases={cases.map((c) => ({
         id: c.id,
         nome: c.nome,
