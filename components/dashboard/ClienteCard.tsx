@@ -1,17 +1,17 @@
 import Link from "next/link";
-import { Phone } from "lucide-react";
+import { Phone, Wallet, TrendingUp } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { ValorOcultavelTexto } from "@/components/ui/ValorOcultavelTexto";
 
-const statusTone: Record<string, "yellow" | "green" | "gray" | "blue"> = {
+export const statusTone: Record<string, "yellow" | "green" | "gray" | "blue"> = {
   lead: "yellow",
   ativo: "green",
   avulso: "blue",
   inativo: "gray",
 };
 
-const statusLabel: Record<string, string> = {
+export const statusLabel: Record<string, string> = {
   lead: "Lead",
   ativo: "Ativo",
   avulso: "Avulso",
@@ -45,10 +45,14 @@ export function ClienteCard({ cliente, index }: { cliente: ClienteCardData; inde
           <div className="flex items-center gap-3">
             {c.logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={c.logoUrl} alt={c.nome} className="h-10 w-10 rounded-xl object-cover" />
+              <img
+                src={c.logoUrl}
+                alt={c.nome}
+                className="h-10 w-10 rounded-xl object-cover ring-1 ring-white/10"
+              />
             ) : (
               <div
-                className="flex h-10 w-10 items-center justify-center rounded-xl text-sm font-semibold"
+                className="flex h-10 w-10 items-center justify-center rounded-xl text-sm font-semibold ring-1 ring-white/10"
                 style={{ backgroundColor: `${c.cor || "#E63946"}1A`, color: c.cor || "#E63946" }}
               >
                 {iniciais}
@@ -69,7 +73,9 @@ export function ClienteCard({ cliente, index }: { cliente: ClienteCardData; inde
         {(c.mensalidade > 0 || c.totalRecebido > 0) && (
           <div className="grid grid-cols-2 gap-2 border-t border-border pt-3">
             <div>
-              <p className="text-xs text-muted">Mensalidade</p>
+              <p className="mb-0.5 flex items-center gap-1 text-[11px] text-muted">
+                <Wallet size={10} /> Mensalidade
+              </p>
               <p className="text-sm font-medium text-text">
                 {c.mensalidade > 0 ? (
                   <ValorOcultavelTexto>R$ {c.mensalidade.toLocaleString("pt-BR")}</ValorOcultavelTexto>
@@ -79,8 +85,10 @@ export function ClienteCard({ cliente, index }: { cliente: ClienteCardData; inde
               </p>
             </div>
             <div>
-              <p className="text-xs text-muted">Recebido até agora</p>
-              <p className="text-sm font-medium text-text">
+              <p className="mb-0.5 flex items-center gap-1 text-[11px] text-muted">
+                <TrendingUp size={10} /> Recebido até agora
+              </p>
+              <p className="text-sm font-medium text-emerald-400">
                 <ValorOcultavelTexto>R$ {c.totalRecebido.toLocaleString("pt-BR")}</ValorOcultavelTexto>
               </p>
             </div>

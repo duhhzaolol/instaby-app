@@ -130,6 +130,31 @@ export default async function ClienteDetalhePage({
 
   const ultimoRelatorio = cliente.relatorios[0];
 
+  // Faturamento dos últimos 6 meses desse cliente — mesmo cálculo/formato do gráfico
+  // já usado no Dashboard geral, só que filtrado pra este cliente (cobrancas já vêm
+  // com todo o histórico, sem filtro de data, então dá pra agrupar em JS direto).
+  const inicioMesesAtrasCliente = (n: number) => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth() - n, 1);
+  };
+  const baldesFaturamento: { chave: string; mes: string; valor: number }[] = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = inicioMesesAtrasCliente(i);
+    baldesFaturamento.push({
+      chave: `${d.getFullYear()}-${d.getMonth()}`,
+      mes: d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", ""),
+      valor: 0,
+    });
+  }
+  cliente.cobrancas
+    .filter((c) => c.status === "pago")
+    .forEach((c) => {
+      const chave = `${c.createdAt.getFullYear()}-${c.createdAt.getMonth()}`;
+      const balde = baldesFaturamento.find((b) => b.chave === chave);
+      if (balde) balde.valor += Number(c.valor);
+    });
+  const faturamentoPorMes = baldesFaturamento.map((b) => ({ mes: b.mes, valor: b.valor }));
+
   type EventoTimeline = { texto: string; data: Date; tipo: string };
   const timeline: EventoTimeline[] = [
     ...cliente.cobrancas
@@ -238,6 +263,7 @@ export default async function ClienteDetalhePage({
           proximaAtividade={proximaAtividade ? { titulo: proximaAtividade.titulo, prazo: proximaAtividade.prazo?.toISOString() || null } : null}
           situacaoRelatorio={ultimoRelatorio ? new Date(ultimoRelatorio.fim).toLocaleDateString("pt-BR") : null}
           timeline={timeline.map((t) => ({ texto: t.texto, data: t.data.toISOString(), tipo: t.tipo }))}
+          faturamentoPorMes={faturamentoPorMes}
         />
       )}
 

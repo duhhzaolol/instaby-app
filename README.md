@@ -1,4 +1,44 @@
-# Instaby App — v122
+# Instaby App — v123
+
+## Repaginação visual — Clientes (lista + Visão Geral)
+
+Segunda tela repaginada, na sequência da Visão Geral (Dashboard, v121). Dessa vez:
+tela de Clientes (lista) e a aba "Visão Geral" de dentro de cada cliente.
+
+**Lista de Clientes.** Cartão de cada cliente ganhou ícones nos números
+(mensalidade/recebido), o "Recebido até agora" destacado em verde, e um contorno
+sutil no avatar/logo. Os grupos por status (Ativos/Avulsos/Leads/Inativos) agora
+abrem e fecham com uma animação suave em vez de aparecer/sumir seco, e cada grupo
+mostra a contagem num selo colorido (verde pra Ativos, azul Avulsos, amarelo
+Leads, cinza Inativos — mesma cor do status). As abas de filtro no topo ganharam
+a contagem ao lado do nome (ex: "Ativo (12)"). Novo: um resumo de 3 números
+grandes no topo da tela — Ativos, Mensalidade recorrente (soma dos clientes
+ativos) e Leads em aberto — pro "bate o olho e já sabe como tá" que você pediu.
+
+**Visão Geral do cliente.** Os 4 números do topo (Mensalidade/Próxima
+cobrança/Contrato/Horas) agora usam o mesmo cartão com ícone colorido e entrada
+animada que já existe no Tráfego Pago. Novo gráfico "Faturamento — últimos 6
+meses" desse cliente específico (mesmo estilo do gráfico do Dashboard geral,
+agora por cliente). "Resultado do mês" e as outras seções ganharam uma entrada
+suave ao abrir a aba, e a linha do tempo ganhou ícones com fundo colorido por
+tipo de evento (pagamento/contrato/proposta) em vez de só um ícone cinza.
+
+Não mexi no fluxo de arrastar-pra-mudar-status pra Clientes dessa vez —
+diferente de Tarefas (onde arrastar só muda um "onde isso está no meu dia"),
+mudar o status de um cliente mexe em faturamento/relatórios, então preferi
+manter isso só pelo formulário de editar por enquanto. Se você quiser esse
+comportamento de arrastar entre colunas (tipo Leads → Ativo) também aqui, com
+uma confirmação antes de mudanças mais sensíveis (ex: virar Inativo), eu
+implemento como próximo passo — é só falar. Também não toquei nos outros 12
+formulários/abas de dentro do cliente (Contatos, Links, Onboarding,
+Solicitações, Serviços, Relatórios, Financeiro, Orçamentos, Contratos, Horas,
+Tráfego Pago) — ficam pra uma rodada futura.
+
+Dois componentes novos e reutilizáveis (`StatTile` e `AreaTrendChart`), pra as
+próximas telas do redesign reaproveitarem em vez de eu recriar o mesmo cartão
+de novo a cada tela. Sem mudança de banco.
+
+## v122
 
 ## Tráfego Pago: totais corrigidos pro seu fluxo real de exportação + Retorno (ROI)
 

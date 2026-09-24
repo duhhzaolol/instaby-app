@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, UserCheck, Wallet, UserPlus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { ToggleOcultarValores } from "@/components/ui/ToggleOcultarValores";
+import { ValorOcultavelTexto } from "@/components/ui/ValorOcultavelTexto";
 import { Button } from "@/components/ui/Button";
+import { StatTile } from "@/components/ui/StatTile";
 import { ClienteCard, ClienteCardData } from "@/components/dashboard/ClienteCard";
 import { ClientesAgrupados } from "@/components/dashboard/ClientesAgrupados";
 import { AjudaContextual } from "@/components/ui/AjudaContextual";
@@ -60,6 +62,13 @@ export default async function ClientesPage({
     { chave: "inativo", titulo: "Inativos", clientes: clientesFormatados.filter((c) => c.status === "inativo") },
   ];
 
+  const contagemPorStatus: Record<string, number> = {};
+  for (const c of clientesFormatados) contagemPorStatus[c.status] = (contagemPorStatus[c.status] || 0) + 1;
+
+  const mensalidadeRecorrente = clientesFormatados
+    .filter((c) => c.status === "ativo")
+    .reduce((soma, c) => soma + c.mensalidade, 0);
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
@@ -84,6 +93,18 @@ export default async function ClientesPage({
         </div>
       </div>
 
+      <div className="mb-6 grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <StatTile Icon={UserCheck} cor="#22C55E" label="Ativos" valor={contagemPorStatus.ativo || 0} index={0} />
+        <StatTile
+          Icon={Wallet}
+          cor="#E63946"
+          label="Mensalidade recorrente"
+          valor={<ValorOcultavelTexto>R$ {mensalidadeRecorrente.toLocaleString("pt-BR")}</ValorOcultavelTexto>}
+          index={1}
+        />
+        <StatTile Icon={UserPlus} cor="#F59E0B" label="Leads em aberto" valor={contagemPorStatus.lead || 0} index={2} />
+      </div>
+
       <div className="mb-6 flex gap-2">
         {abas.map((a) => (
           <Link
@@ -96,6 +117,7 @@ export default async function ClientesPage({
             }`}
           >
             {a.label}
+            {a.valor !== "todos" && contagemPorStatus[a.valor] ? ` (${contagemPorStatus[a.valor]})` : ""}
           </Link>
         ))}
       </div>
