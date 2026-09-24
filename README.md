@@ -1,4 +1,52 @@
-# Instaby App — v118
+# Instaby App — v119
+
+## Importar campanhas do Meta Ads automaticamente (Tráfego Pago)
+
+Em **Tráfego Pago** (tela geral ou na aba do cliente) tem um novo botão
+**"Importar do Meta Ads"**. Você exporta um CSV ou Excel direto do
+Gerenciador de Anúncios (Relatórios → Exportar) e joga o arquivo lá:
+
+- Campanhas cujo **nome bate exatamente** com uma já cadastrada são
+  atualizadas.
+- Campanhas que não reconhece são **criadas automaticamente**, com o nome
+  exato do Meta, plataforma "Meta Ads" e status conforme "Veiculação da
+  campanha" (ativa/pausada) — sem precisar cadastrar na mão antes.
+- Pra cada campanha, o período do relatório (Início/Encerramento) vira um
+  registro em **Resultados**, com verba gasta, impressões, alcance e
+  resultados (+ o texto que o Meta usa pra explicar o que "resultados"
+  significa naquela campanha, ex: "Conversas por mensagem iniciadas").
+
+**Sobre reimportar sem duplicar** (o ponto que você levantou): cada
+resultado é único por campanha + período exato (início e fim). Reimportar
+o **mesmo período exato** atualiza em vez de duplicar. Só que o Meta, por
+padrão, exporta sempre "os últimos 30 dias" — um período que desliza a
+cada exportação — então duas exportações em dias diferentes têm períodos
+diferentes que se sobrepõem, e cada uma vira um registro separado (soma
+errada se você olhar o total).
+
+A solução é exportar com o detalhamento **"Dia"** ativado (no Gerenciador
+de Anúncios, ao lado de "Exportar" tem a opção de agrupar por dia): aí
+cada linha do arquivo vira um dia específico, e reimportar — mesmo com
+exportações que se sobrepõem — nunca conta o mesmo dia duas vezes, porque
+cada dia é seu próprio período único. O app detecta automaticamente se o
+arquivo está nesse formato e avisa na tela se não estiver. Com
+detalhamento por dia você também ganha o **gráfico de custo x resultados
+ao longo do tempo** que aparece dentro de "Resultados" de cada campanha
+assim que tiver pelo menos 2 lançamentos — funciona tanto com dados
+importados quanto lançados na mão.
+
+Cliques não vêm nesse tipo de relatório do Meta (só em outros formatos) —
+por isso a importação não mexe no campo "cliques" de um resultado que já
+tinha esse dado lançado manualmente, só atualiza o que o arquivo realmente
+traz.
+
+Banco: `ResultadoCampanha` ganhou `alcance`, `indicadorResultado`, `origem`
+("manual" ou "meta_import") e uma restrição de unicidade em
+(campanha, início, fim) — tudo aditivo. Lançamento manual de resultado
+também passou a funcionar como "atualizar se já existir" pro mesmo
+período, em vez de dar erro de duplicidade.
+
+## v118
 
 ## Resumo de cobrança em PDF, pra enviar pro cliente atrasado (ou qualquer um)
 

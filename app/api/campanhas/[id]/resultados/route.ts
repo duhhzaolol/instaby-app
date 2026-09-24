@@ -38,8 +38,25 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
   const numOuNulo = (v: any) => (v === "" || v === undefined || v === null ? null : Number(v));
 
-  const resultado = await prisma.resultadoCampanha.create({
-    data: {
+  // upsert em vez de create puro: se já existe um resultado importado do Meta pro mesmo
+  // período (campanhaId, inicio, fim), lançar manualmente aqui atualiza em vez de dar erro
+  const resultado = await prisma.resultadoCampanha.upsert({
+    where: {
+      campanhaId_inicio_fim: {
+        campanhaId: params.id,
+        inicio: new Date(body.inicio),
+        fim: new Date(body.fim),
+      },
+    },
+    update: {
+      verbaInvestida: numOuNulo(body.verbaInvestida),
+      impressoes: numOuNulo(body.impressoes),
+      cliques: numOuNulo(body.cliques),
+      resultados: numOuNulo(body.resultados),
+      observacoes: body.observacoes || null,
+      origem: "manual",
+    },
+    create: {
       campanhaId: params.id,
       inicio: new Date(body.inicio),
       fim: new Date(body.fim),
@@ -48,6 +65,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       cliques: numOuNulo(body.cliques),
       resultados: numOuNulo(body.resultados),
       observacoes: body.observacoes || null,
+      origem: "manual",
     },
   });
 

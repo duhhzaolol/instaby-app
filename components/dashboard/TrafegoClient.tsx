@@ -7,6 +7,7 @@ import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { Card } from "@/components/ui/Card";
 import ResultadosCampanha from "@/components/dashboard/ResultadosCampanha";
+import ImportarCampanhasMeta from "@/components/dashboard/ImportarCampanhasMeta";
 
 type Cliente = { id: string; nome: string; cor: string | null };
 
@@ -376,6 +377,8 @@ export default function TrafegoClient({
 
   return (
     <div>
+      <ImportarCampanhasMeta clientes={clientes} clienteFixo={clienteFixo} />
+
       <div className="mb-4">
         <button
           onClick={() => setFormAberto((v) => !v)}

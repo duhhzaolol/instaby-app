@@ -422,21 +422,30 @@ model Campanha {
   resultados ResultadoCampanha[]
 }
 
-// Resultado de campanha — lançado manualmente pelo gestor de tráfego (fase 3 do módulo).
-// Não vem de integração com Meta/Google Ads (isso é outro projeto de aprovação de API),
-// é só o registro do que ele mesmo olha no painel de anúncios e digita aqui.
+// Resultado de campanha — lançado manualmente pelo gestor de tráfego (fase 3 do módulo)
+// OU importado automaticamente do export CSV/Excel do Gerenciador de Anúncios do Meta
+// (v119). O par (campanhaId, inicio, fim) é único: reimportar o mesmo período atualiza
+// em vez de duplicar — por isso é importante exportar do Meta com o detalhamento "Dia"
+// (cada linha vira inicio=fim=aquele dia), senão períodos com datas sobrepostas (ex: o
+// "últimos 30 dias" padrão do Meta, exportado de novo alguns dias depois) não deduplicam
+// entre si — só a reexportação exata do mesmo período é substituída.
 model ResultadoCampanha {
-  id             String    @id @default(uuid())
-  campanhaId     String
-  campanha       Campanha  @relation(fields: [campanhaId], references: [id])
-  inicio         DateTime
-  fim            DateTime
-  verbaInvestida Decimal?
-  impressoes     Int?
-  cliques        Int?
-  resultados     Int? // leads/vendas/conversões — o que contar depende do objetivo da campanha
-  observacoes    String?
-  createdAt      DateTime  @default(now())
+  id                String    @id @default(uuid())
+  campanhaId        String
+  campanha          Campanha  @relation(fields: [campanhaId], references: [id])
+  inicio            DateTime
+  fim               DateTime
+  verbaInvestida    Decimal?
+  impressoes        Int?
+  alcance           Int?
+  cliques           Int?
+  resultados        Int? // leads/vendas/conversões — o que contar depende do objetivo da campanha
+  indicadorResultado String? // texto do Meta explicando o que "resultados" significa aqui (ex: "Conversas por mensagem iniciadas")
+  origem            String    @default("manual") // manual | meta_import
+  observacoes       String?
+  createdAt         DateTime  @default(now())
+
+  @@unique([campanhaId, inicio, fim])
 }
 
 // Depoimentos fixos — aparecem em toda página de orçamento

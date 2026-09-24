@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp, Plus, X, Check, Trash2, Pencil, TrendingUp } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { DatePicker } from "@/components/ui/DatePicker";
 
@@ -12,8 +13,11 @@ type Resultado = {
   fim: string;
   verbaInvestida: number | null;
   impressoes: number | null;
+  alcance: number | null;
   cliques: number | null;
   resultados: number | null;
+  indicadorResultado: string | null;
+  origem: string;
   observacoes: string | null;
 };
 
@@ -250,9 +254,14 @@ function LinhaResultado({ resultado }: { resultado: Resultado }) {
           {resultado.impressoes != null && ` · ${fmt(resultado.impressoes)} impressões`}
           {resultado.cliques != null && ` · ${fmt(resultado.cliques)} cliques`}
           {ctr && ` (CTR ${ctr}%)`}
+          {resultado.alcance != null && ` · ${fmt(resultado.alcance)} alcance`}
           {resultado.resultados != null && ` · ${fmt(resultado.resultados)} resultados`}
           {custoPorResultado && ` · R$ ${custoPorResultado.toFixed(2)}/resultado`}
+          {resultado.origem === "meta_import" && " · importado do Meta"}
         </p>
+        {resultado.indicadorResultado && (
+          <p className="mt-0.5 text-[11px] text-muted/70">Resultado = {resultado.indicadorResultado}</p>
+        )}
         {resultado.observacoes && <p className="mt-0.5 text-[11px] text-muted/70">{resultado.observacoes}</p>}
       </div>
       <button
@@ -261,6 +270,48 @@ function LinhaResultado({ resultado }: { resultado: Resultado }) {
       >
         <Pencil size={11} />
       </button>
+    </div>
+  );
+}
+
+function GraficoResultados({ resultados }: { resultados: Resultado[] }) {
+  const dados = [...resultados]
+    .sort((a, b) => new Date(a.fim).getTime() - new Date(b.fim).getTime())
+    .map((r) => ({
+      data: new Date(r.fim).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "America/Sao_Paulo" }),
+      custo: r.verbaInvestida != null ? Number(r.verbaInvestida) : null,
+      resultados: r.resultados,
+    }));
+
+  if (dados.length < 2) return null;
+
+  return (
+    <div className="mt-2 rounded-xl border border-border bg-base/40 p-3">
+      <p className="mb-2 text-[11px] font-medium text-muted">Custo e resultados ao longo do tempo</p>
+      <ResponsiveContainer width="100%" height={160}>
+        <LineChart data={dados} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border, #2a2a2a)" />
+          <XAxis dataKey="data" tick={{ fontSize: 10 }} />
+          <YAxis yAxisId="custo" tick={{ fontSize: 10 }} />
+          <YAxis yAxisId="resultados" orientation="right" tick={{ fontSize: 10 }} />
+          <Tooltip
+            contentStyle={{ fontSize: 11, borderRadius: 8 }}
+            formatter={(valor: any, nome: string) =>
+              nome === "custo" ? [`R$ ${fmt(Number(valor))}`, "Custo"] : [fmt(Number(valor)), "Resultados"]
+            }
+          />
+          <Line yAxisId="custo" type="monotone" dataKey="custo" stroke="#F59E0B" strokeWidth={2} dot={false} connectNulls />
+          <Line
+            yAxisId="resultados"
+            type="monotone"
+            dataKey="resultados"
+            stroke="#22C55E"
+            strokeWidth={2}
+            dot={false}
+            connectNulls
+          />
+        </LineChart>
+      </ResponsiveContainer>
     </div>
   );
 }
@@ -310,6 +361,8 @@ export default function ResultadosCampanha({ campanhaId }: { campanhaId: string 
           {!carregando && resultados && resultados.length === 0 && !formAberto && (
             <p className="mt-2 text-xs text-muted">Nenhum resultado lançado ainda pra essa campanha.</p>
           )}
+
+          {!carregando && resultados && <GraficoResultados resultados={resultados} />}
 
           {!carregando &&
             resultados?.map((r) => <LinhaResultado key={r.id} resultado={r} />)}
