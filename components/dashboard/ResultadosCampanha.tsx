@@ -463,7 +463,7 @@ function agruparPorMes(lista: Resultado[]): Resultado[] {
   }
 
   const contados: Resultado[] = [];
-  for (const grupo of porMes.values()) {
+  for (const grupo of Array.from(porMes.values())) {
     const iniciosUnicos = new Set(grupo.map((r) => new Date(r.inicio).getTime()));
     if (grupo.length > 1 && iniciosUnicos.size === 1) {
       contados.push(grupo.reduce((a, b) => (new Date(b.fim) > new Date(a.fim) ? b : a)));

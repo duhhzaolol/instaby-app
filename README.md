@@ -1,4 +1,35 @@
-# Instaby App — v124
+# Instaby App — v125
+
+## Correção de build — o deploy não subia
+
+O deploy que travou depois da v124: o Vercel parou lá pelas 16:13, na etapa de
+checagem de tipos, com esse erro em `ResultadosCampanha.tsx` (tela de
+Resultados do Tráfego Pago):
+
+```
+Type error: Type 'MapIterator<Resultado[]>' can only be iterated through
+when using the '--downlevelIteration' flag or with a '--target' of 'es2015'
+or higher.
+```
+
+Não tem nada a ver com a landing page nova — é um trecho de código da v122
+(a tela de Resultados do Tráfego Pago), numa função que agrupa resultados por
+mês. Ela percorria os dados de um jeito (`for...of` direto num
+`Map.values()`) que essa configuração específica do projeto (TypeScript
+mirando numa versão mais antiga do JavaScript, "es5") não aceita — mesmo o
+código estando correto, só essa forma de escrever o loop que não é permitida
+aqui. Troquei pra uma forma equivalente (`Array.from(...)` antes do loop) que
+funciona do mesmo jeito e passa na checagem. Não mudei nada do resultado, só
+a maneira como o código percorre os dados.
+
+Conferi o projeto inteiro atrás desse mesmo padrão (qualquer outro
+`for...of` em cima de `Map`/`Set`) — essa era a única ocorrência, inclusive
+nos arquivos novos da v124 (landing page). Então é bem provável que isso
+resolva o build, mas como o Vercel para no primeiro erro que encontra, se
+aparecer outro erro diferente mais adiante, é só me mandar o log de novo
+(igual mandou dessa vez) que eu já sigo direto pra ele.
+
+## v124
 
 ## Landing page cinematográfica — a reforma completa do site público
 
