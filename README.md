@@ -1,4 +1,29 @@
-# Instaby App — v127
+# Instaby App — v128
+
+## Abertura → Hero: resolvida a "subida" que ainda incomodava
+
+Você confirmou que os ícones convergindo pro logo ficaram muito bonitos — mas
+quando essa parte termina e some, a tela inicial ainda "subia" de baixo pra
+cima, em vez de simplesmente aparecer. Foi direto na raiz do problema.
+
+O que causava: a técnica que eu tinha usado (um bloco "grudado" no topo da
+tela enquanto você rola — "sticky", na programação) precisa, por natureza, de
+uma tela cheia inteira de rolagem extra pra "soltar". E era exatamente durante
+essa rolagem extra que o cabeçalho e a tela inicial apareciam subindo de
+baixo — mesmo eu já tendo corrigido a animação interna deles na v126. Ou
+seja: não era mais um bug de animação, era a própria mecânica de rolagem
+escolhida que obrigava essa subida a acontecer, e por isso continuava
+aparecendo mesmo depois daquele ajuste.
+
+Troquei a mecânica: agora a cena da abertura é uma camada fixa que cobre a
+tela inteira o tempo todo — o cabeçalho e a tela inicial já ficam prontos,
+exatamente no lugar deles, o tempo todo, só escondidos atrás dessa camada.
+Quando a animação termina, ela só esmaece — e como não sobra nada "atrás"
+precisando subir, o que aparece é puro fade, rápido, sem nenhum deslocamento.
+A animação dos ícones/logo em si continua exatamente igual, só mudou o que
+acontece depois que ela termina.
+
+## v127
 
 ## Correção de build — outro erro de tipagem, agora nos ícones novos
 

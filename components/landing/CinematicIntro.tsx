@@ -1,12 +1,19 @@
 "use client";
 
 // Abertura do site: ícones espalhados (conteúdo, redes, tráfego) flutuam soltos
-// e, conforme a pessoa rola um pouco (não é mais um scroll longo de 3 telas),
-// convergem pro centro e "viram" o logo da Instaby. Curto de propósito — é só
-// uma virada de chave, não uma cena longa. No final, a cena inteira (não só um
-// flash por cima) esmaece em opacidade — quando o sticky solta, já não sobra
-// nada opaco pra "puxar" visualmente, então a virada pro Hero é um fade de
-// verdade, não um corte seco revelado pelo scroll.
+// e, conforme a pessoa rola um pouco, convergem pro centro e "viram" o logo da
+// Instaby. Curto de propósito — é só uma virada de chave, não uma cena longa.
+//
+// Importante (ajuste depois do retorno sobre a v126): a cena é um overlay
+// `fixed` cobrindo a tela inteira, não um bloco `sticky` no fluxo normal da
+// página. Com `sticky`, depois que a cena terminava, o cabeçalho e o Hero
+// (que vêm logo depois no código) ainda precisavam "subir" uma tela inteira
+// até aparecer por completo — essa subida era exatamente o que ficava feio.
+// Com `fixed`, cabeçalho e Hero já estão nas posições finais deles o tempo
+// todo, só encobertos pela cena; quando ela esmaece (rápido, no fim do
+// scroll), eles simplesmente aparecem no lugar — puro fade, sem nenhum
+// deslocamento. O `<div>` logo abaixo (altura fixa) não posiciona nada, só
+// dá a distância de rolagem que a animação consome.
 //
 // Cada ícone tem sua própria trajetória (posição inicial → centro), por isso
 // vira um sub-componente (IconeConvergindo): chamar useTransform dentro de um
@@ -70,14 +77,15 @@ export function CinematicIntro({
   subtitulo?: string | null;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  // progresso 0→1 ao longo da "régua" de scroll abaixo, ponto — sem folga
+  // extra depois: ao chegar em 1, a régua acabou e cabeçalho/Hero (que já
+  // estavam prontos, atrás) simplesmente ficam visíveis, sem scroll a mais.
   const { scrollYProgress } = useScroll({
     target: containerRef,
-    offset: ["start start", "end end"],
+    offset: ["start start", "end start"],
   });
 
-  // A cena inteira — fundo, ícones, logo e texto — esmaece no final. É essa
-  // opacidade (aplicada no próprio bloco sticky, não só num overlay por cima)
-  // que garante o fade real na virada pro Hero.
+  // A cena inteira — fundo, ícones, logo e texto — esmaece rápido no final.
   const opacidadeCena = useTransform(scrollYProgress, [0, 0.78, 1], [1, 1, 0]);
 
   // Logo: nasce pequeno/transparente e ganha forma junto com a chegada dos ícones.
@@ -93,8 +101,15 @@ export function CinematicIntro({
   const opacidadeIndicador = useTransform(scrollYProgress, [0, 0.06, 0.18], [0, 1, 0]);
 
   return (
-    <div ref={containerRef} className="relative h-[170vh]">
-      <motion.div style={{ opacity: opacidadeCena }} className="sticky top-0 h-screen w-full overflow-hidden bg-[#08080a]">
+    <div ref={containerRef} className="relative h-[70vh]">
+      {/* fixed, não sticky: cobre a tela inteira sempre no mesmo lugar (nunca
+          "desliza"), só a opacidade muda — cabeçalho e Hero, por trás, já
+          estão nas posições finais deles desde o início. */}
+      <motion.div
+        aria-hidden
+        style={{ opacity: opacidadeCena }}
+        className="pointer-events-none fixed inset-0 z-50 overflow-hidden bg-[#08080a]"
+      >
         {/* grade neon sutil de fundo */}
         <div
           aria-hidden
