@@ -19,6 +19,25 @@ type CaseItem = {
   link: string | null;
 };
 
+// Tira de filme — perfuração em cima e embaixo do carrossel. Furos de verdade
+// (retângulos com canto arredondado, bem nítidos, sobre uma base preta bem mais
+// escura que o fundo da seção) em vez de um degradê radial suave — que ficava
+// perto demais do tom de fundo e sumia de tão sutil. Repete um número alto de
+// furos com largura fixa (não "esticando" pra preencher a largura) pra sempre
+// tampar a tela inteira, do celular ao monitor mais largo, sem precisar
+// calcular quantos cabem em cada tamanho.
+function TiraDeFilme() {
+  return (
+    <div aria-hidden className="h-6 w-full overflow-hidden bg-black sm:h-7">
+      <div className="flex h-full w-max items-center gap-3.5 px-2 sm:gap-4">
+        {Array.from({ length: 100 }).map((_, i) => (
+          <span key={i} className="h-3 w-5 shrink-0 rounded-[3px] bg-white/80 sm:h-3.5 sm:w-7" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function AlbunsCarrossel({
   cases,
   titulo,
@@ -79,15 +98,7 @@ export function AlbunsCarrossel({
         <div className="group overflow-hidden">
           {/* tira de filme — perfuração em cima e embaixo do carrossel, pra reforçar
               a ideia de "rolo de filme" que os álbuns já sugerem */}
-          <div
-            aria-hidden
-            className="h-3.5 w-full bg-[#08080a]"
-            style={{
-              backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.3) 34%, transparent 36%)",
-              backgroundSize: "24px 100%",
-              backgroundPosition: "12px center",
-            }}
-          />
+          <TiraDeFilme />
           <div
             className="flex w-max gap-4 px-6 animate-marquee-esquerda group-hover:[animation-play-state:paused]"
             style={{ animationDuration: `${Math.max(comImagem.length * 7, 26)}s` }}
@@ -126,15 +137,7 @@ export function AlbunsCarrossel({
               );
             })}
           </div>
-          <div
-            aria-hidden
-            className="h-3.5 w-full bg-[#08080a]"
-            style={{
-              backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.3) 34%, transparent 36%)",
-              backgroundSize: "24px 100%",
-              backgroundPosition: "12px center",
-            }}
-          />
+          <TiraDeFilme />
         </div>
       )}
     </section>

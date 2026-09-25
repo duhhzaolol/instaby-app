@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -255,6 +255,27 @@ export function LandingPage({
 }) {
   const [menuAberto, setMenuAberto] = useState(false);
 
+  // Cabeçalho flutua transparente sobre o Hero (uma cena só com a foto, sem
+  // barra separada por cima) e só ganha fundo sólido depois que a pessoa rola
+  // uma distância pra dentro da seção — nunca enquanto a abertura cinematográfica
+  // ainda cobre a tela (ela já fica na frente do cabeçalho, com z-index maior).
+  const heroRef = useRef<HTMLElement>(null);
+  const [cabecalhoSolido, setCabecalhoSolido] = useState(false);
+  useEffect(() => {
+    function aoRolar() {
+      const el = heroRef.current;
+      if (!el) return;
+      setCabecalhoSolido(el.getBoundingClientRect().top < -120);
+    }
+    aoRolar();
+    window.addEventListener("scroll", aoRolar, { passive: true });
+    window.addEventListener("resize", aoRolar);
+    return () => {
+      window.removeEventListener("scroll", aoRolar);
+      window.removeEventListener("resize", aoRolar);
+    };
+  }, []);
+
   // Galeria de fundo do Hero — com 2+ fotos válidas, revezam com fade lento;
   // com 0 ou 1, cai no comportamento antigo (heroImagemUrl fixa), então sites
   // que ainda não configuraram a galeria continuam exatamente como estavam.
@@ -330,8 +351,14 @@ export function LandingPage({
       {/* Abertura — ícones flutuando convergem e formam o logo conforme rola um pouco */}
       <CinematicIntro titulo={aberturaTitulo} subtitulo={aberturaSubtitulo} />
 
-      {/* Cabeçalho */}
-      <header className="sticky top-0 z-40 border-b border-border/60 bg-base/85 backdrop-blur-md">
+      {/* Cabeçalho — fixo e transparente sobre o Hero (uma cena só, sem barra
+          separada por cima); ganha fundo e linha inferior só depois que rola
+          um pouco pra dentro da página, longe da foto de abertura. */}
+      <header
+        className={`fixed inset-x-0 top-0 z-40 transition-colors duration-300 ${
+          cabecalhoSolido ? "border-b border-border/60 bg-base/90 backdrop-blur-md" : "border-b border-transparent bg-transparent"
+        }`}
+      >
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <a href="#inicio" className="shrink-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -367,7 +394,7 @@ export function LandingPage({
         </div>
 
         {menuAberto && (
-          <div className="border-t border-border/60 bg-base px-6 py-4 md:hidden">
+          <div className="max-h-[80vh] overflow-y-auto border-t border-border/60 bg-base px-6 py-4 md:hidden">
             <nav className="flex flex-col gap-3 text-sm">
               {NAV.map((n) => (
                 <a key={n.href} href={n.href} onClick={() => setMenuAberto(false)} className="text-muted hover:text-text">
@@ -391,9 +418,13 @@ export function LandingPage({
         )}
       </header>
 
-      {/* Hero — banner ocupa a seção inteira, de ponta a ponta; texto sempre por cima */}
+      {/* Hero — banner ocupa a seção inteira, de ponta a ponta; texto sempre por
+          cima. Começa exatamente no topo (o cabeçalho flutua por cima,
+          transparente) pra virar "uma coisa só" com o cabeçalho, em vez de uma
+          barra sobre um banner separado. */}
       <motion.section
         id="inicio"
+        ref={heroRef}
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true, amount: 0.15 }}
@@ -437,11 +468,16 @@ export function LandingPage({
         ) : (
           <div
             className="absolute inset-0"
-            style={{ background: "radial-gradient(ellipse at top left, rgba(230,57,70,0.25), transparent 65%), #0d0d0f" }}
+            style={{ background: "radial-gradient(ellipse at top left, rgba(230,57,70,0.25), transparent 65%), #131519" }}
           />
         )}
-        {/* linha de brilho no topo — ecoa o flash da abertura */}
-        <div className="absolute inset-x-0 top-0 z-10 h-px bg-gradient-to-r from-transparent via-accent/70 to-transparent" />
+        {/* reforço de legibilidade pro cabeçalho, que flutua transparente por cima —
+            garante contraste em qualquer foto, independente do degradê do texto
+            (mais forte à esquerda) */}
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/55 to-transparent" />
+        {/* transição suave pro tom da seção seguinte — sem corte seco entre o
+            banner do Hero e o fundo escuro logo abaixo */}
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-base sm:h-32" />
 
         <div className="relative z-10 mx-auto flex min-h-[560px] max-w-6xl flex-col justify-center gap-5 px-6 py-20 sm:min-h-[680px] sm:py-28">
           <div className="max-w-xl">
@@ -491,7 +527,7 @@ export function LandingPage({
                 >
                   <span
                     aria-hidden
-                    className="pointer-events-none absolute inset-y-0 left-0 w-1/3 animate-streak-sweep bg-gradient-to-r from-transparent via-white/40 to-transparent"
+                    className="pointer-events-none absolute inset-y-0 left-0 w-1/2 animate-streak-sweep bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.18)_40%,rgba(255,255,255,0.85)_50%,rgba(255,255,255,0.18)_60%,transparent)]"
                   />
                   <MessageCircle size={16} /> Falar no WhatsApp
                 </a>
@@ -543,7 +579,7 @@ export function LandingPage({
       <PilaresCarroChefe pilares={pilaresFinal} linkContato={linkContatoPilar} />
 
       {/* Serviços — o restante do que a Instaby faz, sem depender de foto */}
-      <section id="servicos" className="relative overflow-hidden bg-[#0b0b0d] px-6 py-16">
+      <section id="servicos" className="relative overflow-hidden bg-base px-6 py-16">
         <GradeNeon />
         <ElementoFlutuante className="right-[5%] top-[10%] hidden lg:block" duracao={8}>
           <SvgRec />
@@ -574,7 +610,7 @@ export function LandingPage({
                   key={i}
                   href={s.destino}
                   target={s.destino.startsWith("http") ? "_blank" : undefined}
-                  className="group relative aspect-[3/4] w-[68%] shrink-0 snap-start overflow-hidden rounded-xl border border-white/10 active:border-accent/40"
+                  className="group relative aspect-[3/4] w-[68%] shrink-0 snap-start overflow-hidden rounded-2xl border border-white/10 active:border-accent/40"
                 >
                   {s.imagemUrl ? (
                     <>
@@ -586,20 +622,32 @@ export function LandingPage({
                         style={{ objectPosition: s.foco || "50% 50%" }}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-black/5" />
+                      <div className="absolute left-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-lg bg-black/50 text-accent backdrop-blur-sm">
+                        <Icon size={13} />
+                      </div>
+                      <div className="absolute inset-x-0 bottom-0 p-3.5">
+                        <p className="text-sm font-medium text-white">{s.nome}</p>
+                        <p className="mt-1 text-xs leading-relaxed text-white/60">{s.descricao}</p>
+                        <span className="mt-2 block h-0.5 w-7 rounded-full bg-accent" />
+                      </div>
                     </>
                   ) : (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-white/[0.06] to-transparent">
-                      <Icon size={52} className="text-white/10" />
+                    <div className="absolute inset-0 flex flex-col justify-between bg-gradient-to-br from-[#18191d] via-[#131418] to-[#0e0f12] p-3.5">
+                      <div
+                        aria-hidden
+                        className="pointer-events-none absolute -right-5 -top-5 h-24 w-24 rounded-full opacity-70 blur-2xl"
+                        style={{ background: "radial-gradient(circle, rgba(230,57,70,0.3), transparent 70%)" }}
+                      />
+                      <span className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-accent/30 bg-accent/10 text-accent shadow-[0_0_18px_-6px_rgba(230,57,70,0.55)]">
+                        <Icon size={20} />
+                      </span>
+                      <div className="relative">
+                        <p className="text-sm font-medium text-white">{s.nome}</p>
+                        <p className="mt-1 text-xs leading-relaxed text-white/55">{s.descricao}</p>
+                        <span className="mt-2 block h-0.5 w-7 rounded-full bg-accent" />
+                      </div>
                     </div>
                   )}
-                  <div className="absolute left-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-lg bg-black/50 text-accent backdrop-blur-sm">
-                    <Icon size={13} />
-                  </div>
-                  <div className="absolute inset-x-0 bottom-0 p-3.5">
-                    <p className="text-sm font-medium text-white">{s.nome}</p>
-                    <p className="mt-1 text-xs leading-relaxed text-white/60">{s.descricao}</p>
-                    <span className="mt-2 block h-0.5 w-7 rounded-full bg-accent" />
-                  </div>
                 </a>
               );
             })}
@@ -615,7 +663,7 @@ export function LandingPage({
                   href={s.destino}
                   target={s.destino.startsWith("http") ? "_blank" : undefined}
                   {...fadeUp((i % 4) * 0.05)}
-                  className="group relative aspect-[3/4] overflow-hidden rounded-xl border border-white/10 transition-all duration-300 hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-[0_10px_28px_-10px_rgba(230,57,70,0.45)]"
+                  className="group relative aspect-[3/4] overflow-hidden rounded-2xl border border-white/10 transition-all duration-300 hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-[0_10px_28px_-10px_rgba(230,57,70,0.45)]"
                 >
                   {s.imagemUrl ? (
                     <>
@@ -627,20 +675,32 @@ export function LandingPage({
                         style={{ objectPosition: s.foco || "50% 50%" }}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-black/5 transition-colors group-hover:from-black/95" />
+                      <div className="absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg bg-black/50 text-accent backdrop-blur-sm transition-colors group-hover:bg-accent group-hover:text-white">
+                        <Icon size={15} />
+                      </div>
+                      <div className="absolute inset-x-0 bottom-0 p-4">
+                        <p className="text-sm font-semibold text-white">{s.nome}</p>
+                        <p className="mt-1 text-xs leading-relaxed text-white/60">{s.descricao}</p>
+                        <span className="mt-2.5 block h-0.5 w-8 rounded-full bg-accent" />
+                      </div>
                     </>
                   ) : (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-white/[0.06] to-transparent transition-colors group-hover:from-white/[0.09]">
-                      <Icon size={64} className="text-white/10" />
+                    <div className="absolute inset-0 flex flex-col justify-between bg-gradient-to-br from-[#18191d] via-[#131418] to-[#0e0f12] p-4 transition-colors duration-300 group-hover:from-[#1c1d22]">
+                      <div
+                        aria-hidden
+                        className="pointer-events-none absolute -right-6 -top-6 h-28 w-28 rounded-full opacity-70 blur-2xl transition-opacity duration-300 group-hover:opacity-100"
+                        style={{ background: "radial-gradient(circle, rgba(230,57,70,0.3), transparent 70%)" }}
+                      />
+                      <span className="relative flex h-14 w-14 items-center justify-center rounded-2xl border border-accent/30 bg-accent/10 text-accent shadow-[0_0_20px_-6px_rgba(230,57,70,0.55)] transition-transform duration-300 group-hover:scale-110">
+                        <Icon size={26} />
+                      </span>
+                      <div className="relative">
+                        <p className="text-sm font-semibold text-white">{s.nome}</p>
+                        <p className="mt-1 text-xs leading-relaxed text-white/55">{s.descricao}</p>
+                        <span className="mt-2.5 block h-0.5 w-8 rounded-full bg-accent" />
+                      </div>
                     </div>
                   )}
-                  <div className="absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg bg-black/50 text-accent backdrop-blur-sm transition-colors group-hover:bg-accent group-hover:text-white">
-                    <Icon size={15} />
-                  </div>
-                  <div className="absolute inset-x-0 bottom-0 p-4">
-                    <p className="text-sm font-semibold text-white">{s.nome}</p>
-                    <p className="mt-1 text-xs leading-relaxed text-white/60">{s.descricao}</p>
-                    <span className="mt-2.5 block h-0.5 w-8 rounded-full bg-accent" />
-                  </div>
                 </motion.a>
               );
             })}
@@ -717,7 +777,7 @@ export function LandingPage({
       </section>
 
       {/* Faixa de diferenciais — compacta, logo abaixo do Sobre */}
-      <section className="bg-[#0b0b0d] px-6 py-10">
+      <section className="bg-base px-6 py-10">
         <div className="mx-auto grid max-w-6xl grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {diferenciaisFinal.map((d, i) => (
             <motion.div key={d.titulo} {...fadeUp((i % 4) * 0.06)} className="flex gap-3">
@@ -736,7 +796,7 @@ export function LandingPage({
 
       {/* Clientes / depoimentos */}
       {(logos.length > 0 || depoimentos.length > 0) && (
-        <section className="relative overflow-hidden bg-[#0b0b0d] py-16">
+        <section className="relative overflow-hidden bg-base py-16">
           <GradeNeon />
           {/* glow ambiente — o "brilhante" que faltava aqui */}
           <div
@@ -757,8 +817,8 @@ export function LandingPage({
           {logos.length > 0 && (
             <motion.div {...fadeUp(0.1)} className="group/marquee relative mb-12 overflow-hidden py-2">
               {/* fade nas bordas — sumiço suave, sem corte seco */}
-              <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-[#0b0b0d] to-transparent sm:w-28" />
-              <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-[#0b0b0d] to-transparent sm:w-28" />
+              <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-base to-transparent sm:w-28" />
+              <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-base to-transparent sm:w-28" />
               <div
                 className="flex w-max items-center gap-5 animate-marquee-esquerda group-hover/marquee:[animation-play-state:paused]"
                 style={{ animationDuration: `${Math.max(logos.length * 4, 18)}s` }}
@@ -828,6 +888,10 @@ export function LandingPage({
             style={{ background: "linear-gradient(135deg, #3a0a0f, #1a0507 60%, #0d0304)" }}
           />
         )}
+        {/* transição suave nas duas bordas — funde com o tom das seções vizinhas
+            em vez de cortar seco de um tema pro outro */}
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-base to-transparent sm:h-28" />
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-base to-transparent sm:h-28" />
         <ElementoFlutuante className="right-[6%] bottom-[10%] hidden lg:block" duracao={10} delay={0.5}>
           <IconeFlutuanteMini Icon={TrendingUp} className="border-white/10 text-white/20" />
         </ElementoFlutuante>
@@ -852,15 +916,16 @@ export function LandingPage({
               </a>
             </motion.div>
           </div>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {PROCESSO.map((p, i) => (
-              <motion.div key={p.passo} {...fadeUp(i * 0.08)} className="relative">
-                <p className="mb-2 text-2xl font-semibold text-red-500/70">{p.passo}</p>
+              <motion.div
+                key={p.passo}
+                {...fadeUp(i * 0.08)}
+                className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-sm transition-colors duration-300 hover:border-white/20 hover:bg-white/[0.07]"
+              >
+                <p className="mb-2 text-2xl font-semibold text-red-400/80">{p.passo}</p>
                 <p className="mb-1.5 text-sm font-medium text-white">{p.titulo}</p>
                 <p className="text-xs leading-relaxed text-white/60">{p.texto}</p>
-                {i < PROCESSO.length - 1 && (
-                  <ArrowRight size={14} className="absolute right-0 top-1.5 hidden text-white/20 lg:block" style={{ right: "-24px" }} />
-                )}
               </motion.div>
             ))}
           </div>
@@ -894,7 +959,7 @@ export function LandingPage({
             <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/65 to-black/30" />
           </>
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-accent/15 via-[#0d0d0f] to-[#0d0d0f]" />
+          <div className="absolute inset-0 bg-gradient-to-br from-accent/15 via-base to-base" />
         )}
 
         <div className="relative z-10 mx-auto flex min-h-[380px] max-w-6xl flex-col justify-center px-6 py-16 sm:min-h-[420px] sm:py-20">
@@ -914,7 +979,7 @@ export function LandingPage({
               >
                 <span
                   aria-hidden
-                  className="pointer-events-none absolute inset-y-0 left-0 w-1/3 animate-streak-sweep bg-gradient-to-r from-transparent via-white/40 to-transparent"
+                  className="pointer-events-none absolute inset-y-0 left-0 w-1/2 animate-streak-sweep bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.18)_40%,rgba(255,255,255,0.85)_50%,rgba(255,255,255,0.18)_60%,transparent)]"
                 />
                 <MessageCircle size={16} /> {ctaBotaoTextoFinal}
               </a>

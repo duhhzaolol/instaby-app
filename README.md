@@ -1,4 +1,74 @@
-# Instaby App — v130
+# Instaby App — v131
+
+## Repaginação visual do site público — cabeçalho, seções, ícones e tira de filme
+
+Depois do retorno frustrado sobre a tela do Hero, essa versão não mexe em
+nenhum dado nem campo novo — é só CSS/layout dos componentes do site
+público, ponto por ponto do que foi pedido:
+
+**1) Cabeçalho "grudado" no Hero, sem barra separada.** O cabeçalho era
+`sticky`, ou seja, sempre ocupava espaço próprio no topo, com fundo sólido e
+uma linha embaixo — isso criava exatamente a "barra em cima do banner" que
+incomodava. Agora ele é flutuante (`fixed`) e nasce transparente, sobre a
+própria foto do Hero — cabeçalho e banner viram uma cena só. Só depois que a
+pessoa rola um pouco pra dentro da página (bem depois da abertura
+cinematográfica) é que ele ganha fundo escuro e a linha inferior, pra
+continuar legível sobre o conteúdo. Também adicionei um reforço de sombra
+atrás do cabeçalho (independente da foto escolhida) pra garantir contraste
+do logo/menu em qualquer imagem.
+
+**2) Fim das "camadas que trocam de cor".** As seções escuras usavam 3 tons
+de preto ligeiramente diferentes (`#131519`, `#0b0b0d`, `#08080a`) — a
+diferença é mínima, mas o corte seco entre uma seção e outra é exatamente o
+"risco preto" que incomodava. Unifiquei tudo num único tom. A faixa
+vermelha do Processo (o "risco vermelho") continua existindo como um
+momento visual à parte, só que agora com uma transição suave nas duas
+bordas em vez de um corte seco.
+
+**3) Ícones da seção Serviços (sem foto) redesenhados.** Antes: um ícone
+gigante e quase invisível (10% de opacidade) sozinho no meio do cartão —
+lido como "ícone quebrado". Agora: um selo compacto (fundo e borda na cor
+da marca, brilho sutil atrás) no estilo dos demais elementos do site, com
+nome/descrição embaixo — um cartão com identidade mesmo sem foto ainda
+cadastrada.
+
+**4) Tira de filme dos Álbuns, refeita.** A perfuração era um degradê
+radial suave (30% de opacidade) sobre um fundo quase da mesma cor — por
+isso "não dava pra ver nada", e de perto ficava esquisita. Trocada por
+furos de verdade (retângulos nítidos, bordas arredondadas) sobre uma faixa
+preta bem mais escura que o fundo da seção — bem mais alta também, pra não
+passar despercebida.
+
+**5) Cantos arredondados e cards.** Os cartões de Serviços foram de
+`rounded-xl` pra `rounded-2xl`; a faixa do Processo ganhou cartões de
+verdade (borda, fundo leve, cantos arredondados) em vez de texto solto
+sobre o gradiente.
+
+**6) Botão do WhatsApp com brilho mais bonito.** O "risquinho" que passa
+pelo botão ganhou um degradê com núcleo brilhante e sombra suave nas
+bordas (em vez de uma faixa lisa única), ficou um pouco mais rápido, e
+mais largo — fica mais parecido com um reflexo de vidro.
+
+**7) Ajustes de navegação.** Como o cabeçalho virou flutuante, um clique
+num link do menu (Serviços, Sobre...) agora reserva o espaço dele antes de
+rolar até lá, pra não cobrir o título da seção; a rolagem entre âncoras
+ficou suave (respeitando a preferência do sistema de "reduzir movimento").
+
+Não mudei a foto de fundo do Hero em si — ela é a que está cadastrada em
+Configurações → Site, então trocar é só subir uma nova por lá quando
+quiser; não tenho como gerar ou sugerir uma foto de verdade pra colocar no
+lugar.
+
+Sobre a verificação desta vez: como nada aqui mexeu em schema, API ou
+tipos vindos do banco, a checagem de tipos (mesmo com a limitação já
+conhecida de não gerar o cliente do Prisma neste ambiente) rodou limpa nos
+arquivos alterados nas duas vezes que rodei. Além disso, montei um mockup
+estático das partes mais visuais (cabeçalho sobre o Hero, tira de filme,
+cartão de Serviços sem foto) usando o mesmo `tailwind.config.ts` do
+projeto e tirei print pra conferir de verdade como cada coisa fica —
+não só "no papel".
+
+## v130
 
 ## Correção de build — 3º erro, dessa vez no formulário de Serviços
 

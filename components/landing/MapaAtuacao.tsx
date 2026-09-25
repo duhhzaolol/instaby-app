@@ -53,7 +53,7 @@ export function MapaAtuacao({
   const vagos = SLOTS_SECUNDARIOS.slice(secundariosPosicionados.length, secundariosPosicionados.length + 2);
 
   return (
-    <section className="bg-[#08080a] py-16 sm:py-20">
+    <section className="bg-base py-16 sm:py-20">
       <div className="mx-auto mb-10 max-w-6xl px-6">
         <motion.p
           initial={{ opacity: 0, y: 16 }}

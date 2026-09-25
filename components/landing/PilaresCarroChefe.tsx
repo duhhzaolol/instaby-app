@@ -28,7 +28,7 @@ export function PilaresCarroChefe({ pilares, linkContato }: { pilares: Pilar[]; 
   const indicadoresValidos = (trafego?.indicadores || []).filter((i) => i.valor?.trim() && i.legenda?.trim());
 
   return (
-    <section className="relative overflow-hidden bg-[#0b0b0d] px-6 py-16 sm:py-20">
+    <section className="relative overflow-hidden bg-base px-6 py-16 sm:py-20">
       <ElementoFlutuante className="right-[4%] top-[8%] hidden lg:block" duracao={9}>
         <IconeFlutuanteMini Icon={TrendingUp} />
       </ElementoFlutuante>
