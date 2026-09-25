@@ -1,4 +1,46 @@
-# Instaby App — v129
+# Instaby App — v130
+
+## Correção de build — 3º erro, dessa vez no formulário de Serviços
+
+Mais um log da Vercel, mais um erro de tipagem — de novo só na etapa de
+checagem de tipos, depois do "Compiled successfully" (o código em si
+rodava certinho, só a checagem de tipos travou):
+
+```
+./app/dashboard/configuracoes/site/page.tsx:91:11
+Type error: Type '{ ...; foco?: string | null | undefined; }[] | null' is
+not assignable to type '(Partial<ServicoOverride> & {...})[] | null'.
+  Types of property 'foco' are incompatible.
+    Type 'string | null | undefined' is not assignable to type
+    'string | undefined'.
+```
+
+O que causava: no formulário de Serviços (`ServicosForm.tsx`), eu descrevi
+os dados que "entram de fora" (do banco) usando `Partial<ServicoOverride>`
+— a ideia era dizer "esses dois campos podem não vir preenchidos". Só que
+`Partial<...>` só permite um campo ficar *ausente* (`undefined`); ele não
+passa a aceitar `null` num campo cuja definição original é só `string`. Como
+o `foco` de um serviço pode perfeitamente vir `null` do banco (serviço que
+nunca teve foto), e a definição base tinha `foco: string` (sem `null`),
+ficou uma combinação que o TypeScript rejeitou — na tela, o painel
+funcionaria normalmente, mas o build trava antes de chegar lá.
+
+Corrigido separando dois tipos: um pro que o formulário guarda por dentro
+(sempre preenchido, com valor padrão) e outro pro que pode chegar de fora
+(com `foco`/`imagemUrl` explicitamente aceitando `null`). Conferido à mão,
+campo por campo, contra os outros pontos que usam esse mesmo padrão nessa
+leva (galeria do Hero, mapa) — só esse tinha o problema.
+
+Nota sobre a verificação: da vez passada eu tinha rodado uma checagem de
+tipo do projeto inteiro antes de empacotar e não achei nada — mas esse
+ambiente de trabalho não consegue gerar o cliente do Prisma (a etapa que
+roda na Vercel é bloqueada por rede aqui), então essa checagem local fica
+incompleta, de um jeito que não dá pra confiar 100%; foi exatamente esse
+tipo de erro que ela deixou passar dessa vez. Pra esta correção, além de
+rodar a checagem de novo, revisei à mão cada campo novo introduzido na
+v129 — método mais lento, mas o único totalmente confiável aqui.
+
+## v129
 
 ## Mixagem inspirada no site que você mandou (câmera, filme, mapa e fotos)
 

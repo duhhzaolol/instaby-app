@@ -23,9 +23,19 @@ export const SERVICOS_PADRAO = [
   { nome: "Apps e soluções digitais", descricao: "Ferramentas e sistemas sob medida pra necessidades específicas.", destino: "#servicos" },
 ];
 
+// Estado interno: sempre totalmente preenchido (imagemUrl/foco já resolvidos
+// com fallback). O que chega de fora (banco, via API) pode ter esses dois
+// campos ausentes ou nulos — por isso o tipo de entrada (ServicoEntrada) é
+// separado, com imagemUrl/foco explicitamente `| null | undefined`. Um único
+// tipo com `Partial<>` pareceria mais enxuto, mas `Partial<T>` só adiciona
+// `| undefined` aos campos de T — nunca `| null` — então um campo não-nulo
+// aqui (como `foco: string`) continuaria rejeitando `null` vindo de fora
+// mesmo dentro de `Partial<>`. Foi exatamente esse descompasso que quebrou o
+// build da v129.
 type ServicoOverride = { nome: string; descricao: string; destino: string; imagemUrl: string | null; foco: string };
+type ServicoEntrada = { nome: string; descricao: string; destino: string; imagemUrl?: string | null; foco?: string | null };
 
-export default function ServicosForm({ servicos }: { servicos: (Partial<ServicoOverride> & { nome: string; descricao: string; destino: string })[] | null }) {
+export default function ServicosForm({ servicos }: { servicos: ServicoEntrada[] | null }) {
   const router = useRouter();
   const [itens, setItens] = useState<ServicoOverride[]>(
     SERVICOS_PADRAO.map((padrao, i) => ({
