@@ -1,4 +1,36 @@
-# Instaby App — v126
+# Instaby App — v127
+
+## Correção de build — outro erro de tipagem, agora nos ícones novos
+
+Você mandou o log do build de novo, com outro erro. Na real é um bom sinal:
+esse aqui aconteceu bem mais à frente que o da v125 (a etapa de "Compiled
+successfully" já tinha passado), e é um problema completamente diferente —
+não tem nada a ver com Map/Set de novo.
+
+Erro do Vercel, resumido:
+
+```
+./components/landing/CinematicIntro.tsx:31:5
+Type error: Type 'ForwardRefExoticComponent<...>' is not assignable to type
+'ComponentType<{ size?: number | undefined; }>'.
+  ...propTypes...size... Type 'string' is not assignable to type 'number'.
+```
+
+O que aconteceu: na abertura nova (os ícones flutuando) e nos iconezinhos
+flutuantes que apareceram em outras seções, eu descrevi pro TypeScript "isso
+aqui é um componente de ícone que recebe um tamanho em número" — só que a
+biblioteca de ícones que uso (lucide-react) define o tamanho dela de um jeito
+um pouco mais flexível (aceita número ou texto). O TypeScript comparou as
+duas descrições, viu que não batiam 100% e travou o build — mesmo o ícone
+funcionando perfeitamente na tela. É só um desencontro na "ficha técnica" que
+eu escrevi, não um bug de comportamento nem nada visual.
+
+Corrigi nos 2 lugares exatos onde esse padrão apareceu (abertura nova e
+ícones flutuantes mini) e conferi o projeto inteiro pra garantir que não
+sobrou nenhum outro lugar com a mesma pegadinha — não sobrou. Nada muda
+visualmente, é só a "ficha técnica" que ficou correta.
+
+## v126
 
 ## Retorno sobre a LP — ajustes ponto a ponto no que você comentou
 

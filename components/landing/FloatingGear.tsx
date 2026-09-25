@@ -93,7 +93,7 @@ export function IconeFlutuanteMini({
   Icon,
   className = "",
 }: {
-  Icon: React.ComponentType<{ size?: number }>;
+  Icon: React.ElementType;
   className?: string;
 }) {
   return (

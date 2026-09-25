@@ -19,7 +19,7 @@ import { motion, useScroll, useTransform, type MotionValue } from "framer-motion
 import { Instagram, Youtube, Play, TrendingUp, Heart, Film } from "lucide-react";
 
 type ConfigIcone = {
-  Icon: React.ComponentType<{ size?: number }>;
+  Icon: React.ElementType;
   x: number;
   y: number;
   rotate: number;
