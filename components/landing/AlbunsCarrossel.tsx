@@ -77,6 +77,17 @@ export function AlbunsCarrossel({
         </div>
       ) : (
         <div className="group overflow-hidden">
+          {/* tira de filme — perfuração em cima e embaixo do carrossel, pra reforçar
+              a ideia de "rolo de filme" que os álbuns já sugerem */}
+          <div
+            aria-hidden
+            className="h-3.5 w-full bg-[#08080a]"
+            style={{
+              backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.3) 34%, transparent 36%)",
+              backgroundSize: "24px 100%",
+              backgroundPosition: "12px center",
+            }}
+          />
           <div
             className="flex w-max gap-4 px-6 animate-marquee-esquerda group-hover:[animation-play-state:paused]"
             style={{ animationDuration: `${Math.max(comImagem.length * 7, 26)}s` }}
@@ -115,6 +126,15 @@ export function AlbunsCarrossel({
               );
             })}
           </div>
+          <div
+            aria-hidden
+            className="h-3.5 w-full bg-[#08080a]"
+            style={{
+              backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.3) 34%, transparent 36%)",
+              backgroundSize: "24px 100%",
+              backgroundPosition: "12px center",
+            }}
+          />
         </div>
       )}
     </section>

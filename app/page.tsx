@@ -37,7 +37,11 @@ export default async function Home() {
       heroImagemUrlMobile={config?.siteHeroImagemUrlMobile || null}
       heroFoco={config?.siteHeroFoco || null}
       heroIndicadores={(config?.siteHeroIndicadores as { valor: string; legenda: string }[] | null) || null}
-      servicos={(config?.siteServicos as { nome: string; descricao: string; destino: string }[] | null) || null}
+      servicos={
+        (config?.siteServicos as
+          | { nome: string; descricao: string; destino: string; imagemUrl?: string | null; foco?: string | null }[]
+          | null) || null
+      }
       diferenciais={(config?.siteDiferenciais as { titulo: string; texto: string }[] | null) || null}
       sobreTexto={config?.siteSobreTexto || null}
       sobreImagemUrl={config?.siteSobreImagemUrl || null}
@@ -71,6 +75,10 @@ export default async function Home() {
       pilares={(config?.sitePilares as { nome: string; texto: string; indicadores?: { valor: string; legenda: string }[] }[] | null) || null}
       albunsTitulo={config?.siteAlbunsTitulo || null}
       albunsTexto={config?.siteAlbunsTexto || null}
+      heroGaleria={(config?.siteHeroGaleria as { url: string; foco?: string | null }[] | null) || null}
+      mapaTitulo={config?.siteMapaTitulo || null}
+      mapaTexto={config?.siteMapaTexto || null}
+      mapaLocais={(config?.siteMapaLocais as { nome: string }[] | null) || null}
       cases={cases.map((c) => ({
         id: c.id,
         nome: c.nome,

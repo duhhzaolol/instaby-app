@@ -1,4 +1,80 @@
-# Instaby App — v128
+# Instaby App — v129
+
+## Mixagem inspirada no site que você mandou (câmera, filme, mapa e fotos)
+
+Você pediu pra estudar o appcreatorhub.com e "misturar" as ideias que gostou
+de lá com a identidade da Instaby (que já usa a mesma linguagem visual —
+preto com degradê vermelho). Entrei no site, naveguei pelas seções que você
+comentou (o cabeçalho preto, o efeito nos botões, o portfólio "tipo filme" e
+o mapa no fim) e apliquei uma versão de cada ideia no site da Instaby,
+mantendo a identidade que você já tinha.
+
+### Abertura: a câmera "grava" o logo se formando
+
+A animação dos ícones convergindo continua exatamente igual (você já tinha
+aprovado); só que agora, assim que o logo termina de se formar, um quadro de
+mira — tipo visor de câmera, com os 4 cantinhos, o detalhe que você gostou —
+fecha ao redor dele, junto com um selo "REC" piscando. A sensação é a de "a
+câmera acabou de gravar o logo nascendo", misturando a ideia da referência
+com a animação que você já tinha aprovado, sem trocar nada do que já
+funcionava.
+
+### Álbuns: tira de filme de verdade
+
+O carrossel de Álbuns ganhou uma "perfuração" (aquelas bolinhas na borda de
+um rolo de filme) em cima e embaixo da faixa de cards — um detalhe sutil,
+que não atrapalha a leitura dos trabalhos, só reforça a ideia de "filme"
+que os álbuns já sugeriam.
+
+Uma decisão que tomei aqui: você pediu pra colocar esse tratamento "logo ali
+em cima", mas os Álbuns já estão numa posição que a gente definiu com
+cuidado numa rodada anterior (depois dos Pilares, pra não competir com o
+Tráfego Pago em destaque). Interpretei o pedido como "aplica esse estilo de
+filme na seção de Álbuns" (que eu fiz), não como "move a seção pra cima" —
+se eu entendi errado e você quiser os Álbuns mais perto do topo, me avisa
+que eu reorganizo.
+
+### Serviços: uma foto pra cada serviço (opcional)
+
+Os 8 cartões de "Serviços" agora aceitam uma foto cada um, em Configurações
+→ Site → Serviços. Sem foto, o cartão continua mostrando o ícone de sempre
+(nada quebra pros serviços que você ainda não tiver foto). Com foto, ela
+ocupa o cartão inteiro com o nome por cima — no mesmo espírito dos cartões
+de "portfólio por cliente" que você viu na referência, só que aqui
+reaproveitado pros serviços da agência, que foi exatamente a troca de termo
+que você pediu.
+
+### Hero: galeria de fotos revezando no fundo
+
+Em Configurações → Site → Abertura, tem agora uma seção nova, "Galeria de
+fotos do fundo", onde dá pra enviar 2 ou mais fotos que revezam sozinhas no
+fundo da tela inicial, com um fade suave entre uma e outra — parecido com o
+efeito que você viu na referência. Sem configurar nada aqui, o site continua
+com o banner único de sempre (nada muda pra quem não mexer); configurando,
+a galeria assume automaticamente.
+
+### Botões principais: aquele "risquinho passando"
+
+O efeito que você descreveu no botão da referência (uma luz passando de
+tempo em tempo, meio "câmera gravando") recriei nos dois botões principais
+de "Falar no WhatsApp" — o da tela inicial e o da chamada final, perto do
+rodapé. É uma luz diagonal que atravessa o botão a cada poucos segundos e
+some. Se achar muito ou pouco, é rápido de ajustar (ou tirar de um dos
+dois).
+
+### Nova seção: "Onde a gente atende"
+
+Entre o Processo e a chamada final, entrou um mapa (ilustrativo, não é um
+mapa real com endereço) mostrando onde a Instaby atua: Araras no centro, em
+destaque, ligada por uma linha a cada outro cliente/cidade. Já cadastrei os
+3 exemplos que você pediu — Araras, Limeira e "Estados Unidos" — mas como
+você não passou a cidade exata do cliente americano, deixei "Estados
+Unidos" por enquanto; me manda o nome da cidade (ou deixa assim mesmo, se
+preferir) que eu ajusto na hora. Dá pra adicionar quantos locais quiser em
+Configurações → Site → Onde a gente atende, sem limite — o mapa se
+reorganiza sozinho.
+
+## v128
 
 ## Abertura → Hero: resolvida a "subida" que ainda incomodava
 

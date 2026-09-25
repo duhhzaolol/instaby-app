@@ -8,6 +8,7 @@ import DiferenciaisForm from "./DiferenciaisForm";
 import ProcessoCtaForm from "./ProcessoCtaForm";
 import CasesForm from "./CasesForm";
 import LinkBioForm from "./LinkBioForm";
+import MapaForm from "./MapaForm";
 
 export default async function SiteConfigPage() {
   const [config, cases, links] = await Promise.all([
@@ -50,6 +51,7 @@ export default async function SiteConfigPage() {
             siteHeroImagemUrlMobile: config?.siteHeroImagemUrlMobile || null,
             siteHeroFoco: config?.siteHeroFoco || null,
             siteHeroIndicadores: (config?.siteHeroIndicadores as { valor: string; legenda: string }[] | null) || null,
+            siteHeroGaleria: (config?.siteHeroGaleria as { url: string; foco: string }[] | null) || null,
             siteSobreTexto: config?.siteSobreTexto || null,
             siteSobreImagemUrl: config?.siteSobreImagemUrl || null,
             siteSobreImagemUrlMobile: config?.siteSobreImagemUrlMobile || null,
@@ -85,7 +87,13 @@ export default async function SiteConfigPage() {
       <div>
         <p className="mb-1 text-sm font-medium text-text">Serviços</p>
         <p className="mb-4 text-sm text-muted">Os 8 cartões da seção "Serviços" do site.</p>
-        <ServicosForm servicos={(config?.siteServicos as { nome: string; descricao: string; destino: string }[] | null) || null} />
+        <ServicosForm
+          servicos={
+            (config?.siteServicos as
+              | { nome: string; descricao: string; destino: string; imagemUrl?: string | null; foco?: string | null }[]
+              | null) || null
+          }
+        />
       </div>
 
       <div>
@@ -136,6 +144,18 @@ export default async function SiteConfigPage() {
             siteCtaImagemUrlMobile: config?.siteCtaImagemUrlMobile || null,
             siteCtaFoco: config?.siteCtaFoco || null,
           }}
+        />
+      </div>
+
+      <div>
+        <p className="mb-1 text-sm font-medium text-text">Onde a gente atende</p>
+        <p className="mb-4 text-sm text-muted">
+          O mapa ilustrativo entre o "Processo" e a chamada final, com um pino pra cada cidade ou cliente atendido.
+        </p>
+        <MapaForm
+          mapaTitulo={config?.siteMapaTitulo || null}
+          mapaTexto={config?.siteMapaTexto || null}
+          mapaLocais={(config?.siteMapaLocais as { nome: string }[] | null) || null}
         />
       </div>
 

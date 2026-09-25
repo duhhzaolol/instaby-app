@@ -24,6 +24,7 @@
 import { useRef } from "react";
 import { motion, useScroll, useTransform, type MotionValue } from "framer-motion";
 import { Instagram, Youtube, Play, TrendingUp, Heart, Film } from "lucide-react";
+import { SvgRec } from "./FloatingGear";
 
 type ConfigIcone = {
   Icon: React.ElementType;
@@ -97,6 +98,14 @@ export function CinematicIntro({
   const opacidadeTexto = useTransform(scrollYProgress, [0.6, 0.72], [0, 1]);
   const yTexto = useTransform(scrollYProgress, [0.6, 0.72], [16, 0]);
 
+  // "Mixagem" com a ideia de câmera gravando: um quadro de mira (cantos, como
+  // visor de câmera) fecha em volta do logo assim que ele termina de se formar,
+  // com o selo REC ancorado no canto — o logo "sendo gravado", sem precisar
+  // reintroduzir a câmera inteira que você não gostou antes.
+  const escalaQuadro = useTransform(scrollYProgress, [0.52, 0.68], [1.15, 1]);
+  const opacidadeQuadro = useTransform(scrollYProgress, [0.52, 0.64], [0, 1]);
+  const opacidadeRec = useTransform(scrollYProgress, [0.6, 0.7], [0, 1]);
+
   // Indicador de "role" — só faz sentido no início.
   const opacidadeIndicador = useTransform(scrollYProgress, [0, 0.06, 0.18], [0, 1, 0]);
 
@@ -150,6 +159,27 @@ export function CinematicIntro({
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="Instaby" className="h-10 w-auto sm:h-14" />
+        </motion.div>
+
+        {/* quadro de mira (estilo visor de câmera) fechando em volta do logo,
+            como se a cena tivesse acabado de "gravar" ele se formando */}
+        <motion.div
+          aria-hidden
+          style={{ scale: escalaQuadro, opacity: opacidadeQuadro }}
+          className="absolute inset-0 z-20 flex items-center justify-center"
+        >
+          <div className="relative h-[190px] w-[260px] sm:h-[260px] sm:w-[360px]">
+            <span className="absolute left-0 top-0 h-6 w-6 border-l-2 border-t-2 border-white/50 sm:h-8 sm:w-8" />
+            <span className="absolute right-0 top-0 h-6 w-6 border-r-2 border-t-2 border-white/50 sm:h-8 sm:w-8" />
+            <span className="absolute bottom-0 left-0 h-6 w-6 border-b-2 border-l-2 border-white/50 sm:h-8 sm:w-8" />
+            <span className="absolute bottom-0 right-0 h-6 w-6 border-b-2 border-r-2 border-white/50 sm:h-8 sm:w-8" />
+          </div>
+        </motion.div>
+        <motion.div
+          style={{ opacity: opacidadeRec }}
+          className="absolute inset-x-0 top-[27%] z-20 flex justify-center sm:top-[24%]"
+        >
+          <SvgRec />
         </motion.div>
 
         {/* texto de abertura, entra depois do logo formado */}

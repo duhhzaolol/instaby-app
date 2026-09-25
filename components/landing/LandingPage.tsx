@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -26,6 +26,7 @@ import {
 import { CinematicIntro } from "./CinematicIntro";
 import { PilaresCarroChefe } from "./PilaresCarroChefe";
 import { AlbunsCarrossel } from "./AlbunsCarrossel";
+import { MapaAtuacao } from "./MapaAtuacao";
 import { ElementoFlutuante, SvgRec, IconeFlutuanteMini } from "./FloatingGear";
 
 const ICONES_SERVICOS = [Instagram, Megaphone, Video, Film, LayoutTemplate, MapPin, Lightbulb, Smartphone];
@@ -130,10 +131,12 @@ function GradeNeon() {
 }
 
 type Indicador = { valor: string; legenda: string };
-type ServicoOverride = { nome: string; descricao: string; destino: string };
+type ServicoOverride = { nome: string; descricao: string; destino: string; imagemUrl?: string | null; foco?: string | null };
 type DiferencialOverride = { titulo: string; texto: string };
 type Resultado = { valor: string; legenda: string };
 type Pilar = { nome: string; texto: string; indicadores?: Indicador[] };
+type ImagemGaleria = { url: string; foco?: string | null };
+type LocalMapa = { nome: string };
 
 type CaseTrabalho = {
   id: string;
@@ -195,6 +198,10 @@ export function LandingPage({
   pilares,
   albunsTitulo,
   albunsTexto,
+  heroGaleria,
+  mapaTitulo,
+  mapaTexto,
+  mapaLocais,
 }: {
   logos: { nome: string; logoUrl: string }[];
   depoimentos: { id: string; nomeCliente: string; texto: string }[];
@@ -241,8 +248,24 @@ export function LandingPage({
   pilares?: Pilar[] | null;
   albunsTitulo?: string | null;
   albunsTexto?: string | null;
+  heroGaleria?: ImagemGaleria[] | null;
+  mapaTitulo?: string | null;
+  mapaTexto?: string | null;
+  mapaLocais?: LocalMapa[] | null;
 }) {
   const [menuAberto, setMenuAberto] = useState(false);
+
+  // Galeria de fundo do Hero — com 2+ fotos válidas, revezam com fade lento;
+  // com 0 ou 1, cai no comportamento antigo (heroImagemUrl fixa), então sites
+  // que ainda não configuraram a galeria continuam exatamente como estavam.
+  const galeriaValida = (heroGaleria || []).filter((g) => g.url?.trim());
+  const usaGaleria = galeriaValida.length > 0;
+  const [indiceGaleria, setIndiceGaleria] = useState(0);
+  useEffect(() => {
+    if (galeriaValida.length < 2) return;
+    const t = setInterval(() => setIndiceGaleria((i) => (i + 1) % galeriaValida.length), 5000);
+    return () => clearInterval(t);
+  }, [galeriaValida.length]);
 
   const linkWhatsapp = whatsappAgencia
     ? `https://wa.me/${whatsappAgencia}?text=${encodeURIComponent("Olá! Vim pelo site da Instaby e queria saber mais sobre os serviços.")}`
@@ -268,6 +291,8 @@ export function LandingPage({
     nome: servicos?.[i]?.nome || padrao.nome,
     descricao: servicos?.[i]?.descricao || padrao.descricao,
     destino: servicos?.[i]?.destino || padrao.destino,
+    imagemUrl: servicos?.[i]?.imagemUrl || null,
+    foco: servicos?.[i]?.foco || "50% 50%",
     icone: ICONES_SERVICOS[i],
   }));
 
@@ -375,7 +400,22 @@ export function LandingPage({
         transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
         className="relative w-full overflow-hidden"
       >
-        {heroImagemUrl ? (
+        {usaGaleria ? (
+          <>
+            {galeriaValida.map((g, i) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={g.url + i}
+                src={g.url}
+                alt="Instaby"
+                className="absolute inset-0 h-full w-full object-cover transition-opacity duration-[1400ms] ease-in-out"
+                style={{ objectPosition: g.foco || "50% 50%", opacity: i === indiceGaleria ? 1 : 0 }}
+              />
+            ))}
+            <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-black/20" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+          </>
+        ) : heroImagemUrl ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -447,8 +487,12 @@ export function LandingPage({
                 <a
                   href={linkWhatsapp}
                   target="_blank"
-                  className="flex items-center gap-2 rounded-full bg-accent px-6 py-3 text-sm font-medium text-white shadow-glow transition-transform hover:scale-[1.02]"
+                  className="relative flex items-center gap-2 overflow-hidden rounded-full bg-accent px-6 py-3 text-sm font-medium text-white shadow-glow transition-transform hover:scale-[1.02]"
                 >
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute inset-y-0 left-0 w-1/3 animate-streak-sweep bg-gradient-to-r from-transparent via-white/40 to-transparent"
+                  />
                   <MessageCircle size={16} /> Falar no WhatsApp
                 </a>
               )}
@@ -530,13 +574,32 @@ export function LandingPage({
                   key={i}
                   href={s.destino}
                   target={s.destino.startsWith("http") ? "_blank" : undefined}
-                  className="group w-[78%] shrink-0 snap-start rounded-xl border border-white/10 bg-white/[0.04] p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] active:border-accent/40"
+                  className="group relative aspect-[3/4] w-[68%] shrink-0 snap-start overflow-hidden rounded-xl border border-white/10 active:border-accent/40"
                 >
-                  <div className="mb-2.5 flex h-8 w-8 items-center justify-center rounded-lg bg-accent/15 text-accent">
-                    <Icon size={15} />
+                  {s.imagemUrl ? (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={s.imagemUrl}
+                        alt={s.nome}
+                        className="absolute inset-0 h-full w-full object-cover"
+                        style={{ objectPosition: s.foco || "50% 50%" }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-black/5" />
+                    </>
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-white/[0.06] to-transparent">
+                      <Icon size={52} className="text-white/10" />
+                    </div>
+                  )}
+                  <div className="absolute left-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-lg bg-black/50 text-accent backdrop-blur-sm">
+                    <Icon size={13} />
                   </div>
-                  <p className="mb-1 text-sm font-medium text-text">{s.nome}</p>
-                  <p className="text-xs leading-relaxed text-muted">{s.descricao}</p>
+                  <div className="absolute inset-x-0 bottom-0 p-3.5">
+                    <p className="text-sm font-medium text-white">{s.nome}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-white/60">{s.descricao}</p>
+                    <span className="mt-2 block h-0.5 w-7 rounded-full bg-accent" />
+                  </div>
                 </a>
               );
             })}
@@ -552,13 +615,32 @@ export function LandingPage({
                   href={s.destino}
                   target={s.destino.startsWith("http") ? "_blank" : undefined}
                   {...fadeUp((i % 4) * 0.05)}
-                  className="group rounded-xl border border-white/10 bg-white/[0.04] p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] transition-all duration-300 hover:-translate-y-0.5 hover:border-accent/40 hover:bg-white/[0.07] hover:shadow-[0_10px_28px_-10px_rgba(230,57,70,0.45)]"
+                  className="group relative aspect-[3/4] overflow-hidden rounded-xl border border-white/10 transition-all duration-300 hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-[0_10px_28px_-10px_rgba(230,57,70,0.45)]"
                 >
-                  <div className="mb-2.5 flex h-8 w-8 items-center justify-center rounded-lg bg-accent/15 text-accent transition-colors group-hover:bg-accent group-hover:text-white">
+                  {s.imagemUrl ? (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={s.imagemUrl}
+                        alt={s.nome}
+                        className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"
+                        style={{ objectPosition: s.foco || "50% 50%" }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-black/5 transition-colors group-hover:from-black/95" />
+                    </>
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-white/[0.06] to-transparent transition-colors group-hover:from-white/[0.09]">
+                      <Icon size={64} className="text-white/10" />
+                    </div>
+                  )}
+                  <div className="absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg bg-black/50 text-accent backdrop-blur-sm transition-colors group-hover:bg-accent group-hover:text-white">
                     <Icon size={15} />
                   </div>
-                  <p className="mb-1 text-sm font-medium text-text">{s.nome}</p>
-                  <p className="text-xs leading-relaxed text-muted">{s.descricao}</p>
+                  <div className="absolute inset-x-0 bottom-0 p-4">
+                    <p className="text-sm font-semibold text-white">{s.nome}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-white/60">{s.descricao}</p>
+                    <span className="mt-2.5 block h-0.5 w-8 rounded-full bg-accent" />
+                  </div>
                 </motion.a>
               );
             })}
@@ -785,6 +867,9 @@ export function LandingPage({
         </div>
       </section>
 
+      {/* Onde a gente atende — mapa ilustrativo, entre o Processo e o Contato final */}
+      <MapaAtuacao titulo={mapaTitulo} texto={mapaTexto} locais={mapaLocais} />
+
       {/* Contato final — banner de fundo, texto e botão por cima */}
       <section id="contato" className="relative w-full overflow-hidden">
         <ElementoFlutuante className="right-[6%] top-[16%] hidden lg:block" duracao={8.5} delay={0.7}>
@@ -825,8 +910,12 @@ export function LandingPage({
               <a
                 href={linkWhatsapp}
                 target="_blank"
-                className="inline-flex items-center gap-2 rounded-full bg-accent px-7 py-3 text-sm font-medium text-white shadow-glow transition-transform hover:scale-[1.02]"
+                className="relative inline-flex items-center gap-2 overflow-hidden rounded-full bg-accent px-7 py-3 text-sm font-medium text-white shadow-glow transition-transform hover:scale-[1.02]"
               >
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-y-0 left-0 w-1/3 animate-streak-sweep bg-gradient-to-r from-transparent via-white/40 to-transparent"
+                />
                 <MessageCircle size={16} /> {ctaBotaoTextoFinal}
               </a>
             ) : (

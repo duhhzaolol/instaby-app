@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check } from "lucide-react";
+import { Check, Plus, Trash2 } from "lucide-react";
 import { Input, Textarea, Label } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { UploadImagem } from "@/components/ui/UploadImagem";
 import { FocoImagem } from "@/components/ui/FocoImagem";
 
 type Indicador = { valor: string; legenda: string };
+type ImagemGaleria = { url: string; foco: string };
 
 type ConfigSite = {
   siteHeroTitulo: string | null;
@@ -18,6 +19,7 @@ type ConfigSite = {
   siteHeroImagemUrlMobile: string | null;
   siteHeroFoco: string | null;
   siteHeroIndicadores: Indicador[] | null;
+  siteHeroGaleria: ImagemGaleria[] | null;
   siteSobreTexto: string | null;
   siteSobreImagemUrl: string | null;
   siteSobreImagemUrlMobile: string | null;
@@ -48,6 +50,7 @@ export default function SiteTextosForm({ config }: { config: ConfigSite }) {
   const [indicadores, setIndicadores] = useState<Indicador[]>(
     config.siteHeroIndicadores && config.siteHeroIndicadores.length === 3 ? config.siteHeroIndicadores : INDICADORES_VAZIOS
   );
+  const [galeria, setGaleria] = useState<ImagemGaleria[]>(config.siteHeroGaleria || []);
   const [sobreTexto, setSobreTexto] = useState(config.siteSobreTexto || "");
   const [sobreImagemUrl, setSobreImagemUrl] = useState<string | null>(config.siteSobreImagemUrl);
   const [sobreImagemUrlMobile, setSobreImagemUrlMobile] = useState<string | null>(config.siteSobreImagemUrlMobile);
@@ -66,6 +69,22 @@ export default function SiteTextosForm({ config }: { config: ConfigSite }) {
     setIndicadores((prev) => prev.map((ind, idx) => (idx === i ? { ...ind, [campo]: valor } : ind)));
   }
 
+  function atualizarGaleriaUrl(i: number, url: string | null) {
+    setGaleria((prev) => prev.map((item, idx) => (idx === i ? { ...item, url: url || "" } : item)));
+  }
+
+  function atualizarGaleriaFoco(i: number, foco: string) {
+    setGaleria((prev) => prev.map((item, idx) => (idx === i ? { ...item, foco } : item)));
+  }
+
+  function adicionarFotoGaleria() {
+    setGaleria((prev) => [...prev, { url: "", foco: "50% 50%" }]);
+  }
+
+  function removerFotoGaleria(i: number) {
+    setGaleria((prev) => prev.filter((_, idx) => idx !== i));
+  }
+
   async function salvar() {
     setSalvando(true);
     setSalvo(false);
@@ -81,6 +100,7 @@ export default function SiteTextosForm({ config }: { config: ConfigSite }) {
         siteHeroImagemUrlMobile: heroImagemUrlMobile,
         siteHeroFoco: heroFoco || null,
         siteHeroIndicadores: indicadoresPreenchidos.length > 0 ? indicadoresPreenchidos : [],
+        siteHeroGaleria: galeria.filter((g) => g.url.trim()),
         siteSobreTexto: sobreTexto || null,
         siteSobreImagemUrl: sobreImagemUrl,
         siteSobreImagemUrlMobile: sobreImagemUrlMobile,
@@ -208,6 +228,42 @@ export default function SiteTextosForm({ config }: { config: ConfigSite }) {
               proporcao="4:5, vertical"
             />
           </div>
+        </div>
+
+        <div className="mt-4 rounded-xl border border-border/60 bg-base/40 p-3">
+          <p className="mb-1 text-xs font-medium text-text">Galeria de fotos do fundo (opcional)</p>
+          <p className="mb-3 text-[11px] leading-relaxed text-muted">
+            Envie 2 ou mais fotos aqui pra elas revezarem automaticamente como fundo da abertura, uma de cada vez,
+            com um fade suave — tipo uma vitrine. Com pelo menos uma foto aqui, essa galeria substitui o banner
+            único configurado acima. Deixe vazia pra manter o banner fixo de sempre.
+          </p>
+          <div className="flex flex-col gap-3">
+            {galeria.map((foto, i) => (
+              <div key={i} className="rounded-lg border border-border/60 bg-card/40 p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-muted">Foto {i + 1}</p>
+                  <Button variant="danger" size="sm" onClick={() => removerFotoGaleria(i)} title="Remover foto">
+                    <Trash2 size={12} />
+                  </Button>
+                </div>
+                <UploadImagem
+                  value={foto.url || null}
+                  onChange={(url) => atualizarGaleriaUrl(i, url)}
+                  pasta="site-hero-galeria"
+                  tamanhoRecomendado="1920 × 1080px"
+                  proporcao="16:9"
+                />
+                {foto.url && (
+                  <div className="mt-2">
+                    <FocoImagem imagemUrl={foto.url} valor={foto.foco || "50% 50%"} onChange={(v) => atualizarGaleriaFoco(i, v)} />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          <Button variant="secondary" onClick={adicionarFotoGaleria} className="mt-3 w-full">
+            <Plus size={14} /> Adicionar foto à galeria
+          </Button>
         </div>
       </div>
 

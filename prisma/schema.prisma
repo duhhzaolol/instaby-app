@@ -510,6 +510,16 @@ model Configuracao {
   sitePilares           Json?
   siteAlbunsTitulo      String? // título da seção de álbuns/portfólio (carrossel)
   siteAlbunsTexto       String? // texto de apoio da seção de álbuns
+  // Fotos extras que entram num rodízio (crossfade) com siteHeroImagemUrl no banner do Hero.
+  // [{"url":..,"foco":".."}] — vazio/1 imagem só = Hero estático, do jeito que sempre foi.
+  siteHeroGaleria       Json?
+  // Seção "onde a gente atende": [{"nome":"Araras, SP"}, ...] — o primeiro item é sempre a
+  // sede (nó principal, em destaque no mapa), os demais são clientes/atendimentos (nós
+  // menores, conectados por linha). Posição de cada nó no mapa é calculada no componente
+  // (não guardamos coordenada) — só a ordem da lista importa.
+  siteMapaTitulo        String?
+  siteMapaTexto         String?
+  siteMapaLocais        Json?
   // Conteúdo editável da página de links (/link)
   linkBioIntroTexto     String?
   linkBioRodapeTexto    String?
