@@ -3,8 +3,10 @@
 // Abertura do site: ícones espalhados (conteúdo, redes, tráfego) convergem pro
 // centro e "viram" o logo da Instaby — automático, assim que a página carrega,
 // sem precisar rolar (referência: o efeito de entrada do site Creator Hub, que
-// o Duhzao mandou de exemplo). Curto de propósito — é só uma virada de chave,
-// ~1,4s do início ao fim, não uma cena longa.
+// o Duhzao mandou de exemplo). 3 tempos, do jeito que ele pediu depois de ver
+// a 1ª versão (essa era rápida demais, ~1,4s no total): 2s de "apresentação"
+// (ícones convergindo, brilho, logo se formando), 1s de logo sozinho parado
+// na tela, e só depois a revelação do site — ~3,5s do início ao fim.
 //
 // Antes (v126-v131) isso era ligado ao scroll (useScroll/scrollYProgress),
 // precisando de um espaçador de 70vh só pra dar distância de rolagem — o
@@ -38,39 +40,44 @@ type ConfigIcone = {
   soDesktop?: boolean;
 };
 
-// Posições ~30% mais espalhadas que antes, pra acompanhar o ícone maior
-// (pedido: "pode aumentar o tamanho, que eles estão pequenos").
+// Espalhados o bastante pro tamanho maior dos ícones (2ª rodada de aumento —
+// pedido explícito de novo: "aumente esses elementos").
 const ICONES: ConfigIcone[] = [
-  { Icon: Instagram, x: -195, y: -155, rotate: -14 },
-  { Icon: Youtube, x: 195, y: -180, rotate: 12 },
-  { Icon: Play, x: -235, y: 115, rotate: 9, soDesktop: true },
-  { Icon: TrendingUp, x: 220, y: 145, rotate: -10, soDesktop: true },
-  { Icon: Heart, x: -80, y: -240, rotate: -6 },
-  { Icon: Film, x: 90, y: 225, rotate: 14 },
+  { Icon: Instagram, x: -235, y: -185, rotate: -14 },
+  { Icon: Youtube, x: 235, y: -215, rotate: 12 },
+  { Icon: Play, x: -280, y: 140, rotate: 9, soDesktop: true },
+  { Icon: TrendingUp, x: 265, y: 175, rotate: -10, soDesktop: true },
+  { Icon: Heart, x: -95, y: -290, rotate: -6 },
+  { Icon: Film, x: 110, y: 270, rotate: 14 },
 ];
 
-// Timeline (segundos, a partir do carregamento da página):
-const DURACAO_ICONES = 0.65; // ícones convergem, encolhem e somem
-const ATRASO_GLOW = 0.3;
-const DURACAO_GLOW = 0.28;
-const ATRASO_LOGO = 0.32;
-const DURACAO_LOGO = 0.28;
-const ATRASO_QUADRO = 0.46;
-const DURACAO_QUADRO = 0.2;
-const ATRASO_REC = 0.56;
-const DURACAO_REC = 0.16;
-const ATRASO_TEXTO = 0.58;
-const DURACAO_TEXTO = 0.18;
-const ATRASO_SUBIDA = 0.76; // cena (logo formado) sobe e esmaece
+// Timeline (segundos, a partir do carregamento da página). A "apresentação"
+// (ícones → glow → logo → quadro → REC → texto) preenche os primeiros 2s —
+// são os mesmos tempos da 1ª versão (que cabiam em 0,76s), só esticados na
+// mesma proporção pra caber em 2s certinho. Depois disso, tudo fica parado
+// (o logo formado, "sozinho na tela") até completar 3s, e só então começa a
+// revelação do site.
+const DURACAO_ICONES = 1.7; // ícones convergem, encolhem e somem
+const ATRASO_GLOW = 0.8;
+const DURACAO_GLOW = 0.75;
+const ATRASO_LOGO = 0.85;
+const DURACAO_LOGO = 0.75;
+const ATRASO_QUADRO = 1.2;
+const DURACAO_QUADRO = 0.55;
+const ATRASO_REC = 1.45;
+const DURACAO_REC = 0.4;
+const ATRASO_TEXTO = 1.5;
+const DURACAO_TEXTO = 0.5; // termina em 2,0s — início do 1s de logo parado
+const ATRASO_SUBIDA = 3.0; // 2s de apresentação + 1s parado = 3s, só então sobe
 const DURACAO_SUBIDA = 0.22;
 // Começa ANTES da subida terminar (não depois) — testado em vídeo: com um
 // atraso maior aqui, a tela ficava um instante todo preta entre a cena sumir
 // e a cortina começar a se mexer, um "buraco" feio. Sobrepondo os dois, a
 // cortina já está rachando no momento em que a cena termina de esmaecer —
 // um movimento só, contínuo, sem pausa morta no meio.
-const ATRASO_CORTINA = 0.8;
-const DURACAO_CORTINA = 0.48; // termina em ~1.28s
-const DESMONTAR_MS = 1500; // um pouco depois da cortina terminar
+const ATRASO_CORTINA = 3.04;
+const DURACAO_CORTINA = 0.48; // termina em ~3,52s
+const DESMONTAR_MS = 3800; // um pouco depois da cortina terminar
 
 function IconeConvergindo({ config }: { config: ConfigIcone }) {
   const Icon = config.Icon;
@@ -85,11 +92,11 @@ function IconeConvergindo({ config }: { config: ConfigIcone }) {
         opacity: [1, 1, 0],
       }}
       transition={{ duration: DURACAO_ICONES, times: [0, 0.6, 1], ease: "easeInOut" }}
-      className={`absolute left-1/2 top-1/2 z-10 -ml-8 -mt-8 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/15 bg-white/[0.04] text-white/70 backdrop-blur-sm sm:-ml-10 sm:-mt-10 sm:h-20 sm:w-20 ${
+      className={`absolute left-1/2 top-1/2 z-10 -ml-10 -mt-10 flex h-20 w-20 items-center justify-center rounded-2xl border border-white/15 bg-white/[0.04] text-white/70 backdrop-blur-sm sm:-ml-12 sm:-mt-12 sm:h-24 sm:w-24 ${
         config.soDesktop ? "hidden sm:flex" : ""
       }`}
     >
-      <Icon size={26} />
+      <Icon size={32} />
     </motion.div>
   );
 }
@@ -183,7 +190,7 @@ export function CinematicIntro({
           className="absolute inset-0 z-20 flex items-center justify-center"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="Instaby" className="h-10 w-auto sm:h-14" />
+          <img src="/logo.png" alt="Instaby" className="h-20 w-auto sm:h-28" />
         </motion.div>
 
         {/* quadro de mira (estilo visor de câmera) fechando em volta do logo,

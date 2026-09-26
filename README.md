@@ -1,4 +1,39 @@
-# Instaby App — v132
+# Instaby App — v133
+
+## Abertura: elementos maiores + tempo certo (2s + 1s + revelação)
+
+Ajuste fino em cima da v132, que o Duhzao aprovou ("Ficou perfeito") mas
+pediu pra calibrar tamanho e tempo.
+
+**1) Elementos ainda maiores.** Os ícones que convergem cresceram de novo
+(64-80px → 80-96px, conforme a tela), com as posições iniciais reajustadas
+pra continuarem bem espalhados no tamanho novo. O logo formado também
+dobrou de tamanho (40-56px de altura → 80-112px) — fica grande na tela
+durante a pausa, do jeito que foi pedido ("tem que ser um tamanho legal").
+
+**2) Tempo dividido em 3 partes, ~3,5s no total** (antes, a sequência
+inteira durava só ~1,4s):
+- **2 segundos de "apresentação"**: ícones convergindo, brilho, logo se
+  formando, quadro de mira, REC e texto — mesma coreografia de antes, só
+  esticada pra caber certinho em 2s.
+- **1 segundo de logo parado**, grande, sozinho na tela — sem nada
+  acontecendo, só pra dar tempo da marca ser vista.
+- **Revelação do site**: mesmo mecanismo já aprovado na v132 (a cena sobe e
+  esmaece enquanto a tela se abre em duas metades, uma pra cima e outra pra
+  baixo, revelando o site a partir do meio) — só que agora começa depois da
+  pausa de 1s, não logo em seguida.
+
+**3) Sem mudança na revelação em si** — o "sobe e abre cortina" continua
+exatamente como ficou aprovado na v132, incluindo o cuidado de começar a
+cortina um pouco antes da cena de fundo terminar de esmaecer (evita um
+quadro preto "morto" entre uma coisa e outra).
+
+*(Mesma observação da v132: o vídeo de demonstração foi gravado em câmera
+lenta e depois acelerado de volta pra velocidade real, só pra dar pra ver
+os detalhes — no site de verdade a abertura roda nessa velocidade real,
+~3,5s do início ao fim.)*
+
+## v132
 
 ## Abertura automática (sem scroll) + cabeçalho mais sólido
 
