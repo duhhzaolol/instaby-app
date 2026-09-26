@@ -6,16 +6,21 @@ import { motion } from "framer-motion";
 // (ícone colorido + rótulo em caixa alta + valor grande + sub-legenda opcional),
 // agora compartilhado por qualquer tela que precise do mesmo estilo de "número em
 // destaque" (Clientes, Visão Geral do cliente, etc.) em vez de reimplementar em cada uma.
+//
+// `icone` tem que chegar JÁ MONTADO por quem chama (ex: <Wallet size={12} style={{ color:
+// cor }} />) — nunca o componente do ícone em si (ex: Icon={Wallet}). Esse componente é
+// "use client"; se quem chama for um Server Component (ex: app/dashboard/clientes/
+// page.tsx) e passar o componente cru, quebra em produção com "Functions cannot be
+// passed directly to Client Components" — uma função/componente não pode atravessar a
+// fronteira servidor→cliente, só um elemento já montado (JSX) pode.
 export function StatTile({
-  Icon,
-  cor,
+  icone,
   label,
   valor,
   sub,
   index = 0,
 }: {
-  Icon: any;
-  cor: string;
+  icone: React.ReactNode;
   label: string;
   valor: React.ReactNode;
   sub?: React.ReactNode;
@@ -29,7 +34,7 @@ export function StatTile({
       className="rounded-xl border border-border bg-card/60 p-3.5"
     >
       <div className="mb-1.5 flex items-center gap-1.5">
-        <Icon size={12} style={{ color: cor }} />
+        {icone}
         <p className="text-[10px] font-medium uppercase tracking-wide text-muted">{label}</p>
       </div>
       <p className="text-lg font-semibold text-text">{valor}</p>

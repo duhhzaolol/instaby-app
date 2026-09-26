@@ -1,4 +1,30 @@
-# Instaby App — v135
+# Instaby App — v136
+
+## Corrigido o erro no Clientes (bug em produção)
+
+Achei a causa do "Application error" que você via ao abrir Clientes
+(Digest 3240314787), a partir do log de erro que você mandou. Já está
+corrigido, sem mudar nada na aparência da tela.
+
+**O que era:** os 3 quadradinhos de resumo no topo do Clientes (Ativos /
+Mensalidade recorrente / Leads em aberto) estavam montados de um jeito que
+o Next.js não aceita em produção.
+
+**Detalhe técnico pra registro:** o Next.js roda uma parte do código no
+servidor e entrega o resultado pronto pro navegador, e outra parte roda
+direto no navegador. Um ícone (do pacote lucide-react que a gente usa) é,
+por baixo dos panos, uma função — e função não pode atravessar essa
+fronteira servidor→navegador como se fosse um dado comum, só o desenho
+já pronto dela pode. A tela de Clientes (que roda no servidor, porque
+busca os clientes no banco) estava mandando o ícone "cru" pro
+componente do quadradinho (que roda no navegador) — isso derrubava a
+página inteira assim que tentava montar. Troquei pra montar o ícone
+antes de mandar. Conferi o projeto inteiro atrás do mesmo padrão: só
+existia nesses 3 quadradinhos, já corrigidos — os outros (Dashboard,
+Tráfego Pago, dentro do próprio cliente) usavam um jeito diferente por
+baixo dos panos e nunca tiveram esse problema.
+
+## v135
 
 ## Conexão com o Google Drive (primeira parte da automação de pastas)
 

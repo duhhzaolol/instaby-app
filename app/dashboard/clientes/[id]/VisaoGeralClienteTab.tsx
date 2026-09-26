@@ -71,15 +71,13 @@ export default function VisaoGeralClienteTab({
     <div>
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatTile
-          Icon={Wallet}
-          cor="#E63946"
+          icone={<Wallet size={12} style={{ color: "#E63946" }} />}
           label="Mensalidade"
           valor={<ValorSensivel oculto={oculto}>R$ {mensalidade.toFixed(0)}</ValorSensivel>}
           index={0}
         />
         <StatTile
-          Icon={CalendarClock}
-          cor="#F59E0B"
+          icone={<CalendarClock size={12} style={{ color: "#F59E0B" }} />}
           label="Próxima cobrança"
           valor={
             proximaCobranca ? (
@@ -92,8 +90,7 @@ export default function VisaoGeralClienteTab({
           index={1}
         />
         <StatTile
-          Icon={FileSignature}
-          cor={contratoVigente ? "#22C55E" : "#9CA3AF"}
+          icone={<FileSignature size={12} style={{ color: contratoVigente ? "#22C55E" : "#9CA3AF" }} />}
           label="Contrato"
           valor={contratoVigente ? "Assinado" : "Sem contrato assinado"}
           sub={
@@ -106,7 +103,12 @@ export default function VisaoGeralClienteTab({
           }
           index={2}
         />
-        <StatTile Icon={Clock} cor="#0D9488" label="Horas esse mês" valor={`${horasMes.toFixed(1)}h`} index={3} />
+        <StatTile
+          icone={<Clock size={12} style={{ color: "#0D9488" }} />}
+          label="Horas esse mês"
+          valor={`${horasMes.toFixed(1)}h`}
+          index={3}
+        />
       </div>
 
       <AreaTrendChart

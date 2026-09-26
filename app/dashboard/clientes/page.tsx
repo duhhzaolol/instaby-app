@@ -94,15 +94,24 @@ export default async function ClientesPage({
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <StatTile Icon={UserCheck} cor="#22C55E" label="Ativos" valor={contagemPorStatus.ativo || 0} index={0} />
         <StatTile
-          Icon={Wallet}
-          cor="#E63946"
+          icone={<UserCheck size={12} style={{ color: "#22C55E" }} />}
+          label="Ativos"
+          valor={contagemPorStatus.ativo || 0}
+          index={0}
+        />
+        <StatTile
+          icone={<Wallet size={12} style={{ color: "#E63946" }} />}
           label="Mensalidade recorrente"
           valor={<ValorOcultavelTexto>R$ {mensalidadeRecorrente.toLocaleString("pt-BR")}</ValorOcultavelTexto>}
           index={1}
         />
-        <StatTile Icon={UserPlus} cor="#F59E0B" label="Leads em aberto" valor={contagemPorStatus.lead || 0} index={2} />
+        <StatTile
+          icone={<UserPlus size={12} style={{ color: "#F59E0B" }} />}
+          label="Leads em aberto"
+          valor={contagemPorStatus.lead || 0}
+          index={2}
+        />
       </div>
 
       <div className="mb-6 flex gap-2">
