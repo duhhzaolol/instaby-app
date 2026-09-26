@@ -79,11 +79,15 @@ export function CobrancaRow({
 
   async function lancarBaixa() {
     if (valorBaixa <= 0) return;
-    await fetch(`/api/cobrancas/${cobranca.id}/pagamentos`, {
+    const res = await fetch(`/api/cobrancas/${cobranca.id}/pagamentos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ valor: valorBaixa }),
     });
+    if (!res.ok) {
+      alert("Não consegui lançar essa baixa. Tenta de novo.");
+      return;
+    }
     setValorBaixa(0);
     setLancandoBaixa(false);
     router.refresh();

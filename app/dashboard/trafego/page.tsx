@@ -162,6 +162,7 @@ export default async function TrafegoPage({
                     descricao: t.descricao,
                     prioridade: t.prioridade,
                     clienteId: t.clienteId,
+                    driveFolderId: t.driveFolderId,
                   }}
                 />
               ))}

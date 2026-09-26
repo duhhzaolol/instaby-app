@@ -24,6 +24,7 @@ type MembroEquipe = {
   gerenciarTrafego: boolean;
   gerenciarEquipe: boolean;
   gerenciarConfiguracoes: boolean;
+  verArquivos: boolean;
   todosClientes: boolean;
   clienteIds: string[];
 };
@@ -35,6 +36,11 @@ const CAPACIDADES: { chave: keyof MembroEquipe; label: string; ajuda: string }[]
 
 const CAPACIDADES_DEPOIS_DO_COMERCIAL: { chave: keyof MembroEquipe; label: string; ajuda: string }[] = [
   { chave: "gerenciarTrafego", label: "Tráfego Pago", ajuda: "Campanhas, verba e resultado de tráfego pago." },
+  {
+    chave: "verArquivos",
+    label: "Ver arquivos (Drive)",
+    ajuda: "Vê a aba Arquivos dentro de cada cliente — Logotipos e Conteúdo do Drive. Contratos ali dentro continua exigindo a permissão de Contratos também.",
+  },
   { chave: "gerenciarConfiguracoes", label: "Configurações", ajuda: "Site, catálogo, automações e outras configurações gerais." },
   { chave: "gerenciarEquipe", label: "Gerenciar equipe", ajuda: "Pode criar, editar e remover outros logins — cuidado ao liberar." },
 ];
@@ -57,6 +63,7 @@ const TODAS_CAPACIDADES: (keyof MembroEquipe)[] = [
   "verContratos",
   "verCatalogo",
   "gerenciarTrafego",
+  "verArquivos",
   "gerenciarConfiguracoes",
   "gerenciarEquipe",
 ];
@@ -71,7 +78,7 @@ function preset(ligadas: (keyof MembroEquipe)[]): Partial<MembroEquipe> {
 // depois de clicar dá pra ajustar (ligar/desligar) qualquer um antes de salvar.
 // Cargo continua sendo um rótulo livre — esses são só os mais comuns na agência.
 const PRESETS_CARGO: { nome: string; permissoes: Partial<MembroEquipe> }[] = [
-  { nome: "Editor", permissoes: preset([]) },
+  { nome: "Editor", permissoes: preset(["verArquivos"]) },
   { nome: "Social Media", permissoes: preset(["verCatalogo"]) },
   { nome: "Gestor de Tráfego", permissoes: preset(["gerenciarTrafego", "verCatalogo"]) },
   { nome: "Comercial", permissoes: preset(["verOportunidades", "verOrcamentos", "verContratos", "verCatalogo"]) },
@@ -112,6 +119,7 @@ function formVazio(): Omit<MembroEquipe, "id" | "master"> & { senha: string } {
     gerenciarTrafego: false,
     gerenciarEquipe: false,
     gerenciarConfiguracoes: false,
+    verArquivos: false,
     todosClientes: true,
     clienteIds: [],
   };

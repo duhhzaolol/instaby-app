@@ -71,7 +71,12 @@ export default function EditarClienteForm({ cliente }: { cliente: Cliente }) {
   async function excluir() {
     if (!confirm(`Excluir ${cliente.nome}? Isso apaga também as tarefas, cobranças, despesas, orçamentos e contratos dele. Não dá pra desfazer.`)) return;
     setExcluindo(true);
-    await fetch(`/api/clientes/${cliente.id}`, { method: "DELETE" });
+    const res = await fetch(`/api/clientes/${cliente.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      setExcluindo(false);
+      alert("Não consegui excluir o cliente. Tenta de novo, e se continuar assim me chama.");
+      return;
+    }
     router.push("/dashboard/clientes");
     router.refresh();
   }

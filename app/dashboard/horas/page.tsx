@@ -89,7 +89,7 @@ export default async function HorasPage({
 
   const registrosMes = registrosGrade.filter((r) => r.inicio >= inicioMesVisto && r.inicio <= fimMesVisto);
 
-  type BlocoCliente = { id: string; cor: string | null; total: number; atividades: Record<string, number> };
+  type BlocoCliente = { id: string; nome: string; cor: string | null; total: number; atividades: Record<string, number> };
   const porCliente: Record<string, BlocoCliente> = {};
   const semCliente: typeof registrosMes = [];
   let totalMes = 0;
@@ -100,7 +100,9 @@ export default async function HorasPage({
     totalMes += horas;
 
     if (r.cliente) {
-      const bloco = (porCliente[r.cliente.nome] ||= { id: r.cliente.id, cor: r.cliente.cor, total: 0, atividades: {} });
+      // Agrupado por id, não por nome — dois clientes com o mesmo nome de exibição
+      // não podem cair no mesmo balde (aconteceria se agrupasse por nome).
+      const bloco = (porCliente[r.cliente.id] ||= { id: r.cliente.id, nome: r.cliente.nome, cor: r.cliente.cor, total: 0, atividades: {} });
       bloco.total += horas;
       bloco.atividades[r.atividade] = (bloco.atividades[r.atividade] || 0) + horas;
     } else {
@@ -266,14 +268,14 @@ export default async function HorasPage({
         <p className="mb-6 text-sm text-muted">Nada registrado nesse mês.</p>
       ) : (
         <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {ranking.map(([nome, bloco]) => {
+          {ranking.map(([, bloco]) => {
             const cor = bloco.cor || "#E63946";
             const atividades = Object.entries(bloco.atividades).sort((a, b) => b[1] - a[1]);
             const maiorAtividade = Math.max(...atividades.map(([, h]) => h));
 
             return (
               <Link
-                key={nome}
+                key={bloco.id}
                 href={linkComFiltro({ cliente: bloco.id })}
                 className="block rounded-2xl border border-border bg-card/60 p-4 transition-colors hover:bg-hover"
                 style={{ borderLeft: `3px solid ${cor}` }}
@@ -281,7 +283,7 @@ export default async function HorasPage({
                 <div className="mb-3 flex items-center justify-between">
                   <p className="flex items-center gap-2 text-sm font-medium text-text">
                     <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: cor }} />
-                    {nome}
+                    {bloco.nome}
                   </p>
                   <span className="text-sm font-medium text-text">{formatarDuracao(bloco.total)}</span>
                 </div>

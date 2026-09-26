@@ -41,6 +41,16 @@ export function visualDaCategoriaTarefa(categoria: string | null | undefined) {
   return CATEGORIAS_TAREFA.find((c) => c.valor === categoria) || CATEGORIAS_TAREFA[9];
 }
 
+// Categorias que geram pasta automática no Drive (dentro de Conteúdo do cliente,
+// uma por semana) quando a tarefa tem prazo definido — gravação e fotos são a
+// origem do material bruto, reel é o que vira o vídeo/post final.
+export const CATEGORIAS_COM_PASTA_DRIVE: CategoriaTarefa[] = ["gravacao", "reel", "fotos"];
+
+// Dessas, só "reel" trava: sem vídeo bruto na pasta, a tarefa não avança de "A
+// fazer" (ver PATCH de /api/tarefas/[id]). Gravação/fotos não travam — a tarefa
+// delas É a origem do material, não depende de nada existir antes.
+export const CATEGORIAS_QUE_PRECISAM_VIDEO_BRUTO: CategoriaTarefa[] = ["reel"];
+
 export const PRIORIDADES = [
   { valor: "alta", label: "🔥 Alta", cor: "#EF4444" },
   { valor: "media", label: "◆ Média", cor: "#F59E0B" },

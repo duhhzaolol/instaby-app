@@ -1,4 +1,68 @@
-# Instaby App — v136
+# Instaby App — v137
+
+## Pastas automáticas no Drive por cliente (parte 2 da automação)
+
+Segunda parte da automação de pastas — agora sim cria e organiza as pastas de
+verdade, além da conexão que já existia desde a v135.
+
+**O que tem agora:** uma aba nova, "Arquivos", dentro da página de cada
+cliente. Assim que alguém abre essa aba (ou quando a primeira tarefa de
+gravação/reel/fotos com prazo é criada), o app cria sozinho, dentro do Drive
+da agência, uma pasta com o nome do cliente contendo 3 subpastas:
+
+- **Logotipos** — compartilhada com "qualquer um que tiver o link", pra quem
+  for criar arte ou editar não precisar de conta própria no Drive da agência.
+- **Conteúdo** — também compartilhada por link, organizada por semana (uma
+  subpasta por semana, tipo "Semana 22–28 set"). É onde entra o material
+  bruto (gravação/fotos) e sai o editado.
+- **Contratos** — nunca é compartilhada por link, de propósito. Só quem loga
+  direto na conta do Drive da agência (ou tem a permissão de Contratos aqui
+  dentro do app) consegue ver.
+
+A pasta da semana de cada tarefa de mídia (Gravação, Criar Reel, Fotos)
+também aparece direto dentro da tarefa, com um botão "Abrir pasta".
+
+**Trava de segurança pro Reel:** uma tarefa "Criar Reel" só sai de "A fazer"
+se já tiver um vídeo de verdade dentro da pasta da semana dela no Drive. Tem
+um botão "Verificar vídeo bruto" dentro da tarefa pra conferir isso a
+qualquer momento — evita começar (ou marcar como pronta) a edição sem o
+material ainda ter chegado.
+
+**Quem pode ver:** nova permissão em Configurações > Equipe, "Ver arquivos
+(Drive)" — só quem tiver ela marcada (ou acesso total) vê a aba Arquivos de
+qualquer cliente. O preset "Editor" já vem com ela marcada.
+
+**Detalhe técnico pra registro:** nada é criado em massa — as pastas de um
+cliente só nascem na primeira vez que alguém realmente precisa delas. Se o
+Drive falhar por qualquer motivo nesse momento (token, instabilidade, cota),
+a aba mostra "pastas ainda não disponíveis" em vez de travar a página
+inteira do cliente — isolei esse risco de propósito, depois de ter corrigido
+na v136 um caso parecido (uma parte travando a página toda).
+
+## Botões que falhavam sem avisar — corrigidos
+
+Aproveitei pra revisar tarefas, cobranças, clientes e horas atrás de mais
+erros do tipo "o botão não fez nada e ninguém soube por quê":
+
+- **Excluir cliente** (em Editar cliente) e **excluir tarefa**: se o servidor
+  recusasse (rede, permissão etc.), nada acontecia na tela — parecia que
+  tinha excluído, mas não tinha. Agora avisam quando não conseguem.
+- **Lançar pagamento numa cobrança** e **salvar detalhes de uma tarefa**
+  (descrição, data, prioridade): mesmo problema, mesmo jeito de corrigir.
+- **Ranking de horas por cliente**: se dois clientes tivessem o mesmo nome de
+  exibição, as horas dos dois podiam se misturar por engano no total do mês.
+  Corrigido — agora agrupa pelo cliente de verdade, não pelo nome dele.
+- Um detalhe cosmético na tela Financeiro do cliente (dois cartões competindo
+  pela mesma animação de entrada).
+
+**Sobre "testar os botões":** não tenho como abrir o app de verdade e clicar
+aqui dentro (este ambiente não tem acesso ao banco de dados nem às chaves do
+Google) — a verificação foi lendo o código com cuidado, incluindo uma
+varredura dedicada no projeto inteiro atrás desses padrões de erro. Onde
+achei algo quebrado, corrigi; fora o que está listado aqui e na v136, nada
+mais chamou atenção.
+
+## v136
 
 ## Corrigido o erro no Clientes (bug em produção)
 

@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
       gerenciarTrafego: !!body.gerenciarTrafego,
       gerenciarEquipe: !!body.gerenciarEquipe,
       gerenciarConfiguracoes: !!body.gerenciarConfiguracoes,
+      verArquivos: !!body.verArquivos,
       todosClientes: !!body.todosClientes,
       clientesPermitidos: !body.todosClientes && clienteIds.length
         ? { create: clienteIds.map((clienteId) => ({ clienteId })) }

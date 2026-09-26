@@ -37,6 +37,7 @@ model Usuario {
   gerenciarTrafego       Boolean @default(false) // módulo Tráfego Pago
   gerenciarEquipe        Boolean @default(false) // Configurações > Equipe (criar/editar outros logins)
   gerenciarConfiguracoes Boolean @default(false) // resto de Configurações (site, catálogo, automações etc.)
+  verArquivos            Boolean @default(false) // vê a aba "Arquivos" (pastas do Drive) dentro do cliente
   todosClientes          Boolean @default(true) // false = só enxerga os clientes listados em clientesPermitidos
 
   clientesPermitidos ClienteUsuario[]
@@ -76,6 +77,18 @@ model Cliente {
   valorRenovacao     Decimal?
   exibirLogoPublico  Boolean   @default(false) // aparece na vitrine "empresas que confiam" das propostas
   createdAt          DateTime  @default(now())
+
+  // Pastas da automação de pastas do Google Drive (raiz do cliente + 3 fixas dentro
+  // dela). Ficam null até a 1ª vez que alguém abre a aba Arquivos desse cliente (ou
+  // até a 1ª tarefa de conteúdo com prazo ser criada) — não são criadas em massa pra
+  // todo cliente que existe, só sob demanda (ver lib/google.ts: garantirPastasCliente).
+  // Logotipos e Conteúdo ganham permissão "qualquer um com o link" na criação;
+  // Contratos nunca ganha essa permissão, de propósito — fica só na conta do Drive
+  // da agência mesmo.
+  driveClienteFolderId   String?
+  driveLogotiposFolderId String?
+  driveContratosFolderId String?
+  driveConteudoFolderId  String?
 
   tarefas             Tarefa[]
   orcamentos          Orcamento[]
@@ -254,6 +267,14 @@ model Tarefa {
   prazo      DateTime?
   link       String?
   createdAt DateTime @default(now())
+
+  // Pasta da semana no Google Drive (dentro de Conteúdo do cliente), criada sob
+  // demanda quando a tarefa tem categoria de mídia (gravacao/reel/fotos) + prazo +
+  // cliente com Drive conectado — ver lib/google.ts: garantirPastaSemana. Pra
+  // categoria "reel" especificamente, essa pasta também é onde a gente checa se já
+  // tem vídeo bruto (arquivo de vídeo lá dentro) antes de deixar a tarefa avançar de
+  // "A fazer" — ver o PATCH de /api/tarefas/[id].
+  driveFolderId String?
 }
 
 // Catálogo reutilizável de serviços — a "esteira de produto"

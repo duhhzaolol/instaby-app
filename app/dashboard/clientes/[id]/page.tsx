@@ -13,11 +13,13 @@ import { MensalidadeChip } from "./MensalidadeChip";
 import LinksClienteTab from "./LinksClienteTab";
 import OnboardingTab from "./OnboardingTab";
 import SolicitacoesTab from "./SolicitacoesTab";
+import ArquivosTab from "./ArquivosTab";
 import { TarefaRow } from "@/components/dashboard/TarefaRow";
 import { OrcamentoRow } from "@/components/dashboard/OrcamentoRow";
 import TrafegoClient from "@/components/dashboard/TrafegoClient";
 import { Clock } from "lucide-react";
 import { getUsuarioAtual, permissoesDe, podeVerCliente } from "@/lib/permissoes";
+import { garantirPastasCliente, linkDaPasta } from "@/lib/google";
 import { redirect } from "next/navigation";
 
 export default async function ClienteDetalhePage({
@@ -71,18 +73,35 @@ export default async function ClienteDetalhePage({
     { valor: "contratos", label: "Contratos" },
     { valor: "horas", label: "Horas" },
     { valor: "trafego", label: "Tráfego Pago" },
+    { valor: "arquivos", label: "Arquivos" },
   ];
   const abas = abasBase.filter((a) => {
     if (a.valor === "financeiro") return pode.verFinanceiro;
     if (a.valor === "orcamentos") return pode.verOrcamentos;
     if (a.valor === "contratos") return pode.verContratos;
     if (a.valor === "trafego") return pode.gerenciarTrafego;
+    if (a.valor === "arquivos") return pode.verArquivos;
     return true;
   });
   const abaPedida = searchParams.aba || "visao_geral";
   // Se pedirem por URL uma aba que essa pessoa não pode ver, cai pra Visão Geral
   // em vez de renderizar o conteúdo restrito.
   const aba = abas.some((a) => a.valor === abaPedida) ? abaPedida : "visao_geral";
+
+  // Só chama o Drive (rede + possível criação de pasta) quando alguém realmente
+  // abre a aba Arquivos — não em toda visita à página do cliente. Best-effort e
+  // isolado com try/catch de propósito: se o Drive falhar por qualquer motivo
+  // (token revogado, cota, instabilidade de rede), a aba mostra "indisponível"
+  // em vez de derrubar a página inteira do cliente — mesma lógica já usada nas
+  // rotas de tarefas (ver app/api/tarefas/route.ts e [id]/route.ts).
+  let pastasDrive: Awaited<ReturnType<typeof garantirPastasCliente>> = null;
+  if (aba === "arquivos" && pode.verArquivos) {
+    try {
+      pastasDrive = await garantirPastasCliente(cliente.id);
+    } catch (e) {
+      console.error("Erro ao preparar pastas do Drive desse cliente:", e);
+    }
+  }
 
   const orcamentosAceitos = cliente.orcamentos.filter((o) => o.status === "aceito");
   const totalServicos = cliente.servicosContratados.reduce((soma, sc) => soma + Number(sc.valor), 0);
@@ -358,6 +377,7 @@ export default async function ClienteDetalhePage({
                   descricao: t.descricao,
                   prioridade: t.prioridade,
                   clienteId: cliente.id,
+                  driveFolderId: t.driveFolderId,
                 }}
               />
             ))}
@@ -528,6 +548,21 @@ export default async function ClienteDetalhePage({
           }))}
           clientes={[{ id: cliente.id, nome: cliente.nome, cor: cliente.cor }]}
           clienteFixo={cliente.id}
+        />
+      )}
+
+      {aba === "arquivos" && (
+        <ArquivosTab
+          pastas={
+            pastasDrive
+              ? {
+                  logotipos: linkDaPasta(pastasDrive.driveLogotiposFolderId),
+                  conteudo: linkDaPasta(pastasDrive.driveConteudoFolderId),
+                  contratos: linkDaPasta(pastasDrive.driveContratosFolderId),
+                }
+              : null
+          }
+          podeVerContratos={pode.verContratos}
         />
       )}
     </div>

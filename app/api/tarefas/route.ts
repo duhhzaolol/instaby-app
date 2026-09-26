@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUsuarioAtual, clienteIdsPermitidos, podeVerCliente } from "@/lib/permissoes";
+import { garantirPastaSemana } from "@/lib/google";
+import { CATEGORIAS_COM_PASTA_DRIVE } from "@/lib/categoriaTarefaVisual";
 
 export async function GET() {
   const usuario = await getUsuarioAtual();
@@ -40,6 +42,19 @@ export async function POST(request: NextRequest) {
       prazo: body.prazo ? new Date(body.prazo) : null,
     },
   });
+
+  // Sob demanda: só tenta criar a pasta da semana se for categoria de mídia com
+  // prazo e cliente definidos. Best-effort — se o Drive falhar, a tarefa já foi
+  // criada normalmente, só fica sem pasta vinculada (tenta de novo numa próxima
+  // edição, ver PATCH de /api/tarefas/[id]).
+  if (tarefa.clienteId && tarefa.prazo && CATEGORIAS_COM_PASTA_DRIVE.includes((tarefa.categoria || "") as any)) {
+    try {
+      const driveFolderId = await garantirPastaSemana(tarefa.id);
+      if (driveFolderId) (tarefa as any).driveFolderId = driveFolderId;
+    } catch (e) {
+      console.error("Erro ao preparar pasta do Drive pra essa tarefa:", e);
+    }
+  }
 
   return NextResponse.json(tarefa, { status: 201 });
 }

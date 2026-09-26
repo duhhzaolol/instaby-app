@@ -108,6 +108,7 @@ export default async function TarefasPage({
                 descricao: t.descricao,
                 prioridade: t.prioridade,
                 clienteId: t.clienteId,
+                driveFolderId: t.driveFolderId,
               }}
             />
           ))}

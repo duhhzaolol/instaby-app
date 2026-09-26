@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, ChevronDown, Clock } from "lucide-react";
+import { Trash2, ChevronDown, Clock, HardDrive, ExternalLink, CheckCircle2, AlertCircle } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { visualDaCategoriaTarefa, PRIORIDADES } from "@/lib/categoriaTarefaVisual";
+import { visualDaCategoriaTarefa, PRIORIDADES, CATEGORIAS_QUE_PRECISAM_VIDEO_BRUTO } from "@/lib/categoriaTarefaVisual";
 import { formatarDuracao } from "@/lib/formatarDuracao";
 import { urgenciaPrazo } from "@/lib/urgenciaPrazo";
 import { DatePicker } from "@/components/ui/DatePicker";
@@ -19,6 +19,7 @@ export type TarefaRowData = {
   descricao?: string | null;
   prioridade?: string | null;
   clienteId?: string | null;
+  driveFolderId?: string | null;
 };
 
 function horaAtual() {
@@ -47,6 +48,8 @@ export function TarefaRow({
   const [salvando, setSalvando] = useState(false);
 
   const [confirmandoConclusao, setConfirmandoConclusao] = useState(false);
+  const [checandoVideo, setChecandoVideo] = useState(false);
+  const [temVideoBruto, setTemVideoBruto] = useState<boolean | null>(null);
   // Início também nasce no horário atual (igual sempre foi) — só o Fim tinha
   // esse padrão, o Início abria em branco, parecendo "errado"/aleatório.
   const [horaInicioConclusao, setHoraInicioConclusao] = useState(horaAtual());
@@ -72,22 +75,43 @@ export function TarefaRow({
       setConfirmandoConclusao(true);
       return;
     }
-    await fetch(`/api/tarefas/${tarefa.id}`, {
+    const res = await fetch(`/api/tarefas/${tarefa.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      alert(data?.erro || "Não consegui mudar o status.");
+    }
     router.refresh();
+  }
+
+  async function verificarVideoBruto() {
+    setChecandoVideo(true);
+    const res = await fetch(`/api/tarefas/${tarefa.id}/video-bruto`);
+    const data = await res.json().catch(() => null);
+    setTemVideoBruto(data?.temBruto ?? false);
+    setChecandoVideo(false);
   }
 
   async function confirmarConclusao(registrarHoras: boolean) {
     setRegistrandoConclusao(true);
 
-    await fetch(`/api/tarefas/${tarefa.id}`, {
+    const res = await fetch(`/api/tarefas/${tarefa.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "feito" }),
     });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      alert(data?.erro || "Não consegui marcar como feito.");
+      setRegistrandoConclusao(false);
+      setConfirmandoConclusao(false);
+      router.refresh();
+      return;
+    }
 
     if (registrarHoras && horaInicioConclusao && horaFimConclusao) {
       // Data local do navegador (não UTC) — depois das 21h, toISOString() já cai no dia
@@ -113,19 +137,29 @@ export function TarefaRow({
   async function excluir() {
     if (!confirm("Excluir essa tarefa?")) return;
     setExcluindo(true);
-    await fetch(`/api/tarefas/${tarefa.id}`, { method: "DELETE" });
+    const res = await fetch(`/api/tarefas/${tarefa.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      setExcluindo(false);
+      alert("Não consegui excluir essa tarefa. Tenta de novo.");
+      return;
+    }
     router.refresh();
   }
 
   async function salvarDetalhe() {
     setSalvando(true);
     const prazo = data ? `${data}T${hora || "00:00"}:00-03:00` : null;
-    await fetch(`/api/tarefas/${tarefa.id}`, {
+    const res = await fetch(`/api/tarefas/${tarefa.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ descricao: descricao || null, prazo, prioridade: prioridade || null }),
     });
     setSalvando(false);
+    if (!res.ok) {
+      const corpo = await res.json().catch(() => null);
+      alert(corpo?.erro || "Não consegui salvar os detalhes dessa tarefa. Tenta de novo.");
+      return;
+    }
     setDetalheAberto(false);
     router.refresh();
   }
@@ -275,6 +309,42 @@ export function TarefaRow({
               </select>
             </div>
           </div>
+
+          {tarefa.driveFolderId && CATEGORIAS_QUE_PRECISAM_VIDEO_BRUTO.includes((tarefa.categoria || "") as any) && (
+            <div className="mb-3 rounded-lg border border-border bg-card/60 p-3">
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-text">
+                <HardDrive size={12} /> Pasta desta semana no Drive
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <a
+                  href={`https://drive.google.com/drive/folders/${tarefa.driveFolderId}`}
+                  target="_blank"
+                  className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs text-text hover:bg-hover"
+                >
+                  <ExternalLink size={11} /> Abrir pasta
+                </a>
+                <button
+                  type="button"
+                  onClick={verificarVideoBruto}
+                  disabled={checandoVideo}
+                  className="rounded-lg border border-border px-2.5 py-1.5 text-xs text-muted hover:text-text disabled:opacity-50"
+                >
+                  {checandoVideo ? "Verificando..." : "Verificar vídeo bruto"}
+                </button>
+                {temVideoBruto === true && (
+                  <span className="flex items-center gap-1 text-xs text-emerald-400">
+                    <CheckCircle2 size={12} /> Pronto pra editar
+                  </span>
+                )}
+                {temVideoBruto === false && (
+                  <span className="flex items-center gap-1 text-xs text-amber-400">
+                    <AlertCircle size={12} /> Ainda sem vídeo bruto
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           <button
             onClick={salvarDetalhe}
             disabled={salvando}

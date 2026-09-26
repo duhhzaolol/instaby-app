@@ -306,7 +306,7 @@ export default function FinanceiroClient({
         <CalendarioFinanceiro movimentos={movimentosMes} mes={mesAtual} ano={anoAtual} />
       </Card>
 
-      <Card index={5} hoverable={false} className="mb-6 p-5">
+      <Card index={6} hoverable={false} className="mb-6 p-5">
         <p className="mb-4 text-sm font-medium text-text">Cobranças pendentes</p>
         <div className="flex flex-col gap-2">
           {cobrancasPendentes.length === 0 && <p className="text-sm text-muted">Nada pendente — tudo em dia.</p>}
@@ -368,7 +368,7 @@ export default function FinanceiroClient({
       </Card>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <Card index={6} hoverable={false} className="p-5">
+        <Card index={7} hoverable={false} className="p-5">
           <div className="mb-4 flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-text">Custos operacionais</p>
@@ -392,7 +392,7 @@ export default function FinanceiroClient({
           </div>
         </Card>
 
-        <Card index={7} hoverable={false} className="p-5">
+        <Card index={8} hoverable={false} className="p-5">
           <div className="mb-4 flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-text">Custos flexíveis</p>
