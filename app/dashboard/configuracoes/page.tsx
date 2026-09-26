@@ -10,6 +10,7 @@ import CustoHoraForm from "./CustoHoraForm";
 import InstrucoesCobrancaForm from "./InstrucoesCobrancaForm";
 import TemplateOnboardingForm from "./TemplateOnboardingForm";
 import TemplatesTarefasForm from "./TemplatesTarefasForm";
+import GoogleDriveForm from "./GoogleDriveForm";
 
 export default async function ConfiguracoesPage() {
   const usuarioAtual = await getUsuarioAtual();
@@ -113,6 +114,21 @@ export default async function ConfiguracoesPage() {
               seleção, edição. Aplica de uma vez num conteúdo ou cliente, sem digitar tarefa por tarefa.
             </p>
             <TemplatesTarefasForm templates={templatesTarefas} />
+          </div>
+
+          <div>
+            <p className="mb-1 text-sm font-medium text-text">Google Drive</p>
+            <p className="mb-4 text-sm text-muted">
+              Conexão única com o Drive da agência — usada pra organizar pasta de cliente automaticamente
+              (em construção; por enquanto só a conexão em si).
+            </p>
+            <GoogleDriveForm
+              conectadoEm={
+                config?.googleDriveConectadoEm
+                  ? config.googleDriveConectadoEm.toLocaleDateString("pt-BR")
+                  : null
+              }
+            />
           </div>
 
           <div>

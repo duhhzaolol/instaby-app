@@ -541,6 +541,14 @@ model Configuracao {
   // Texto livre com instruções de pagamento (ex: chave PIX, dados bancários) — aparece
   // no resumo de cobrança em PDF que você manda pro cliente. Vazio = seção não aparece.
   instrucoesCobranca    String?
+
+  // Conexão com o Google Drive da agência (uma só, pra conta toda — não é por membro
+  // da equipe). googleDriveRefreshToken nunca é devolvido pro navegador em nenhuma
+  // rota; só usado no servidor pra gerar um token de acesso novo a cada chamada à API
+  // do Drive. googleDriveEmail é só pra mostrar "Conectado como fulano@..." na tela.
+  googleDriveRefreshToken String?
+  googleDriveEmail        String?
+  googleDriveConectadoEm  DateTime?
 }
 
 // Trabalhos do portfólio, mostrados na Landing Page pública (seção Portfólio).

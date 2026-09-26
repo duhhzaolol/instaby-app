@@ -1,4 +1,28 @@
-# Instaby App — v134
+# Instaby App — v135
+
+## Conexão com o Google Drive (primeira parte da automação de pastas)
+
+Primeiro pedaço da ideia de organizar pasta de cliente automaticamente no
+Drive: por enquanto só a CONEXÃO em si — ainda não cria pasta nenhuma
+sozinha, isso vem numa próxima parte.
+
+**O que tem agora:** em Configurações, um cartão "Google Drive" com um botão
+"Conectar". Clicando, você é levado pra tela do Google pra autorizar (login +
+"Permitir"), e volta pro Configurações já mostrando "Conectado desde
+[data]". Dá pra desconectar a qualquer momento pelo mesmo lugar.
+
+**O que precisa estar configurado pra isso funcionar:** as variáveis
+`GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` no Vercel (Settings →
+Environment Variables) — configuradas juntas com você durante a conversa.
+Se estiver faltando alguma, o cartão avisa isso claramente em vez de dar
+erro sem explicação.
+
+**Detalhe técnico pra registro:** o acesso pedido é só o escopo
+`drive.file` do Google (arquivos/pastas que o próprio app criar) — nunca o
+Drive inteiro. A conexão é única pra agência (guardada em Configurações),
+não uma por pessoa da equipe.
+
+## v134
 
 ## Permissão "Comercial" detalhada + sugestão de permissões por cargo
 
