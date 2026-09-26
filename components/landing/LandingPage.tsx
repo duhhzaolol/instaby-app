@@ -472,9 +472,11 @@ export function LandingPage({
           />
         )}
         {/* reforço de legibilidade pro cabeçalho, que flutua transparente por cima —
-            garante contraste em qualquer foto, independente do degradê do texto
-            (mais forte à esquerda) */}
-        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/55 to-transparent" />
+            bem mais opaco perto do topo (quase preto sólido, referência do site
+            Creator Hub que o Duhzao mandou) e some rápido, sem deixar linha de
+            corte — garante contraste em qualquer foto, independente do degradê
+            do texto (mais forte à esquerda) */}
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/85 via-black/40 to-transparent" />
         {/* transição suave pro tom da seção seguinte — sem corte seco entre o
             banner do Hero e o fundo escuro logo abaixo */}
         <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-base sm:h-32" />

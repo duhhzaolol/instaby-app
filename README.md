@@ -1,4 +1,41 @@
-# Instaby App — v131
+# Instaby App — v132
+
+## Abertura automática (sem scroll) + cabeçalho mais sólido
+
+Referência: o Duhzao mandou print/frame do site "Creator Hub", cuja abertura
+toca sozinha assim que a página carrega (sem precisar rolar) e cujo
+cabeçalho lê como preto sólido, sem linha de corte visível.
+
+**1) Abertura deixou de depender de scroll.** Até a v131, a cena de abertura
+(ícones convergindo, virando o logo) era presa ao scroll — a pessoa
+precisava rolar a página pra ela acontecer. Agora ela é automática: toca
+sozinha assim que o site carrega, do jeito que foi pedido ("a pessoa entrou,
+vai aparecer lá, tudo sozinho"). Sem scroll envolvido, o espaçador de 70vh
+que só existia pra dar distância de rolagem também saiu — não faz falta
+mais.
+
+**2) Ícones flutuantes maiores.** Aumentei o tamanho dos ícones que
+convergem (de 48-56px pra 64-80px, conforme a tela) e espalhei um pouco mais
+as posições iniciais deles, pra não ficarem apertados uns nos outros no
+tamanho novo.
+
+**3) Nova saída: "sobe e abre cortina".** Depois que o logo se forma e o
+texto de abertura aparece, a cena inteira sobe e esmaece — e, ao mesmo
+tempo, a tela se abre em duas metades (uma sai por cima, a outra por baixo),
+revelando o site por trás, crescendo a partir do meio da tela. Tudo isso
+rápido — a sequência inteira (ícones convergindo → logo → saída) dura
+pouco mais de 1 segundo.
+
+**4) Cabeçalho mais opaco no topo.** O degradê atrás do cabeçalho (que dá
+contraste pro logo/menu sobre a foto do Hero) ficou bem mais forte perto do
+topo — lê como um preto quase sólido ali, igual à referência mandada, e
+continua sumindo suave conforme desce, sem criar linha de corte nenhuma.
+
+*(Testado com gravação de tela da prévia local — a versão em câmera lenta
+que mandei junto é só pra dar pra ver os detalhes; no site de verdade a
+abertura é rápida, do jeito que foi pedido.)*
+
+## v131
 
 ## Repaginação visual do site público — cabeçalho, seções, ícones e tira de filme
 

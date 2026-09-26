@@ -1,28 +1,31 @@
 "use client";
 
-// Abertura do site: ícones espalhados (conteúdo, redes, tráfego) flutuam soltos
-// e, conforme a pessoa rola um pouco, convergem pro centro e "viram" o logo da
-// Instaby. Curto de propósito — é só uma virada de chave, não uma cena longa.
+// Abertura do site: ícones espalhados (conteúdo, redes, tráfego) convergem pro
+// centro e "viram" o logo da Instaby — automático, assim que a página carrega,
+// sem precisar rolar (referência: o efeito de entrada do site Creator Hub, que
+// o Duhzao mandou de exemplo). Curto de propósito — é só uma virada de chave,
+// ~1,4s do início ao fim, não uma cena longa.
 //
-// Importante (ajuste depois do retorno sobre a v126): a cena é um overlay
-// `fixed` cobrindo a tela inteira, não um bloco `sticky` no fluxo normal da
-// página. Com `sticky`, depois que a cena terminava, o cabeçalho e o Hero
-// (que vêm logo depois no código) ainda precisavam "subir" uma tela inteira
-// até aparecer por completo — essa subida era exatamente o que ficava feio.
-// Com `fixed`, cabeçalho e Hero já estão nas posições finais deles o tempo
-// todo, só encobertos pela cena; quando ela esmaece (rápido, no fim do
-// scroll), eles simplesmente aparecem no lugar — puro fade, sem nenhum
-// deslocamento. O `<div>` logo abaixo (altura fixa) não posiciona nada, só
-// dá a distância de rolagem que a animação consome.
+// Antes (v126-v131) isso era ligado ao scroll (useScroll/scrollYProgress),
+// precisando de um espaçador de 70vh só pra dar distância de rolagem — o
+// visitante tinha que rolar pra abertura acontecer. Agora é por tempo
+// (initial/animate padrão do framer-motion, com delay em cada elemento),
+// disparado uma vez no carregamento. Sem scroll envolvido, não existe mais
+// espaçador nenhum: o cabeçalho e o Hero já ficam nas posições finais deles
+// desde o primeiro frame, só encobertos pela cena `fixed` até ela terminar.
+//
+// A saída é uma "abertura de cortina": depois que o logo se forma, a cena
+// inteira sobe e esmaece; ao mesmo tempo, duas metades sólidas (uma cobrindo
+// a metade de cima da tela, outra a de baixo) se separam — a de cima sai por
+// cima, a de baixo por baixo — revelando o site por trás, crescendo a partir
+// do meio da tela.
 //
 // Cada ícone tem sua própria trajetória (posição inicial → centro), por isso
-// vira um sub-componente (IconeConvergindo): chamar useTransform dentro de um
-// .map() quebraria as regras de hooks do React — delegar pra um componente
-// próprio, instanciado uma vez por ícone, é a forma correta e seguindo o mesmo
-// padrão de qualquer lista de componentes.
+// vira um sub-componente (IconeConvergindo) — mesmo padrão de qualquer lista
+// de componentes com animação própria.
 
-import { useRef } from "react";
-import { motion, useScroll, useTransform, type MotionValue } from "framer-motion";
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { Instagram, Youtube, Play, TrendingUp, Heart, Film } from "lucide-react";
 import { SvgRec } from "./FloatingGear";
 
@@ -35,37 +38,58 @@ type ConfigIcone = {
   soDesktop?: boolean;
 };
 
+// Posições ~30% mais espalhadas que antes, pra acompanhar o ícone maior
+// (pedido: "pode aumentar o tamanho, que eles estão pequenos").
 const ICONES: ConfigIcone[] = [
-  { Icon: Instagram, x: -150, y: -120, rotate: -14 },
-  { Icon: Youtube, x: 150, y: -140, rotate: 12 },
-  { Icon: Play, x: -180, y: 90, rotate: 9, soDesktop: true },
-  { Icon: TrendingUp, x: 170, y: 110, rotate: -10, soDesktop: true },
-  { Icon: Heart, x: -60, y: -185, rotate: -6 },
-  { Icon: Film, x: 70, y: 175, rotate: 14 },
+  { Icon: Instagram, x: -195, y: -155, rotate: -14 },
+  { Icon: Youtube, x: 195, y: -180, rotate: 12 },
+  { Icon: Play, x: -235, y: 115, rotate: 9, soDesktop: true },
+  { Icon: TrendingUp, x: 220, y: 145, rotate: -10, soDesktop: true },
+  { Icon: Heart, x: -80, y: -240, rotate: -6 },
+  { Icon: Film, x: 90, y: 225, rotate: 14 },
 ];
 
-function IconeConvergindo({
-  scrollYProgress,
-  config,
-}: {
-  scrollYProgress: MotionValue<number>;
-  config: ConfigIcone;
-}) {
-  const x = useTransform(scrollYProgress, [0, 0.5], [config.x, 0]);
-  const y = useTransform(scrollYProgress, [0, 0.5], [config.y, 0]);
-  const rotate = useTransform(scrollYProgress, [0, 0.5], [config.rotate, 0]);
-  const scale = useTransform(scrollYProgress, [0, 0.4, 0.56], [1, 0.9, 0.3]);
-  const opacity = useTransform(scrollYProgress, [0, 0.38, 0.56], [1, 1, 0]);
-  const Icon = config.Icon;
+// Timeline (segundos, a partir do carregamento da página):
+const DURACAO_ICONES = 0.65; // ícones convergem, encolhem e somem
+const ATRASO_GLOW = 0.3;
+const DURACAO_GLOW = 0.28;
+const ATRASO_LOGO = 0.32;
+const DURACAO_LOGO = 0.28;
+const ATRASO_QUADRO = 0.46;
+const DURACAO_QUADRO = 0.2;
+const ATRASO_REC = 0.56;
+const DURACAO_REC = 0.16;
+const ATRASO_TEXTO = 0.58;
+const DURACAO_TEXTO = 0.18;
+const ATRASO_SUBIDA = 0.76; // cena (logo formado) sobe e esmaece
+const DURACAO_SUBIDA = 0.22;
+// Começa ANTES da subida terminar (não depois) — testado em vídeo: com um
+// atraso maior aqui, a tela ficava um instante todo preta entre a cena sumir
+// e a cortina começar a se mexer, um "buraco" feio. Sobrepondo os dois, a
+// cortina já está rachando no momento em que a cena termina de esmaecer —
+// um movimento só, contínuo, sem pausa morta no meio.
+const ATRASO_CORTINA = 0.8;
+const DURACAO_CORTINA = 0.48; // termina em ~1.28s
+const DESMONTAR_MS = 1500; // um pouco depois da cortina terminar
 
+function IconeConvergindo({ config }: { config: ConfigIcone }) {
+  const Icon = config.Icon;
   return (
     <motion.div
-      style={{ x, y, rotate, scale, opacity }}
-      className={`absolute left-1/2 top-1/2 z-10 -ml-6 -mt-6 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/15 bg-white/[0.04] text-white/70 backdrop-blur-sm sm:-ml-7 sm:-mt-7 sm:h-14 sm:w-14 ${
+      initial={{ x: config.x, y: config.y, rotate: config.rotate, scale: 1, opacity: 1 }}
+      animate={{
+        x: [config.x, 0, 0],
+        y: [config.y, 0, 0],
+        rotate: [config.rotate, 0, 0],
+        scale: [1, 0.9, 0.3],
+        opacity: [1, 1, 0],
+      }}
+      transition={{ duration: DURACAO_ICONES, times: [0, 0.6, 1], ease: "easeInOut" }}
+      className={`absolute left-1/2 top-1/2 z-10 -ml-8 -mt-8 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/15 bg-white/[0.04] text-white/70 backdrop-blur-sm sm:-ml-10 sm:-mt-10 sm:h-20 sm:w-20 ${
         config.soDesktop ? "hidden sm:flex" : ""
       }`}
     >
-      <Icon size={20} />
+      <Icon size={26} />
     </motion.div>
   );
 }
@@ -77,47 +101,49 @@ export function CinematicIntro({
   titulo?: string | null;
   subtitulo?: string | null;
 }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  // progresso 0→1 ao longo da "régua" de scroll abaixo, ponto — sem folga
-  // extra depois: ao chegar em 1, a régua acabou e cabeçalho/Hero (que já
-  // estavam prontos, atrás) simplesmente ficam visíveis, sem scroll a mais.
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start start", "end start"],
-  });
+  // depois que a cortina termina de abrir, desmonta a cena de vez — as duas
+  // metades já saíram da tela, então isso não muda nada visualmente, só evita
+  // deixar um overlay fixed (mesmo que inofensivo) penduradо pro resto da visita.
+  const [ativo, setAtivo] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setAtivo(false), DESMONTAR_MS);
+    return () => clearTimeout(t);
+  }, []);
 
-  // A cena inteira — fundo, ícones, logo e texto — esmaece rápido no final.
-  const opacidadeCena = useTransform(scrollYProgress, [0, 0.78, 1], [1, 1, 0]);
-
-  // Logo: nasce pequeno/transparente e ganha forma junto com a chegada dos ícones.
-  const escalaLogo = useTransform(scrollYProgress, [0.3, 0.58], [0.5, 1]);
-  const opacidadeLogo = useTransform(scrollYProgress, [0.3, 0.5], [0, 1]);
-  const glowLogo = useTransform(scrollYProgress, [0.42, 0.58], [0, 1]);
-
-  // Texto: entra logo depois do logo se formar.
-  const opacidadeTexto = useTransform(scrollYProgress, [0.6, 0.72], [0, 1]);
-  const yTexto = useTransform(scrollYProgress, [0.6, 0.72], [16, 0]);
-
-  // "Mixagem" com a ideia de câmera gravando: um quadro de mira (cantos, como
-  // visor de câmera) fecha em volta do logo assim que ele termina de se formar,
-  // com o selo REC ancorado no canto — o logo "sendo gravado", sem precisar
-  // reintroduzir a câmera inteira que você não gostou antes.
-  const escalaQuadro = useTransform(scrollYProgress, [0.52, 0.68], [1.15, 1]);
-  const opacidadeQuadro = useTransform(scrollYProgress, [0.52, 0.64], [0, 1]);
-  const opacidadeRec = useTransform(scrollYProgress, [0.6, 0.7], [0, 1]);
-
-  // Indicador de "role" — só faz sentido no início.
-  const opacidadeIndicador = useTransform(scrollYProgress, [0, 0.06, 0.18], [0, 1, 0]);
+  if (!ativo) return null;
 
   return (
-    <div ref={containerRef} className="relative h-[70vh]">
-      {/* fixed, não sticky: cobre a tela inteira sempre no mesmo lugar (nunca
-          "desliza"), só a opacidade muda — cabeçalho e Hero, por trás, já
-          estão nas posições finais deles desde o início. */}
+    // fixed, não sticky/scroll: cobre a tela inteira sempre no mesmo lugar;
+    // cabeçalho e Hero, por trás, já estão nas posições finais deles desde o
+    // início — quando a cortina abre, eles simplesmente aparecem no lugar.
+    <div aria-hidden className="pointer-events-none fixed inset-0 z-50 overflow-hidden">
+      {/* as duas metades da cortina — cobrem a tela inteira até se separarem */}
       <motion.div
-        aria-hidden
-        style={{ opacity: opacidadeCena }}
-        className="pointer-events-none fixed inset-0 z-50 overflow-hidden bg-[#08080a]"
+        initial={{ y: "0%" }}
+        animate={{ y: "-100%" }}
+        transition={{ delay: ATRASO_CORTINA, duration: DURACAO_CORTINA, ease: [0.76, 0, 0.24, 1] }}
+        className="absolute inset-x-0 top-0 z-0 h-1/2 bg-[#08080a]"
+      />
+      <motion.div
+        initial={{ y: "0%" }}
+        animate={{ y: "100%" }}
+        transition={{ delay: ATRASO_CORTINA, duration: DURACAO_CORTINA, ease: [0.76, 0, 0.24, 1] }}
+        className="absolute inset-x-0 bottom-0 z-0 h-1/2 bg-[#08080a]"
+      />
+
+      {/* ícones espalhados, convergindo pro centro — ficam por cima da cortina,
+          fora do grupo que sobe/esmaece (eles já cuidam do próprio sumiço) */}
+      {ICONES.map((config, i) => (
+        <IconeConvergindo key={i} config={config} />
+      ))}
+
+      {/* cena formada: grade neon, glow, logo, quadro de mira, REC e texto —
+          tudo junto num grupo só, que sobe e esmaece de uma vez no final */}
+      <motion.div
+        initial={{ y: 0, opacity: 1 }}
+        animate={{ y: -50, opacity: 0 }}
+        transition={{ delay: ATRASO_SUBIDA, duration: DURACAO_SUBIDA, ease: "easeIn" }}
+        className="absolute inset-0 z-10"
       >
         {/* grade neon sutil de fundo */}
         <div
@@ -135,15 +161,12 @@ export function CinematicIntro({
           style={{ background: "radial-gradient(ellipse at center, rgba(230,57,70,0.14), transparent 60%)" }}
         />
 
-        {/* ícones espalhados, convergindo pro centro */}
-        {ICONES.map((config, i) => (
-          <IconeConvergindo key={i} scrollYProgress={scrollYProgress} config={config} />
-        ))}
-
         {/* glow por trás do logo, cresce junto com ele */}
         <motion.div
           aria-hidden
-          style={{ opacity: glowLogo }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: ATRASO_GLOW, duration: DURACAO_GLOW }}
           className="absolute inset-0 z-10 flex items-center justify-center"
         >
           <div
@@ -154,7 +177,9 @@ export function CinematicIntro({
 
         {/* logo, montado pelos ícones */}
         <motion.div
-          style={{ scale: escalaLogo, opacity: opacidadeLogo }}
+          initial={{ scale: 0.5, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: ATRASO_LOGO, duration: DURACAO_LOGO, ease: [0.16, 1, 0.3, 1] }}
           className="absolute inset-0 z-20 flex items-center justify-center"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -165,7 +190,9 @@ export function CinematicIntro({
             como se a cena tivesse acabado de "gravar" ele se formando */}
         <motion.div
           aria-hidden
-          style={{ scale: escalaQuadro, opacity: opacidadeQuadro }}
+          initial={{ scale: 1.15, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: ATRASO_QUADRO, duration: DURACAO_QUADRO }}
           className="absolute inset-0 z-20 flex items-center justify-center"
         >
           <div className="relative h-[190px] w-[260px] sm:h-[260px] sm:w-[360px]">
@@ -176,7 +203,9 @@ export function CinematicIntro({
           </div>
         </motion.div>
         <motion.div
-          style={{ opacity: opacidadeRec }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: ATRASO_REC, duration: DURACAO_REC }}
           className="absolute inset-x-0 top-[27%] z-20 flex justify-center sm:top-[24%]"
         >
           <SvgRec />
@@ -184,7 +213,9 @@ export function CinematicIntro({
 
         {/* texto de abertura, entra depois do logo formado */}
         <motion.div
-          style={{ opacity: opacidadeTexto, y: yTexto }}
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: ATRASO_TEXTO, duration: DURACAO_TEXTO }}
           className="absolute inset-x-0 top-[64%] z-20 flex flex-col items-center gap-3 px-6 text-center"
         >
           <h1 className="max-w-xs text-xl font-semibold leading-tight text-white sm:max-w-2xl sm:text-3xl">
@@ -193,13 +224,6 @@ export function CinematicIntro({
           <p className="max-w-[280px] text-sm text-white/60 sm:max-w-md sm:text-base">
             {subtitulo || "Conteúdo, captação e tráfego pago — cada peça, trabalhando junto pelo seu resultado."}
           </p>
-        </motion.div>
-
-        <motion.div
-          style={{ opacity: opacidadeIndicador }}
-          className="absolute bottom-8 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 text-[11px] uppercase tracking-widest text-white/40"
-        >
-          role pra continuar
         </motion.div>
       </motion.div>
     </div>
