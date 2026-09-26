@@ -33,6 +33,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   if (body.gerenciarEquipe !== undefined) data.gerenciarEquipe = !!body.gerenciarEquipe;
   if (body.gerenciarConfiguracoes !== undefined) data.gerenciarConfiguracoes = !!body.gerenciarConfiguracoes;
   if (body.verArquivos !== undefined) data.verArquivos = !!body.verArquivos;
+  if (body.acessoClienteCompleto !== undefined) data.acessoClienteCompleto = !!body.acessoClienteCompleto;
   if (body.todosClientes !== undefined) data.todosClientes = !!body.todosClientes;
 
   // Nova senha é opcional na edição — só troca se vier preenchida

@@ -27,10 +27,11 @@ export function PipelineOportunidades({ oportunidades }: { oportunidades: Oportu
   const [detalhe, setDetalhe] = useState<OportunidadeData | null>(null);
   const [salvando, setSalvando] = useState(false);
 
-  const colunas = ESTAGIOS_OPORTUNIDADE.map((e) => ({
-    ...e,
-    itens: oportunidades.filter((o) => o.status === e.valor),
-  }));
+  const colunas = ESTAGIOS_OPORTUNIDADE.map((e) => {
+    const itens = oportunidades.filter((o) => o.status === e.valor);
+    const total = itens.reduce((s, o) => s + (o.valorEstimado || 0), 0);
+    return { ...e, itens, total };
+  });
 
   async function salvarCampo(campo: string, valor: any) {
     if (!detalhe) return;
@@ -84,18 +85,28 @@ export function PipelineOportunidades({ oportunidades }: { oportunidades: Oportu
     <>
       <div className="flex gap-3 overflow-x-auto pb-3">
         {colunas.map((col) => (
-          <div key={col.valor} className="w-64 shrink-0">
-            <div className="mb-2 flex items-center gap-1.5 px-1">
-              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: col.cor }} />
-              <p className="text-xs font-medium text-text">{col.label}</p>
-              <span className="text-xs text-muted">({col.itens.length})</span>
+          <div key={col.valor} className="w-64 shrink-0 rounded-2xl border border-border bg-card/40 p-3">
+            <div className="mb-3 flex items-center justify-between px-1">
+              <p className="flex items-center gap-1.5 text-xs font-medium text-text">
+                <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: col.cor }} />
+                {col.label}
+              </p>
+              <span className="whitespace-nowrap rounded-full bg-base px-2 py-0.5 text-[10px] text-muted">
+                {col.itens.length}
+                {col.total > 0 && ` · R$ ${col.total.toFixed(0)}`}
+              </span>
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex min-h-[64px] flex-col gap-2">
+              {col.itens.length === 0 && (
+                <p className="rounded-xl border border-dashed border-border/60 p-4 text-center text-[11px] text-muted">
+                  Nada por aqui
+                </p>
+              )}
               {col.itens.map((o) => (
                 <button
                   key={o.id}
                   onClick={() => setDetalhe(o)}
-                  className="rounded-xl border border-border bg-card/60 p-3 text-left hover:bg-hover"
+                  className="rounded-xl border border-border bg-base/60 p-3 text-left transition-all hover:border-white/20 hover:shadow-premium"
                 >
                   <p className="mb-1 text-sm text-text">{o.nome}</p>
                   {o.valorEstimado ? (
@@ -105,7 +116,6 @@ export function PipelineOportunidades({ oportunidades }: { oportunidades: Oportu
                   )}
                 </button>
               ))}
-              {col.itens.length === 0 && <p className="text-[11px] text-muted/60">Nada aqui</p>}
             </div>
           </div>
         ))}

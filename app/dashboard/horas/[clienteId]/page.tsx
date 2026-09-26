@@ -50,16 +50,17 @@ export default async function HorasClientePage({
 
   const registros = await prisma.registroTempo.findMany({
     where: { clienteId: cliente.id, inicio: { gte: inicioGrade, lte: fimGrade } },
+    include: { usuario: { select: { nome: true } } },
     orderBy: { inicio: "asc" },
   });
 
-  const porDia: Record<string, { atividade: string; horas: number }[]> = {};
+  const porDia: Record<string, { atividade: string; horas: number; usuarioNome: string | null }[]> = {};
   let totalMes = 0;
   registros.forEach((r) => {
     if (!r.fim) return;
     const horas = (r.fim.getTime() - r.inicio.getTime()) / 1000 / 60 / 60;
     const chave = chaveDiaEvento(r.inicio);
-    (porDia[chave] ||= []).push({ atividade: r.atividade, horas });
+    (porDia[chave] ||= []).push({ atividade: r.atividade, horas, usuarioNome: r.usuario?.nome || null });
     if (r.inicio >= inicioMes && r.inicio <= fimMes) totalMes += horas;
   });
 
@@ -156,6 +157,7 @@ export default async function HorasClientePage({
                       {registrosDoDia.slice(0, 2).map((r, i) => (
                         <p key={i} className="truncate text-[9px] text-muted">
                           {r.atividade}
+                          {r.usuarioNome ? ` · ${r.usuarioNome}` : ""}
                         </p>
                       ))}
                       {registrosDoDia.length > 2 && (

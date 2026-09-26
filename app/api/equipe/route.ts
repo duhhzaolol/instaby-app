@@ -60,6 +60,9 @@ export async function POST(request: NextRequest) {
       gerenciarEquipe: !!body.gerenciarEquipe,
       gerenciarConfiguracoes: !!body.gerenciarConfiguracoes,
       verArquivos: !!body.verArquivos,
+      // Default true (mesmo default do schema) se vier ausente — só fica false quando
+      // alguém desliga de propósito (ex: preset "Editor" no formulário de Equipe).
+      acessoClienteCompleto: body.acessoClienteCompleto === undefined ? true : !!body.acessoClienteCompleto,
       todosClientes: !!body.todosClientes,
       clientesPermitidos: !body.todosClientes && clienteIds.length
         ? { create: clienteIds.map((clienteId) => ({ clienteId })) }

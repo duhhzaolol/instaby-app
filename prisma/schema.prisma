@@ -38,9 +38,15 @@ model Usuario {
   gerenciarEquipe        Boolean @default(false) // Configurações > Equipe (criar/editar outros logins)
   gerenciarConfiguracoes Boolean @default(false) // resto de Configurações (site, catálogo, automações etc.)
   verArquivos            Boolean @default(false) // vê a aba "Arquivos" (pastas do Drive) dentro do cliente
+  // false = dentro de um cliente, só vê Arquivos (se verArquivos) e Horas — as abas gerais
+  // (Visão Geral, Contatos, Onboarding, Solicitações, Tarefas, Serviços, Links) ficam ocultas.
+  // Default true pra não mudar nada de quem já existe; só fica false quando alguém liga
+  // isso de propósito (ex: preset "Editor" em Equipe) pra um acesso bem restrito.
+  acessoClienteCompleto  Boolean @default(true)
   todosClientes          Boolean @default(true) // false = só enxerga os clientes listados em clientesPermitidos
 
   clientesPermitidos ClienteUsuario[]
+  registrosTempo     RegistroTempo[]
 
   createdAt        DateTime  @default(now())
   tentativasFalhas Int       @default(0) // contador de senhas erradas seguidas — zera a cada acerto
@@ -297,6 +303,11 @@ model RegistroTempo {
   id        String    @id @default(uuid())
   clienteId String?
   cliente   Cliente?  @relation(fields: [clienteId], references: [id])
+  // Quem lançou esse registro — opcional só pra não quebrar histórico antigo (lançado
+  // antes dessa coluna existir); todo registro novo criado pela rota de API já vem com
+  // isso preenchido a partir da sessão de quem estava logado.
+  usuarioId String?
+  usuario   Usuario?  @relation(fields: [usuarioId], references: [id])
   atividade String // ex: "Captação", "Edição", "Reunião"
   inicio    DateTime
   fim       DateTime?

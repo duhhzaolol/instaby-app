@@ -25,6 +25,7 @@ type MembroEquipe = {
   gerenciarEquipe: boolean;
   gerenciarConfiguracoes: boolean;
   verArquivos: boolean;
+  acessoClienteCompleto: boolean;
   todosClientes: boolean;
   clienteIds: string[];
 };
@@ -77,12 +78,15 @@ function preset(ligadas: (keyof MembroEquipe)[]): Partial<MembroEquipe> {
 // Pontos de partida por cargo — só preenchem os toggles abaixo, nada é travado:
 // depois de clicar dá pra ajustar (ligar/desligar) qualquer um antes de salvar.
 // Cargo continua sendo um rótulo livre — esses são só os mais comuns na agência.
+// acessoClienteCompleto vai à parte (fora do preset() genérico) porque tem o sentido
+// invertido dos outros: true = normal, false = restrito. Só o Editor nasce restrito —
+// ele deve enxergar, dentro de cada cliente, só a aba Arquivos (e Horas, que é universal).
 const PRESETS_CARGO: { nome: string; permissoes: Partial<MembroEquipe> }[] = [
-  { nome: "Editor", permissoes: preset(["verArquivos"]) },
-  { nome: "Social Media", permissoes: preset(["verCatalogo"]) },
-  { nome: "Gestor de Tráfego", permissoes: preset(["gerenciarTrafego", "verCatalogo"]) },
-  { nome: "Comercial", permissoes: preset(["verOportunidades", "verOrcamentos", "verContratos", "verCatalogo"]) },
-  { nome: "Financeiro", permissoes: preset(["verFinanceiro", "gerenciarFinanceiro"]) },
+  { nome: "Editor", permissoes: { ...preset(["verArquivos"]), acessoClienteCompleto: false } },
+  { nome: "Social Media", permissoes: { ...preset(["verCatalogo"]), acessoClienteCompleto: true } },
+  { nome: "Gestor de Tráfego", permissoes: { ...preset(["gerenciarTrafego", "verCatalogo"]), acessoClienteCompleto: true } },
+  { nome: "Comercial", permissoes: { ...preset(["verOportunidades", "verOrcamentos", "verContratos", "verCatalogo"]), acessoClienteCompleto: true } },
+  { nome: "Financeiro", permissoes: { ...preset(["verFinanceiro", "gerenciarFinanceiro"]), acessoClienteCompleto: true } },
 ];
 
 function Toggle({ ligado, onChange }: { ligado: boolean; onChange: (v: boolean) => void }) {
@@ -120,6 +124,7 @@ function formVazio(): Omit<MembroEquipe, "id" | "master"> & { senha: string } {
     gerenciarEquipe: false,
     gerenciarConfiguracoes: false,
     verArquivos: false,
+    acessoClienteCompleto: true,
     todosClientes: true,
     clienteIds: [],
   };
@@ -439,6 +444,21 @@ function FormMembro({
             />
           </div>
         ))}
+
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 px-3.5 py-2.5">
+          <div>
+            <p className="text-sm text-text">Acesso completo dentro do cliente</p>
+            <p className="text-xs text-muted">
+              Desligado = ao abrir qualquer cliente, essa pessoa só vê a aba Arquivos (se tiver
+              "Ver arquivos" ligado) e Horas — Visão Geral, Contatos, Onboarding, Solicitações,
+              Tarefas, Serviços e Links ficam ocultos. Ideal pra um editor que só entrega arquivo.
+            </p>
+          </div>
+          <Toggle
+            ligado={!!form.acessoClienteCompleto}
+            onChange={(v) => setForm((f: any) => ({ ...f, acessoClienteCompleto: v }))}
+          />
+        </div>
       </div>
 
       <div className="flex flex-col gap-2">

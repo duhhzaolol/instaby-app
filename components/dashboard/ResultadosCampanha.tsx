@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ChevronDown, ChevronUp, Plus, X, Check, Trash2, Pencil, TrendingUp, DollarSign, Target, Percent, Eye, Trophy } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, X, Check, Trash2, Pencil, TrendingUp, DollarSign, Target, Percent, Eye, Trophy, Users, Repeat, Coins } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { DatePicker } from "@/components/ui/DatePicker";
@@ -60,6 +60,7 @@ function NovoResultadoForm({ campanhaId, onSalvo }: { campanhaId: string; onSalv
   const [fim, setFim] = useState(new Date().toLocaleDateString("en-CA"));
   const [verbaInvestida, setVerbaInvestida] = useState(0);
   const [impressoes, setImpressoes] = useState("");
+  const [alcance, setAlcance] = useState("");
   const [cliques, setCliques] = useState("");
   const [resultados, setResultados] = useState("");
   const [observacoes, setObservacoes] = useState("");
@@ -79,6 +80,7 @@ function NovoResultadoForm({ campanhaId, onSalvo }: { campanhaId: string; onSalv
         fim,
         verbaInvestida: verbaInvestida || null,
         impressoes: numOuNulo(impressoes),
+        alcance: numOuNulo(alcance),
         cliques: numOuNulo(cliques),
         resultados: numOuNulo(resultados),
         observacoes: observacoes || null,
@@ -118,18 +120,28 @@ function NovoResultadoForm({ campanhaId, onSalvo }: { campanhaId: string; onSalv
         <input
           type="number"
           min={0}
+          value={alcance}
+          onChange={(e) => setAlcance(e.target.value)}
+          placeholder="Alcance"
+          className="h-10 w-full rounded-xl border border-border bg-base/60 px-3 text-sm text-text"
+        />
+        <input
+          type="number"
+          min={0}
           value={cliques}
           onChange={(e) => setCliques(e.target.value)}
           placeholder="Cliques"
           className="h-10 w-full rounded-xl border border-border bg-base/60 px-3 text-sm text-text"
         />
+      </div>
+      <div className="mb-2 grid grid-cols-2 gap-2">
         <input
           type="number"
           min={0}
           value={resultados}
           onChange={(e) => setResultados(e.target.value)}
           placeholder="Resultados (leads/vendas)"
-          className="h-10 w-full rounded-xl border border-border bg-base/60 px-3 text-sm text-text"
+          className="col-span-2 h-10 w-full rounded-xl border border-border bg-base/60 px-3 text-sm text-text"
         />
       </div>
       <textarea
@@ -176,6 +188,7 @@ function EditarResultadoForm({
   const router = useRouter();
   const [verbaInvestida, setVerbaInvestida] = useState(resultado.verbaInvestida || 0);
   const [impressoes, setImpressoes] = useState(resultado.impressoes?.toString() || "");
+  const [alcance, setAlcance] = useState(resultado.alcance?.toString() || "");
   const [cliques, setCliques] = useState(resultado.cliques?.toString() || "");
   const [resultados, setResultados] = useState(resultado.resultados?.toString() || "");
   const [observacoes, setObservacoes] = useState(resultado.observacoes || "");
@@ -191,6 +204,7 @@ function EditarResultadoForm({
       body: JSON.stringify({
         verbaInvestida: verbaInvestida || null,
         impressoes: numOuNulo(impressoes),
+        alcance: numOuNulo(alcance),
         cliques: numOuNulo(cliques),
         resultados: numOuNulo(resultados),
         observacoes: observacoes || null,
@@ -235,18 +249,28 @@ function EditarResultadoForm({
         <input
           type="number"
           min={0}
+          value={alcance}
+          onChange={(e) => setAlcance(e.target.value)}
+          placeholder="Alcance"
+          className="h-10 w-full rounded-xl border border-border bg-base/60 px-3 text-sm text-text"
+        />
+        <input
+          type="number"
+          min={0}
           value={cliques}
           onChange={(e) => setCliques(e.target.value)}
           placeholder="Cliques"
           className="h-10 w-full rounded-xl border border-border bg-base/60 px-3 text-sm text-text"
         />
+      </div>
+      <div className="mb-2 grid grid-cols-2 gap-2">
         <input
           type="number"
           min={0}
           value={resultados}
           onChange={(e) => setResultados(e.target.value)}
           placeholder="Resultados"
-          className="h-10 w-full rounded-xl border border-border bg-base/60 px-3 text-sm text-text"
+          className="col-span-2 h-10 w-full rounded-xl border border-border bg-base/60 px-3 text-sm text-text"
         />
       </div>
       <textarea
@@ -488,7 +512,15 @@ function PainelResultados({ resultados }: { resultados: Resultado[] }) {
   const totalInvestido = contados.reduce((s, r) => s + (r.verbaInvestida ? Number(r.verbaInvestida) : 0), 0);
   const totalResultados = contados.reduce((s, r) => s + (r.resultados || 0), 0);
   const totalImpressoes = contados.reduce((s, r) => s + (r.impressoes || 0), 0);
+  const totalAlcance = contados.reduce((s, r) => s + (r.alcance || 0), 0);
   const custoPorResultado = totalResultados > 0 ? totalInvestido / totalResultados : null;
+  // Frequência = quantas vezes, em média, a mesma pessoa viu o anúncio — sinal de fadiga
+  // de criativo quando fica alta demais (referência de mercado: >2-3 em prospecção,
+  // >5-7 em remarketing pede troca de criativo ou pausa).
+  const frequencia = totalAlcance > 0 ? totalImpressoes / totalAlcance : null;
+  // CPM = custo a cada mil impressões — mostra se o leilão do Meta pra esse público/período
+  // está caro ou barato, independente de quantos resultados saíram disso.
+  const cpm = totalImpressoes > 0 ? (totalInvestido / totalImpressoes) * 1000 : null;
 
   const totalPlanosFechados = contados.reduce((s, r) => s + (r.planosFechados || 0), 0);
   const totalRetorno = contados.reduce((s, r) => s + (r.valorRetorno ? Number(r.valorRetorno) : 0), 0);
@@ -504,7 +536,7 @@ function PainelResultados({ resultados }: { resultados: Resultado[] }) {
 
   return (
     <div className="mt-2">
-      <div className="mb-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="mb-2 grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
         <Estatistica Icon={DollarSign} cor={COR_CUSTO} label="Investido" valor={fmtMoedaCompacta(totalInvestido)} index={0} />
         <Estatistica Icon={Target} cor={COR_RESULTADOS} label="Resultados" valor={compactar(totalResultados)} index={1} />
         <Estatistica
@@ -516,12 +548,33 @@ function PainelResultados({ resultados }: { resultados: Resultado[] }) {
         />
         <Estatistica Icon={Eye} cor="#9CA3AF" label="Impressões" valor={compactar(totalImpressoes)} index={3} />
         <Estatistica
+          Icon={Users}
+          cor="#9CA3AF"
+          label="Alcance"
+          valor={totalAlcance > 0 ? compactar(totalAlcance) : "—"}
+          index={4}
+        />
+        <Estatistica
+          Icon={Repeat}
+          cor="#9CA3AF"
+          label="Frequência"
+          valor={frequencia != null ? `${frequencia.toFixed(1)}x` : "—"}
+          index={5}
+        />
+        <Estatistica
+          Icon={Coins}
+          cor="#9CA3AF"
+          label="CPM"
+          valor={cpm != null ? fmtMoedaCompacta(cpm) : "—"}
+          index={6}
+        />
+        <Estatistica
           Icon={Trophy}
           cor={COR_RETORNO}
           label="Retorno"
           valor={totalRetorno > 0 ? fmtMoedaCompacta(totalRetorno) : "—"}
           sub={retornoSub}
-          index={4}
+          index={7}
         />
       </div>
 

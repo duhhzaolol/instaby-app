@@ -15,6 +15,7 @@ export type RegistroTempoData = {
   clienteId?: string | null;
   clienteNome?: string | null;
   clienteCor?: string | null;
+  usuarioNome?: string | null;
 };
 
 type Cliente = { id: string; nome: string };
@@ -152,6 +153,7 @@ export function RegistroTempoRow({
           {formatarHora(registro.inicio)}
           {registro.fim ? ` – ${formatarHora(registro.fim)}` : " – em andamento"}
           {duracao !== null && ` · ${formatarDuracao(duracao)}`}
+          {registro.usuarioNome && ` · ${registro.usuarioNome}`}
         </p>
       </div>
       <div className="flex items-center gap-3">

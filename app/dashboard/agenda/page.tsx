@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { headers } from "next/headers";
-import { ChevronLeft, ChevronRight, CalendarPlus } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarPlus, CalendarCheck, Clock, Sun } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { AgendaGrid, EventoAgenda } from "@/components/dashboard/AgendaGrid";
 import { AjudaContextual } from "@/components/ui/AjudaContextual";
+import { StatTile } from "@/components/ui/StatTile";
+import { formatarDuracao } from "@/lib/formatarDuracao";
 import { TIPOS_ATIVIDADE_AGENDA, classificarTipoAtividade } from "@/lib/tipoAtividadeAgenda";
 import { getUsuarioAtual, clienteIdsPermitidos } from "@/lib/permissoes";
 
@@ -65,7 +67,7 @@ export default async function AgendaPage({
     }),
     prisma.registroTempo.findMany({
       where: { inicio: { gte: inicioGrade, lte: fimGrade }, ...filtroCliente },
-      include: { cliente: { select: { id: true, nome: true, cor: true } } },
+      include: { cliente: { select: { id: true, nome: true, cor: true } }, usuario: { select: { nome: true } } },
     }),
   ]);
 
@@ -104,6 +106,7 @@ export default async function AgendaPage({
       tipoAtividade,
       texto: r.cliente ? `${r.atividade} · ${r.cliente.nome}` : r.atividade,
       clienteNome: r.cliente?.nome || null,
+      usuarioNome: r.usuario?.nome || null,
       cor: r.cliente?.cor,
       href: r.cliente ? `/dashboard/horas/${r.cliente.id}` : "/dashboard/horas",
       data: chave,
@@ -125,6 +128,16 @@ export default async function AgendaPage({
   const mesAnterior = new Date(ano, mes - 1, 1);
   const mesSeguinte = new Date(ano, mes + 1, 1);
   const hojeChave = chaveDiaEvento(hoje);
+
+  // Resumo do período — a partir dos mesmos dados já buscados acima, sem query nova.
+  // Compromissos/horas contam o período inteiro (não só os tipos com filtro ligado),
+  // pra servir de totalizador estável mesmo quando alguém desliga um tipo na grade.
+  const totalCompromissos = tarefas.filter((t) => !!t.prazo).length;
+  const totalHorasPeriodo = registrosTempo.reduce((s, r) => {
+    if (!r.fim) return s;
+    return s + (r.fim.getTime() - r.inicio.getTime()) / 1000 / 60 / 60;
+  }, 0);
+  const eventosHoje = eventosPorDia[hojeChave]?.length || 0;
 
   const host = headers().get("host");
   const linkIcs = process.env.AGENDA_SECRET
@@ -162,6 +175,28 @@ export default async function AgendaPage({
             <ChevronRight size={15} />
           </Link>
         </div>
+      </div>
+
+      <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <StatTile
+          icone={<CalendarCheck size={12} style={{ color: "#3B82F6" }} />}
+          label="Compromissos no período"
+          valor={totalCompromissos}
+          index={0}
+        />
+        <StatTile
+          icone={<Clock size={12} style={{ color: "#0D9488" }} />}
+          label="Horas lançadas"
+          valor={formatarDuracao(totalHorasPeriodo)}
+          index={1}
+        />
+        <StatTile
+          icone={<Sun size={12} style={{ color: "#F59E0B" }} />}
+          label="Hoje"
+          valor={eventosHoje}
+          sub={eventosHoje === 0 ? "nada por enquanto" : eventosHoje === 1 ? "1 item na agenda" : "itens na agenda"}
+          index={2}
+        />
       </div>
 
       {linkIcs ? (

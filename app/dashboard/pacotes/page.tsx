@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { Plus, Package2 } from "lucide-react";
+import { Plus, Package2, Wallet } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { StatTile } from "@/components/ui/StatTile";
 import PacoteCard from "./PacoteCard";
 
 export default async function PacotesPage() {
@@ -10,6 +11,11 @@ export default async function PacotesPage() {
     include: { itens: { include: { servico: true } } },
     orderBy: { createdAt: "desc" },
   });
+
+  const totais = pacotes.map((p) =>
+    p.itens.reduce((s, it) => s + Number(it.servico.valorUnitario) * it.quantidade, 0)
+  );
+  const ticketMedio = totais.length > 0 ? totais.reduce((s, t) => s + t, 0) / totais.length : 0;
 
   return (
     <div>
@@ -24,6 +30,23 @@ export default async function PacotesPage() {
           </Button>
         </Link>
       </div>
+
+      {pacotes.length > 0 && (
+        <div className="mb-6 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <StatTile
+            icone={<Package2 size={12} style={{ color: "#3B82F6" }} />}
+            label="Pacotes cadastrados"
+            valor={pacotes.length}
+            index={0}
+          />
+          <StatTile
+            icone={<Wallet size={12} style={{ color: "#E63946" }} />}
+            label="Ticket médio"
+            valor={`R$ ${ticketMedio.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`}
+            index={1}
+          />
+        </div>
+      )}
 
       {pacotes.length === 0 ? (
         <EmptyState

@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { FileSignature } from "lucide-react";
+import { FileSignature, Send, Clock } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { StatTile } from "@/components/ui/StatTile";
 
 const tone: Record<string, "gray" | "yellow" | "green"> = {
   rascunho: "gray",
@@ -34,9 +35,38 @@ export default async function ContratosGlobalPage() {
     .filter((r) => r.dias <= 30)
     .sort((a, b) => a.dias - b.dias);
 
+  const contagemPorStatus: Record<string, number> = {};
+  for (const c of contratos) contagemPorStatus[c.status] = (contagemPorStatus[c.status] || 0) + 1;
+
   return (
     <div>
-      <p className="mb-6 text-lg font-medium text-text">Contratos</p>
+      <div className="mb-6">
+        <p className="text-lg font-medium text-text">Contratos</p>
+        <p className="text-sm text-muted">{contratos.length} no total</p>
+      </div>
+
+      {contratos.length > 0 && (
+        <div className="mb-6 grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <StatTile
+            icone={<FileSignature size={12} style={{ color: "#22C55E" }} />}
+            label="Assinados"
+            valor={contagemPorStatus.assinado || 0}
+            index={0}
+          />
+          <StatTile
+            icone={<Send size={12} style={{ color: "#F59E0B" }} />}
+            label="Enviados"
+            valor={contagemPorStatus.enviado || 0}
+            index={1}
+          />
+          <StatTile
+            icone={<Clock size={12} style={{ color: "#F59E0B" }} />}
+            label="Renovando em breve"
+            valor={renovacoesProximas.length}
+            index={2}
+          />
+        </div>
+      )}
 
       {renovacoesProximas.length > 0 && (
         <div className="mb-5 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3.5">

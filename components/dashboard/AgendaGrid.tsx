@@ -13,6 +13,7 @@ export type EventoAgenda = {
   tipoAtividade: TipoAtividadeAgenda;
   texto: string;
   clienteNome?: string | null;
+  usuarioNome?: string | null; // só "hora" — quem lançou aquele tempo trabalhado
   cor?: string | null;
   href: string;
   data: string; // YYYY-MM-DD
@@ -141,7 +142,7 @@ export function AgendaGrid({
                         onClick={() => abrir(e)}
                         className="flex items-center gap-1 truncate rounded px-1 py-0.5 text-left text-[10px] hover:opacity-80"
                         style={{ backgroundColor: `${e.cor || visual.cor}1A`, color: e.cor || visual.cor }}
-                        title={e.texto}
+                        title={e.usuarioNome ? `${e.texto} — ${e.usuarioNome}` : e.texto}
                       >
                         <Icon size={9} className="shrink-0" />
                         <span className="truncate">{e.texto}</span>
@@ -202,7 +203,10 @@ export function AgendaGrid({
                     >
                       <Icon size={13} />
                     </div>
-                    <p className="min-w-0 flex-1 truncate text-sm text-text">{e.texto}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm text-text">{e.texto}</p>
+                      {e.usuarioNome && <p className="truncate text-[11px] text-muted">{e.usuarioNome}</p>}
+                    </div>
                   </button>
                 );
               })}

@@ -1,4 +1,140 @@
-# Instaby App — v137
+# Instaby App — v139
+
+Segunda leva do pedido grande da v138 — agora sim o redesign visual das áreas
+que ainda estavam no estilo antigo. Painel inteiro agora segue a mesma
+linguagem visual (cards com entrada animada, StatTiles no topo de cada tela,
+cantos/bordas/cores padronizados) que já existia em Dashboard, Clientes e
+Tráfego Pago desde antes.
+
+## Redesign visual — Financeiro
+
+- Patrimônio: cards de bens (visualização e edição) passaram a usar o mesmo
+  componente `Card` com entrada animada em cascata do resto do app.
+- Ajustes pequenos de tamanho de texto pra bater com o padrão das outras
+  telas.
+- **Mantido de propósito**: Financeiro não ganhou gráfico nenhum — continua só
+  números e calendário, como você já tinha pedido antes. Tinha um cálculo de
+  gráfico não usado sobrando no código; não vira gráfico em lugar nenhum, só
+  ficou ali sem uso mesmo.
+
+## Redesign visual — Comercial
+
+- Oportunidades: 3 cartões de resumo no topo (Em aberto / Valor estimado /
+  Ganhas) e o quadro (kanban) de estágios ganhou o mesmo visual de painel
+  arredondado que o quadro de Tarefas já usava — colunas mostram contagem e
+  valor total, cards com destaque ao passar o mouse.
+  Modal de detalhe e o jeito de mudar estágio não mudaram.
+- Orçamentos, Contratos, Pacotes e Serviços: cada um ganhou uma linha de
+  cartões de resumo no topo, usando dado que a tela já buscava (sem consulta
+  nova ao banco).
+
+## Redesign visual — Tarefas
+
+Conferi a tela de Tarefas, o calendário de tarefas e o quadro (kanban) — já
+estavam todos no visual novo de um trabalho anterior. Nada pra mudar aqui.
+
+## Redesign visual — Agenda
+
+Cartões de resumo no topo (Compromissos no período / Horas lançadas / Hoje),
+com o mesmo dado que a tela já calculava pro calendário — sem consulta nova.
+
+## Redesign visual — Horas
+
+A caixa única de "Total do mês" virou 3 cartões de resumo: total do
+período, cliente com mais horas no período, e registros de hoje. Calendário
+de horas (geral e por cliente) já estava no visual novo — conferido, sem
+mudança necessária.
+
+## Redesign visual — Tráfego Pago
+
+Linha de cartões de resumo no topo (Campanhas ativas / Verba ativa sob
+gestão / Pausadas), no mesmo padrão do resto do app. Formulário de campanha,
+importação do Meta e o card de cada campanha já estavam no visual novo.
+
+Com isso fecha o pedido de redesign visual completo — todas as áreas do
+painel agora seguem a mesma linguagem visual.
+
+**Detalhe técnico pra registro:** mesma validação de sempre (`tsc --noEmit`
+lido à mão, comparando com o que já dava erro antes) — ainda sem acesso ao
+`prisma generate` neste ambiente. Nenhum erro novo real, só o barulho de
+sempre, em arquivo que eu não toquei ou que já vinha em cascata do client do
+Prisma desatualizado.
+
+## v138
+
+Primeira leva de um pedido grande (o resto — redesign visual das áreas que
+ainda estavam no estilo antigo — vem nas próximas versões). Essa parte aqui é
+toda de dados/permissão, sem mudar a aparência de nada.
+
+## Alcance e métricas novas do Meta em Resultados de Campanha
+
+Você pediu o campo de alcance manual — adicionei, e aproveitei pra pesquisar
+o que mais poderia valer a pena de métrica de tráfego pago.
+
+- **Alcance**: agora dá pra lançar na mão (Novo resultado / Editar resultado),
+  igual verba, impressões e cliques. Antes só existia se viesse de importação
+  do Meta — lançamento manual não tinha o campo.
+- **Frequência** (impressões ÷ alcance): mostra quantas vezes, em média, a
+  mesma pessoa viu o anúncio. É o sinal clássico de "criativo cansado" —
+  passou de ~2-3 em prospecção ou ~5-7 em remarketing, geralmente é hora de
+  trocar o criativo ou pausar. Calculada sozinha, não precisa lançar nada a
+  mais pra ela aparecer.
+- **CPM** (custo a cada mil impressões): mostra se o leilão do Meta pra
+  aquele público/período está caro ou barato, independente de quantos
+  resultados saíram — complementa o "custo por resultado" que já existia.
+- O painel de estatísticas do topo (Investido / Resultados / etc.) ganhou
+  esses 3 novos cartões — Alcance, Frequência e CPM — ao lado dos que já
+  existiam.
+
+Deixei de fora as métricas específicas de vídeo (hook rate, hold rate) porque
+o app não guarda visualização de vídeo hoje — não dava pra calcular de
+verdade, só ia virar decoração.
+
+## Revisão de acessos — Editor restrito só aos arquivos
+
+Você pediu pra revisar os acessos porque vai entrar um Editor (só precisa
+baixar arquivo) e um Gestor de Tráfego (acesso diferente) em breve.
+
+- **Nova capacidade em Configurações > Equipe**: "Acesso completo dentro do
+  cliente". Desligada, a pessoa só vê a aba **Arquivos** (se também tiver
+  essa permissão) e **Horas** ao abrir qualquer cliente — Visão Geral,
+  Contatos, Onboarding, Solicitações, Tarefas, Serviços, Links e Relatórios
+  ficam ocultos pra ela. Ligada (o padrão de sempre) não muda nada de como
+  já funcionava.
+- **Preset "Editor"** (botão rápido no formulário de Equipe) já vem com essa
+  capacidade desligada e "Ver arquivos" ligada — clica no preset e já sai
+  pronto pro que você descreveu, sem precisar configurar campo por campo.
+  Os outros presets (Social Media, Gestor de Tráfego, Comercial, Financeiro)
+  continuam com acesso completo, porque fazem sentido ver as abas gerais do
+  cliente.
+- **Horas continua universal**: não existe (e não precisa existir) permissão
+  pra isso — todo login ativo já podia registrar e ver as próprias horas, com
+  ou sem essa restrição nova. Só confirmei que o Editor restrito não perde
+  esse acesso.
+- **Corrigido de brinde**: se alguém pedisse por URL uma aba que não pode
+  ver, a tela caía sempre pra "Visão Geral" — o que ia ficar errado assim que
+  essa aba passasse a poder estar bloqueada pra alguém. Agora cai pra
+  primeira aba que a pessoa realmente enxerga.
+
+## Quem lançou cada hora — Horas e Agenda mostram o autor
+
+Cada registro de horas agora guarda quem lançou (a partir da sessão de quem
+está logado — não dá pra digitar em nome de outra pessoa). Onde aparece:
+
+- Lista de horas de hoje e "sem cliente" na tela Horas.
+- Card de detalhe de um dia no calendário de Horas (geral e por cliente).
+- Card de detalhe de um dia na Agenda, pros itens que são hora trabalhada.
+
+Registros lançados antes dessa versão não têm autor salvo (não dava pra
+adivinhar quem foi) — só aparecem sem esse detalhe, sem quebrar nada.
+
+**Detalhe técnico pra registro:** ainda sem acesso ao `prisma generate` neste
+ambiente (bloqueio de rede já reportado antes) — validei essa leva inteira
+lendo o `tsc --noEmit` a mão e comparando com o que já dava erro antes, por
+causa do client do Prisma local estar desatualizado. Nenhum erro novo real,
+só o barulho de sempre em arquivo que eu não toquei.
+
+## v137
 
 ## Pastas automáticas no Drive por cliente (parte 2 da automação)
 

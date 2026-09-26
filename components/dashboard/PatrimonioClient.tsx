@@ -98,7 +98,7 @@ function NovoBemForm({ onSalvo }: { onSalvo: () => void }) {
   );
 }
 
-function EditarBemForm({ bem, onFechar }: { bem: Bem; onFechar: () => void }) {
+function EditarBemForm({ bem, index, onFechar }: { bem: Bem; index: number; onFechar: () => void }) {
   const router = useRouter();
   const [valorAtual, setValorAtual] = useState(bem.valorAtual);
   const [status, setStatus] = useState(bem.status);
@@ -117,7 +117,7 @@ function EditarBemForm({ bem, onFechar }: { bem: Bem; onFechar: () => void }) {
   }
 
   return (
-    <div className="rounded-xl border border-accent/30 bg-card/60 p-4">
+    <Card index={index} hoverable={false} className="p-4">
       <div className="mb-3 flex items-center justify-between">
         <p className="text-sm font-medium text-text">{bem.nome}</p>
         <button onClick={onFechar} className="text-muted hover:text-text">
@@ -149,7 +149,7 @@ function EditarBemForm({ bem, onFechar }: { bem: Bem; onFechar: () => void }) {
       >
         <Check size={14} /> {enviando ? "Salvando..." : "Salvar alterações"}
       </button>
-    </div>
+    </Card>
   );
 }
 
@@ -197,45 +197,47 @@ export default function PatrimonioClient({
             despesa como Investimento/Ativo.
           </p>
         )}
-        {bens.map((b) =>
+        {bens.map((b, i) =>
           editandoId === b.id ? (
-            <EditarBemForm key={b.id} bem={b} onFechar={() => setEditandoId(null)} />
+            <EditarBemForm key={b.id} bem={b} index={i} onFechar={() => setEditandoId(null)} />
           ) : (
-            <div
+            <Card
               key={b.id}
-              className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-card/60 px-4 py-3 ${
-                b.status !== "em_uso" ? "opacity-60" : ""
-              }`}
+              index={i}
+              hoverable={false}
+              className={`p-0 ${b.status !== "em_uso" ? "opacity-60" : ""}`}
             >
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-text">{b.nome}</p>
-                <p className="text-xs text-muted">
-                  {b.categoria || "Sem categoria"} · adquirido em {new Date(b.data).toLocaleDateString("pt-BR")}
-                  {b.origem ? ` · via despesa "${b.origem}"` : ""}
-                </p>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <p className="text-sm font-medium text-text">R$ {fmt(b.valorAtual)}</p>
-                  <p className="text-[11px] text-muted">
-                    aquisição R$ {fmt(b.valorAquisicao)} ·{" "}
-                    <span
-                      className={
-                        b.status === "em_uso" ? "text-emerald-400" : b.status === "vendido" ? "text-cyan-400" : "text-muted"
-                      }
-                    >
-                      {STATUS_LABEL[b.status] || b.status}
-                    </span>
+              <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-text">{b.nome}</p>
+                  <p className="text-xs text-muted">
+                    {b.categoria || "Sem categoria"} · adquirido em {new Date(b.data).toLocaleDateString("pt-BR")}
+                    {b.origem ? ` · via despesa "${b.origem}"` : ""}
                   </p>
                 </div>
-                <button
-                  onClick={() => setEditandoId(b.id)}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border text-muted hover:text-text"
-                >
-                  <Pencil size={13} />
-                </button>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-text">R$ {fmt(b.valorAtual)}</p>
+                    <p className="text-[11px] text-muted">
+                      aquisição R$ {fmt(b.valorAquisicao)} ·{" "}
+                      <span
+                        className={
+                          b.status === "em_uso" ? "text-emerald-400" : b.status === "vendido" ? "text-cyan-400" : "text-muted"
+                        }
+                      >
+                        {STATUS_LABEL[b.status] || b.status}
+                      </span>
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setEditandoId(b.id)}
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border text-muted hover:text-text"
+                  >
+                    <Pencil size={13} />
+                  </button>
+                </div>
               </div>
-            </div>
+            </Card>
           )
         )}
       </div>

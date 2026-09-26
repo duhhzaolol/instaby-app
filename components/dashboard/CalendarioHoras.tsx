@@ -80,7 +80,11 @@ export function CalendarioHoras({
                   {visiveis.map((r) => {
                     const cor = corPadrao || r.clienteCor || "#E63946";
                     return (
-                      <p key={r.id} className="truncate text-[10px] leading-tight" title={`${r.clienteNome || "Instaby"} – ${r.atividade}`}>
+                      <p
+                        key={r.id}
+                        className="truncate text-[10px] leading-tight"
+                        title={`${r.clienteNome || "Instaby"} – ${r.atividade}${r.usuarioNome ? ` (${r.usuarioNome})` : ""}`}
+                      >
                         <span className="font-semibold" style={{ color: cor }}>
                           {r.clienteNome || "Instaby"}
                         </span>{" "}

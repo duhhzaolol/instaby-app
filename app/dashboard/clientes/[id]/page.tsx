@@ -76,17 +76,23 @@ export default async function ClienteDetalhePage({
     { valor: "arquivos", label: "Arquivos" },
   ];
   const abas = abasBase.filter((a) => {
+    if (a.valor === "horas") return true; // universal — todo mundo pode lançar/ver as próprias horas
     if (a.valor === "financeiro") return pode.verFinanceiro;
     if (a.valor === "orcamentos") return pode.verOrcamentos;
     if (a.valor === "contratos") return pode.verContratos;
     if (a.valor === "trafego") return pode.gerenciarTrafego;
     if (a.valor === "arquivos") return pode.verArquivos;
-    return true;
+    // Abas "gerais" do cliente (Visão Geral, Contatos, Links, Onboarding, Solicitações,
+    // Tarefas, Serviços) — atrás de acessoClienteCompleto pra dar pra restringir alguém
+    // (ex: um Editor, que só deve ver Arquivos) sem esconder as áreas com permissão própria.
+    return pode.acessoClienteCompleto;
   });
   const abaPedida = searchParams.aba || "visao_geral";
-  // Se pedirem por URL uma aba que essa pessoa não pode ver, cai pra Visão Geral
-  // em vez de renderizar o conteúdo restrito.
-  const aba = abas.some((a) => a.valor === abaPedida) ? abaPedida : "visao_geral";
+  // Se pedirem por URL uma aba que essa pessoa não pode ver, cai pra primeira aba que ela
+  // realmente enxerga — nunca mais um valor fixo, porque "visao_geral" pode estar bloqueada
+  // pra ela agora (ex: acessoClienteCompleto=false). "horas" é sempre universal, então
+  // abas nunca fica vazio de verdade.
+  const aba = abas.some((a) => a.valor === abaPedida) ? abaPedida : abas[0]?.valor || "horas";
 
   // Só chama o Drive (rede + possível criação de pasta) quando alguém realmente
   // abre a aba Arquivos — não em toda visita à página do cliente. Best-effort e

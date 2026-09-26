@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { CheckSquare, Megaphone, ListChecks } from "lucide-react";
+import { CheckSquare, Megaphone, ListChecks, Zap, Wallet, PauseCircle } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { AjudaContextual } from "@/components/ui/AjudaContextual";
+import { StatTile } from "@/components/ui/StatTile";
 import TrafegoClient from "@/components/dashboard/TrafegoClient";
 import { TarefaRow } from "@/components/dashboard/TarefaRow";
 import { NovaTarefaGlobalForm } from "@/components/dashboard/NovaTarefaGlobalForm";
@@ -75,6 +76,7 @@ export default async function TrafegoPage({
 
   const verbaAtiva = dados.filter((c) => c.status === "ativa").reduce((s, c) => s + c.verbaMensal, 0);
   const qtdAtivas = dados.filter((c) => c.status === "ativa").length;
+  const qtdPausadas = dados.filter((c) => c.status === "pausada").length;
 
   return (
     <div>
@@ -92,6 +94,29 @@ export default async function TrafegoPage({
           {verbaAtiva > 0 && ` · R$ ${verbaAtiva.toLocaleString("pt-BR", { minimumFractionDigits: 0 })} de verba/mês sob gestão`}
         </p>
       </div>
+
+      {dados.length > 0 && (
+        <div className="mb-5 grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <StatTile
+            icone={<Zap size={12} style={{ color: "#22C55E" }} />}
+            label="Campanhas ativas"
+            valor={qtdAtivas}
+            index={0}
+          />
+          <StatTile
+            icone={<Wallet size={12} style={{ color: "#E63946" }} />}
+            label="Verba ativa sob gestão"
+            valor={`R$ ${verbaAtiva.toLocaleString("pt-BR", { minimumFractionDigits: 0 })}/mês`}
+            index={1}
+          />
+          <StatTile
+            icone={<PauseCircle size={12} style={{ color: "#F59E0B" }} />}
+            label="Pausadas"
+            valor={qtdPausadas}
+            index={2}
+          />
+        </div>
+      )}
 
       <div className="mb-5 flex gap-2">
         {VISOES.map((v) => {

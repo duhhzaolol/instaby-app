@@ -39,7 +39,7 @@ export default async function PatrimonioPage() {
             exemplo="Ex.: comprou uma câmera de R$ 7.000 — ela vira um item aqui, e você pode atualizar o valor estimado com o tempo (depreciação) ou marcar como vendida."
           />
         </p>
-        <p className="text-xs text-muted">Bens e equipamentos da empresa, com valor de aquisição e valor atual estimado.</p>
+        <p className="text-sm text-muted">Bens e equipamentos da empresa, com valor de aquisição e valor atual estimado.</p>
       </div>
 
       <PatrimonioClient bens={dados} totalAtual={totalAtual} totalAquisicao={totalAquisicao} />

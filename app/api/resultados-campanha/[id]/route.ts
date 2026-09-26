@@ -31,6 +31,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       ...(body.fim !== undefined && { fim: new Date(body.fim) }),
       ...(body.verbaInvestida !== undefined && { verbaInvestida: numOuNulo(body.verbaInvestida) }),
       ...(body.impressoes !== undefined && { impressoes: numOuNulo(body.impressoes) }),
+      ...(body.alcance !== undefined && { alcance: numOuNulo(body.alcance) }),
       ...(body.cliques !== undefined && { cliques: numOuNulo(body.cliques) }),
       ...(body.resultados !== undefined && { resultados: numOuNulo(body.resultados) }),
       ...(body.observacoes !== undefined && { observacoes: body.observacoes || null }),

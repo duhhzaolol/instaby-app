@@ -94,7 +94,7 @@ export default function FinanceiroClient({
               exemplo="Ex.: clique num dia do calendário pra ver todos os recebimentos e pagamentos daquele dia."
             />
           </p>
-          <p className="text-xs text-muted">Visão geral · a DRE está no menu ao lado</p>
+          <p className="text-sm text-muted">Visão geral · a DRE está no menu ao lado</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {PERIODOS_FINANCEIRO.map((p) => (

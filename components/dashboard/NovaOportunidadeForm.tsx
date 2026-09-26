@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 
 export function NovaOportunidadeForm() {
   const router = useRouter();
@@ -31,12 +33,11 @@ export function NovaOportunidadeForm() {
 
   if (!aberto) {
     return (
-      <button
-        onClick={() => setAberto(true)}
-        className="mb-5 flex items-center gap-1.5 rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-white hover:opacity-90"
-      >
-        <Plus size={15} /> Nova oportunidade
-      </button>
+      <div className="mb-5">
+        <Button size="sm" onClick={() => setAberto(true)}>
+          <Plus size={14} /> Nova oportunidade
+        </Button>
+      </div>
     );
   }
 
@@ -48,35 +49,29 @@ export function NovaOportunidadeForm() {
           <X size={16} />
         </button>
       </div>
-      <input
+      <Input
         autoFocus
         required
         value={nome}
         onChange={(e) => setNome(e.target.value)}
         placeholder="Empresa ou nome"
-        className="mb-3 h-10 w-full rounded-xl border border-border bg-base/60 px-3.5 text-sm text-text"
+        className="mb-3"
       />
       <div className="mb-4 grid grid-cols-2 gap-2">
-        <input
+        <Input
           value={contatoWhatsapp}
           onChange={(e) => setContatoWhatsapp(e.target.value)}
           placeholder="WhatsApp (opcional)"
-          className="h-10 rounded-xl border border-border bg-base/60 px-3 text-sm text-text"
         />
-        <input
+        <Input
           value={origem}
           onChange={(e) => setOrigem(e.target.value)}
           placeholder="Origem (opcional)"
-          className="h-10 rounded-xl border border-border bg-base/60 px-3 text-sm text-text"
         />
       </div>
-      <button
-        type="submit"
-        disabled={enviando || !nome.trim()}
-        className="h-10 w-full rounded-xl bg-accent text-sm font-semibold text-white disabled:opacity-40"
-      >
+      <Button type="submit" disabled={enviando || !nome.trim()} className="w-full">
         {enviando ? "Criando..." : "Criar"}
-      </button>
+      </Button>
     </form>
   );
 }

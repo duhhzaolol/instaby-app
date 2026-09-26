@@ -24,7 +24,7 @@ export async function PATCH(
       ...(body.inicio !== undefined && { inicio: new Date(body.inicio) }),
       ...(body.fim !== undefined && { fim: body.fim ? new Date(body.fim) : null }),
     },
-    include: { cliente: { select: { nome: true } } },
+    include: { cliente: { select: { nome: true } }, usuario: { select: { nome: true } } },
   });
 
   return NextResponse.json(registro);

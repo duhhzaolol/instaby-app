@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Layers, Tag, AlertTriangle } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { StatTile } from "@/components/ui/StatTile";
 import { visualDaCategoria } from "@/lib/categoriaVisual";
 import { AjudaContextual } from "@/components/ui/AjudaContextual";
 
@@ -34,6 +35,29 @@ export default async function ServicosPage() {
           </Button>
         </Link>
       </div>
+
+      {servicos.length > 0 && (
+        <div className="mb-6 grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <StatTile
+            icone={<Layers size={12} style={{ color: "#3B82F6" }} />}
+            label="Serviços cadastrados"
+            valor={servicos.length}
+            index={0}
+          />
+          <StatTile
+            icone={<Tag size={12} style={{ color: "#0D9488" }} />}
+            label="Categorias"
+            valor={categorias.length}
+            index={1}
+          />
+          <StatTile
+            icone={<AlertTriangle size={12} style={{ color: "#F59E0B" }} />}
+            label="Sem valor definido"
+            valor={semValorQtd}
+            index={2}
+          />
+        </div>
+      )}
 
       {semValorQtd > 0 && (
         <div className="mb-5 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3.5">

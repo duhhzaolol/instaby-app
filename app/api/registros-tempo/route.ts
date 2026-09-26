@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
       ...(desde ? { inicio: { gte: new Date(desde) } } : {}),
       ...(idsPermitidos ? { OR: [{ clienteId: null }, { clienteId: { in: idsPermitidos } }] } : {}),
     },
-    include: { cliente: { select: { nome: true } } },
+    include: { cliente: { select: { nome: true } }, usuario: { select: { nome: true } } },
     orderBy: { inicio: "desc" },
   });
 
@@ -37,11 +37,14 @@ export async function POST(request: NextRequest) {
   const registro = await prisma.registroTempo.create({
     data: {
       clienteId: body.clienteId || null,
+      // Sempre a pessoa logada que está lançando — nunca vem do body, pra ninguém
+      // conseguir registrar hora em nome de outro alterando o payload da requisição.
+      usuarioId: usuario.id,
       atividade: body.atividade,
       inicio: new Date(body.inicio),
       fim: body.fim ? new Date(body.fim) : null,
     },
-    include: { cliente: { select: { nome: true } } },
+    include: { cliente: { select: { nome: true } }, usuario: { select: { nome: true } } },
   });
 
   return NextResponse.json(registro, { status: 201 });

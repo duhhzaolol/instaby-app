@@ -37,6 +37,7 @@ export function permissoesDe(usuario: Usuario) {
     gerenciarEquipe: usuario.master || usuario.gerenciarEquipe,
     gerenciarConfiguracoes: usuario.master || usuario.gerenciarConfiguracoes,
     verArquivos: usuario.master || usuario.verArquivos,
+    acessoClienteCompleto: usuario.master || usuario.acessoClienteCompleto,
     todosClientes: usuario.master || usuario.todosClientes,
   };
 }

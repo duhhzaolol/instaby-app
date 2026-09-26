@@ -51,6 +51,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     update: {
       verbaInvestida: numOuNulo(body.verbaInvestida),
       impressoes: numOuNulo(body.impressoes),
+      alcance: numOuNulo(body.alcance),
       cliques: numOuNulo(body.cliques),
       resultados: numOuNulo(body.resultados),
       observacoes: body.observacoes || null,
@@ -64,6 +65,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       fim: new Date(body.fim),
       verbaInvestida: numOuNulo(body.verbaInvestida),
       impressoes: numOuNulo(body.impressoes),
+      alcance: numOuNulo(body.alcance),
       cliques: numOuNulo(body.cliques),
       resultados: numOuNulo(body.resultados),
       observacoes: body.observacoes || null,

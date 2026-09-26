@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, Crown, CalendarClock } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { NovoRegistroTempoForm } from "@/components/dashboard/NovoRegistroTempoForm";
 import { RegistroTempoRow } from "@/components/dashboard/RegistroTempoRow";
 import { CalendarioHoras } from "@/components/dashboard/CalendarioHoras";
 import { formatarDuracao } from "@/lib/formatarDuracao";
 import { AjudaContextual } from "@/components/ui/AjudaContextual";
+import { StatTile } from "@/components/ui/StatTile";
 import { getUsuarioAtual, clienteIdsPermitidos } from "@/lib/permissoes";
 
 const NOMES_MESES = [
@@ -72,13 +73,13 @@ export default async function HorasPage({
     vendoMesAtual
       ? prisma.registroTempo.findMany({
           where: { inicio: { gte: inicioHoje() }, ...filtroCliente },
-          include: { cliente: { select: { nome: true, cor: true } } },
+          include: { cliente: { select: { nome: true, cor: true } }, usuario: { select: { nome: true } } },
           orderBy: { inicio: "desc" },
         })
       : Promise.resolve([]),
     prisma.registroTempo.findMany({
       where: { inicio: { gte: inicioGrade, lte: fimGrade }, ...filtroCliente },
-      include: { cliente: { select: { id: true, nome: true, cor: true } } },
+      include: { cliente: { select: { id: true, nome: true, cor: true } }, usuario: { select: { nome: true } } },
       orderBy: { inicio: "desc" },
     }),
     prisma.tarefa.findMany({
@@ -132,6 +133,7 @@ export default async function HorasPage({
       clienteId: string | null;
       clienteNome: string | null;
       clienteCor: string | null;
+      usuarioNome: string | null;
     }[]
   > = {};
   registrosCalendario.forEach((r) => {
@@ -144,6 +146,7 @@ export default async function HorasPage({
       clienteId: r.clienteId,
       clienteNome: r.cliente?.nome || null,
       clienteCor: r.cliente?.cor || null,
+      usuarioNome: r.usuario?.nome || null,
     });
     if (!r.fim) return;
     const horas = (r.fim.getTime() - r.inicio.getTime()) / 1000 / 60 / 60;
@@ -192,11 +195,26 @@ export default async function HorasPage({
 
       <NovoRegistroTempoForm clientes={clientes} tarefasAbertas={tarefasAbertas} />
 
-      <div className="mb-6 flex items-center justify-between rounded-xl border border-accent/20 bg-accent/5 px-4 py-3">
-        <span className="text-sm font-medium text-text">
-          Total {vendoMesAtual ? "do mês" : `de ${NOMES_MESES[mes].toLowerCase()}`} (todos os clientes)
-        </span>
-        <span className="text-xl font-medium text-accent">{formatarDuracao(totalMes)}</span>
+      <div className="mb-6 grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <StatTile
+          icone={<Clock size={12} style={{ color: "#E63946" }} />}
+          label={vendoMesAtual ? "Total do mês" : `Total de ${NOMES_MESES[mes].toLowerCase()}`}
+          valor={formatarDuracao(totalMes)}
+          index={0}
+        />
+        <StatTile
+          icone={<Crown size={12} style={{ color: "#0D9488" }} />}
+          label="Cliente no topo"
+          valor={ranking[0] ? ranking[0][1].nome : "—"}
+          sub={ranking[0] ? formatarDuracao(ranking[0][1].total) : undefined}
+          index={1}
+        />
+        <StatTile
+          icone={<CalendarClock size={12} style={{ color: "#F59E0B" }} />}
+          label="Registros hoje"
+          valor={vendoMesAtual ? registrosHoje.length : "—"}
+          index={2}
+        />
       </div>
 
       {/* Filtro por cliente — clica pra trocar o calendário, sem sair da tela */}
@@ -332,6 +350,7 @@ export default async function HorasPage({
                   clienteId: null,
                   clienteNome: null,
                   clienteCor: null,
+                  usuarioNome: r.usuario?.nome || null,
                 }}
               />
             ))}
@@ -357,6 +376,7 @@ export default async function HorasPage({
                   clienteId: r.clienteId,
                   clienteNome: r.cliente?.nome || null,
                   clienteCor: r.cliente?.cor || null,
+                  usuarioNome: r.usuario?.nome || null,
                 }}
               />
             ))}
