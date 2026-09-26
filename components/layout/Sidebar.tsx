@@ -32,6 +32,10 @@ export type Permissoes = {
   verFinanceiro: boolean;
   gerenciarFinanceiro: boolean;
   verComercial: boolean;
+  verOportunidades: boolean;
+  verOrcamentos: boolean;
+  verContratos: boolean;
+  verCatalogo: boolean;
   gerenciarTrafego: boolean;
   gerenciarEquipe: boolean;
   gerenciarConfiguracoes: boolean;
@@ -55,12 +59,16 @@ const menuFinanceiro = [
   { label: "Patrimônio", href: "/dashboard/financeiro/patrimonio", icon: Gem },
 ];
 
-const menuOrcamento = [
-  { label: "Oportunidades", href: "/dashboard/oportunidades", icon: Trophy },
-  { label: "Catálogo de serviços", href: "/dashboard/servicos", icon: Package },
-  { label: "Pacotes", href: "/dashboard/pacotes", icon: Package2 },
-  { label: "Orçamentos", href: "/dashboard/orcamentos", icon: FileText },
-  { label: "Contratos", href: "/dashboard/contratos", icon: FileSignature },
+// Cada item do grupo "Comercial" tem seu próprio flag agora (antes era um só,
+// verComercial, pro grupo inteiro) — assim alguém pode ver só Oportunidades,
+// só Orçamentos etc. Cada item só aparece se a pessoa tiver aquele flag
+// específico (permissoesDe já soma o legado verComercial em todos eles).
+const menuOrcamento: { label: string; href: string; icon: any; flag: keyof Permissoes }[] = [
+  { label: "Oportunidades", href: "/dashboard/oportunidades", icon: Trophy, flag: "verOportunidades" },
+  { label: "Catálogo de serviços", href: "/dashboard/servicos", icon: Package, flag: "verCatalogo" },
+  { label: "Pacotes", href: "/dashboard/pacotes", icon: Package2, flag: "verCatalogo" },
+  { label: "Orçamentos", href: "/dashboard/orcamentos", icon: FileText, flag: "verOrcamentos" },
+  { label: "Contratos", href: "/dashboard/contratos", icon: FileSignature, flag: "verContratos" },
 ];
 
 const menuTrafego = [{ label: "Tráfego Pago", href: "/dashboard/trafego", icon: Megaphone }];
@@ -111,10 +119,12 @@ function ConteudoSidebar({
 }) {
   const pathname = usePathname();
 
+  const menuOrcamentoVisivel = menuOrcamento.filter((i) => pode[i.flag]);
+
   const todosHrefs = [
     ...menuPrincipal.map((i) => i.href),
     ...(pode.verFinanceiro ? menuFinanceiro.map((i) => i.href) : []),
-    ...(pode.verComercial ? menuOrcamento.map((i) => i.href) : []),
+    ...menuOrcamentoVisivel.map((i) => i.href),
     ...(pode.gerenciarTrafego ? menuTrafego.map((i) => i.href) : []),
     ...menuConfig.map((i) => i.href),
   ];
@@ -153,10 +163,10 @@ function ConteudoSidebar({
           </div>
         )}
 
-        {pode.verComercial && (
+        {menuOrcamentoVisivel.length > 0 && (
           <div className="flex flex-col gap-1">
             <p className="px-3 pb-1 text-[11px] uppercase tracking-wider text-muted/70">Comercial</p>
-            {menuOrcamento.map((item) => (
+            {menuOrcamentoVisivel.map((item) => (
               <ItemMenu key={item.href} item={item} ativo={!!ativo(item.href)} onClick={onNavigate} />
             ))}
           </div>

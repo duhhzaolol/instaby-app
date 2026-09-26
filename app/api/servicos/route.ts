@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { exigirPermissaoApi } from "@/lib/permissoes";
 
 export async function GET() {
-  const { erro } = await exigirPermissaoApi("verComercial");
+  const { erro } = await exigirPermissaoApi("verCatalogo");
   if (erro) return erro;
 
   const servicos = await prisma.servico.findMany({
@@ -13,7 +13,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const { erro } = await exigirPermissaoApi("verComercial");
+  const { erro } = await exigirPermissaoApi("verCatalogo");
   if (erro) return erro;
 
   const body = await request.json();

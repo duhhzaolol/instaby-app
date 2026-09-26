@@ -20,11 +20,19 @@ export type Usuario = NonNullable<Awaited<ReturnType<typeof getUsuarioAtual>>>;
 // Objeto pronto de "o que essa pessoa pode" — master sempre true em tudo,
 // pra nenhuma tela precisar ficar checando `usuario.master || usuario.xyz` na mão.
 export function permissoesDe(usuario: Usuario) {
+  // verComercial é o flag legado (compatibilidade: quem já tinha o antigo botão
+  // único "Comercial" ligado continua com os 4 de baixo liberados, sem precisar
+  // editar ninguém). Gente criada/editada pelo formulário novo usa só os 4
+  // específicos — o formulário nem manda mais verComercial=true.
   return {
     master: usuario.master,
     verFinanceiro: usuario.master || usuario.verFinanceiro,
     gerenciarFinanceiro: usuario.master || usuario.gerenciarFinanceiro,
     verComercial: usuario.master || usuario.verComercial,
+    verOportunidades: usuario.master || usuario.verComercial || usuario.verOportunidades,
+    verOrcamentos: usuario.master || usuario.verComercial || usuario.verOrcamentos,
+    verContratos: usuario.master || usuario.verComercial || usuario.verContratos,
+    verCatalogo: usuario.master || usuario.verComercial || usuario.verCatalogo,
     gerenciarTrafego: usuario.master || usuario.gerenciarTrafego,
     gerenciarEquipe: usuario.master || usuario.gerenciarEquipe,
     gerenciarConfiguracoes: usuario.master || usuario.gerenciarConfiguracoes,

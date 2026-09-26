@@ -6,7 +6,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { erro } = await exigirPermissaoApi("verComercial");
+  const { erro } = await exigirPermissaoApi("verCatalogo");
   if (erro) return erro;
 
   await prisma.pacoteItem.deleteMany({ where: { pacoteId: params.id } });
@@ -18,7 +18,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { erro } = await exigirPermissaoApi("verComercial");
+  const { erro } = await exigirPermissaoApi("verCatalogo");
   if (erro) return erro;
 
   const body = await request.json();

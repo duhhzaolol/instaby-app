@@ -6,7 +6,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { erro } = await exigirPermissaoApi("verComercial");
+  const { erro } = await exigirPermissaoApi("verOportunidades");
   if (erro) return erro;
 
   const oportunidade = await prisma.oportunidade.findUnique({ where: { id: params.id } });

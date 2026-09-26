@@ -16,7 +16,11 @@ type MembroEquipe = {
   ativo: boolean;
   verFinanceiro: boolean;
   gerenciarFinanceiro: boolean;
-  verComercial: boolean;
+  verComercial: boolean; // legado — ver nota em aplicarPreset/abrirEdicao
+  verOportunidades: boolean;
+  verOrcamentos: boolean;
+  verContratos: boolean;
+  verCatalogo: boolean;
   gerenciarTrafego: boolean;
   gerenciarEquipe: boolean;
   gerenciarConfiguracoes: boolean;
@@ -27,10 +31,51 @@ type MembroEquipe = {
 const CAPACIDADES: { chave: keyof MembroEquipe; label: string; ajuda: string }[] = [
   { chave: "verFinanceiro", label: "Ver Financeiro", ajuda: "Vê a área Financeiro e valores em R$ no resto do app." },
   { chave: "gerenciarFinanceiro", label: "Lançar cobrança/despesa", ajuda: "Cria e edita cobrança, despesa e contas a pagar/receber." },
-  { chave: "verComercial", label: "Comercial", ajuda: "Oportunidades, Orçamentos, Contratos, Catálogo e Pacotes." },
+];
+
+const CAPACIDADES_DEPOIS_DO_COMERCIAL: { chave: keyof MembroEquipe; label: string; ajuda: string }[] = [
   { chave: "gerenciarTrafego", label: "Tráfego Pago", ajuda: "Campanhas, verba e resultado de tráfego pago." },
   { chave: "gerenciarConfiguracoes", label: "Configurações", ajuda: "Site, catálogo, automações e outras configurações gerais." },
   { chave: "gerenciarEquipe", label: "Gerenciar equipe", ajuda: "Pode criar, editar e remover outros logins — cuidado ao liberar." },
+];
+
+// Antes "Comercial" era um interruptor só pros 4 juntos — agora dá pra marcar
+// só o que a pessoa precisa (ex: só Oportunidades, sem ver Financeiro nem
+// Contratos fechados).
+const SUBPERMISSOES_COMERCIAL: { chave: keyof MembroEquipe; label: string }[] = [
+  { chave: "verOportunidades", label: "Oportunidades" },
+  { chave: "verOrcamentos", label: "Orçamentos" },
+  { chave: "verContratos", label: "Contratos" },
+  { chave: "verCatalogo", label: "Catálogo e Pacotes" },
+];
+
+const TODAS_CAPACIDADES: (keyof MembroEquipe)[] = [
+  "verFinanceiro",
+  "gerenciarFinanceiro",
+  "verOportunidades",
+  "verOrcamentos",
+  "verContratos",
+  "verCatalogo",
+  "gerenciarTrafego",
+  "gerenciarConfiguracoes",
+  "gerenciarEquipe",
+];
+
+function preset(ligadas: (keyof MembroEquipe)[]): Partial<MembroEquipe> {
+  const obj: Partial<MembroEquipe> = {};
+  for (const chave of TODAS_CAPACIDADES) (obj as any)[chave] = ligadas.includes(chave);
+  return obj;
+}
+
+// Pontos de partida por cargo — só preenchem os toggles abaixo, nada é travado:
+// depois de clicar dá pra ajustar (ligar/desligar) qualquer um antes de salvar.
+// Cargo continua sendo um rótulo livre — esses são só os mais comuns na agência.
+const PRESETS_CARGO: { nome: string; permissoes: Partial<MembroEquipe> }[] = [
+  { nome: "Editor", permissoes: preset([]) },
+  { nome: "Social Media", permissoes: preset(["verCatalogo"]) },
+  { nome: "Gestor de Tráfego", permissoes: preset(["gerenciarTrafego", "verCatalogo"]) },
+  { nome: "Comercial", permissoes: preset(["verOportunidades", "verOrcamentos", "verContratos", "verCatalogo"]) },
+  { nome: "Financeiro", permissoes: preset(["verFinanceiro", "gerenciarFinanceiro"]) },
 ];
 
 function Toggle({ ligado, onChange }: { ligado: boolean; onChange: (v: boolean) => void }) {
@@ -60,6 +105,10 @@ function formVazio(): Omit<MembroEquipe, "id" | "master"> & { senha: string } {
     verFinanceiro: false,
     gerenciarFinanceiro: false,
     verComercial: false,
+    verOportunidades: false,
+    verOrcamentos: false,
+    verContratos: false,
+    verCatalogo: false,
     gerenciarTrafego: false,
     gerenciarEquipe: false,
     gerenciarConfiguracoes: false,
@@ -91,7 +140,18 @@ export default function EquipeManager({
   }
 
   function abrirEdicao(m: MembroEquipe) {
-    setForm({ ...m, senha: "" });
+    setForm({
+      ...m,
+      senha: "",
+      // Migração transparente do interruptor antigo: quem já tinha "Comercial"
+      // ligado no modo antigo abre aqui já com os 4 específicos marcados
+      // (mesmo acesso de antes) — ao salvar, viram os valores de verdade e o
+      // flag antigo é desligado (ver salvar()).
+      verOportunidades: m.verComercial || m.verOportunidades,
+      verOrcamentos: m.verComercial || m.verOrcamentos,
+      verContratos: m.verComercial || m.verContratos,
+      verCatalogo: m.verComercial || m.verCatalogo,
+    });
     setErro("");
     setEditandoId(m.id);
     setCriando(false);
@@ -113,7 +173,10 @@ export default function EquipeManager({
     const res = await fetch(url, {
       method: editandoId ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      // verComercial sempre false daqui em diante: quem passa por esse formulário
+      // (novo ou editado) fica só nos 4 específicos, que já vieram certos de
+      // abrirEdicao/formVazio — assim o flag antigo vai sendo aposentado aos poucos.
+      body: JSON.stringify({ ...form, verComercial: false }),
     });
     setSalvando(false);
     if (!res.ok) {
@@ -277,6 +340,21 @@ function FormMembro({
         <div>
           <Label>Cargo (só rótulo, ex: Editor, Gestor de Tráfego)</Label>
           <Input value={form.cargo} onChange={(e) => setForm((f: any) => ({ ...f, cargo: e.target.value }))} />
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {PRESETS_CARGO.map((p) => (
+              <button
+                key={p.nome}
+                type="button"
+                onClick={() => setForm((f: any) => ({ ...f, cargo: p.nome, ...p.permissoes }))}
+                className="rounded-full border border-border px-2.5 py-1 text-[11px] text-muted transition-colors hover:border-accent/40 hover:text-accent"
+              >
+                {p.nome}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1 text-[10px] text-muted/70">
+            Clique num cargo pra preencher "O que essa pessoa pode" com um padrão — dá pra ajustar depois.
+          </p>
         </div>
         <div>
           <Label>E-mail {editando && "(não muda depois)"}</Label>
@@ -307,6 +385,38 @@ function FormMembro({
       <div className="flex flex-col gap-2">
         <p className="text-xs font-medium uppercase tracking-wider text-muted/70">O que essa pessoa pode</p>
         {CAPACIDADES.map((c) => (
+          <div
+            key={c.chave}
+            className="flex items-center justify-between gap-3 rounded-xl border border-border bg-base/60 px-3.5 py-2.5"
+          >
+            <div>
+              <p className="text-sm text-text">{c.label}</p>
+              <p className="text-xs text-muted">{c.ajuda}</p>
+            </div>
+            <Toggle
+              ligado={!!form[c.chave]}
+              onChange={(v) => setForm((f: any) => ({ ...f, [c.chave]: v }))}
+            />
+          </div>
+        ))}
+
+        <div className="rounded-xl border border-border bg-base/60 px-3.5 py-2.5">
+          <p className="text-sm text-text">Comercial</p>
+          <p className="mb-2.5 text-xs text-muted">Marque só o que essa pessoa precisa ver.</p>
+          <div className="flex flex-col gap-2 border-t border-border pt-2.5">
+            {SUBPERMISSOES_COMERCIAL.map((c) => (
+              <div key={c.chave} className="flex items-center justify-between gap-3 pl-1">
+                <p className="text-xs text-text">{c.label}</p>
+                <Toggle
+                  ligado={!!form[c.chave]}
+                  onChange={(v) => setForm((f: any) => ({ ...f, [c.chave]: v }))}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {CAPACIDADES_DEPOIS_DO_COMERCIAL.map((c) => (
           <div
             key={c.chave}
             className="flex items-center justify-between gap-3 rounded-xl border border-border bg-base/60 px-3.5 py-2.5"

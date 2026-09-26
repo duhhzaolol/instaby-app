@@ -25,7 +25,15 @@ model Usuario {
   // Capacidades — cada uma liga uma área do sistema. Ignoradas (sempre liberado) se master=true.
   verFinanceiro          Boolean @default(false) // vê a área Financeiro e valores em R$ pelo resto do app
   gerenciarFinanceiro    Boolean @default(false) // lançar/editar cobrança, despesa, conta a pagar/receber
-  verComercial           Boolean @default(false) // Oportunidades, Orçamentos, Contratos, Catálogo, Pacotes
+  // legado: era um único interruptor pros 4 de baixo juntos ("Comercial"). Mantido
+  // só por compatibilidade — quem já tinha isso ligado continua com os 4 liberados
+  // (ver permissoesDe, que soma esse flag em cada um). O formulário de equipe não
+  // usa mais esse campo pra gente nova: grava direto nos 4 específicos abaixo.
+  verComercial           Boolean @default(false)
+  verOportunidades       Boolean @default(false) // funil de Oportunidades
+  verOrcamentos          Boolean @default(false) // Orçamentos (painel e aba do cliente)
+  verContratos           Boolean @default(false) // Contratos (painel e aba do cliente)
+  verCatalogo            Boolean @default(false) // Catálogo de serviços e Pacotes
   gerenciarTrafego       Boolean @default(false) // módulo Tráfego Pago
   gerenciarEquipe        Boolean @default(false) // Configurações > Equipe (criar/editar outros logins)
   gerenciarConfiguracoes Boolean @default(false) // resto de Configurações (site, catálogo, automações etc.)

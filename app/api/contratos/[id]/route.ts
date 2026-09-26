@@ -6,7 +6,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { erro } = await exigirPermissaoApi("verComercial");
+  const { erro } = await exigirPermissaoApi("verContratos");
   if (erro) return erro;
 
   const body = await request.json();
@@ -27,7 +27,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { erro } = await exigirPermissaoApi("verComercial");
+  const { erro } = await exigirPermissaoApi("verContratos");
   if (erro) return erro;
 
   await prisma.contrato.delete({ where: { id: params.id } });

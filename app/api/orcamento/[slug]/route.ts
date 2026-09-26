@@ -25,7 +25,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { slug: string } }
 ) {
-  const { erro } = await exigirPermissaoApi("verComercial");
+  const { erro } = await exigirPermissaoApi("verOrcamentos");
   if (erro) return erro;
 
   const orcamento = await prisma.orcamento.findUnique({ where: { slug: params.slug } });

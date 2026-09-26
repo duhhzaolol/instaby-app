@@ -7,7 +7,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { erro } = await exigirPermissaoApi("verComercial");
+  const { erro } = await exigirPermissaoApi("verOrcamentos");
   if (erro) return erro;
 
   const orcamentos = await prisma.orcamento.findMany({
@@ -22,7 +22,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { erro } = await exigirPermissaoApi("verComercial");
+  const { erro } = await exigirPermissaoApi("verOrcamentos");
   if (erro) return erro;
 
   const body = await request.json();

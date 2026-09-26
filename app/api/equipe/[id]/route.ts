@@ -25,6 +25,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   if (body.verFinanceiro !== undefined) data.verFinanceiro = !!body.verFinanceiro;
   if (body.gerenciarFinanceiro !== undefined) data.gerenciarFinanceiro = !!body.gerenciarFinanceiro;
   if (body.verComercial !== undefined) data.verComercial = !!body.verComercial;
+  if (body.verOportunidades !== undefined) data.verOportunidades = !!body.verOportunidades;
+  if (body.verOrcamentos !== undefined) data.verOrcamentos = !!body.verOrcamentos;
+  if (body.verContratos !== undefined) data.verContratos = !!body.verContratos;
+  if (body.verCatalogo !== undefined) data.verCatalogo = !!body.verCatalogo;
   if (body.gerenciarTrafego !== undefined) data.gerenciarTrafego = !!body.gerenciarTrafego;
   if (body.gerenciarEquipe !== undefined) data.gerenciarEquipe = !!body.gerenciarEquipe;
   if (body.gerenciarConfiguracoes !== undefined) data.gerenciarConfiguracoes = !!body.gerenciarConfiguracoes;

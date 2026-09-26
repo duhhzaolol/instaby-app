@@ -74,7 +74,8 @@ export default async function ClienteDetalhePage({
   ];
   const abas = abasBase.filter((a) => {
     if (a.valor === "financeiro") return pode.verFinanceiro;
-    if (a.valor === "orcamentos" || a.valor === "contratos") return pode.verComercial;
+    if (a.valor === "orcamentos") return pode.verOrcamentos;
+    if (a.valor === "contratos") return pode.verContratos;
     if (a.valor === "trafego") return pode.gerenciarTrafego;
     return true;
   });

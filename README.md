@@ -1,4 +1,37 @@
-# Instaby App — v133
+# Instaby App — v134
+
+## Permissão "Comercial" detalhada + sugestão de permissões por cargo
+
+Ajuste na tela Configurações > Equipe (modal de novo membro / edição), a
+partir do que você notou testando: precisava dar acesso a uma pessoa "mas
+não tudo" dentro de Comercial.
+
+**1) "Comercial" deixou de ser um interruptor único.** Antes, um único
+"Comercial" liberava Oportunidades, Orçamentos, Contratos e Catálogo/Pacotes
+juntos. Agora são 4 interruptores separados, então dá pra liberar só
+Oportunidades pra alguém, por exemplo, sem abrir Contratos ou Orçamentos
+pra essa pessoa. Vale tanto pro menu lateral quanto pelas abas dentro da
+página de cada cliente.
+
+*Quem já tinha o "Comercial" antigo ligado continua exatamente com o mesmo
+acesso de antes — nada muda pra ninguém que já existe, a não ser que você
+abra o cadastro da pessoa pra editar (aí os 4 novos já aparecem ligados,
+refletindo o que ela já tinha, e você pode desligar o que não fizer
+sentido).*
+
+**2) Sugestão de permissões por cargo.** No campo Cargo, agora aparecem
+alguns chips de sugestão (Editor, Social Media, Gestor de Tráfego,
+Comercial, Financeiro) — clicar num deles preenche o cargo e já marca um
+conjunto padrão de permissões pra começar. É só um ponto de partida: dá
+pra ligar/desligar qualquer coisa depois, antes de salvar.
+
+**3) Conferido: acesso restrito por aba dentro do cliente já funciona.**
+Perguntou se dava pra alguém acessar um cliente sem ver o Financeiro — isso
+já existia (cada aba da página do cliente já checa a permissão certa:
+Financeiro, Orçamentos, Contratos e Tráfego Pago cada uma só aparece pra
+quem tem a permissão daquela área). Não precisou de mudança, só confirmação.
+
+## v133
 
 ## Abertura: elementos maiores + tempo certo (2s + 1s + revelação)
 
