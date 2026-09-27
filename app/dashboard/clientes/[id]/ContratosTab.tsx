@@ -46,13 +46,23 @@ export default function ContratosTab({
     const form = new FormData();
     form.append("arquivo", arquivo);
     const resp = await fetch("/api/upload-contrato", { method: "POST", body: form });
+    if (!resp.ok) {
+      setAnexando(null);
+      alert("Não consegui enviar esse arquivo. Tenta de novo.");
+      return;
+    }
     const dados = await resp.json();
     if (dados.url) {
-      await fetch(`/api/contratos/${id}`, {
+      const res = await fetch(`/api/contratos/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ arquivoUrl: dados.url, status: "assinado" }),
       });
+      if (!res.ok) {
+        setAnexando(null);
+        alert("O arquivo foi enviado, mas não consegui vincular ao contrato. Tenta de novo.");
+        return;
+      }
     }
     setAnexando(null);
     router.refresh();
@@ -60,41 +70,57 @@ export default function ContratosTab({
 
   async function gerarDoOrcamento(orcamentoId: string) {
     setGerando(true);
-    await fetch(`/api/clientes/${clienteId}/contratos`, {
+    const res = await fetch(`/api/clientes/${clienteId}/contratos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ orcamentoId }),
     });
     setGerando(false);
+    if (!res.ok) {
+      alert("Não consegui gerar o contrato. Tenta de novo.");
+      return;
+    }
     router.refresh();
   }
 
   async function gerarDosServicos() {
     setGerando(true);
-    await fetch(`/api/clientes/${clienteId}/contratos`, {
+    const res = await fetch(`/api/clientes/${clienteId}/contratos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ fonte: "servicos" }),
     });
     setGerando(false);
+    if (!res.ok) {
+      alert("Não consegui gerar o contrato. Tenta de novo.");
+      return;
+    }
     router.refresh();
   }
 
   async function atualizarStatus(id: string, status: string) {
-    await fetch(`/api/contratos/${id}`, {
+    const res = await fetch(`/api/contratos/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
+    if (!res.ok) {
+      alert("Não consegui atualizar o status do contrato. Tenta de novo.");
+      return;
+    }
     router.refresh();
   }
 
   async function salvarTexto(id: string) {
-    await fetch(`/api/contratos/${id}`, {
+    const res = await fetch(`/api/contratos/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ conteudo: textoEditado[id] }),
     });
+    if (!res.ok) {
+      alert("Não consegui salvar o texto do contrato. Tenta de novo.");
+      return;
+    }
     setExpandido(null);
     router.refresh();
   }
@@ -105,7 +131,11 @@ export default function ContratosTab({
 
   async function excluir(id: string) {
     if (!confirm("Excluir esse contrato?")) return;
-    await fetch(`/api/contratos/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/contratos/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      alert("Não consegui excluir esse contrato. Tenta de novo.");
+      return;
+    }
     router.refresh();
   }
 

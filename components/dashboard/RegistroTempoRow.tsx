@@ -52,7 +52,7 @@ export function RegistroTempoRow({
 
   async function salvar() {
     setSalvando(true);
-    await fetch(`/api/registros-tempo/${registro.id}`, {
+    const res = await fetch(`/api/registros-tempo/${registro.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -63,13 +63,21 @@ export function RegistroTempoRow({
       }),
     });
     setSalvando(false);
+    if (!res.ok) {
+      alert("Não consegui salvar esse registro. Tenta de novo.");
+      return;
+    }
     setEditando(false);
     router.refresh();
   }
 
   async function excluir() {
     if (!confirm("Excluir esse registro de horas?")) return;
-    await fetch(`/api/registros-tempo/${registro.id}`, { method: "DELETE" });
+    const res = await fetch(`/api/registros-tempo/${registro.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      alert("Não consegui excluir esse registro. Tenta de novo.");
+      return;
+    }
     router.refresh();
   }
 

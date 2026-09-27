@@ -32,32 +32,48 @@ export default function OnboardingTab({ clienteId, onboarding }: { clienteId: st
 
   async function iniciar() {
     setIniciando(true);
-    await fetch(`/api/clientes/${clienteId}/onboarding`, { method: "POST" });
+    const res = await fetch(`/api/clientes/${clienteId}/onboarding`, { method: "POST" });
     setIniciando(false);
+    if (!res.ok) {
+      alert("Não consegui iniciar o onboarding. Tenta de novo.");
+      return;
+    }
     router.refresh();
   }
 
   async function mudarStatus(id: string, status: string) {
-    await fetch(`/api/itens-onboarding/${id}`, {
+    const res = await fetch(`/api/itens-onboarding/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
+    if (!res.ok) {
+      alert("Não consegui atualizar esse item. Tenta de novo.");
+      return;
+    }
     router.refresh();
   }
 
   async function mudarResponsavel(id: string, responsavel: string) {
-    await fetch(`/api/itens-onboarding/${id}`, {
+    const res = await fetch(`/api/itens-onboarding/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ responsavel }),
     });
+    if (!res.ok) {
+      alert("Não consegui atualizar o responsável. Tenta de novo.");
+      return;
+    }
     router.refresh();
   }
 
   async function excluirItem(id: string) {
     if (!confirm("Excluir esse item?")) return;
-    await fetch(`/api/itens-onboarding/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/itens-onboarding/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      alert("Não consegui excluir esse item. Tenta de novo.");
+      return;
+    }
     router.refresh();
   }
 
@@ -65,12 +81,16 @@ export default function OnboardingTab({ clienteId, onboarding }: { clienteId: st
     e.preventDefault();
     if (!novoTitulo.trim() || !onboarding) return;
     setAdicionando(true);
-    await fetch(`/api/onboarding/${onboarding.id}/itens`, {
+    const res = await fetch(`/api/onboarding/${onboarding.id}/itens`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ titulo: novoTitulo }),
     });
     setAdicionando(false);
+    if (!res.ok) {
+      alert("Não consegui adicionar esse item. Tenta de novo.");
+      return;
+    }
     setNovoTitulo("");
     router.refresh();
   }
@@ -78,11 +98,15 @@ export default function OnboardingTab({ clienteId, onboarding }: { clienteId: st
   async function lancarTempo(id: string) {
     const min = parseInt(minutos);
     if (!min || min <= 0) return;
-    await fetch(`/api/itens-onboarding/${id}/tempo`, {
+    const res = await fetch(`/api/itens-onboarding/${id}/tempo`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ minutos: min }),
     });
+    if (!res.ok) {
+      alert("Não consegui lançar esse tempo. Tenta de novo.");
+      return;
+    }
     setLancandoTempoId(null);
     setMinutos("");
     router.refresh();

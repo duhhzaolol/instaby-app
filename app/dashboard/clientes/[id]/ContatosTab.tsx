@@ -51,28 +51,34 @@ export default function ContatosTab({ clienteId, contatos, contatoAntigo }: { cl
     if (!form.nome?.trim()) return;
     setEnviando(true);
 
-    if (editandoId) {
-      await fetch(`/api/contatos/${editandoId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-    } else {
-      await fetch(`/api/clientes/${clienteId}/contatos`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-    }
+    const res = editandoId
+      ? await fetch(`/api/contatos/${editandoId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        })
+      : await fetch(`/api/clientes/${clienteId}/contatos`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
 
     setEnviando(false);
+    if (!res.ok) {
+      alert("Não consegui salvar esse contato. Tenta de novo.");
+      return;
+    }
     setAberto(false);
     router.refresh();
   }
 
   async function excluir(id: string) {
     if (!confirm("Excluir esse contato?")) return;
-    await fetch(`/api/contatos/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/contatos/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      alert("Não consegui excluir esse contato. Tenta de novo.");
+      return;
+    }
     router.refresh();
   }
 

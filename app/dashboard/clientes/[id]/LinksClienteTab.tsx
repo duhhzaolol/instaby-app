@@ -29,12 +29,16 @@ export default function LinksClienteTab({
     e.preventDefault();
     if (!url.trim()) return;
     setEnviando(true);
-    await fetch(`/api/clientes/${clienteId}/links`, {
+    const res = await fetch(`/api/clientes/${clienteId}/links`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ tipo, label: label || null, url }),
     });
     setEnviando(false);
+    if (!res.ok) {
+      alert("Não consegui salvar esse link. Tenta de novo.");
+      return;
+    }
     setTipo("drive");
     setLabel("");
     setUrl("");
@@ -44,7 +48,11 @@ export default function LinksClienteTab({
 
   async function excluir(id: string) {
     if (!confirm("Excluir esse link?")) return;
-    await fetch(`/api/links/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/links/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      alert("Não consegui excluir esse link. Tenta de novo.");
+      return;
+    }
     router.refresh();
   }
 

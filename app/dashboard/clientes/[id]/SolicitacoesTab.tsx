@@ -28,12 +28,16 @@ export default function SolicitacoesTab({ clienteId, solicitacoes }: { clienteId
     e.preventDefault();
     if (!descricao.trim()) return;
     setEnviando(true);
-    await fetch(`/api/clientes/${clienteId}/solicitacoes`, {
+    const res = await fetch(`/api/clientes/${clienteId}/solicitacoes`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ descricao, prioridade, extra }),
     });
     setEnviando(false);
+    if (!res.ok) {
+      alert("Não consegui registrar essa solicitação. Tenta de novo.");
+      return;
+    }
     setDescricao("");
     setPrioridade("media");
     setExtra(false);
@@ -42,17 +46,25 @@ export default function SolicitacoesTab({ clienteId, solicitacoes }: { clienteId
   }
 
   async function mudarStatus(id: string, status: string) {
-    await fetch(`/api/solicitacoes/${id}`, {
+    const res = await fetch(`/api/solicitacoes/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
+    if (!res.ok) {
+      alert("Não consegui atualizar o status. Tenta de novo.");
+      return;
+    }
     router.refresh();
   }
 
   async function excluir(id: string) {
     if (!confirm("Excluir essa solicitação?")) return;
-    await fetch(`/api/solicitacoes/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/solicitacoes/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      alert("Não consegui excluir essa solicitação. Tenta de novo.");
+      return;
+    }
     router.refresh();
   }
 

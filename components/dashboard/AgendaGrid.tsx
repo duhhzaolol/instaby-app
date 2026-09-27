@@ -62,24 +62,28 @@ export function AgendaGrid({
     if (!editando) return;
     setSalvando(true);
 
-    if (editando.origem === "tarefa") {
-      await fetch(`/api/tarefas/${editando.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prazo: `${data}T${hora || "00:00"}:00-03:00` }),
-      });
-    } else {
-      await fetch(`/api/registros-tempo/${editando.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          inicio: `${data}T${horaInicio}:00-03:00`,
-          fim: horaFim ? `${data}T${horaFim}:00-03:00` : null,
-        }),
-      });
-    }
+    const res =
+      editando.origem === "tarefa"
+        ? await fetch(`/api/tarefas/${editando.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prazo: `${data}T${hora || "00:00"}:00-03:00` }),
+          })
+        : await fetch(`/api/registros-tempo/${editando.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              inicio: `${data}T${horaInicio}:00-03:00`,
+              fim: horaFim ? `${data}T${horaFim}:00-03:00` : null,
+            }),
+          });
 
     setSalvando(false);
+    if (!res.ok) {
+      const corpo = await res.json().catch(() => null);
+      alert(corpo?.erro || "Não consegui salvar esse item. Tenta de novo.");
+      return;
+    }
     setEditando(null);
     router.refresh();
   }
@@ -90,9 +94,13 @@ export function AgendaGrid({
     setSalvando(true);
 
     const rota = editando.origem === "tarefa" ? `/api/tarefas/${editando.id}` : `/api/registros-tempo/${editando.id}`;
-    await fetch(rota, { method: "DELETE" });
+    const res = await fetch(rota, { method: "DELETE" });
 
     setSalvando(false);
+    if (!res.ok) {
+      alert("Não consegui excluir esse item. Tenta de novo.");
+      return;
+    }
     setEditando(null);
     router.refresh();
   }

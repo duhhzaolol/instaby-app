@@ -41,27 +41,33 @@ export default function TemplatesTarefasForm({ templates }: { templates: Templat
   async function salvar() {
     if (!nome.trim() || itens.length === 0) return;
     setSalvando(true);
-    if (editandoId) {
-      await fetch(`/api/templates-tarefas/${editandoId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nome, itens }),
-      });
-    } else {
-      await fetch("/api/templates-tarefas", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nome, itens }),
-      });
-    }
+    const res = editandoId
+      ? await fetch(`/api/templates-tarefas/${editandoId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nome, itens }),
+        })
+      : await fetch("/api/templates-tarefas", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nome, itens }),
+        });
     setSalvando(false);
+    if (!res.ok) {
+      alert("Não consegui salvar esse template. Tenta de novo.");
+      return;
+    }
     setNovo(false);
     router.refresh();
   }
 
   async function excluir(id: string) {
     if (!confirm("Excluir esse template?")) return;
-    await fetch(`/api/templates-tarefas/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/templates-tarefas/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      alert("Não consegui excluir esse template. Tenta de novo.");
+      return;
+    }
     router.refresh();
   }
 

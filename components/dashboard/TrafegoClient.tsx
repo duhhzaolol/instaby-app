@@ -202,7 +202,7 @@ function NovaCampanhaForm({
     e.preventDefault();
     if (!clienteId || !nome.trim() || !plataforma) return;
     setEnviando(true);
-    await fetch("/api/campanhas", {
+    const res = await fetch("/api/campanhas", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -218,6 +218,10 @@ function NovaCampanhaForm({
       }),
     });
     setEnviando(false);
+    if (!res.ok) {
+      alert("Não consegui salvar essa campanha. Tenta de novo.");
+      return;
+    }
     onSalvo();
     router.refresh();
   }
@@ -285,7 +289,7 @@ function EditarCampanhaForm({
 
   async function salvar() {
     setEnviando(true);
-    await fetch(`/api/campanhas/${campanha.id}`, {
+    const res = await fetch(`/api/campanhas/${campanha.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -300,6 +304,10 @@ function EditarCampanhaForm({
       }),
     });
     setEnviando(false);
+    if (!res.ok) {
+      alert("Não consegui salvar as alterações dessa campanha. Tenta de novo.");
+      return;
+    }
     onFechar();
     router.refresh();
   }
@@ -307,8 +315,12 @@ function EditarCampanhaForm({
   async function excluir() {
     if (!confirm(`Excluir a campanha "${campanha.nome}"?`)) return;
     setEnviando(true);
-    await fetch(`/api/campanhas/${campanha.id}`, { method: "DELETE" });
+    const res = await fetch(`/api/campanhas/${campanha.id}`, { method: "DELETE" });
     setEnviando(false);
+    if (!res.ok) {
+      alert("Não consegui excluir essa campanha. Tenta de novo.");
+      return;
+    }
     onFechar();
     router.refresh();
   }

@@ -108,11 +108,17 @@ export default function QuadroTarefas({ tarefas }: { tarefas: TarefaQuadro[] }) 
 
   async function aplicarStatus(id: string, status: string) {
     setItens((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)));
-    await fetch(`/api/tarefas/${id}`, {
+    const res = await fetch(`/api/tarefas/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
+    if (!res.ok) {
+      // Card volta pro lugar sozinho quando o router.refresh() trouxer o estado
+      // real do servidor de volta (useEffect que resincroniza `itens` com `tarefas`).
+      const data = await res.json().catch(() => null);
+      alert(data?.erro || "Não consegui mudar o status dessa tarefa.");
+    }
     router.refresh();
   }
 
@@ -140,15 +146,25 @@ export default function QuadroTarefas({ tarefas }: { tarefas: TarefaQuadro[] }) 
     const tarefa = confirmando;
 
     setItens((prev) => prev.map((t) => (t.id === tarefa.id ? { ...t, status: "feito" } : t)));
-    await fetch(`/api/tarefas/${tarefa.id}`, {
+    const res = await fetch(`/api/tarefas/${tarefa.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "feito" }),
     });
 
+    if (!res.ok) {
+      // Ex.: tarefa de Reel sem vídeo bruto na pasta ainda (gate do servidor, 409) —
+      // sem essa checagem, o cartão só "voltava sozinho" sem explicar por quê.
+      const data = await res.json().catch(() => null);
+      setSalvandoConclusao(false);
+      alert(data?.erro || "Não consegui marcar essa tarefa como feita.");
+      router.refresh();
+      return;
+    }
+
     if (registrarHoras && horaInicio && horaFim) {
       const hoje = new Date().toLocaleDateString("en-CA");
-      await fetch("/api/registros-tempo", {
+      const resHoras = await fetch("/api/registros-tempo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -158,6 +174,9 @@ export default function QuadroTarefas({ tarefas }: { tarefas: TarefaQuadro[] }) 
           fim: `${hoje}T${horaFim}:00-03:00`,
         }),
       });
+      if (!resHoras.ok) {
+        alert("A tarefa foi marcada como feita, mas não consegui lançar as horas — lança manualmente em Horas.");
+      }
     }
 
     setSalvandoConclusao(false);
@@ -168,7 +187,10 @@ export default function QuadroTarefas({ tarefas }: { tarefas: TarefaQuadro[] }) 
   async function excluir(id: string) {
     if (!confirm("Excluir essa tarefa?")) return;
     setItens((prev) => prev.filter((t) => t.id !== id));
-    await fetch(`/api/tarefas/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/tarefas/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      alert("Não consegui excluir essa tarefa.");
+    }
     router.refresh();
   }
 

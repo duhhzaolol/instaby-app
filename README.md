@@ -1,4 +1,51 @@
-# Instaby App — v139
+# Instaby App — v140
+
+Varredura de um tech debt que já tinha sido identificado (mas não fechado de
+propósito) lá na v137: telas que salvam/excluem algo sem checar se a API
+aceitou o pedido. Sem essa checagem, se a gravação falhasse por qualquer
+motivo (queda de conexão, sessão expirada, regra de negócio recusando), a
+tela seguia como se tivesse dado certo — formulário fechava, botão parava de
+girar — sem avisar que nada foi salvo de verdade.
+
+## Corrigido: 13 telas que falhavam em silêncio
+
+Mesmo padrão da correção que a Tarefa já tinha (v137): checa se a resposta
+da API deu certo e, se não deu, avisa com uma mensagem e não fecha o
+formulário nem assume que salvou. Onde foi corrigido:
+
+- **Dentro do cliente**: Contratos (gerar, editar texto, mudar status,
+  anexar assinado, excluir), Links, Contatos, Onboarding (iniciar, mudar
+  status/responsável, lançar tempo, adicionar/excluir item), Solicitações.
+- **Comercial**: Pipeline de Oportunidades (editar campo, marcar
+  ganha/perdida, excluir).
+- **Tráfego Pago**: criar/editar/excluir campanha.
+- **Tarefas**: quadro (kanban) — mudar status, marcar feito, excluir.
+- **Horas** e **Agenda**: editar/excluir registro de horas ou compromisso.
+- **Financeiro**: excluir/editar despesa, lançar baixa de pagamento.
+- **Relatórios**: excluir relatório.
+- **Configurações**: templates de checklist de tarefa.
+
+Achado de bônus nessa varredura: o quadro de Tarefas (arrastar card pra
+"Feito") tinha um caso real disso acontecendo hoje — uma tarefa de Reel sem
+vídeo bruto na pasta (trava que você pediu na v137) já era recusada pelo
+servidor certinho, mas o quadro não mostrava por quê — o card só "voltava"
+sozinho pro lugar de antes, sem explicação. Agora aparece a mensagem
+("...ainda não tem o vídeo bruto na pasta...") de verdade.
+
+**Fora dessa leva, por decisão de escopo**: rodando uma busca no projeto
+inteiro, achei bem mais lugares com esse mesmo padrão faltando do que os 13
+já mapeados desde a v137 — a maioria formulários de Configurações → Site
+(textos/imagens do site público). Como são de menor risco (conteúdo do
+site, não dado de cliente/financeiro) e o pente-fino ficaria bem maior que
+essa leva, deixei de fora de propósito — fechei só essa lista de 13 que já
+era conhecida. Se quiser, numa próxima leva fecho o resto também.
+
+**Detalhe técnico pra registro:** mudança só de tratamento de erro (nenhuma
+regra de negócio nova) — `tsc --noEmit` deu o mesmo total de erros de antes
+(305, todos os de sempre) e zero erro em qualquer um dos 13 arquivos
+tocados.
+
+## v139
 
 Segunda leva do pedido grande da v138 — agora sim o redesign visual das áreas
 que ainda estavam no estilo antigo. Painel inteiro agora segue a mesma

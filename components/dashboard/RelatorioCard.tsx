@@ -32,7 +32,11 @@ export function RelatorioCard({ relatorio, index }: { relatorio: RelatorioResumo
 
   async function excluir() {
     if (!confirm("Excluir esse relatório?")) return;
-    await fetch(`/api/relatorios/${relatorio.id}`, { method: "DELETE" });
+    const res = await fetch(`/api/relatorios/${relatorio.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      alert("Não consegui excluir esse relatório. Tenta de novo.");
+      return;
+    }
     router.refresh();
   }
 

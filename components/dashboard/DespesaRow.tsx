@@ -56,7 +56,7 @@ export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index:
 
   async function salvar() {
     setSalvando(true);
-    await fetch(`/api/despesas/${despesa.id}`, {
+    const res = await fetch(`/api/despesas/${despesa.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -71,17 +71,25 @@ export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index:
       }),
     });
     setSalvando(false);
+    if (!res.ok) {
+      alert("Não consegui salvar essa despesa. Tenta de novo.");
+      return;
+    }
     setEditando(false);
     router.refresh();
   }
 
   async function lancarBaixa() {
     if (valorBaixa <= 0) return;
-    await fetch(`/api/despesas/${despesa.id}/pagamentos`, {
+    const res = await fetch(`/api/despesas/${despesa.id}/pagamentos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ valor: valorBaixa }),
     });
+    if (!res.ok) {
+      alert("Não consegui lançar essa baixa. Tenta de novo.");
+      return;
+    }
     setValorBaixa(0);
     setLancandoBaixa(false);
     router.refresh();
@@ -89,7 +97,11 @@ export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index:
 
   async function excluir() {
     if (!confirm("Excluir essa despesa?")) return;
-    await fetch(`/api/despesas/${despesa.id}`, { method: "DELETE" });
+    const res = await fetch(`/api/despesas/${despesa.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      alert("Não consegui excluir essa despesa. Tenta de novo.");
+      return;
+    }
     router.refresh();
   }
 

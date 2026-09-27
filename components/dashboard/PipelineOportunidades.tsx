@@ -36,11 +36,14 @@ export function PipelineOportunidades({ oportunidades }: { oportunidades: Oportu
   async function salvarCampo(campo: string, valor: any) {
     if (!detalhe) return;
     setDetalhe({ ...detalhe, [campo]: valor } as OportunidadeData);
-    await fetch(`/api/oportunidades/${detalhe.id}`, {
+    const res = await fetch(`/api/oportunidades/${detalhe.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ [campo]: valor }),
     });
+    if (!res.ok) {
+      alert("Não consegui salvar essa alteração. Tenta de novo.");
+    }
     router.refresh();
   }
 
@@ -49,6 +52,11 @@ export function PipelineOportunidades({ oportunidades }: { oportunidades: Oportu
     if (!confirm(`Marcar "${detalhe.nome}" como ganha? Isso cria o cadastro de cliente pra ela.`)) return;
     setSalvando(true);
     const res = await fetch(`/api/oportunidades/${detalhe.id}/ganhar`, { method: "POST" });
+    if (!res.ok) {
+      setSalvando(false);
+      alert("Não consegui marcar essa oportunidade como ganha. Tenta de novo.");
+      return;
+    }
     const dados = await res.json();
     setSalvando(false);
     setDetalhe(null);
@@ -63,12 +71,16 @@ export function PipelineOportunidades({ oportunidades }: { oportunidades: Oportu
     if (!detalhe) return;
     const motivo = prompt("Por que perdeu essa oportunidade? (opcional)");
     setSalvando(true);
-    await fetch(`/api/oportunidades/${detalhe.id}`, {
+    const res = await fetch(`/api/oportunidades/${detalhe.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "perdido", motivoPerda: motivo || null }),
     });
     setSalvando(false);
+    if (!res.ok) {
+      alert("Não consegui marcar essa oportunidade como perdida. Tenta de novo.");
+      return;
+    }
     setDetalhe(null);
     router.refresh();
   }
@@ -76,7 +88,11 @@ export function PipelineOportunidades({ oportunidades }: { oportunidades: Oportu
   async function excluir() {
     if (!detalhe) return;
     if (!confirm("Excluir essa oportunidade?")) return;
-    await fetch(`/api/oportunidades/${detalhe.id}`, { method: "DELETE" });
+    const res = await fetch(`/api/oportunidades/${detalhe.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      alert("Não consegui excluir essa oportunidade. Tenta de novo.");
+      return;
+    }
     setDetalhe(null);
     router.refresh();
   }
