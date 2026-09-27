@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -25,7 +25,14 @@ import {
   Menu,
   X,
   Megaphone,
+  Sparkles,
 } from "lucide-react";
+import { BotaoTema } from "@/components/ui/TemaAlternativo";
+import { ULTIMA_VERSAO_NOVIDADES } from "@/lib/changelog";
+
+// Mesma chave usada em components/dashboard/MarcarNovidadesVistas.tsx.
+const CHAVE_NOVIDADES_VISTAS = "instaby:novidades-vista";
+const HREF_NOVIDADES = "/dashboard/novidades";
 
 export type Permissoes = {
   master: boolean;
@@ -48,6 +55,7 @@ const menuPrincipal = [
   { label: "Agenda", href: "/dashboard/agenda", icon: Calendar },
   { label: "Tarefas", href: "/dashboard/tarefas", icon: CheckSquare },
   { label: "Horas", href: "/dashboard/horas", icon: Clock },
+  { label: "Novidades", href: HREF_NOVIDADES, icon: Sparkles },
 ];
 
 const menuFinanceiro = [
@@ -79,10 +87,12 @@ function ItemMenu({
   item,
   ativo,
   onClick,
+  badge,
 }: {
   item: { label: string; href: string; icon: any };
   ativo: boolean;
   onClick?: () => void;
+  badge?: boolean;
 }) {
   const Icon = item.icon;
   return (
@@ -99,7 +109,10 @@ function ItemMenu({
           ativo ? "font-medium text-accent" : "text-muted hover:bg-hover hover:text-text"
         }`}
       >
-        <Icon size={17} strokeWidth={1.75} />
+        <span className="relative flex">
+          <Icon size={17} strokeWidth={1.75} />
+          {badge && <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-accent" />}
+        </span>
         {item.label}
       </div>
     </Link>
@@ -118,6 +131,16 @@ function ConteudoSidebar({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const [temNovidadeNaoVista, setTemNovidadeNaoVista] = useState(false);
+
+  useEffect(() => {
+    try {
+      const vista = Number(localStorage.getItem(CHAVE_NOVIDADES_VISTAS) || "0");
+      setTemNovidadeNaoVista(vista < ULTIMA_VERSAO_NOVIDADES);
+    } catch {
+      // sem localStorage, sem bolinha — não é crítico
+    }
+  }, []);
 
   const menuOrcamentoVisivel = menuOrcamento.filter((i) => pode[i.flag]);
 
@@ -150,7 +173,13 @@ function ConteudoSidebar({
         <div className="flex flex-col gap-1">
           <p className="px-3 pb-1 text-[11px] uppercase tracking-wider text-muted/70">Geral</p>
           {menuPrincipal.map((item) => (
-            <ItemMenu key={item.href} item={item} ativo={!!ativo(item.href)} onClick={onNavigate} />
+            <ItemMenu
+              key={item.href}
+              item={item}
+              ativo={!!ativo(item.href)}
+              onClick={onNavigate}
+              badge={item.href === HREF_NOVIDADES ? temNovidadeNaoVista : undefined}
+            />
           ))}
         </div>
 
@@ -189,14 +218,15 @@ function ConteudoSidebar({
         </div>
       </nav>
 
-      <div className="flex items-center gap-3 rounded-xl border border-border bg-card/60 px-3 py-2.5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-xs font-semibold text-white">
+      <div className="flex items-center gap-2 rounded-xl border border-border bg-card/60 px-3 py-2.5">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-semibold text-white">
           {iniciais}
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm text-text">{nome}</p>
           <p className="truncate text-xs text-muted">{email}</p>
         </div>
+        <BotaoTema />
       </div>
     </>
   );

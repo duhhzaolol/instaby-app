@@ -85,3 +85,17 @@
   --fill-accent:var(--accent);
   --on-accent:#FFFFFF;
 }
+
+/* ---- Tema alternativo "cinza" ----
+   Continua escuro de propósito — não é um tema claro, só troca o preto
+   azulado padrão por um cinza mais neutro. Ligado pelo botão ao lado do seu
+   nome no rodapé do menu lateral (components/ui/TemaAlternativo.tsx),
+   guardado no localStorage e aplicado via atributo data-theme na tag <html>.
+   Cor de referência ainda provisória — ajusta fácil trocando os 4 valores
+   abaixo assim que tivermos o tom exato que você quer. */
+:root[data-theme="cinza"]{
+  --base:#2A2B2F;
+  --card:#35363B;
+  --hover:#3F4045;
+  --border:rgba(255,255,255,.09);
+}

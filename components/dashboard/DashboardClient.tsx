@@ -170,6 +170,7 @@ export default function DashboardClient({
       sensivel: false,
       href: "/dashboard/clientes?status=ativo",
       cor: "#3B82F6",
+      destaque: true,
     },
     {
       label: "Leads em aberto",
@@ -178,6 +179,7 @@ export default function DashboardClient({
       sensivel: false,
       href: "/dashboard/clientes?status=lead",
       cor: "#A855F7",
+      destaque: true,
     },
     {
       label: "Faturamento do mês",
@@ -188,6 +190,7 @@ export default function DashboardClient({
       href: "/dashboard/financeiro",
       cor: "#22C55E",
       delta: variacaoFaturamento,
+      destaque: false,
     },
     {
       label: "Cobranças pendentes",
@@ -197,6 +200,7 @@ export default function DashboardClient({
       sensivel: true,
       href: "/dashboard/financeiro",
       cor: "#F59E0B",
+      destaque: false,
     },
   ];
 
@@ -211,7 +215,18 @@ export default function DashboardClient({
           const Icon = c.icon;
           return (
             <Link key={c.label} href={c.href}>
-              <Card index={i} className="p-4 transition-shadow hover:shadow-glow">
+              <Card
+                index={i}
+                className="p-4 transition-shadow hover:shadow-glow"
+                style={
+                  c.destaque
+                    ? {
+                        borderColor: `${c.cor}33`,
+                        backgroundImage: `linear-gradient(to bottom right, ${c.cor}1A, var(--card), var(--card))`,
+                      }
+                    : undefined
+                }
+              >
                 <div className="mb-2 flex items-center justify-between">
                   <p className="text-xs text-muted">{c.label}</p>
                   <div
@@ -248,8 +263,6 @@ export default function DashboardClient({
         })}
       </div>
 
-      <GraficoFaturamento dados={faturamentoPorMes} oculto={oculto} />
-
       {alertas.length > 0 && (
         <div className="mb-6 rounded-2xl border border-border bg-card/60 p-4">
           <p className="mb-3 flex items-center gap-1.5 text-sm font-medium text-text">
@@ -274,6 +287,8 @@ export default function DashboardClient({
           </div>
         </div>
       )}
+
+      <GraficoFaturamento dados={faturamentoPorMes} oculto={oculto} />
 
       {meta.valor > 0 && (
         <Card index={4} hoverable={false} className="mb-6 p-4">

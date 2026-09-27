@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
-import { Search, Bell, Plus } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { useEffect, useRef, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { Search, Bell, X, Users, FileText } from "lucide-react";
 
 function saudacao() {
   const hora = new Date().getHours();
@@ -22,29 +21,138 @@ const rotulos: Record<string, string> = {
   configuracoes: "Configurações",
 };
 
-function linkNovo(pathname: string, aba: string | null): { href: string; label: string } | null {
-  if (pathname === "/dashboard/clientes") return { href: "/dashboard/clientes/novo", label: "Novo cliente" };
-  if (pathname === "/dashboard/servicos") return { href: "/dashboard/servicos/novo", label: "Novo serviço" };
-  if (pathname === "/dashboard/pacotes") return { href: "/dashboard/pacotes/novo", label: "Novo pacote" };
-  if (pathname === "/dashboard/orcamentos") return { href: "/dashboard/orcamentos/novo", label: "Novo orçamento" };
-  if (pathname === "/dashboard/horas") return null; // já tem o próprio botão de registrar
+type ResultadoBusca = {
+  clientes: { id: string; nome: string; cor: string | null; status: string }[];
+  orcamentos: { id: string; slug: string; status: string; clienteNome: string }[];
+};
 
-  const matchCliente = pathname.match(/^\/dashboard\/clientes\/([^/]+)$/);
-  if (matchCliente) {
-    const id = matchCliente[1];
-    if (aba === "orcamentos") return { href: `/dashboard/clientes/${id}/orcamentos/novo`, label: "Novo orçamento" };
-    return null;
+function BuscaGlobal() {
+  const router = useRouter();
+  const [termo, setTermo] = useState("");
+  const [resultado, setResultado] = useState<ResultadoBusca | null>(null);
+  const [aberto, setAberto] = useState(false);
+  const [buscando, setBuscando] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function aoClicarFora(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setAberto(false);
+      }
+    }
+    document.addEventListener("mousedown", aoClicarFora);
+    return () => document.removeEventListener("mousedown", aoClicarFora);
+  }, []);
+
+  useEffect(() => {
+    const termoLimpo = termo.trim();
+    if (termoLimpo.length < 2) {
+      setResultado(null);
+      setBuscando(false);
+      return;
+    }
+    setBuscando(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/busca?q=${encodeURIComponent(termoLimpo)}`);
+        if (res.ok) setResultado(await res.json());
+      } catch {
+        // busca é conveniência, não trava a tela se falhar
+      } finally {
+        setBuscando(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [termo]);
+
+  function limpar() {
+    setTermo("");
+    setResultado(null);
   }
 
-  return null;
+  function irParaCliente(id: string) {
+    setAberto(false);
+    limpar();
+    router.push(`/dashboard/clientes/${id}`);
+  }
+
+  function abrirOrcamento(slug: string) {
+    setAberto(false);
+    limpar();
+    window.open(`/orcamento/${slug}`, "_blank");
+  }
+
+  const temResultado = !!resultado && (resultado.clientes.length > 0 || resultado.orcamentos.length > 0);
+  const mostrarDropdown = aberto && termo.trim().length >= 2;
+
+  return (
+    <div className="hidden flex-1 justify-center px-8 lg:flex">
+      <div ref={containerRef} className="relative w-full max-w-sm">
+        <div className="flex h-9 w-full items-center gap-2 rounded-xl border border-border bg-card/60 px-3 text-sm text-muted focus-within:border-accent/40">
+          <Search size={15} className="shrink-0" />
+          <input
+            value={termo}
+            onChange={(e) => setTermo(e.target.value)}
+            onFocus={() => setAberto(true)}
+            placeholder="Buscar cliente, orçamento..."
+            className="w-full bg-transparent text-text outline-none placeholder:text-muted"
+          />
+          {termo && (
+            <button onClick={limpar} className="shrink-0 text-muted hover:text-text">
+              <X size={13} />
+            </button>
+          )}
+        </div>
+
+        {mostrarDropdown && (
+          <div className="absolute left-0 top-11 z-30 w-full overflow-hidden rounded-xl border border-border bg-card p-1.5 shadow-premium-lg">
+            {buscando ? (
+              <p className="px-3 py-2.5 text-xs text-muted">Buscando...</p>
+            ) : !temResultado ? (
+              <p className="px-3 py-2.5 text-xs text-muted">Nada encontrado.</p>
+            ) : (
+              <div className="flex flex-col gap-0.5">
+                {resultado!.clientes.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => irParaCliente(c.id)}
+                    className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm hover:bg-hover"
+                  >
+                    <span
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md"
+                      style={{ backgroundColor: `${c.cor || "#9CA3AF"}1A`, color: c.cor || "#9CA3AF" }}
+                    >
+                      <Users size={12} />
+                    </span>
+                    <span className="truncate text-text">{c.nome}</span>
+                  </button>
+                ))}
+                {resultado!.orcamentos.map((o) => (
+                  <button
+                    key={o.id}
+                    onClick={() => abrirOrcamento(o.slug)}
+                    className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm hover:bg-hover"
+                  >
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white/5 text-muted">
+                      <FileText size={12} />
+                    </span>
+                    <span className="truncate text-text">
+                      {o.clienteNome} <span className="text-muted">· orçamento</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export function Header({ nomePrimeiro }: { nomePrimeiro: string }) {
   const pathname = usePathname() || "";
-  const searchParams = useSearchParams();
-  const aba = searchParams.get("aba");
   const partes = pathname.split("/").filter(Boolean).filter((p) => p !== "dashboard");
-  const novo = linkNovo(pathname, aba);
 
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border bg-base/80 pl-16 pr-6 backdrop-blur-xs md:pl-6 print:hidden">
@@ -63,25 +171,13 @@ export function Header({ nomePrimeiro }: { nomePrimeiro: string }) {
         </p>
       </div>
 
-      <div className="hidden flex-1 justify-center px-8 lg:flex">
-        <div className="flex h-9 w-full max-w-sm items-center gap-2 rounded-xl border border-border bg-card/60 px-3 text-sm text-muted">
-          <Search size={15} />
-          <span>Buscar cliente, orçamento...</span>
-        </div>
-      </div>
+      <BuscaGlobal />
 
       <div className="flex items-center gap-3">
         <button className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card/60 text-muted hover:text-text hover:bg-hover transition-colors">
           <Bell size={16} />
           <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-accent" />
         </button>
-        {novo && (
-          <Link href={novo.href}>
-            <Button size="sm" className="hidden sm:inline-flex">
-              <Plus size={14} /> {novo.label}
-            </Button>
-          </Link>
-        )}
       </div>
     </header>
   );

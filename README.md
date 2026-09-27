@@ -1,4 +1,65 @@
-# Instaby App — v140
+# Instaby App — v141
+
+Rodada de ajustes pedidos numa revisão ao vivo do app: uma página de
+novidades pra acompanhar o que muda a cada versão, reorganização e mais cor
+no Dashboard, tema alternativo de fundo, e dois bugs corrigidos em Clientes.
+
+## Novidades — histórico de versões dentro do próprio app
+
+Novo item "Novidades" no menu lateral (ícone de estrelinha, logo abaixo de
+Horas), levando pra uma página que lista o que mudou em cada versão, em
+linguagem simples — sem termo técnico, sem nome de arquivo. Uma bolinha
+aparece ao lado do item no menu quando tem versão nova que a pessoa ainda
+não visitou; some sozinha ao abrir a página.
+
+**Processo permanente a partir de agora:** toda versão nova entregue ganha
+uma entrada nova nessa página — então você e o time sempre vão ter onde
+conferir o que mudou, sem precisar perguntar.
+
+## Dashboard — ordem nova e mais cor
+
+- O bloco "Precisa da sua atenção" subiu de posição: agora aparece logo
+  abaixo dos 4 cartões do topo (Clientes ativos, Leads em aberto,
+  Faturamento, Cobranças pendentes), antes do gráfico de faturamento — como
+  pedido.
+- Os cartões "Clientes ativos" (azul) e "Leads em aberto" (roxo) ganharam a
+  borda colorida com degradê, no mesmo estilo que já existia no cartão
+  "Insight Instaby" — só nesses dois por enquanto, de propósito, pra não
+  ficar repetitivo. Apontando outros lugares onde vale o mesmo efeito, dá
+  pra ir espalhando aos poucos.
+
+## Tema de fundo alternativo (cinza)
+
+Botão novo ao lado do nome do usuário, no rodapé do menu lateral — alterna
+o fundo do sistema entre o escuro padrão de sempre e um cinza mais neutro
+(ainda escuro, não é modo claro). Fica salvo no navegador, então cada
+pessoa escolhe o que preferir sem afetar as outras.
+
+**Sobre a cor exata:** a imagem enviada como referência não correspondeu à
+descrição — em vez de um print do calendário em cinza, chegou o ícone
+pequeno do app de Calendário (branco/vermelho/preto, sem nenhum cinza
+nele), então não deu pra tirar a cor de lá. Ficou um cinza neutro como
+ponto de partida provisório. Com o print certo (ou só um código de cor tipo
+#RRGGBB), a troca é rápida — é um ajuste pequeno agora que a estrutura já
+existe (3-4 valores de cor num arquivo só).
+
+## Clientes — dois bugs corrigidos
+
+- A "janelinha de buscar" no topo, que antes era só um desenho sem
+  funcionar (daí a sensação de travada), agora é uma busca de verdade:
+  digita 2+ letras e já aparecem clientes e orçamentos correspondentes,
+  clica e vai direto pra lá. Aparece em qualquer tela do painel, não só em
+  Clientes.
+- O botão "Novo cliente" duplicado sumiu. De brinde: o mesmo tipo de
+  duplicação existia (ainda não reportada) em Serviços, Pacotes, Orçamentos
+  e na aba de Orçamentos dentro de um cliente — corrigido nos 4 lugares de
+  uma vez, porque vinha da mesma origem.
+
+**Detalhe técnico pra registro:** `tsc --noEmit` deu o mesmo total de erros
+de sempre (305, todos conhecidos e sem relação com essa leva) e zero erro em
+qualquer um dos arquivos tocados ou criados agora.
+
+## v140
 
 Varredura de um tech debt que já tinha sido identificado (mas não fechado de
 propósito) lá na v137: telas que salvam/excluem algo sem checar se a API

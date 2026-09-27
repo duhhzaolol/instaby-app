@@ -5,14 +5,17 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        base: "#131519",
-        card: "#1C2028",
-        hover: "#282D38",
-        accent: "#E63946",
-        "accent-dim": "#3a1414",
-        text: "#F9FAFB",
-        muted: "#9CA3AF",
-        border: "rgba(255,255,255,.08)",
+        // Ligadas às variáveis CSS em styles/tokens-colors.css (não mais hex
+        // fixo) — é isso que permite o tema "cinza" trocar essas cores em
+        // tempo real, sem precisar recompilar nada. Ver components/ui/TemaAlternativo.tsx.
+        base: "var(--base)",
+        card: "var(--card)",
+        hover: "var(--hover)",
+        accent: "var(--accent)",
+        "accent-dim": "var(--accent-dim)",
+        text: "var(--text)",
+        muted: "var(--muted)",
+        border: "var(--border)",
       },
       boxShadow: {
         premium: "0 8px 24px -8px rgba(0,0,0,0.5)",
