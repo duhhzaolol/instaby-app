@@ -1,8 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { Search, Bell, X, Users, FileText } from "lucide-react";
+import { Search, Bell, Sparkles, X, Users, FileText } from "lucide-react";
+import { ULTIMA_VERSAO_NOVIDADES } from "@/lib/changelog";
+
+// Mesma chave usada em components/dashboard/MarcarNovidadesVistas.tsx.
+const CHAVE_NOVIDADES_VISTAS = "instaby:novidades-vista";
 
 function saudacao() {
   const hora = new Date().getHours();
@@ -153,6 +158,16 @@ function BuscaGlobal() {
 export function Header({ nomePrimeiro }: { nomePrimeiro: string }) {
   const pathname = usePathname() || "";
   const partes = pathname.split("/").filter(Boolean).filter((p) => p !== "dashboard");
+  const [temNovidadeNaoVista, setTemNovidadeNaoVista] = useState(false);
+
+  useEffect(() => {
+    try {
+      const vista = Number(localStorage.getItem(CHAVE_NOVIDADES_VISTAS) || "0");
+      setTemNovidadeNaoVista(vista < ULTIMA_VERSAO_NOVIDADES);
+    } catch {
+      // sem localStorage, sem bolinha — não é crítico
+    }
+  }, []);
 
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border bg-base/80 pl-16 pr-6 backdrop-blur-xs md:pl-6 print:hidden">
@@ -174,9 +189,24 @@ export function Header({ nomePrimeiro }: { nomePrimeiro: string }) {
       <BuscaGlobal />
 
       <div className="flex items-center gap-3">
-        <button className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card/60 text-muted hover:text-text hover:bg-hover transition-colors">
+        <Link
+          href="/dashboard/novidades"
+          title="Novidades"
+          className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card/60 text-muted transition-colors hover:bg-hover hover:text-text"
+        >
+          <Sparkles size={16} />
+          {temNovidadeNaoVista && <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-accent" />}
+        </Link>
+        {/* Ainda só decorativo — não existe um sistema de notificação de verdade
+           por trás (nunca existiu, não é regressão da v141). Tirei a bolinha
+           vermelha fixa que tinha antes porque ela dava a entender que tinha
+           notificação nova sempre, mesmo sem nada por trás — melhor sem do
+           que mentindo. */}
+        <button
+          title="Notificações (ainda não implementado)"
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card/60 text-muted transition-colors hover:bg-hover hover:text-text"
+        >
           <Bell size={16} />
-          <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-accent" />
         </button>
       </div>
     </header>

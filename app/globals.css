@@ -15,8 +15,8 @@
   }
 
   body {
-    background-color: var(--base);
-    color: var(--text);
+    background-color: rgb(var(--base));
+    color: rgb(var(--text));
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }

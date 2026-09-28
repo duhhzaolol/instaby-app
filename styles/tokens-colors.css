@@ -1,14 +1,22 @@
 /* Instaby — color tokens. Values lifted verbatim from instaby-app/tailwind.config.ts,
    app/globals.css and the lib/*Visual.ts mapping files. The product is dark-only. */
 :root{
-  /* ---- Painel interno (internal panel) surfaces ---- */
-  --base:#131519;            /* app background */
-  --card:#1C2028;            /* card / panel fill (usually at 60–70% alpha over --base) */
-  --hover:#282D38;           /* row + button hover fill */
-  --accent:#E63946;          /* brand red */
-  --accent-dim:#3a1414;      /* deep red used for gradient tails */
-  --text:#F9FAFB;            /* primary ink */
-  --muted:#9CA3AF;           /* secondary ink */
+  /* ---- Painel interno (internal panel) surfaces ----
+     Valores em "R G B" (sem função rgb() nem #) de propósito: é isso que
+     permite o Tailwind aplicar opacidade dinâmica (bg-card/60, border-accent/20
+     etc.) via rgb(var(--x) / <alpha-value>) no tailwind.config.ts — um valor
+     hex fixo (ou var(--x) sem canal alfa) não deixa o Tailwind calcular a
+     transparência e a classe some do CSS compilado sem erro nenhum no build
+     (bug real da v141, corrigido aqui). Pra usar fora do Tailwind (CSS puro,
+     style inline), sempre envolver em rgb(...): rgb(var(--card)) ou
+     rgb(var(--card) / 0.6). */
+  --base:19 21 25;            /* #131519 — app background */
+  --card:28 32 40;            /* #1C2028 — card / panel fill (usually at 60–70% alpha over --base) */
+  --hover:40 45 56;           /* #282D38 — row + button hover fill */
+  --accent:230 57 70;         /* #E63946 — brand red */
+  --accent-dim:58 20 20;      /* #3a1414 — deep red used for gradient tails */
+  --text:249 250 251;         /* #F9FAFB — primary ink */
+  --muted:156 163 175;        /* #9CA3AF — secondary ink */
   --border:rgba(255,255,255,.08);
 
   /* ---- Páginas públicas (client-facing pages) surfaces ---- */
@@ -70,19 +78,19 @@
   --rede-meta-ads:#0866FF;
 
   /* ---- Semantic aliases (prefer these in new work) ---- */
-  --surface-app:var(--base);
-  --surface-card:color-mix(in srgb, var(--card) 70%, transparent);
-  --surface-card-solid:var(--card);
-  --surface-inset:var(--base);
-  --surface-hover:var(--hover);
-  --text-body:var(--text);
-  --text-secondary:var(--muted);
+  --surface-app:rgb(var(--base));
+  --surface-card:rgb(var(--card) / 70%);
+  --surface-card-solid:rgb(var(--card));
+  --surface-inset:rgb(var(--base));
+  --surface-hover:rgb(var(--hover));
+  --text-body:rgb(var(--text));
+  --text-secondary:rgb(var(--muted));
   --text-micro:var(--dim);
-  --text-accent:var(--accent);
+  --text-accent:rgb(var(--accent));
   --border-default:var(--border);
   --border-strong:rgba(255,255,255,.10);
   --border-accent:var(--accent-20);
-  --fill-accent:var(--accent);
+  --fill-accent:rgb(var(--accent));
   --on-accent:#FFFFFF;
 }
 
@@ -94,8 +102,8 @@
    Cor de referência ainda provisória — ajusta fácil trocando os 4 valores
    abaixo assim que tivermos o tom exato que você quer. */
 :root[data-theme="cinza"]{
-  --base:#2A2B2F;
-  --card:#35363B;
-  --hover:#3F4045;
+  --base:42 43 47;   /* #2A2B2F */
+  --card:53 54 59;   /* #35363B */
+  --hover:63 64 69;  /* #3F4045 */
   --border:rgba(255,255,255,.09);
 }

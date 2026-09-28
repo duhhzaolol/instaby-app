@@ -1,4 +1,49 @@
-# Instaby App — v141
+# Instaby App — v142
+
+Correção de um bug visual sério que a v141 introduziu sem querer (várias
+caixas do app perdendo o fundo escuro), mais dois ajustes pedidos depois de
+ver a v141 no ar: Novidades mudou de lugar e o sininho parou de mentir.
+
+## Corrigido: caixas com fundo sumindo e borda clara (bug da v141)
+
+A v141 trocou as cores do Tailwind (`base`, `card`, `hover`, `accent`,
+`text`, `muted`) de valor fixo pra variável CSS, pra dar suporte ao tema
+cinza novo. Isso quebrou, em silêncio (sem erro nenhum no build), toda
+classe que usa essas cores **com opacidade** — `bg-card/60`, `bg-card/70`,
+`border-accent/20`, `bg-accent/10`, `text-muted/70` e por aí vai: o Tailwind
+não consegue calcular a transparência de uma variável sem ela guardar o
+valor num formato específico, então a classe simplesmente não virava CSS
+nenhum. Na prática, isso tirava o fundo escuro (ficava transparente) de uma
+quantidade grande de caixas e cartões pelo app inteiro — incluindo o
+componente `Card` usado em quase toda tela — e deixava a borda aparecendo
+com a cor do texto (branca) por baixo.
+
+**Corrigido na raiz**: as variáveis de cor agora guardam o valor em
+"R G B" (ex.: `19 21 25`) e o Tailwind usa o formato
+`rgb(var(--cor) / <valor-alfa>)`, que é o jeito correto de deixar uma cor
+customizada funcionar com opacidade dinâmica. Conferido depois do conserto,
+com uma comparação lado a lado (print) de antes/depois nos dois temas —
+fundo e borda das caixas voltaram a aparecer do jeito certo, incluindo com o
+tema cinza ligado.
+
+## Novidades mudou de lugar, sininho parou de mentir
+
+- O item "Novidades" saiu do menu lateral (achado escondido demais) e virou
+  um ícone de estrelinha no topo da tela, do lado do sininho de
+  notificações — mais fácil de ver e clicar.
+- Tirado o pontinho vermelho do sininho, que ficava sempre aceso mesmo sem
+  nenhuma notificação de verdade por trás. O sininho em si continua sem
+  abrir nada — isso já era assim desde antes da v141, não é regressão desta
+  leva — fica registrado como possível próximo passo, se fizer sentido
+  construir um sistema de notificação de verdade.
+
+**Detalhe técnico pra registro:** `tsc --noEmit` no mesmo total de sempre
+(305, barulho conhecido do client do Prisma desatualizado), zero erro novo.
+Essa leva, por ser puramente visual/CSS, foi conferida também com um
+mockup estático usando o CSS real compilado do projeto + print via
+Playwright, não só leitura de código.
+
+## v141
 
 Rodada de ajustes pedidos numa revisão ao vivo do app: uma página de
 novidades pra acompanhar o que muda a cada versão, reorganização e mais cor

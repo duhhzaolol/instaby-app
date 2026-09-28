@@ -222,7 +222,7 @@ export default function DashboardClient({
                   c.destaque
                     ? {
                         borderColor: `${c.cor}33`,
-                        backgroundImage: `linear-gradient(to bottom right, ${c.cor}1A, var(--card), var(--card))`,
+                        backgroundImage: `linear-gradient(to bottom right, ${c.cor}1A, rgb(var(--card)), rgb(var(--card)))`,
                       }
                     : undefined
                 }

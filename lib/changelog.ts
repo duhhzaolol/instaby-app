@@ -1,6 +1,7 @@
 // Registro de novidades do app, em linguagem simples — pensado pra qualquer
 // pessoa da equipe entender o que mudou sem precisar entender de código.
-// Alimenta a página /dashboard/novidades e o aviso (bolinha) no menu lateral.
+// Alimenta a página /dashboard/novidades e o aviso (bolinha) no ícone de
+// estrelinha do cabeçalho, do lado do sininho.
 //
 // PROCESSO PERMANENTE: a partir da v141, toda versão nova entregue ganha uma
 // entrada nova aqui, sempre no TOPO da lista (a mais recente primeiro). Frase
@@ -20,6 +21,27 @@ export type VersaoNovidades = {
 };
 
 export const NOVIDADES: VersaoNovidades[] = [
+  {
+    versao: 142,
+    resumo: "Correção de um bug visual que a v141 introduziu, e a Novidades mudou de lugar.",
+    itens: [
+      {
+        tipo: "corrigido",
+        texto:
+          "Bug da v141: várias caixas e cartões pelo app estavam perdendo o fundo escuro e ficando com uma borda clara chamativa — veio junto com a infraestrutura nova do tema cinza, corrigido na raiz agora. Afetava, por exemplo, o bloco \"Precisa da sua atenção\" do Dashboard e a caixa com o nome do usuário no menu lateral.",
+      },
+      {
+        tipo: "melhorado",
+        texto:
+          "\"Novidades\" saiu do menu lateral e virou um ícone (estrelinha) no topo da tela, do lado do sininho de notificações — mais fácil de ver.",
+      },
+      {
+        tipo: "corrigido",
+        texto:
+          "Tirado o pontinho vermelho do sininho que ficava sempre aceso, mesmo sem nenhuma notificação de verdade por trás dele. O sininho em si ainda não abre nada — isso já era assim antes da v141, não é coisa nova — fica pra decidir se vale construir um sistema de notificação de verdade.",
+      },
+    ],
+  },
   {
     versao: 141,
     resumo:

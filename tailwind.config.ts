@@ -8,13 +8,22 @@ const config: Config = {
         // Ligadas às variáveis CSS em styles/tokens-colors.css (não mais hex
         // fixo) — é isso que permite o tema "cinza" trocar essas cores em
         // tempo real, sem precisar recompilar nada. Ver components/ui/TemaAlternativo.tsx.
-        base: "var(--base)",
-        card: "var(--card)",
-        hover: "var(--hover)",
-        accent: "var(--accent)",
-        "accent-dim": "var(--accent-dim)",
-        text: "var(--text)",
-        muted: "var(--muted)",
+        //
+        // IMPORTANTE: usa o formato rgb(var(--x) / <alpha-value>), não só
+        // var(--x) — o placeholder <alpha-value> é o que deixa o Tailwind
+        // calcular classes com opacidade (bg-card/60, border-accent/20...).
+        // Sem ele, essas variáveis guardam "R G B" cru (ver tokens-colors.css)
+        // e uma classe tipo bg-card/60 simplesmente não gera CSS nenhum —
+        // sem erro no build, só some do estilo (era o bug da v141).
+        base: "rgb(var(--base) / <alpha-value>)",
+        card: "rgb(var(--card) / <alpha-value>)",
+        hover: "rgb(var(--hover) / <alpha-value>)",
+        accent: "rgb(var(--accent) / <alpha-value>)",
+        "accent-dim": "rgb(var(--accent-dim) / <alpha-value>)",
+        text: "rgb(var(--text) / <alpha-value>)",
+        muted: "rgb(var(--muted) / <alpha-value>)",
+        // --border já é um rgba() completo (não uma variável "R G B" crua),
+        // então fica direto, sem o wrapper rgb(...).
         border: "var(--border)",
       },
       boxShadow: {
