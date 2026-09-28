@@ -5,9 +5,13 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { Search, Bell, Sparkles, X, Users, FileText } from "lucide-react";
 import { ULTIMA_VERSAO_NOVIDADES } from "@/lib/changelog";
+import { CronometroTopbar } from "@/components/layout/CronometroTopbar";
+import { NovaTarefaTopbar } from "@/components/layout/NovaTarefaTopbar";
 
 // Mesma chave usada em components/dashboard/MarcarNovidadesVistas.tsx.
 const CHAVE_NOVIDADES_VISTAS = "instaby:novidades-vista";
+
+type Cliente = { id: string; nome: string; cor: string | null };
 
 function saudacao() {
   const hora = new Date().getHours();
@@ -70,6 +74,20 @@ function BuscaGlobal() {
     return () => clearTimeout(timer);
   }, [termo]);
 
+  // Atalho de teclado ⌘K / Ctrl+K — foca a busca de qualquer lugar da tela.
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    function aoTeclar(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        inputRef.current?.focus();
+        setAberto(true);
+      }
+    }
+    document.addEventListener("keydown", aoTeclar);
+    return () => document.removeEventListener("keydown", aoTeclar);
+  }, []);
+
   function limpar() {
     setTermo("");
     setResultado(null);
@@ -93,19 +111,24 @@ function BuscaGlobal() {
   return (
     <div className="hidden flex-1 justify-center px-8 lg:flex">
       <div ref={containerRef} className="relative w-full max-w-sm">
-        <div className="flex h-9 w-full items-center gap-2 rounded-xl border border-border bg-card/60 px-3 text-sm text-muted focus-within:border-accent/40">
+        <div className="flex h-9 w-full items-center gap-2 rounded-xl border border-border bg-card px-3 text-sm text-muted focus-within:border-accent/40">
           <Search size={15} className="shrink-0" />
           <input
+            ref={inputRef}
             value={termo}
             onChange={(e) => setTermo(e.target.value)}
             onFocus={() => setAberto(true)}
             placeholder="Buscar cliente, orçamento..."
             className="w-full bg-transparent text-text outline-none placeholder:text-muted"
           />
-          {termo && (
+          {termo ? (
             <button onClick={limpar} className="shrink-0 text-muted hover:text-text">
               <X size={13} />
             </button>
+          ) : (
+            <span className="fonte-valores hidden shrink-0 rounded border border-border px-1.5 py-0.5 text-[10px] text-muted/70 sm:inline">
+              ⌘K
+            </span>
           )}
         </div>
 
@@ -155,7 +178,7 @@ function BuscaGlobal() {
   );
 }
 
-export function Header({ nomePrimeiro }: { nomePrimeiro: string }) {
+export function Header({ nomePrimeiro, clientes }: { nomePrimeiro: string; clientes: Cliente[] }) {
   const pathname = usePathname() || "";
   const partes = pathname.split("/").filter(Boolean).filter((p) => p !== "dashboard");
   const [temNovidadeNaoVista, setTemNovidadeNaoVista] = useState(false);
@@ -170,7 +193,7 @@ export function Header({ nomePrimeiro }: { nomePrimeiro: string }) {
   }, []);
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border bg-base/80 pl-16 pr-6 backdrop-blur-xs md:pl-6 print:hidden">
+    <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border bg-base pl-16 pr-6 md:pl-6 print:hidden">
       <div>
         <p className="text-xs text-muted">
           Dashboard{partes.length > 0 && " / "}
@@ -188,26 +211,27 @@ export function Header({ nomePrimeiro }: { nomePrimeiro: string }) {
 
       <BuscaGlobal />
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5">
+        <CronometroTopbar clientes={clientes} />
+
         <Link
           href="/dashboard/novidades"
           title="Novidades"
-          className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card/60 text-muted transition-colors hover:bg-hover hover:text-text"
+          className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-muted transition-colors hover:bg-hover hover:text-text"
         >
           <Sparkles size={16} />
           {temNovidadeNaoVista && <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-accent" />}
         </Link>
         {/* Ainda só decorativo — não existe um sistema de notificação de verdade
-           por trás (nunca existiu, não é regressão da v141). Tirei a bolinha
-           vermelha fixa que tinha antes porque ela dava a entender que tinha
-           notificação nova sempre, mesmo sem nada por trás — melhor sem do
-           que mentindo. */}
+           por trás (nunca existiu, não é regressão da v141/v142). */}
         <button
           title="Notificações (ainda não implementado)"
-          className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card/60 text-muted transition-colors hover:bg-hover hover:text-text"
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-muted transition-colors hover:bg-hover hover:text-text"
         >
           <Bell size={16} />
         </button>
+
+        <NovaTarefaTopbar clientes={clientes} />
       </div>
     </header>
   );

@@ -22,6 +22,72 @@ export type VersaoNovidades = {
 
 export const NOVIDADES: VersaoNovidades[] = [
   {
+    versao: 145,
+    resumo: "Parte 2 do redesign do painel: 3 telas de Início, uma pra cada função (dono, editor, tráfego).",
+    itens: [
+      {
+        tipo: "adicionado",
+        texto:
+          "O Início virou 3 telas diferentes — dono, editor e gestor de tráfego veem cada um só o que importa pro seu dia a dia ao entrar no painel.",
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          "Início do dono: \"Equipe agora\" mostra o que cada pessoa está fazendo neste momento e as horas já lançadas essa semana; tarefas por status (a fazer/em andamento/feitas essa semana); caixa dos próximos 7 dias; mais 2 alertas novos (tarefa sem responsável, proposta enviada sem resposta).",
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          "Início do editor: o que está fazendo agora — com checklist de sub-passos e botão de marcar como feito —, fila pessoal ordenada por prazo com botão de iniciar o cronômetro direto ali, tarefas disponíveis pra pegar pra si, próximas captações e horas da semana. Sem nenhum valor em R$ nessa tela.",
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          "Início do gestor de tráfego: investido, resultados, custo por resultado e retorno do mês; barra de ritmo de verba por cliente (mostra se o gasto está adiantado ou atrasado pro dia do mês); alertas, relatórios do mês e criativos pedidos ao editor.",
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          "Checklist dentro da tarefa — sub-passos simples (ex: roteiro, captação, edição) que dá pra marcar conforme avança, sem precisar separar em várias tarefas.",
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          "Tarefa agora pode ter um responsável. Por enquanto só dá pra assumir uma tarefa sem dono (\"Pegar pra mim\", no Início do editor) — escolher o responsável na hora de criar ou editar a tarefa vem numa próxima parte.",
+      },
+    ],
+  },
+  {
+    versao: 144,
+    resumo: "Parte 1 do redesign do painel: cores, fontes, menu lateral, barra do topo.",
+    itens: [
+      {
+        tipo: "melhorado",
+        texto:
+          "Visual novo do painel (cores, fontes e cartões) — a primeira parte de um redesign maior, combinado de entregar aos poucos.",
+      },
+      {
+        tipo: "melhorado",
+        texto:
+          "Menu lateral reorganizado, com números ao lado de Tarefas (atrasadas), Clientes (ativos) e Financeiro (cobranças vencidas). Configurações virou uma engrenagem no rodapé, junto com o botão de tema e o de sair.",
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          "Cronômetro na barra do topo — escolhe cliente e atividade e ele roda ao vivo até você parar, usando o mesmo registro de horas de sempre.",
+      },
+      {
+        tipo: "adicionado",
+        texto: "Botão \"Nova tarefa\" na barra do topo, disponível em qualquer tela do painel, não só dentro de Tarefas.",
+      },
+      {
+        tipo: "melhorado",
+        texto:
+          "Financeiro e Comercial viraram 1 item cada no menu, com abas por dentro. O conteúdo de cada aba ainda é o de sempre — a atualização visual delas vem numa próxima parte.",
+      },
+    ],
+  },
+  {
     versao: 143,
     resumo: "Novo botão de sair da conta.",
     itens: [

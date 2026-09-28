@@ -25,6 +25,21 @@ const config: Config = {
         // --border já é um rgba() completo (não uma variável "R G B" crua),
         // então fica direto, sem o wrapper rgb(...).
         border: "var(--border)",
+        // Só existem dentro de .tema-painel (redesign v144) — fora dali a
+        // variável não está definida e a classe simplesmente não faz nada,
+        // então declarar aqui não tem risco nenhum pra landing/link.
+        sidebar: "rgb(var(--sidebar) / <alpha-value>)",
+        inset: "rgb(var(--inset) / <alpha-value>)",
+        micro: "rgb(var(--micro) / <alpha-value>)",
+        "accent-text": "rgb(var(--accent-text) / <alpha-value>)",
+        success: "rgb(var(--success) / <alpha-value>)",
+        "success-text": "rgb(var(--success-text) / <alpha-value>)",
+        warning: "rgb(var(--warning) / <alpha-value>)",
+        "warning-text": "rgb(var(--warning-text) / <alpha-value>)",
+        info: "rgb(var(--info) / <alpha-value>)",
+        "info-text": "rgb(var(--info-text) / <alpha-value>)",
+        "pessoa-editor": "rgb(var(--pessoa-editor) / <alpha-value>)",
+        "pessoa-trafego": "rgb(var(--pessoa-trafego) / <alpha-value>)",
       },
       boxShadow: {
         premium: "0 8px 24px -8px rgba(0,0,0,0.5)",

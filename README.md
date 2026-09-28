@@ -1,4 +1,100 @@
-# Instaby App — v143
+# Instaby App — v145
+
+Parte 2 do redesign completo do painel: as 3 telas de Início (dono, editor,
+gestor de tráfego), cada uma mostrando só o que faz sentido pra função da
+pessoa. Faltam ainda as Partes 3 a 5 (Tarefas — quadro e painel lateral —,
+Clientes/Financeiro em si/Comercial em si/Horas/Configurações, Login+páginas
+do celular) — combinado de fazer aos poucos, uma parte de cada vez, com
+aprovação antes de seguir. **Aguardando aprovação desta Parte 2 antes de
+começar a Parte 3.**
+
+## Parte 2 do redesign: as 3 telas de Início (dono, editor, tráfego)
+
+- **Início do dono** — tudo que já existia (faturamento do mês com meta e
+  gráfico de 6 meses, alertas, performance por cliente, atividade recente)
+  continua igual, com o seguinte por cima: **"Equipe agora"**, mostrando o
+  que cada pessoa ativa está fazendo neste exato momento (a partir do
+  cronômetro) e quantas horas já lançou essa semana; um bloco de **tarefas
+  por status** (a fazer / em andamento / feitas essa semana); **caixa dos
+  próximos 7 dias** (a receber e a pagar, dia a dia); e 2 alertas novos na
+  lista de "Precisa de você" — tarefa sem responsável e proposta enviada sem
+  resposta.
+- **Início do editor** — tela nova, sem nenhum valor em R$: **"Fazendo
+  agora"** (a tarefa em andamento, com checklist de sub-passos e um botão
+  "Marcar como feito"), **"Minha fila"** (tarefas atribuídas a essa pessoa,
+  ordenada por prazo, com botão de iniciar o cronômetro direto ali),
+  tarefas **disponíveis pra pegar** (sem dono ainda — botão "Pegar pra
+  mim"), próximas captações agendadas e horas lançadas essa semana.
+- **Início do gestor de tráfego** — tela nova: investido no mês, resultados,
+  custo por resultado e retorno; uma **barra de ritmo de verba** por
+  campanha ativa (mostra o quanto já foi investido contra o que "deveria"
+  estar investido pra essa altura do mês); alertas (campanha sem resultado
+  lançado há mais de 7 dias, campanha bem abaixo do ritmo); relatórios do
+  mês; e criativos pedidos ao editor (tarefas de arte/reel/fotos/gravação
+  em aberto pra clientes com campanha ativa).
+- **Checklist dentro da tarefa** — sub-passos simples (ex: roteiro,
+  captação, edição, aprovação), pensados pra reaproveitar no painel lateral
+  de tarefa que vem na Parte 3.
+- **Tarefa ganhou um responsável** (campo novo e opcional — tarefa antiga
+  sem dono continua funcionando normal). Por enquanto só dá pra assumir uma
+  tarefa sem dono pelo botão "Pegar pra mim" no Início do editor; escolher/
+  trocar o responsável na hora de criar ou editar a tarefa fica pra Parte 3
+  (painel lateral de tarefa).
+- **Ficou de fora desta parte, de propósito:** o item "Voltou com ajuste"
+  (tarefa que o cliente pediu pra revisar) — depende de um fluxo de
+  aprovação do cliente que ainda não existe no app; entra quando a Parte 3
+  construir isso.
+- **Detalhe técnico pra registro:** mudança de schema (campo `responsavelId`
+  e `concluidaEm` em Tarefa, tabela nova de checklist) avisada e aprovada
+  antes de codar. `tsc --noEmit` sem nenhum erro novo de verdade — só o
+  barulho de sempre do client do Prisma desse sandbox (que nunca terminou
+  de gerar de verdade, porque o download do motor dele é bloqueado aqui);
+  como esse client fica travado igual a um "aceita qualquer coisa", ele não
+  vai acusar erro de campo digitado errado, então cada nome de campo novo
+  foi conferido um a um direto no schema à mão. Tailwind recompilado e
+  conferido que as cores novas (`bg-pessoa-trafego/20` etc.) geram CSS de
+  verdade. Sem `next dev` funcional nesse sandbox (mesmo motivo do Prisma),
+  então não deu pra clicar no app rodando — verificação 100% por leitura de
+  código, igual sempre.
+
+## Parte 1 do redesign: base visual, menu, topo, casca de Financeiro/Comercial
+
+- **Cor e fonte novas, só dentro do painel e do login.** Uma classe
+  (`.tema-painel`) sobrescreve a paleta só ali — a landing e o `/link`
+  continuam exatamente como estavam, sem nenhuma mudança. Fontes novas:
+  Manrope no texto geral, JetBrains Mono em valores/horas/contagens.
+- **Cartão sólido, sem transparência nem blur** (era `bg-card/70` com
+  desfoque) — como o componente de cartão só é usado dentro do painel/login,
+  a mudança não vaza pra lugar nenhum de fora.
+- **Menu lateral**: 248px (era 280px), fundo próprio mais escuro que o resto
+  do painel. Reorganizado — Início, Tarefas (contador vermelho de
+  atrasadas), Agenda, Clientes (contador de ativos), Tráfego pago (só pra
+  quem gerencia tráfego), Horas; grupo "Gestão" (só quem tem acesso) com
+  Financeiro (contador vermelho de cobranças vencidas) e Comercial.
+  Configurações saiu da lista e virou a engrenagem no rodapé, ao lado do
+  avatar, nome, cargo, botão de tema e do botão de sair.
+- **Barra do topo**: cronômetro novo (usa o registro de horas que já
+  existia, nenhum dado novo no banco) — clica, escolhe cliente/atividade,
+  roda ao vivo na barra até parar. Atalho ⌘K foca a busca de qualquer tela.
+  Botão vermelho "Nova tarefa" abre um formulário rápido de qualquer lugar
+  do painel (antes só existia dentro da própria página de Tarefas).
+- **Financeiro e Comercial**: cada um virou 1 item só no menu, com abas por
+  dentro da página. As 5 telas do Comercial (Oportunidades, Orçamentos,
+  Contratos, Serviços, Pacotes) continuam nos mesmos endereços de sempre —
+  só ganharam a barra de abas em cima ligando uma na outra. **O conteúdo
+  novo de cada aba (o "Resumo" do Financeiro, o funil do Comercial etc.) é
+  da Parte 4** — por enquanto é o mesmo conteúdo de sempre, só com o visual
+  novo por cima.
+- Sem imagem de referência disponível pra essa parte (não chegou anexada) —
+  segui as medidas e cores exatas que vieram por escrito. Se algo não bater
+  com o desenho aprovado, é só apontar.
+- **Detalhe técnico pra registro:** `tsc --noEmit` no total de sempre (305),
+  zero erro novo; recompilei o Tailwind isolado e conferi uma a uma as
+  classes novas com opacidade (`bg-sidebar`, `bg-inset`, `bg-accent/15` etc.)
+  pra não repetir o bug da v141; conferido visualmente com um mockup usando
+  o CSS real do projeto, nos dois temas (escuro/cinza).
+
+## v143
 
 Um pedido direto: faltava um jeito de sair da conta pelo próprio app.
 

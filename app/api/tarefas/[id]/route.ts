@@ -18,6 +18,13 @@ export async function PATCH(
 
   const body = await request.json();
 
+  if (body.responsavelId) {
+    const responsavel = await prisma.usuario.findUnique({ where: { id: body.responsavelId } });
+    if (!responsavel || !responsavel.ativo) {
+      return NextResponse.json({ erro: "Essa pessoa não existe ou não está mais ativa." }, { status: 400 });
+    }
+  }
+
   // Trava: uma tarefa de "Criar Reel" com pasta vinculada só sai de "A fazer"
   // quando já existe um arquivo de vídeo lá dentro (colocado pelo admin, direto
   // no Drive). Checado no servidor de propósito — não dá pra contornar só
@@ -37,6 +44,15 @@ export async function PATCH(
     }
   }
 
+  // concluidaEm segue o status sozinho — marca a hora exata em que virou "feito"
+  // (pra dar pra contar "feitas essa semana" no Início) e limpa se voltar atrás
+  // (reabriu por engano, cliente pediu ajuste etc.), nunca fica com data velha.
+  let concluidaEm: Date | null | undefined = undefined;
+  if (body.status !== undefined && body.status !== existente.status) {
+    if (body.status === "feito") concluidaEm = new Date();
+    else if (existente.status === "feito") concluidaEm = null;
+  }
+
   const tarefa = await prisma.tarefa.update({
     where: { id: params.id },
     data: {
@@ -46,6 +62,10 @@ export async function PATCH(
       ...(body.prioridade !== undefined && { prioridade: body.prioridade }),
       ...(body.categoria !== undefined && { categoria: body.categoria }),
       ...(body.prazo !== undefined && { prazo: body.prazo ? new Date(body.prazo) : null }),
+      // "sem responsável" é um valor válido — manda null explícito pra tirar o
+      // responsável de uma tarefa (não confundir com "undefined" de não mexer).
+      ...(body.responsavelId !== undefined && { responsavelId: body.responsavelId || null }),
+      ...(concluidaEm !== undefined && { concluidaEm }),
     },
   });
 

@@ -9,18 +9,9 @@ import {
   LayoutGrid,
   Users,
   Wallet,
-  FileText,
-  FileSignature,
-  Package,
-  Package2,
   Clock,
   Calendar,
   CheckSquare,
-  BarChart3,
-  ArrowDownCircle,
-  ArrowUpCircle,
-  Landmark,
-  Gem,
   Trophy,
   Settings,
   Menu,
@@ -29,11 +20,11 @@ import {
   LogOut,
 } from "lucide-react";
 import { BotaoTema } from "@/components/ui/TemaAlternativo";
+import { primeiroLinkComercial } from "@/lib/navSecoes";
 
-// Confirma antes de sair — o botão fica bem coladinho no de trocar tema, no
-// mesmo cantinho, e um clique sem querer ali no meio do trabalho é chato de
-// mais pra não ter uma trava simples (mesmo padrão de confirm() já usado nos
-// "excluir" espalhados pelo app).
+// Confirma antes de sair — mesmo padrão de confirm() já usado nos "excluir"
+// espalhados pelo app, pra um clique errado no rodapé apertado não deslogar
+// sem querer no meio do trabalho.
 function sairDaConta() {
   if (!confirm("Sair da sua conta?")) return;
   signOut({ callbackUrl: "/login" });
@@ -54,51 +45,41 @@ export type Permissoes = {
   todosClientes: boolean;
 };
 
-const menuPrincipal = [
-  { label: "Visão geral", href: "/dashboard", icon: LayoutGrid },
-  { label: "Clientes", href: "/dashboard/clientes", icon: Users },
-  { label: "Agenda", href: "/dashboard/agenda", icon: Calendar },
-  { label: "Tarefas", href: "/dashboard/tarefas", icon: CheckSquare },
-  { label: "Horas", href: "/dashboard/horas", icon: Clock },
-];
-// "Novidades" morava aqui (v141) — mudou pro Header, do lado do sininho,
-// a pedido dele. Ver components/layout/Header.tsx.
+export type ContadoresMenu = {
+  tarefasAtrasadas: number;
+  clientesAtivos: number;
+  cobrancasVencidas: number;
+};
 
-const menuFinanceiro = [
-  { label: "Visão geral", href: "/dashboard/financeiro", icon: Wallet },
-  { label: "DRE", href: "/dashboard/financeiro/dre", icon: BarChart3 },
-  { label: "Fluxo de Caixa", href: "/dashboard/financeiro/fluxo-de-caixa", icon: Landmark },
-  { label: "Contas a Pagar", href: "/dashboard/financeiro/contas-a-pagar", icon: ArrowUpCircle },
-  { label: "Contas a Receber", href: "/dashboard/financeiro/contas-a-receber", icon: ArrowDownCircle },
-  { label: "Patrimônio", href: "/dashboard/financeiro/patrimonio", icon: Gem },
-];
-
-// Cada item do grupo "Comercial" tem seu próprio flag agora (antes era um só,
-// verComercial, pro grupo inteiro) — assim alguém pode ver só Oportunidades,
-// só Orçamentos etc. Cada item só aparece se a pessoa tiver aquele flag
-// específico (permissoesDe já soma o legado verComercial em todos eles).
-const menuOrcamento: { label: string; href: string; icon: any; flag: keyof Permissoes }[] = [
-  { label: "Oportunidades", href: "/dashboard/oportunidades", icon: Trophy, flag: "verOportunidades" },
-  { label: "Catálogo de serviços", href: "/dashboard/servicos", icon: Package, flag: "verCatalogo" },
-  { label: "Pacotes", href: "/dashboard/pacotes", icon: Package2, flag: "verCatalogo" },
-  { label: "Orçamentos", href: "/dashboard/orcamentos", icon: FileText, flag: "verOrcamentos" },
-  { label: "Contratos", href: "/dashboard/contratos", icon: FileSignature, flag: "verContratos" },
-];
-
-const menuTrafego = [{ label: "Tráfego Pago", href: "/dashboard/trafego", icon: Megaphone }];
-
-const menuConfig = [{ label: "Configurações", href: "/dashboard/configuracoes", icon: Settings }];
+// Lista única "Geral" (redesign v144, Parte 1) — Tráfego Pago deixou de ser
+// uma seção própria e entrou nessa mesma lista, condicional a quem gerencia
+// tráfego, na ordem que ele pediu: Início, Tarefas, Agenda, Clientes, Tráfego
+// pago, Horas.
+const menuGeral = [
+  { chave: "inicio", label: "Início", href: "/dashboard", icon: LayoutGrid },
+  { chave: "tarefas", label: "Tarefas", href: "/dashboard/tarefas", icon: CheckSquare },
+  { chave: "agenda", label: "Agenda", href: "/dashboard/agenda", icon: Calendar },
+  { chave: "clientes", label: "Clientes", href: "/dashboard/clientes", icon: Users },
+  { chave: "trafego", label: "Tráfego pago", href: "/dashboard/trafego", icon: Megaphone },
+  { chave: "horas", label: "Horas", href: "/dashboard/horas", icon: Clock },
+] as const;
 
 function ItemMenu({
   item,
   ativo,
+  contador,
   onClick,
 }: {
   item: { label: string; href: string; icon: any };
   ativo: boolean;
+  // Contador opcional ao lado do rótulo — "alerta" (vermelho, só aparece se
+  // > 0, ex: tarefas atrasadas/cobranças vencidas) ou "neutro" (cinza, sempre
+  // aparece, ex: clientes ativos — é uma contagem, não um aviso).
+  contador?: { valor: number; tipo: "alerta" | "neutro" };
   onClick?: () => void;
 }) {
   const Icon = item.icon;
+  const mostrarContador = contador && (contador.tipo === "neutro" || contador.valor > 0);
   return (
     <Link href={item.href} onClick={onClick} className="relative block">
       {ativo && (
@@ -114,38 +95,68 @@ function ItemMenu({
         }`}
       >
         <Icon size={17} strokeWidth={1.75} />
-        {item.label}
+        <span className="flex-1">{item.label}</span>
+        {mostrarContador && (
+          <span
+            className={`fonte-valores rounded-full px-1.5 py-0.5 text-[11px] font-semibold leading-none ${
+              contador!.tipo === "alerta" ? "bg-accent/15 text-accent-text" : "bg-hover text-muted"
+            }`}
+          >
+            {contador!.valor}
+          </span>
+        )}
       </div>
     </Link>
   );
 }
 
+// Cor de identificação por pessoa (avatar): dono vermelho, quem gerencia
+// tráfego fica azul, o resto (hoje, o editor) fica roxo — as 3 únicas
+// pessoas que existem na agência hoje. Fundo a ~20% da cor, iniciais na cor
+// cheia, igual o resto do app já faz com categoria/cliente.
+// IMPORTANTE: classes escritas por extenso aqui de propósito (nunca montar
+// `bg-${cor}/20` por template string) — o Tailwind só gera CSS pra classe que
+// aparece literal no código-fonte; uma classe montada em runtime não é
+// encontrada e simplesmente não vira estilo nenhum (mesma pegadinha já
+// documentada pra variável de cor, ver styles/tokens-colors.css).
+const CLASSES_AVATAR = {
+  accent: "bg-accent/20 text-accent",
+  "pessoa-trafego": "bg-pessoa-trafego/20 text-pessoa-trafego",
+  "pessoa-editor": "bg-pessoa-editor/20 text-pessoa-editor",
+} as const;
+
+function corPessoa(pode: Permissoes): keyof typeof CLASSES_AVATAR {
+  if (pode.master) return "accent";
+  if (pode.gerenciarTrafego) return "pessoa-trafego";
+  return "pessoa-editor";
+}
+
 function ConteudoSidebar({
   nome,
-  email,
+  cargo,
   pode,
+  contadores,
   onNavigate,
 }: {
   nome: string;
-  email: string;
+  cargo: string;
   pode: Permissoes;
+  contadores: ContadoresMenu;
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
 
-  const menuOrcamentoVisivel = menuOrcamento.filter((i) => pode[i.flag]);
+  const temGestao = pode.verFinanceiro || pode.verOportunidades || pode.verOrcamentos || pode.verContratos || pode.verCatalogo;
+  const linkComercial = primeiroLinkComercial(pode);
 
-  const todosHrefs = [
-    ...menuPrincipal.map((i) => i.href),
-    ...(pode.verFinanceiro ? menuFinanceiro.map((i) => i.href) : []),
-    ...menuOrcamentoVisivel.map((i) => i.href),
-    ...(pode.gerenciarTrafego ? menuTrafego.map((i) => i.href) : []),
-    ...menuConfig.map((i) => i.href),
-  ];
-  const melhorMatch = todosHrefs
-    .filter((h) => pathname === h || pathname?.startsWith(h + "/"))
-    .sort((a, b) => b.length - a.length)[0];
-  const ativo = (href: string) => href === melhorMatch;
+  const menuGeralVisivel = menuGeral.filter((item) => item.chave !== "trafego" || pode.gerenciarTrafego);
+
+  // Comercial casa por prefixo (qualquer uma das 5 sub-rotas conta como
+  // "Comercial" ativo), as outras por igualdade ou prefixo normal.
+  const ativo = (href: string) => pathname === href || (href !== "/dashboard" && !!pathname?.startsWith(href + "/"));
+  const comercialAtivo = ["/dashboard/oportunidades", "/dashboard/orcamentos", "/dashboard/contratos", "/dashboard/servicos", "/dashboard/pacotes"].some(
+    (h) => pathname === h || pathname?.startsWith(h + "/")
+  );
 
   const iniciais = nome
     .split(" ")
@@ -153,6 +164,8 @@ function ConteudoSidebar({
     .slice(0, 2)
     .join("")
     .toUpperCase();
+
+  const cor = corPessoa(pode);
 
   return (
     <>
@@ -163,81 +176,106 @@ function ConteudoSidebar({
       <nav className="flex flex-1 flex-col gap-6 overflow-y-auto">
         <div className="flex flex-col gap-1">
           <p className="px-3 pb-1 text-[11px] uppercase tracking-wider text-muted/70">Geral</p>
-          {menuPrincipal.map((item) => (
-            <ItemMenu key={item.href} item={item} ativo={!!ativo(item.href)} onClick={onNavigate} />
-          ))}
+          {menuGeralVisivel.map((item) => {
+            const contador =
+              item.chave === "tarefas"
+                ? { valor: contadores.tarefasAtrasadas, tipo: "alerta" as const }
+                : item.chave === "clientes"
+                ? { valor: contadores.clientesAtivos, tipo: "neutro" as const }
+                : undefined;
+            return (
+              <ItemMenu
+                key={item.href}
+                item={item}
+                ativo={ativo(item.href)}
+                contador={contador}
+                onClick={onNavigate}
+              />
+            );
+          })}
         </div>
 
-        {pode.verFinanceiro && (
+        {temGestao && (
           <div className="flex flex-col gap-1">
-            <p className="px-3 pb-1 text-[11px] uppercase tracking-wider text-muted/70">Financeiro</p>
-            {menuFinanceiro.map((item) => (
-              <ItemMenu key={item.href} item={item} ativo={!!ativo(item.href)} onClick={onNavigate} />
-            ))}
+            <p className="px-3 pb-1 text-[11px] uppercase tracking-wider text-muted/70">Gestão</p>
+            {pode.verFinanceiro && (
+              <ItemMenu
+                item={{ label: "Financeiro", href: "/dashboard/financeiro", icon: Wallet }}
+                ativo={ativo("/dashboard/financeiro")}
+                contador={{ valor: contadores.cobrancasVencidas, tipo: "alerta" }}
+                onClick={onNavigate}
+              />
+            )}
+            {linkComercial && (
+              <ItemMenu
+                item={{ label: "Comercial", href: linkComercial, icon: Trophy }}
+                ativo={comercialAtivo}
+                onClick={onNavigate}
+              />
+            )}
           </div>
         )}
-
-        {menuOrcamentoVisivel.length > 0 && (
-          <div className="flex flex-col gap-1">
-            <p className="px-3 pb-1 text-[11px] uppercase tracking-wider text-muted/70">Comercial</p>
-            {menuOrcamentoVisivel.map((item) => (
-              <ItemMenu key={item.href} item={item} ativo={!!ativo(item.href)} onClick={onNavigate} />
-            ))}
-          </div>
-        )}
-
-        {pode.gerenciarTrafego && (
-          <div className="flex flex-col gap-1">
-            <p className="px-3 pb-1 text-[11px] uppercase tracking-wider text-muted/70">Tráfego</p>
-            {menuTrafego.map((item) => (
-              <ItemMenu key={item.href} item={item} ativo={!!ativo(item.href)} onClick={onNavigate} />
-            ))}
-          </div>
-        )}
-
-        <div className="flex flex-col gap-1">
-          <p className="px-3 pb-1 text-[11px] uppercase tracking-wider text-muted/70">Configurações</p>
-          {menuConfig.map((item) => (
-            <ItemMenu key={item.href} item={item} ativo={!!ativo(item.href)} onClick={onNavigate} />
-          ))}
-        </div>
       </nav>
 
-      <div className="flex items-center gap-2 rounded-xl border border-border bg-card/60 px-3 py-2.5">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-semibold text-white">
-          {iniciais}
+      <div className="flex flex-col gap-2 rounded-xl border border-border bg-card px-3 py-2.5">
+        <div className="flex items-center gap-2">
+          <div
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${CLASSES_AVATAR[cor]}`}
+          >
+            {iniciais}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm text-text">{nome}</p>
+            <p className="truncate text-xs text-muted">{cargo}</p>
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm text-text">{nome}</p>
-          <p className="truncate text-xs text-muted">{email}</p>
+        <div className="flex items-center gap-1.5 border-t border-border pt-2">
+          <BotaoTema />
+          <Link
+            href="/dashboard/configuracoes"
+            onClick={onNavigate}
+            title="Configurações"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-inset text-muted transition-colors hover:bg-hover hover:text-text"
+          >
+            <Settings size={15} />
+          </Link>
+          <button
+            onClick={sairDaConta}
+            title="Sair da conta"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-inset text-muted transition-colors hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-400"
+          >
+            <LogOut size={15} />
+          </button>
         </div>
-        <BotaoTema />
-        <button
-          onClick={sairDaConta}
-          title="Sair da conta"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-card/60 text-muted transition-colors hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-400"
-        >
-          <LogOut size={15} />
-        </button>
       </div>
     </>
   );
 }
 
-export function Sidebar({ nome, email, pode }: { nome: string; email: string; pode: Permissoes }) {
+export function Sidebar({
+  nome,
+  cargo,
+  pode,
+  contadores,
+}: {
+  nome: string;
+  cargo: string;
+  pode: Permissoes;
+  contadores: ContadoresMenu;
+}) {
   const [aberto, setAberto] = useState(false);
 
   return (
     <>
       {/* Desktop */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[280px] flex-col border-r border-border bg-base/95 px-4 py-6 backdrop-blur-xs md:flex print:hidden">
-        <ConteudoSidebar nome={nome} email={email} pode={pode} />
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[248px] flex-col border-r border-border bg-sidebar px-4 py-6 md:flex print:hidden">
+        <ConteudoSidebar nome={nome} cargo={cargo} pode={pode} contadores={contadores} />
       </aside>
 
       {/* Botão mobile */}
       <button
         onClick={() => setAberto(true)}
-        className="fixed left-4 top-4 z-30 flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card/80 text-text backdrop-blur-xs md:hidden print:hidden"
+        className="fixed left-4 top-4 z-30 flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-text md:hidden print:hidden"
       >
         <Menu size={16} />
       </button>
@@ -254,11 +292,11 @@ export function Sidebar({ nome, email, pode }: { nome: string; email: string; po
               className="fixed inset-0 z-40 bg-black/60 md:hidden"
             />
             <motion.aside
-              initial={{ x: -280 }}
+              initial={{ x: -248 }}
               animate={{ x: 0 }}
-              exit={{ x: -280 }}
+              exit={{ x: -248 }}
               transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-              className="fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col border-r border-border bg-base px-4 py-6 md:hidden"
+              className="fixed inset-y-0 left-0 z-50 flex w-[248px] flex-col border-r border-border bg-sidebar px-4 py-6 md:hidden"
             >
               <button
                 onClick={() => setAberto(false)}
@@ -266,7 +304,13 @@ export function Sidebar({ nome, email, pode }: { nome: string; email: string; po
               >
                 <X size={16} />
               </button>
-              <ConteudoSidebar nome={nome} email={email} pode={pode} onNavigate={() => setAberto(false)} />
+              <ConteudoSidebar
+                nome={nome}
+                cargo={cargo}
+                pode={pode}
+                contadores={contadores}
+                onNavigate={() => setAberto(false)}
+              />
             </motion.aside>
           </>
         )}

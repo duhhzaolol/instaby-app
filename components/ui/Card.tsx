@@ -17,7 +17,12 @@ export function Card({ className, hoverable = true, index = 0, children, ...prop
       transition={{ duration: 0.5, delay: index * 0.06, ease: [0.16, 1, 0.3, 1] }}
       whileHover={hoverable ? { y: -2, scale: 1.01 } : undefined}
       className={cn(
-        "rounded-2xl border border-border bg-card/70 backdrop-blur-xs shadow-premium transition-shadow duration-200",
+        // v144: cartão sólido, sem transparência nem blur (pedido do redesign
+        // do painel) — antes era bg-card/70 backdrop-blur-xs. Como esse
+        // componente só é usado dentro do painel/login (a landing tem os
+        // próprios cartões, não importa este arquivo), a mudança não vaza
+        // pra lugar nenhum fora do escopo do redesign.
+        "rounded-2xl border border-border bg-card shadow-premium transition-shadow duration-200",
         hoverable && "hover:shadow-premium-lg hover:border-white/10",
         className
       )}

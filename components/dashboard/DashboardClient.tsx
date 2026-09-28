@@ -15,13 +15,19 @@ import {
   FileText,
   Sparkles,
   AlertTriangle,
+  Circle,
+  PlayCircle,
+  CheckCircle2,
+  Landmark,
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { Card } from "@/components/ui/Card";
+import { StatTile } from "@/components/ui/StatTile";
 import { CountUp } from "@/components/ui/CountUp";
 import { QuickCommandCenter } from "@/components/dashboard/QuickCommandCenter";
 import QuadroTarefas from "@/components/dashboard/QuadroTarefas";
 import type { TarefaRowData } from "@/components/dashboard/TarefaRow";
+import { EquipeAgora, type PessoaAgora } from "@/components/dashboard/EquipeAgora";
 import { visualDaCategoriaTarefa } from "@/lib/categoriaTarefaVisual";
 import { useOcultarValores, BotaoOcultarValores, ValorSensivel } from "@/components/ui/OcultarValores";
 
@@ -108,6 +114,8 @@ type TarefaHoje = { id: string; titulo: string; categoria: string | null; prazo:
 type Meta = { valor: number; atual: number };
 type PerformanceCliente = { nome: string; cor: string | null; valor: number; percentual: number };
 type Atividade = { id: string; texto: string; cliente: string; valor?: number; data: string; tipo: string };
+type TarefasPorStatus = { aFazer: number; emAndamento: number; feitasSemana: number };
+type DiaCaixa = { dia: string; aReceber: number; aPagar: number };
 
 const iconePorAtividade: Record<string, any> = {
   pagamento: Wallet,
@@ -146,6 +154,9 @@ export default function DashboardClient({
   atividades,
   variacaoFaturamento,
   faturamentoPorMes,
+  equipeAgora,
+  tarefasPorStatus,
+  caixa7Dias,
 }: {
   metrics: Metrics;
   tarefas: Tarefa[];
@@ -159,6 +170,9 @@ export default function DashboardClient({
   atividades: Atividade[];
   variacaoFaturamento: number | null;
   faturamentoPorMes: { mes: string; valor: number }[];
+  equipeAgora: PessoaAgora[];
+  tarefasPorStatus: TarefasPorStatus;
+  caixa7Dias: DiaCaixa[];
 }) {
   const { oculto, alternar } = useOcultarValores();
 
@@ -288,6 +302,8 @@ export default function DashboardClient({
         </div>
       )}
 
+      <EquipeAgora pessoas={equipeAgora} />
+
       <GraficoFaturamento dados={faturamentoPorMes} oculto={oculto} />
 
       {meta.valor > 0 && (
@@ -309,6 +325,44 @@ export default function DashboardClient({
               className="h-full rounded-full bg-accent transition-all"
               style={{ width: `${Math.min(100, (meta.atual / meta.valor) * 100)}%` }}
             />
+          </div>
+        </Card>
+      )}
+
+      {caixa7Dias.some((d) => d.aReceber > 0 || d.aPagar > 0) && (
+        <Card hoverable={false} className="mb-6 p-4">
+          <p className="mb-3 flex items-center gap-1.5 text-sm font-medium text-text">
+            <Landmark size={14} className="text-accent" /> Caixa — próximos 7 dias
+          </p>
+          <div className="flex flex-col gap-1.5">
+            {caixa7Dias.map((d) => {
+              const net = d.aReceber - d.aPagar;
+              return (
+                <div key={d.dia} className="flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs">
+                  <span className="text-muted">{d.dia}</span>
+                  <span className="flex items-center gap-3">
+                    {d.aReceber > 0 && (
+                      <ValorSensivel oculto={oculto}>
+                        <span className="text-emerald-400">+R$ {d.aReceber.toFixed(0)}</span>
+                      </ValorSensivel>
+                    )}
+                    {d.aPagar > 0 && (
+                      <ValorSensivel oculto={oculto}>
+                        <span className="text-red-400">−R$ {d.aPagar.toFixed(0)}</span>
+                      </ValorSensivel>
+                    )}
+                    {(d.aReceber > 0 || d.aPagar > 0) && (
+                      <ValorSensivel oculto={oculto}>
+                        <span className={net >= 0 ? "text-text" : "text-amber-400"}>
+                          = R$ {net.toFixed(0)}
+                        </span>
+                      </ValorSensivel>
+                    )}
+                    {d.aReceber === 0 && d.aPagar === 0 && <span className="text-muted/50">—</span>}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </Card>
       )}
@@ -399,6 +453,12 @@ export default function DashboardClient({
           </div>
         </div>
       )}
+
+      <div className="mb-4 grid grid-cols-3 gap-3">
+        <StatTile icone={<Circle size={12} style={{ color: "#9CA3AF" }} />} label="A fazer" valor={tarefasPorStatus.aFazer} />
+        <StatTile icone={<PlayCircle size={12} style={{ color: "#38BDF8" }} />} label="Em andamento" valor={tarefasPorStatus.emAndamento} />
+        <StatTile icone={<CheckCircle2 size={12} style={{ color: "#22C55E" }} />} label="Feitas essa semana" valor={tarefasPorStatus.feitasSemana} />
+      </div>
 
       <QuadroTarefas tarefas={tarefas} />
 

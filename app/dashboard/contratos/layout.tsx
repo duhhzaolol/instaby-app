@@ -1,6 +1,16 @@
-import { exigirPermissao } from "@/lib/permissoes";
+import { exigirPermissao, permissoesDe } from "@/lib/permissoes";
+import { AbasSecao } from "@/components/layout/AbasSecao";
+import { abasComercialVisiveis } from "@/lib/navSecoes";
 
+// Comercial virou 1 item só no menu lateral, com abas por dentro (redesign
+// v144, Parte 1) — cada uma dessas 5 telas continua no mesmo endereço de
+// sempre, só ganhou essa barra em cima ligando as outras 4.
 export default async function ContratosLayout({ children }: { children: React.ReactNode }) {
-  await exigirPermissao("verContratos");
-  return <>{children}</>;
+  const usuario = await exigirPermissao("verContratos");
+  return (
+    <div>
+      <AbasSecao abas={abasComercialVisiveis(permissoesDe(usuario))} />
+      {children}
+    </div>
+  );
 }

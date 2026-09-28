@@ -47,6 +47,9 @@ model Usuario {
 
   clientesPermitidos ClienteUsuario[]
   registrosTempo     RegistroTempo[]
+  // Tarefas atribuídas a essa pessoa (redesign v144, Parte 2) — opcional, campo
+  // novo (Tarefa não tinha responsável nenhum antes). Ver Tarefa.responsavelId.
+  tarefasResponsavel Tarefa[]
 
   createdAt        DateTime  @default(now())
   tentativasFalhas Int       @default(0) // contador de senhas erradas seguidas — zera a cada acerto
@@ -274,6 +277,24 @@ model Tarefa {
   link       String?
   createdAt DateTime @default(now())
 
+  // De quem é essa tarefa (redesign v144, Parte 2) — opcional, pra não quebrar
+  // tarefa antiga sem dono. Preenchido só quando alguém "pega" a tarefa pra si
+  // (nunca automático/adivinhado). Alimenta a fila pessoal do Início de cada
+  // pessoa e o alerta de "tarefa sem responsável" no Início do dono.
+  responsavelId String?
+  responsavel   Usuario? @relation(fields: [responsavelId], references: [id])
+
+  // Preenchido sozinho quando o status vira "feito" (e limpo se voltar pra outro
+  // status) — ver PATCH de /api/tarefas/[id]. Sem isso não dava pra saber QUANDO
+  // uma tarefa foi concluída, só que ela existe (createdAt é só a criação).
+  concluidaEm DateTime?
+
+  // Sub-passos de dentro da tarefa (redesign v144, Parte 2) — ex: uma tarefa de
+  // "Criar Reel" pode ter "roteiro", "captação", "edição", "aprovação" como itens
+  // separados. Não confundir com TemplateTarefas (que cria várias TAREFAS de uma
+  // vez a partir de uma lista) — isso aqui vive dentro de UMA tarefa só.
+  checklist ChecklistItemTarefa[]
+
   // Pasta da semana no Google Drive (dentro de Conteúdo do cliente), criada sob
   // demanda quando a tarefa tem categoria de mídia (gravacao/reel/fotos) + prazo +
   // cliente com Drive conectado — ver lib/google.ts: garantirPastaSemana. Pra
@@ -281,6 +302,17 @@ model Tarefa {
   // tem vídeo bruto (arquivo de vídeo lá dentro) antes de deixar a tarefa avançar de
   // "A fazer" — ver o PATCH de /api/tarefas/[id].
   driveFolderId String?
+}
+
+// Sub-passo de dentro de uma tarefa (redesign v144, Parte 2) — ver Tarefa.checklist.
+model ChecklistItemTarefa {
+  id        String   @id @default(uuid())
+  tarefaId  String
+  tarefa    Tarefa   @relation(fields: [tarefaId], references: [id], onDelete: Cascade)
+  titulo    String
+  feito     Boolean  @default(false)
+  ordem     Int      @default(0)
+  createdAt DateTime @default(now())
 }
 
 // Catálogo reutilizável de serviços — a "esteira de produto"

@@ -7,6 +7,7 @@ import { ChevronDown, ChevronUp, Plus, X, Check, Trash2, Pencil, TrendingUp, Dol
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { DatePicker } from "@/components/ui/DatePicker";
+import { totalizarResultados } from "@/lib/agregarResultadosCampanha";
 
 // Cores da mini-visão de tendência — vermelho da marca pra custo (dinheiro saindo),
 // verde-azulado pra resultado (o que "entra" de retorno). Validadas com o script de
@@ -469,35 +470,6 @@ function MiniAreaChart({
   );
 }
 
-// Soma sem duplicar exportações "mês corrido": o fluxo real é exportar sempre a partir
-// do dia 1 do mês, com data final crescente (1–10, depois 1–20, depois 1–30...) — cada
-// exportação nova já inclui as anteriores, então somar todas infla o total. Agrupa por
-// mês do início; se o grupo inteiro compartilha o mesmo início, é esse caso — conta só a
-// entrada mais recente (maior fim). Se os inícios diferem dentro do mesmo grupo (ex:
-// exportação dia a dia, ou lançamentos manuais de períodos pontuais), são períodos de
-// fato distintos — soma todos normalmente.
-function agruparPorMes(lista: Resultado[]): Resultado[] {
-  const porMes = new Map<string, Resultado[]>();
-  for (const r of lista) {
-    const d = new Date(r.inicio);
-    const chave = `${d.getUTCFullYear()}-${d.getUTCMonth()}`;
-    const grupo = porMes.get(chave);
-    if (grupo) grupo.push(r);
-    else porMes.set(chave, [r]);
-  }
-
-  const contados: Resultado[] = [];
-  for (const grupo of Array.from(porMes.values())) {
-    const iniciosUnicos = new Set(grupo.map((r) => new Date(r.inicio).getTime()));
-    if (grupo.length > 1 && iniciosUnicos.size === 1) {
-      contados.push(grupo.reduce((a, b) => (new Date(b.fim) > new Date(a.fim) ? b : a)));
-    } else {
-      contados.push(...grupo);
-    }
-  }
-  return contados;
-}
-
 function PainelResultados({ resultados }: { resultados: Resultado[] }) {
   const ordenados = [...resultados].sort((a, b) => new Date(a.fim).getTime() - new Date(b.fim).getTime());
   const dados = ordenados.map((r) => ({
@@ -506,14 +478,20 @@ function PainelResultados({ resultados }: { resultados: Resultado[] }) {
     resultados: r.resultados,
   }));
 
-  // Totais usam a lista deduplicada (contados) — o gráfico acima continua no `ordenados`
-  // bruto, com todas as entradas, pra manter a curva de progressão do mês funcionando.
-  const contados = agruparPorMes(ordenados);
-  const totalInvestido = contados.reduce((s, r) => s + (r.verbaInvestida ? Number(r.verbaInvestida) : 0), 0);
-  const totalResultados = contados.reduce((s, r) => s + (r.resultados || 0), 0);
-  const totalImpressoes = contados.reduce((s, r) => s + (r.impressoes || 0), 0);
-  const totalAlcance = contados.reduce((s, r) => s + (r.alcance || 0), 0);
-  const custoPorResultado = totalResultados > 0 ? totalInvestido / totalResultados : null;
+  // Totais usam a lista deduplicada — o gráfico acima continua no `ordenados` bruto,
+  // com todas as entradas, pra manter a curva de progressão do mês funcionando. Conta
+  // compartilhada com o Início do gestor de tráfego (lib/agregarResultadosCampanha) —
+  // mesma regra de dedupe "mês corrido" nos dois lugares, ver o comentário lá.
+  const {
+    totalInvestido,
+    totalResultados,
+    totalImpressoes,
+    totalAlcance,
+    custoPorResultado,
+    totalPlanosFechados,
+    totalRetorno,
+    roi,
+  } = totalizarResultados(ordenados);
   // Frequência = quantas vezes, em média, a mesma pessoa viu o anúncio — sinal de fadiga
   // de criativo quando fica alta demais (referência de mercado: >2-3 em prospecção,
   // >5-7 em remarketing pede troca de criativo ou pausa).
@@ -522,9 +500,6 @@ function PainelResultados({ resultados }: { resultados: Resultado[] }) {
   // está caro ou barato, independente de quantos resultados saíram disso.
   const cpm = totalImpressoes > 0 ? (totalInvestido / totalImpressoes) * 1000 : null;
 
-  const totalPlanosFechados = contados.reduce((s, r) => s + (r.planosFechados || 0), 0);
-  const totalRetorno = contados.reduce((s, r) => s + (r.valorRetorno ? Number(r.valorRetorno) : 0), 0);
-  const roi = totalInvestido > 0 && totalRetorno > 0 ? totalRetorno / totalInvestido : null;
   const retornoSub =
     totalPlanosFechados > 0 && roi != null
       ? `${totalPlanosFechados} ${totalPlanosFechados === 1 ? "plano" : "planos"} · ${roi.toFixed(1)}x`

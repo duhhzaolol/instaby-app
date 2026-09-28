@@ -1,5 +1,16 @@
 import { prisma } from "@/lib/prisma";
 import DashboardClient from "@/components/dashboard/DashboardClient";
+import InicioEditor, { type TarefaEditor } from "@/components/dashboard/InicioEditor";
+import InicioTrafego, {
+  type CampanhaRitmo,
+  type AlertaTrafego,
+  type RelatorioResumo,
+  type TarefaCriativo,
+} from "@/components/dashboard/InicioTrafego";
+import type { PessoaAgora } from "@/components/dashboard/EquipeAgora";
+import { getUsuarioAtual, permissoesDe, clienteIdsPermitidos, type Usuario } from "@/lib/permissoes";
+import { totalizarResultados, calcularRitmoVerba } from "@/lib/agregarResultadosCampanha";
+import { redirect } from "next/navigation";
 
 function inicioMes() {
   const d = new Date();
@@ -33,7 +44,42 @@ function fimAmanha() {
   return d;
 }
 
+function diasNoFuturo(n: number) {
+  const d = inicioHoje();
+  d.setDate(d.getDate() + n);
+  return d;
+}
+
+// Segunda-feira dessa semana (00h) — convenção de semana usada em "horas da
+// semana" e "tarefas feitas essa semana" no Início (redesign v144, Parte 2).
+function inicioSemana() {
+  const d = inicioHoje();
+  const dia = d.getDay(); // 0 = domingo
+  const diff = dia === 0 ? 6 : dia - 1;
+  d.setDate(d.getDate() - diff);
+  return d;
+}
+
+function horas(inicio: Date, fim: Date | null) {
+  const fimReal = fim || new Date();
+  return Math.max(0, (fimReal.getTime() - inicio.getTime()) / (1000 * 60 * 60));
+}
+
 export default async function DashboardPage() {
+  const usuario = await getUsuarioAtual();
+  if (!usuario) redirect("/login");
+  const pode = permissoesDe(usuario);
+
+  if (pode.master) return <InicioDono />;
+  if (pode.gerenciarTrafego) return <InicioTrafegoPage usuario={usuario} />;
+  return <InicioEditorPage usuario={usuario} />;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// DONO — visão completa da agência (redesign v144, Parte 2: estende o que já
+// existia com Equipe agora, Tarefas por status, mais 2 alertas e Caixa 7 dias)
+// ─────────────────────────────────────────────────────────────────────────
+async function InicioDono() {
   const [
     clientesAtivos,
     leadsPendentes,
@@ -59,6 +105,16 @@ export default async function DashboardPage() {
     itensOnboardingBloqueados,
     oportunidadesAbertas,
     cobrancasPagasUltimosMeses,
+    usuariosAtivos,
+    registrosAbertos,
+    registrosSemana,
+    tarefasAFazerCount,
+    tarefasEmAndamentoCount,
+    tarefasFeitasSemana,
+    propostasSemResposta,
+    tarefasSemResponsavel,
+    cobrancasProximosDias,
+    despesasProximosDias,
   ] = await Promise.all([
     prisma.cliente.count({ where: { status: "ativo" } }),
     prisma.cliente.count({ where: { status: "lead" } }),
@@ -146,6 +202,32 @@ export default async function DashboardPage() {
       where: { status: "pago", createdAt: { gte: inicioMesesAtras(5) } },
       select: { valor: true, createdAt: true },
     }),
+    prisma.usuario.findMany({
+      where: { ativo: true },
+      select: { id: true, nome: true, cargo: true, master: true, gerenciarTrafego: true },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.registroTempo.findMany({
+      where: { fim: null, usuarioId: { not: null } },
+      select: { usuarioId: true, atividade: true, cliente: { select: { nome: true } } },
+    }),
+    prisma.registroTempo.findMany({
+      where: { usuarioId: { not: null }, inicio: { gte: inicioSemana() } },
+      select: { usuarioId: true, inicio: true, fim: true },
+    }),
+    prisma.tarefa.count({ where: { status: "a_fazer" } }),
+    prisma.tarefa.count({ where: { status: "em_andamento" } }),
+    prisma.tarefa.count({ where: { status: "feito", concluidaEm: { gte: inicioSemana() } } }),
+    prisma.orcamento.count({ where: { status: "pendente", enviadoEm: { not: null } } }),
+    prisma.tarefa.count({ where: { status: { not: "feito" }, responsavelId: null } }),
+    prisma.cobranca.findMany({
+      where: { status: { in: ["pendente", "atrasado"] }, vencimento: { gte: inicioHoje(), lt: diasNoFuturo(7) } },
+      select: { valor: true, vencimento: true },
+    }),
+    prisma.despesa.findMany({
+      where: { status: { in: ["pendente", "atrasado"] }, vencimento: { gte: inicioHoje(), lt: diasNoFuturo(7) } },
+      select: { valor: true, vencimento: true },
+    }),
   ]);
 
   const metaFaturamento = config?.metaFaturamentoMensal ? Number(config.metaFaturamentoMensal) : 0;
@@ -164,7 +246,9 @@ export default async function DashboardPage() {
 
   const alertas = [
     { label: "Tarefas atrasadas", contagem: tarefasAtrasadas, href: "/dashboard/tarefas", cor: "#EF4444" },
+    { label: "Tarefas sem responsável", contagem: tarefasSemResponsavel, href: "/dashboard/tarefas", cor: "#F59E0B" },
     { label: "Cobranças vencidas", contagem: cobrancasVencidas, href: "/dashboard/financeiro/contas-a-receber", cor: "#EF4444" },
+    { label: "Propostas enviadas sem resposta", contagem: propostasSemResposta, href: "/dashboard/orcamentos", cor: "#F59E0B" },
     { label: "Contrato(s) renovando em breve", contagem: contratosRenovando, href: "/dashboard/contratos", cor: "#F59E0B" },
     { label: "Despesas sem classificação", contagem: despesasSemClassificacao, href: "/dashboard/financeiro/contas-a-pagar?aba=todas&categoria=sem_classificacao", cor: "#F59E0B" },
     { label: "Item(ns) de onboarding bloqueados", contagem: itensOnboardingBloqueados, href: "/dashboard/clientes", cor: "#F59E0B" },
@@ -202,6 +286,50 @@ export default async function DashboardPage() {
     if (balde) balde.valor += Number(c.valor);
   });
   const faturamentoPorMes = baldes.map((b) => ({ mes: b.mes, valor: b.valor }));
+
+  // Equipe agora: pra cada pessoa ativa, o registro aberto dela (se tiver) e a soma
+  // de horas lançadas essa semana (conta o que já rodou de um registro em aberto
+  // também, não só os fechados — mesmo espírito de "quanto já trabalhou até agora").
+  const horasPorPessoa: Record<string, number> = {};
+  registrosSemana.forEach((r) => {
+    if (!r.usuarioId) return;
+    horasPorPessoa[r.usuarioId] = (horasPorPessoa[r.usuarioId] || 0) + horas(r.inicio, r.fim);
+  });
+  const equipeAgora: PessoaAgora[] = usuariosAtivos.map((u) => {
+    const aberto = registrosAbertos.find((r) => r.usuarioId === u.id);
+    return {
+      id: u.id,
+      nome: u.nome,
+      cargo: u.cargo,
+      cor: u.master ? "accent" : u.gerenciarTrafego ? "pessoa-trafego" : "pessoa-editor",
+      atividadeAtual: aberto ? { atividade: aberto.atividade, clienteNome: aberto.cliente?.nome || null } : null,
+      horasSemana: horasPorPessoa[u.id] || 0,
+    };
+  });
+
+  // Caixa dos próximos 7 dias — a receber/a pagar por dia (sem "saldo bancário"
+  // acumulado, que exigiria um saldo inicial que o app não guarda ainda).
+  const chaveDia = (d: Date) => d.toISOString().slice(0, 10);
+  const diasCaixa: { chave: string; dia: string; aReceber: number; aPagar: number }[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = diasNoFuturo(i);
+    diasCaixa.push({
+      chave: chaveDia(d),
+      dia: d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" }).replace(".", ""),
+      aReceber: 0,
+      aPagar: 0,
+    });
+  }
+  cobrancasProximosDias.forEach((c) => {
+    if (!c.vencimento) return;
+    const balde = diasCaixa.find((d) => d.chave === chaveDia(c.vencimento!));
+    if (balde) balde.aReceber += Number(c.valor);
+  });
+  despesasProximosDias.forEach((d) => {
+    if (!d.vencimento) return;
+    const balde = diasCaixa.find((b) => b.chave === chaveDia(d.vencimento!));
+    if (balde) balde.aPagar += Number(d.valor);
+  });
 
   type Atividade = { id: string; texto: string; cliente: string; valor?: number; data: Date; tipo: string };
   const atividades: Atividade[] = [
@@ -292,6 +420,219 @@ export default async function DashboardPage() {
       variacaoFaturamento={variacaoFaturamento}
       atividades={atividades.map((a) => ({ ...a, data: a.data.toISOString() }))}
       faturamentoPorMes={faturamentoPorMes}
+      equipeAgora={equipeAgora}
+      tarefasPorStatus={{ aFazer: tarefasAFazerCount, emAndamento: tarefasEmAndamentoCount, feitasSemana: tarefasFeitasSemana }}
+      caixa7Dias={diasCaixa.map((d) => ({ dia: d.dia, aReceber: d.aReceber, aPagar: d.aPagar }))}
+    />
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// EDITOR — sem nenhum valor em R$, foco no que essa pessoa tem pra fazer
+// (redesign v144, Parte 2)
+// ─────────────────────────────────────────────────────────────────────────
+async function InicioEditorPage({ usuario }: { usuario: Usuario }) {
+  const usuarioId = usuario.id;
+  const idsPermitidos = await clienteIdsPermitidos(usuario);
+  const filtroClienteTarefa = idsPermitidos ? { OR: [{ clienteId: null }, { clienteId: { in: idsPermitidos } }] } : {};
+
+  const incluirTarefa = {
+    cliente: { select: { nome: true, cor: true } },
+    checklist: { orderBy: { ordem: "asc" as const } },
+  };
+
+  const [fazendoAgoraRaw, minhaFilaRaw, disponiveisRaw, proximasCaptacoesRaw, registrosSemana] = await Promise.all([
+    prisma.tarefa.findMany({
+      where: { responsavelId: usuarioId, status: "em_andamento", ...filtroClienteTarefa },
+      include: incluirTarefa,
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.tarefa.findMany({
+      where: { responsavelId: usuarioId, status: "a_fazer", ...filtroClienteTarefa },
+      include: incluirTarefa,
+    }),
+    prisma.tarefa.findMany({
+      where: { responsavelId: null, status: { not: "feito" }, ...filtroClienteTarefa },
+      include: { cliente: { select: { nome: true, cor: true } } },
+      orderBy: { createdAt: "desc" },
+      take: 15,
+    }),
+    prisma.tarefa.findMany({
+      where: {
+        categoria: { in: ["gravacao", "reel", "fotos"] },
+        status: { not: "feito" },
+        prazo: { gte: inicioHoje() },
+        ...filtroClienteTarefa,
+      },
+      include: { cliente: { select: { nome: true, cor: true } } },
+      take: 8,
+    }),
+    prisma.registroTempo.findMany({
+      where: { usuarioId, inicio: { gte: inicioSemana() } },
+      select: { inicio: true, fim: true },
+    }),
+  ]);
+
+  // Ordena por prazo (quem não tem prazo vai pro fim) em JS — mais simples e
+  // portável que depender de "nulls last" do driver do banco.
+  function ordenarPorPrazo<T extends { prazo: Date | null }>(lista: T[]): T[] {
+    return [...lista].sort((a, b) => {
+      if (!a.prazo && !b.prazo) return 0;
+      if (!a.prazo) return 1;
+      if (!b.prazo) return -1;
+      return a.prazo.getTime() - b.prazo.getTime();
+    });
+  }
+
+  function mapear(t: (typeof fazendoAgoraRaw)[number]): TarefaEditor {
+    return {
+      id: t.id,
+      titulo: t.titulo,
+      categoria: t.categoria,
+      prazo: t.prazo?.toISOString() || null,
+      clienteId: t.clienteId,
+      clienteNome: t.cliente?.nome || null,
+      clienteCor: t.cliente?.cor || null,
+      checklist: t.checklist.map((c) => ({ id: c.id, titulo: c.titulo, feito: c.feito })),
+    };
+  }
+
+  // Mesmo formato de `mapear`, mas pras duas listas sem checklist (disponíveis e
+  // próximas captações vêm da mesma query base, sem o include de checklist).
+  function mapearSimples(t: (typeof disponiveisRaw)[number]): TarefaEditor {
+    return {
+      id: t.id,
+      titulo: t.titulo,
+      categoria: t.categoria,
+      prazo: t.prazo?.toISOString() || null,
+      clienteId: t.clienteId,
+      clienteNome: t.cliente?.nome || null,
+      clienteCor: t.cliente?.cor || null,
+    };
+  }
+
+  const horasSemana = registrosSemana.reduce((s, r) => s + horas(r.inicio, r.fim), 0);
+
+  return (
+    <InicioEditor
+      usuarioId={usuarioId}
+      fazendoAgora={ordenarPorPrazo(fazendoAgoraRaw).map(mapear)}
+      minhaFila={ordenarPorPrazo(minhaFilaRaw).map(mapear)}
+      disponiveis={disponiveisRaw.map(mapearSimples)}
+      proximasCaptacoes={ordenarPorPrazo(proximasCaptacoesRaw).map(mapearSimples)}
+      horasSemana={horasSemana}
+    />
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// TRÁFEGO — indicadores das campanhas que essa pessoa gerencia (redesign
+// v144, Parte 2). Sem ligação com Financeiro (verba não passa pela agência).
+// ─────────────────────────────────────────────────────────────────────────
+async function InicioTrafegoPage({ usuario }: { usuario: Usuario }) {
+  const idsPermitidos = await clienteIdsPermitidos(usuario);
+  const filtroCliente = idsPermitidos ? { clienteId: { in: idsPermitidos } } : {};
+
+  const [resultadosDoMes, campanhasAtivas, resultadosUltimos7Dias, relatoriosDoMes, criativosPedidosRaw] = await Promise.all([
+    prisma.resultadoCampanha.findMany({
+      where: { campanha: filtroCliente, inicio: { gte: inicioMes() } },
+      select: { inicio: true, fim: true, verbaInvestida: true, impressoes: true, alcance: true, resultados: true, planosFechados: true, valorRetorno: true, campanhaId: true },
+    }),
+    prisma.campanha.findMany({
+      where: { status: "ativa", ...filtroCliente },
+      include: { cliente: { select: { nome: true, cor: true } } },
+    }),
+    prisma.resultadoCampanha.findMany({
+      where: { campanha: { status: "ativa", ...filtroCliente }, fim: { gte: diasNoFuturo(-7) } },
+      select: { campanhaId: true },
+    }),
+    prisma.relatorioPeriodo.findMany({
+      // Aqui "cliente" é a relação com o model Cliente (cuja própria chave é "id",
+      // não "clienteId" — diferente de `filtroCliente`, feito pra filtrar Campanha
+      // diretamente). Por isso não reaproveita `filtroCliente` aqui.
+      where: {
+        cliente: idsPermitidos ? { id: { in: idsPermitidos } } : {},
+        inicio: { lte: new Date() },
+        fim: { gte: inicioMes() },
+      },
+      include: { cliente: { select: { nome: true } } },
+      orderBy: { createdAt: "desc" },
+      take: 8,
+    }),
+    prisma.tarefa.findMany({
+      where: {
+        categoria: { in: ["arte", "reel", "fotos", "gravacao"] },
+        status: { not: "feito" },
+        cliente: { campanhas: { some: { status: "ativa" } }, ...(idsPermitidos ? { id: { in: idsPermitidos } } : {}) },
+      },
+      include: { cliente: { select: { nome: true, cor: true } } },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    }),
+  ]);
+
+  const totaisRaw = totalizarResultados(resultadosDoMes);
+
+  // Investido de cada campanha ativa NESSE mês (deduplicado), pra ritmo de gasto —
+  // mesma regra de agrupamento por mês do restante do módulo de Tráfego Pago.
+  const totalizadoresPorCampanha = new Map<string, ReturnType<typeof totalizarResultados>>();
+  campanhasAtivas.forEach((c) => {
+    const doMes = resultadosDoMes.filter((r) => r.campanhaId === c.id);
+    totalizadoresPorCampanha.set(c.id, totalizarResultados(doMes));
+  });
+
+  const campanhasRitmo: CampanhaRitmo[] = campanhasAtivas.map((c) => {
+    const investidoMes = totalizadoresPorCampanha.get(c.id)?.totalInvestido || 0;
+    const ritmo = calcularRitmoVerba({ verbaMensal: Number(c.verbaMensal), investidoNoMes: investidoMes, dataInicioCampanha: c.dataInicio });
+    return {
+      id: c.id,
+      nome: c.nome,
+      clienteNome: c.cliente.nome,
+      clienteCor: c.cliente.cor,
+      verbaMensal: Number(c.verbaMensal),
+      investidoMes,
+      ritmo,
+    };
+  });
+
+  const idsComResultadoRecente = new Set(resultadosUltimos7Dias.map((r) => r.campanhaId));
+  const campanhasSemResultadoRecente = campanhasAtivas.filter((c) => !idsComResultadoRecente.has(c.id)).length;
+  const campanhasRitmoBaixo = campanhasRitmo.filter((c) => c.ritmo != null && c.ritmo < 0.5).length;
+
+  const alertas: AlertaTrafego[] = [
+    { label: "Campanha(s) sem resultado lançado nos últimos 7 dias", contagem: campanhasSemResultadoRecente, href: "/dashboard/trafego", cor: "#F59E0B" },
+    { label: "Campanha(s) bem abaixo do ritmo de verba esperado", contagem: campanhasRitmoBaixo, href: "/dashboard/trafego", cor: "#F59E0B" },
+  ].filter((a) => a.contagem > 0);
+
+  const relatorios: RelatorioResumo[] = relatoriosDoMes.map((r) => ({
+    id: r.id,
+    clienteNome: r.cliente.nome,
+    rede: r.rede,
+    inicio: r.inicio.toISOString(),
+    fim: r.fim.toISOString(),
+  }));
+
+  const criativosPedidos: TarefaCriativo[] = criativosPedidosRaw.map((t) => ({
+    id: t.id,
+    titulo: t.titulo,
+    categoria: t.categoria,
+    prazo: t.prazo?.toISOString() || null,
+    clienteNome: t.cliente?.nome || null,
+    clienteCor: t.cliente?.cor || null,
+  }));
+
+  return (
+    <InicioTrafego
+      totais={{
+        investido: totaisRaw.totalInvestido,
+        resultados: totaisRaw.totalResultados,
+        custoPorResultado: totaisRaw.custoPorResultado,
+        retorno: totaisRaw.totalRetorno,
+      }}
+      campanhas={campanhasRitmo}
+      alertas={alertas}
+      relatorios={relatorios}
+      criativosPedidos={criativosPedidos}
     />
   );
 }

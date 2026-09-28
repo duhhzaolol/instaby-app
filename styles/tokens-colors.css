@@ -94,6 +94,52 @@
   --on-accent:#FFFFFF;
 }
 
+/* ---- Redesign do painel (v144) ----
+   Paleta nova, só pro painel interno + login — NUNCA pra landing/link, que
+   continuam lendo o :root de cima. Aplicada via classe .tema-painel numa div
+   que envolve o conteúdo (app/dashboard/layout.tsx e app/login/layout.tsx),
+   nunca no :root/<html>, assim o resto do site nem sabe que ela existe.
+   Mesma regra de sempre: cor com opacidade dinâmica precisa do valor cru
+   "R G B" (ver comentário grande lá em cima) — os 2 hex que ganharam alfa
+   próprio (--accent-text, etc.) são só pra texto, nunca usados com /NN.
+   Cor de referência definida por ele (documento do redesign, 27/09/2026). */
+.tema-painel{
+  --base:17 19 24;      /* #111318 — fundo do painel */
+  --sidebar:12 14 18;   /* #0C0E12 — menu lateral, mais escuro que o resto */
+  --card:24 27 34;      /* #181B22 — cartão: sólido, sem transparência/blur */
+  --hover:35 39 50;     /* #232732 — elevado/hover */
+  --inset:15 17 22;     /* #0F1116 — bloco dentro de um cartão */
+  --border:rgba(255,255,255,.06);
+  --text:244 245 247;   /* #F4F5F7 */
+  --muted:163 169 181;  /* #A3A9B5 — secundário */
+  --micro:122 130 144;  /* #7A8290 — microtexto */
+  --accent:230 57 70;       /* #E63946 — vermelho da marca (igual já era) */
+  --accent-text:255 122 132; /* #FF7A84 — texto vermelho legível sobre fundo escuro */
+  --success:34 197 94;      /* #22C55E */
+  --success-text:74 222 128; /* #4ADE80 */
+  --warning:245 158 11;     /* #F59E0B */
+  --warning-text:251 191 36; /* #FBBF24 */
+  --info:59 130 246;        /* #3B82F6 */
+  --info-text:96 165 250;   /* #60A5FA */
+  /* Cor de cada pessoa (fundo do avatar a 18–20% de opacidade + iniciais na
+     cor cheia) — dono usa --accent, os outros dois ficam só aqui porque não
+     têm uso fora de avatar/identificação de pessoa. */
+  --pessoa-editor:168 85 247;  /* #A855F7 — roxo */
+  --pessoa-trafego:59 130 246; /* #3B82F6 — azul (mesmo tom do --info) */
+}
+/* Tema cinza por cima do painel novo — mesma ideia do bloco :root[data-theme
+   cinza] de baixo (neutraliza o tom, não vira claro), só que escopada pro
+   painel. Cor ainda provisória, igual o cinza original — ajusta fácil aqui
+   quando tivermos o tom exato. */
+:root[data-theme="cinza"] .tema-painel{
+  --base:44 44 46;
+  --sidebar:36 36 38;
+  --card:55 55 58;
+  --hover:66 66 70;
+  --inset:40 40 42;
+  --border:rgba(255,255,255,.08);
+}
+
 /* ---- Tema alternativo "cinza" ----
    Continua escuro de propósito — não é um tema claro, só troca o preto
    azulado padrão por um cinza mais neutro. Ligado pelo botão ao lado do seu
