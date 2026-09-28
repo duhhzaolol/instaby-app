@@ -2,6 +2,7 @@
 @import "../styles/tokens-typography.css";
 @import "../styles/tokens-spacing.css";
 @import "../styles/tokens-effects.css";
+@import "../styles/tokens-painel.css";
 
 @tailwind base;
 @tailwind components;

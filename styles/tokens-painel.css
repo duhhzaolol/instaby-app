@@ -1,0 +1,31 @@
+/* Visual do painel interno (redesign fase 1).
+   Tudo aqui vale só dentro de `.tema-painel` (layout do dashboard e login) —
+   a LP e a página de links usam as mesmas variáveis, mas ficam fora dessa
+   classe, então continuam exatamente como estão.
+
+   Mudanças em relação ao :root:
+   - fundo um pouco mais escuro e cartões sólidos (sem transparência nem blur);
+   - menu lateral num tom abaixo do fundo, pra separar navegação de conteúdo;
+   - bordas mais suaves e texto secundário um pouco mais claro (lê melhor). */
+.tema-painel {
+  --base: 17 19 24;      /* #111318 */
+  --card: 24 27 34;      /* #181B22 */
+  --hover: 35 39 50;     /* #232732 */
+  --sidebar: 12 14 18;   /* #0C0E12 */
+  --inset: 15 17 22;     /* #0F1116 — trilhos de barra, blocos dentro de cartão */
+  --text: 244 245 247;   /* #F4F5F7 */
+  --muted: 163 169 181;  /* #A3A9B5 */
+  --border: rgba(255, 255, 255, 0.06);
+
+  font-family: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* Tema alternativo "cinza" continua funcionando dentro do painel. */
+:root[data-theme="cinza"] .tema-painel {
+  --base: 42 43 47;
+  --card: 53 54 59;
+  --hover: 63 64 69;
+  --sidebar: 34 35 39;
+  --inset: 36 37 41;
+  --border: rgba(255, 255, 255, 0.09);
+}

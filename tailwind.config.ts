@@ -25,6 +25,14 @@ const config: Config = {
         // --border já é um rgba() completo (não uma variável "R G B" crua),
         // então fica direto, sem o wrapper rgb(...).
         border: "var(--border)",
+        // Tons extras do painel (redesign fase 1) — ver styles/tokens-painel.css.
+        sidebar: "rgb(var(--sidebar) / <alpha-value>)",
+        inset: "rgb(var(--inset) / <alpha-value>)",
+      },
+      fontFamily: {
+        // Pra valores em R$, horas e contagens no painel. Fora do painel a
+        // variável não existe e cai no monoespaçado padrão do sistema.
+        numero: ["var(--font-jetbrains, ui-monospace)", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
       boxShadow: {
         premium: "0 8px 24px -8px rgba(0,0,0,0.5)",

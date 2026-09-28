@@ -1,6 +1,15 @@
 import { exigirPermissao } from "@/lib/permissoes";
+import { AbasSecao } from "@/components/layout/AbasSecao";
+import { abasComercial } from "@/lib/abasComercial";
 
 export default async function OportunidadesLayout({ children }: { children: React.ReactNode }) {
-  await exigirPermissao("verOportunidades");
-  return <>{children}</>;
+  const usuario = await exigirPermissao("verOportunidades");
+  // Comercial virou um item só no menu lateral; as seções dele são abas (redesign fase 1).
+  const abas = abasComercial(usuario);
+  return (
+    <>
+      <AbasSecao abas={abas} />
+      {children}
+    </>
+  );
 }

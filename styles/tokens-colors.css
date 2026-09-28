@@ -18,6 +18,10 @@
   --text:249 250 251;         /* #F9FAFB — primary ink */
   --muted:156 163 175;        /* #9CA3AF — secondary ink */
   --border:rgba(255,255,255,.08);
+  /* Só ganham tom próprio dentro do painel (styles/tokens-painel.css); aqui
+     fora ficam iguais ao fundo, pra classe bg-sidebar/bg-inset nunca ficar vazia. */
+  --sidebar:19 21 25;
+  --inset:19 21 25;
 
   /* ---- Páginas públicas (client-facing pages) surfaces ---- */
   --public-base:#0B0D12;     /* deeper black for proposal / report pages */

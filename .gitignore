@@ -1,0 +1,10 @@
+# Dependências e build — gerados pelo npm/Next, nunca vão pro repositório
+node_modules/
+.next/
+next-env.d.ts
+
+# Variáveis de ambiente (senhas, chaves, DATABASE_URL)
+.env
+.env*.local
+
+.vercel

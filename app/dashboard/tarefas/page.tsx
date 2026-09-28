@@ -15,7 +15,7 @@ const ABAS = [
 export default async function TarefasPage({
   searchParams,
 }: {
-  searchParams: { status?: string };
+  searchParams: { status?: string; nova?: string };
 }) {
   const filtro = searchParams.status || "abertas";
 
@@ -83,7 +83,13 @@ export default async function TarefasPage({
         ))}
       </div>
 
-      <NovaTarefaGlobalForm clientes={clientes} />
+      {/* key: se a pessoa já estava em Tarefas e clica em "Nova tarefa" no topo,
+          o formulário remonta e abre (o estado inicial só vale na montagem). */}
+      <NovaTarefaGlobalForm
+        key={searchParams.nova === "1" ? "nova" : "lista"}
+        clientes={clientes}
+        abrirInicialmente={searchParams.nova === "1"}
+      />
 
       {tarefas.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-border bg-card/40 py-16 text-center">

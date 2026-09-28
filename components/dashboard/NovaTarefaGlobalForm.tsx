@@ -13,6 +13,7 @@ export function NovaTarefaGlobalForm({
   categoriaFixa,
   placeholder,
   textoBotao,
+  abrirInicialmente = false,
 }: {
   clientes: Cliente[];
   // Quando informado, trava a categoria (esconde o seletor) — usado no
@@ -20,9 +21,12 @@ export function NovaTarefaGlobalForm({
   categoriaFixa?: string;
   placeholder?: string;
   textoBotao?: string;
+  // Botão "Nova tarefa" da barra do topo leva pra /dashboard/tarefas?nova=1 —
+  // aí o formulário já abre pronto pra digitar.
+  abrirInicialmente?: boolean;
 }) {
   const router = useRouter();
-  const [aberto, setAberto] = useState(false);
+  const [aberto, setAberto] = useState(abrirInicialmente);
   const [titulo, setTitulo] = useState("");
   const [clienteId, setClienteId] = useState("");
   const [categoria, setCategoria] = useState(categoriaFixa || "");

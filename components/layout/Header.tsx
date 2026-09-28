@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { Search, Bell, Sparkles, X, Users, FileText } from "lucide-react";
+import { Search, Bell, Sparkles, X, Users, FileText, Plus } from "lucide-react";
 import { ULTIMA_VERSAO_NOVIDADES } from "@/lib/changelog";
+import { Cronometro } from "@/components/layout/Cronometro";
 
 // Mesma chave usada em components/dashboard/MarcarNovidadesVistas.tsx.
 const CHAVE_NOVIDADES_VISTAS = "instaby:novidades-vista";
@@ -15,16 +16,6 @@ function saudacao() {
   if (hora < 18) return "Boa tarde";
   return "Boa noite";
 }
-
-const rotulos: Record<string, string> = {
-  dashboard: "Visão geral",
-  clientes: "Clientes",
-  servicos: "Serviços",
-  orcamentos: "Orçamentos",
-  financeiro: "Financeiro",
-  novo: "Novo",
-  configuracoes: "Configurações",
-};
 
 type ResultadoBusca = {
   clientes: { id: string; nome: string; cor: string | null; status: string }[];
@@ -91,9 +82,9 @@ function BuscaGlobal() {
   const mostrarDropdown = aberto && termo.trim().length >= 2;
 
   return (
-    <div className="hidden flex-1 justify-center px-8 lg:flex">
-      <div ref={containerRef} className="relative w-full max-w-sm">
-        <div className="flex h-9 w-full items-center gap-2 rounded-xl border border-border bg-card/60 px-3 text-sm text-muted focus-within:border-accent/40">
+    <div className="hidden w-full max-w-sm lg:flex">
+      <div ref={containerRef} className="relative w-full">
+        <div className="flex h-9 w-full items-center gap-2 rounded-[10px] border border-border bg-card px-3 text-[13px] text-muted focus-within:border-accent/40">
           <Search size={15} className="shrink-0" />
           <input
             value={termo}
@@ -155,9 +146,17 @@ function BuscaGlobal() {
   );
 }
 
-export function Header({ nomePrimeiro }: { nomePrimeiro: string }) {
+export function Header({
+  nomePrimeiro,
+  clientes,
+}: {
+  nomePrimeiro: string;
+  clientes: { id: string; nome: string; cor: string | null }[];
+}) {
   const pathname = usePathname() || "";
-  const partes = pathname.split("/").filter(Boolean).filter((p) => p !== "dashboard");
+  // Cada tela já tem seu título no topo do conteúdo — a barra só mostra a
+  // saudação no Início, pra não repetir "Tarefas" duas vezes, por exemplo.
+  const noInicio = pathname === "/dashboard";
   const [temNovidadeNaoVista, setTemNovidadeNaoVista] = useState(false);
 
   useEffect(() => {
@@ -170,29 +169,22 @@ export function Header({ nomePrimeiro }: { nomePrimeiro: string }) {
   }, []);
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border bg-base/80 pl-16 pr-6 backdrop-blur-xs md:pl-6 print:hidden">
-      <div>
-        <p className="text-xs text-muted">
-          Dashboard{partes.length > 0 && " / "}
-          {partes.map((p, i) => (
-            <span key={i}>
-              {rotulos[p] || p}
-              {i < partes.length - 1 && " / "}
-            </span>
-          ))}
+    <header className="sticky top-0 z-20 flex h-16 items-center gap-6 border-b border-border bg-base/95 pl-16 pr-6 md:pl-8 md:pr-8 print:hidden">
+      {noInicio && (
+        <p className="min-w-0 shrink-0 truncate text-[15px] font-bold text-text">
+          {saudacao()}, {nomePrimeiro}
         </p>
-        <p className="text-sm font-medium text-text">
-          {saudacao()}, {nomePrimeiro} 👋
-        </p>
-      </div>
+      )}
 
       <BuscaGlobal />
 
-      <div className="flex items-center gap-3">
+      <div className="ml-auto flex items-center gap-2.5">
+        <Cronometro clientes={clientes} />
         <Link
           href="/dashboard/novidades"
           title="Novidades"
-          className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card/60 text-muted transition-colors hover:bg-hover hover:text-text"
+          aria-label="Novidades"
+          className="relative hidden h-9 w-9 items-center justify-center rounded-[10px] border border-border bg-card text-muted transition-colors hover:bg-hover hover:text-text sm:flex"
         >
           <Sparkles size={16} />
           {temNovidadeNaoVista && <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-accent" />}
@@ -204,10 +196,18 @@ export function Header({ nomePrimeiro }: { nomePrimeiro: string }) {
            que mentindo. */}
         <button
           title="Notificações (ainda não implementado)"
-          className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card/60 text-muted transition-colors hover:bg-hover hover:text-text"
+          aria-label="Notificações"
+          className="hidden h-9 w-9 items-center justify-center rounded-[10px] border border-border bg-card text-muted transition-colors hover:bg-hover hover:text-text sm:flex"
         >
           <Bell size={16} />
         </button>
+        <Link
+          href="/dashboard/tarefas?nova=1"
+          className="flex h-9 items-center gap-1.5 rounded-[10px] bg-accent px-3 text-[13.5px] font-bold text-white transition hover:brightness-110"
+        >
+          <Plus size={16} strokeWidth={2.25} />
+          <span className="hidden sm:inline">Nova tarefa</span>
+        </Link>
       </div>
     </header>
   );
