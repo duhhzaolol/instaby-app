@@ -7,6 +7,7 @@ import { CalendarioHoras } from "@/components/dashboard/CalendarioHoras";
 import { formatarDuracao } from "@/lib/formatarDuracao";
 import { AjudaContextual } from "@/components/ui/AjudaContextual";
 import { StatTile } from "@/components/ui/StatTile";
+import { AvatarPessoa } from "@/components/ui/AvatarPessoa";
 import { getUsuarioAtual, clienteIdsPermitidos } from "@/lib/permissoes";
 
 const NOMES_MESES = [
@@ -38,7 +39,7 @@ function chaveDiaEvento(d: Date) {
 export default async function HorasPage({
   searchParams,
 }: {
-  searchParams: { mes?: string; cliente?: string };
+  searchParams: { mes?: string; cliente?: string; funcionario?: string };
 }) {
   const hojeChave = hojeChaveBR();
   const [anoHoje, mesHojeNum] = hojeChave.split("-").map(Number);
@@ -64,22 +65,36 @@ export default async function HorasPage({
   const idsPermitidos = usuarioAtual ? await clienteIdsPermitidos(usuarioAtual) : null;
   const filtroCliente = idsPermitidos ? { OR: [{ clienteId: null }, { clienteId: { in: idsPermitidos } }] } : {};
 
-  const [clientes, registrosHoje, registrosGrade, tarefasAbertas] = await Promise.all([
+  // Cada pessoa só vê as PRÓPRIAS horas — só o dono vê o time inteiro, e pode
+  // ainda filtrar por uma pessoa específica com o seletor "ver por funcionário"
+  // (pedido explícito, separado do filtro por cliente que já existia).
+  const verTodasHoras = usuarioAtual?.master ?? false;
+  const funcionarioFiltro = verTodasHoras ? searchParams.funcionario || "" : "";
+  const filtroPessoal = verTodasHoras
+    ? funcionarioFiltro
+      ? { usuarioId: funcionarioFiltro }
+      : {}
+    : { usuarioId: usuarioAtual?.id || "_nunca_" };
+
+  const [clientes, funcionarios, registrosHoje, registrosGrade, tarefasAbertas] = await Promise.all([
     prisma.cliente.findMany({
       where: { status: { not: "inativo" }, ...(idsPermitidos ? { id: { in: idsPermitidos } } : {}) },
       select: { id: true, nome: true, cor: true },
       orderBy: { nome: "asc" },
     }),
+    verTodasHoras
+      ? prisma.usuario.findMany({ where: { ativo: true }, select: { id: true, nome: true, fotoUrl: true }, orderBy: { nome: "asc" } })
+      : Promise.resolve([]),
     vendoMesAtual
       ? prisma.registroTempo.findMany({
-          where: { inicio: { gte: inicioHoje() }, ...filtroCliente },
-          include: { cliente: { select: { nome: true, cor: true } }, usuario: { select: { nome: true } } },
+          where: { inicio: { gte: inicioHoje() }, ...filtroCliente, ...filtroPessoal },
+          include: { cliente: { select: { nome: true, cor: true } }, usuario: { select: { nome: true, fotoUrl: true } } },
           orderBy: { inicio: "desc" },
         })
       : Promise.resolve([]),
     prisma.registroTempo.findMany({
-      where: { inicio: { gte: inicioGrade, lte: fimGrade }, ...filtroCliente },
-      include: { cliente: { select: { id: true, nome: true, cor: true } }, usuario: { select: { nome: true } } },
+      where: { inicio: { gte: inicioGrade, lte: fimGrade }, ...filtroCliente, ...filtroPessoal },
+      include: { cliente: { select: { id: true, nome: true, cor: true } }, usuario: { select: { nome: true, fotoUrl: true } } },
       orderBy: { inicio: "desc" },
     }),
     prisma.tarefa.findMany({
@@ -134,6 +149,7 @@ export default async function HorasPage({
       clienteNome: string | null;
       clienteCor: string | null;
       usuarioNome: string | null;
+      usuarioFotoUrl: string | null;
     }[]
   > = {};
   registrosCalendario.forEach((r) => {
@@ -147,6 +163,7 @@ export default async function HorasPage({
       clienteNome: r.cliente?.nome || null,
       clienteCor: r.cliente?.cor || null,
       usuarioNome: r.usuario?.nome || null,
+      usuarioFotoUrl: r.usuario?.fotoUrl || null,
     });
     if (!r.fim) return;
     const horas = (r.fim.getTime() - r.inicio.getTime()) / 1000 / 60 / 60;
@@ -158,7 +175,12 @@ export default async function HorasPage({
   for (let d = new Date(inicioGrade); d <= fimGrade; d.setDate(d.getDate() + 1)) diasGrade.push(new Date(d));
 
   const linkComFiltro = (extra: Record<string, string>) => {
-    const params = new URLSearchParams({ mes: `${ano}-${mes + 1}`, ...(clienteFiltro && { cliente: clienteFiltro }), ...extra });
+    const params = new URLSearchParams({
+      mes: `${ano}-${mes + 1}`,
+      ...(clienteFiltro && { cliente: clienteFiltro }),
+      ...(funcionarioFiltro && { funcionario: funcionarioFiltro }),
+      ...extra,
+    });
     return `/dashboard/horas?${params.toString()}`;
   };
 
@@ -240,6 +262,33 @@ export default async function HorasPage({
           </Link>
         ))}
       </div>
+
+      {/* Ver por funcionário — só o dono vê essa opção; o resto da equipe já só
+          enxerga as próprias horas, então não tem "outra pessoa" pra filtrar. */}
+      {verTodasHoras && funcionarios.length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          <Link
+            href={linkComFiltro({ funcionario: "" })}
+            className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+              !funcionarioFiltro ? "bg-accent text-white" : "border border-border bg-card/60 text-muted hover:text-text"
+            }`}
+          >
+            Equipe toda
+          </Link>
+          {funcionarios.map((f) => (
+            <Link
+              key={f.id}
+              href={linkComFiltro({ funcionario: f.id })}
+              className={`flex items-center gap-1.5 rounded-full py-1 pl-1 pr-3 text-xs font-medium ${
+                funcionarioFiltro === f.id ? "bg-accent text-white" : "border border-border bg-card/60 text-muted hover:text-text"
+              }`}
+            >
+              <AvatarPessoa nome={f.nome} fotoUrl={f.fotoUrl} tamanho={18} />
+              {f.nome}
+            </Link>
+          ))}
+        </div>
+      )}
 
       <CalendarioHoras
         dias={diasGrade.map((d) => chaveDia(d))}
@@ -351,6 +400,7 @@ export default async function HorasPage({
                   clienteNome: null,
                   clienteCor: null,
                   usuarioNome: r.usuario?.nome || null,
+                  usuarioFotoUrl: r.usuario?.fotoUrl || null,
                 }}
               />
             ))}
@@ -377,6 +427,7 @@ export default async function HorasPage({
                   clienteNome: r.cliente?.nome || null,
                   clienteCor: r.cliente?.cor || null,
                   usuarioNome: r.usuario?.nome || null,
+                  usuarioFotoUrl: r.usuario?.fotoUrl || null,
                 }}
               />
             ))}

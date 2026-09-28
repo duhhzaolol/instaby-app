@@ -1,40 +1,26 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { TarefaRow } from "@/components/dashboard/TarefaRow";
+import QuadroTarefas, { TarefaQuadro } from "@/components/dashboard/QuadroTarefas";
 import { NovaTarefaGlobalForm } from "@/components/dashboard/NovaTarefaGlobalForm";
-import { CheckSquare, CalendarDays } from "lucide-react";
+import { CalendarDays } from "lucide-react";
 import { AjudaContextual } from "@/components/ui/AjudaContextual";
 import { getUsuarioAtual, clienteIdsPermitidos } from "@/lib/permissoes";
 
-const ABAS = [
-  { valor: "abertas", label: "Abertas" },
-  { valor: "feito", label: "Concluídas" },
-  { valor: "todas", label: "Todas" },
-];
-
-export default async function TarefasPage({
-  searchParams,
-}: {
-  searchParams: { status?: string };
-}) {
-  const filtro = searchParams.status || "abertas";
-
+// Página principal de Tarefas — vira o mesmo quadro Kanban usado no resto do
+// app (redesign v144, Parte 3), no lugar das abas Abertas/Concluídas/Todas:
+// as 3 colunas do quadro já mostram tudo de uma vez, então as abas somem.
+// "Nova tarefa" continua sendo uma ação separada (formulário próprio acima do
+// quadro), não embutida dentro do board — pedido explícito.
+export default async function TarefasPage() {
   const usuarioAtual = await getUsuarioAtual();
   const idsPermitidos = usuarioAtual ? await clienteIdsPermitidos(usuarioAtual) : null;
   // Tarefa sem cliente (interna/geral) continua visível pra todo mundo — só
   // restringe a que é de um cliente específico fora da lista permitida.
   const filtroCliente = idsPermitidos ? { OR: [{ clienteId: null }, { clienteId: { in: idsPermitidos } }] } : {};
 
-  const where =
-    filtro === "feito"
-      ? { status: "feito", ...filtroCliente }
-      : filtro === "todas"
-      ? { ...filtroCliente }
-      : { status: { not: "feito" }, ...filtroCliente };
-
   const [tarefas, clientes] = await Promise.all([
     prisma.tarefa.findMany({
-      where,
+      where: filtroCliente,
       include: { cliente: { select: { nome: true, cor: true } } },
       orderBy: { createdAt: "desc" },
     }),
@@ -45,6 +31,17 @@ export default async function TarefasPage({
     }),
   ]);
 
+  const tarefasQuadro: TarefaQuadro[] = tarefas.map((t) => ({
+    id: t.id,
+    titulo: t.titulo,
+    status: t.status,
+    categoria: t.categoria,
+    prazo: t.prazo?.toISOString() || null,
+    clienteId: t.clienteId,
+    clienteNome: t.cliente?.nome || null,
+    clienteCor: t.cliente?.cor || null,
+  }));
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
@@ -53,8 +50,8 @@ export default async function TarefasPage({
             Tarefas
             <AjudaContextual
               titulo="Tarefas"
-              texto="Lista todas as tarefas de todos os clientes. Crie uma tarefa rápida pela Visão Geral ou aqui mesmo. Tarefas com data/horário aparecem também na Agenda."
-              exemplo="Ex.: filtre por 'Abertas' pra ver só o que ainda precisa ser feito."
+              texto="Todas as tarefas de todos os clientes, organizadas por status — arraste um cartão pra outra coluna pra mudar o status. Crie uma tarefa rápida pela Visão Geral ou aqui mesmo. Tarefas com data/horário aparecem também na Agenda."
+              exemplo="Ex.: arraste um cartão de 'A fazer' pra 'Em andamento' quando começar a trabalhar nele."
             />
           </p>
           <p className="text-sm text-muted">Todas as tarefas, de todos os clientes, num lugar só</p>
@@ -67,53 +64,9 @@ export default async function TarefasPage({
         </Link>
       </div>
 
-      <div className="mb-5 flex gap-2">
-        {ABAS.map((a) => (
-          <a
-            key={a.valor}
-            href={`/dashboard/tarefas?status=${a.valor}`}
-            className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-              filtro === a.valor
-                ? "bg-accent text-white"
-                : "border border-border bg-card/60 text-muted hover:text-text"
-            }`}
-          >
-            {a.label}
-          </a>
-        ))}
-      </div>
-
       <NovaTarefaGlobalForm clientes={clientes} />
 
-      {tarefas.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-border bg-card/40 py-16 text-center">
-          <CheckSquare size={28} className="mb-3 text-muted" />
-          <p className="text-sm text-muted">Nenhuma tarefa aqui.</p>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-2">
-          {tarefas.map((t, i) => (
-            <TarefaRow
-              key={t.id}
-              index={i}
-              clienteNome={t.cliente?.nome || null}
-              clienteCor={t.cliente?.cor || null}
-              tarefa={{
-                id: t.id,
-                titulo: t.titulo,
-                tipo: t.tipo,
-                status: t.status,
-                prazo: t.prazo?.toISOString() || null,
-                categoria: t.categoria,
-                descricao: t.descricao,
-                prioridade: t.prioridade,
-                clienteId: t.clienteId,
-                driveFolderId: t.driveFolderId,
-              }}
-            />
-          ))}
-        </div>
-      )}
+      <QuadroTarefas tarefas={tarefasQuadro} titulo="Tarefas" linkVerTudo={null} />
     </div>
   );
 }

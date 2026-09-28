@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { DatePicker } from "@/components/ui/DatePicker";
+import { PRESETS_CHECKLIST } from "@/lib/presetsChecklist";
 
 export default function NovaTarefaForm({ clienteId }: { clienteId: string }) {
   const router = useRouter();
@@ -11,6 +12,7 @@ export default function NovaTarefaForm({ clienteId }: { clienteId: string }) {
   const [titulo, setTitulo] = useState("");
   const [tipo, setTipo] = useState("tarefa");
   const [prazo, setPrazo] = useState("");
+  const [checklistItens, setChecklistItens] = useState<string[]>([]);
   const [enviando, setEnviando] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -20,7 +22,12 @@ export default function NovaTarefaForm({ clienteId }: { clienteId: string }) {
     const resposta = await fetch(`/api/clientes/${clienteId}/tarefas`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ titulo, tipo, prazo: prazo || null }),
+      body: JSON.stringify({
+        titulo,
+        tipo,
+        prazo: prazo || null,
+        checklistItens: checklistItens.length > 0 ? checklistItens : undefined,
+      }),
     });
 
     setEnviando(false);
@@ -28,6 +35,7 @@ export default function NovaTarefaForm({ clienteId }: { clienteId: string }) {
     if (resposta.ok) {
       setTitulo("");
       setPrazo("");
+      setChecklistItens([]);
       setAberto(false);
       router.refresh();
     }
@@ -71,6 +79,24 @@ export default function NovaTarefaForm({ clienteId }: { clienteId: string }) {
         >
           Salvar
         </button>
+      </div>
+
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        <span className="text-[11px] text-muted">Checklist:</span>
+        {PRESETS_CHECKLIST.map((preset) => (
+          <button
+            key={preset.nome}
+            type="button"
+            onClick={() => setChecklistItens((prev) => (prev.join() === preset.itens.join() ? [] : preset.itens))}
+            className={`rounded-full border px-2 py-0.5 text-[11px] transition-colors ${
+              checklistItens.join() === preset.itens.join()
+                ? "border-accent/40 bg-accent/10 text-accent"
+                : "border-border bg-base text-muted hover:text-text"
+            }`}
+          >
+            {preset.nome}
+          </button>
+        ))}
       </div>
     </form>
   );

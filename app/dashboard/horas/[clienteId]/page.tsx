@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { formatarDuracao } from "@/lib/formatarDuracao";
+import { AvatarPessoa } from "@/components/ui/AvatarPessoa";
+import { getUsuarioAtual, podeVerCliente } from "@/lib/permissoes";
 
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const NOMES_MESES = [
@@ -30,6 +32,14 @@ export default async function HorasClientePage({
   params: { clienteId: string };
   searchParams: { mes?: string };
 }) {
+  // Mesma trava de acesso da página do cliente — essa rota é acessada direto por
+  // URL (sem passar pelas abas), então precisa checar sozinha: visibilidade do
+  // cliente e, principalmente, a regra de "cada um só vê as próprias horas" que
+  // valem em /dashboard/horas (senão essa página vira um jeito de furar aquilo).
+  const usuarioAtual = await getUsuarioAtual();
+  if (!usuarioAtual) redirect("/login");
+  if (!(await podeVerCliente(usuarioAtual, params.clienteId))) notFound();
+
   const cliente = await prisma.cliente.findUnique({ where: { id: params.clienteId } });
   if (!cliente) notFound();
 
@@ -49,18 +59,31 @@ export default async function HorasClientePage({
   fimGrade.setDate(fimGrade.getDate() + (6 - fimMes.getDay()));
 
   const registros = await prisma.registroTempo.findMany({
-    where: { clienteId: cliente.id, inicio: { gte: inicioGrade, lte: fimGrade } },
-    include: { usuario: { select: { nome: true } } },
+    where: {
+      clienteId: cliente.id,
+      inicio: { gte: inicioGrade, lte: fimGrade },
+      // Só o dono vê a equipe inteira aqui também — mesma regra do /dashboard/horas.
+      ...(usuarioAtual.master ? {} : { usuarioId: usuarioAtual.id }),
+    },
+    include: { usuario: { select: { nome: true, fotoUrl: true } } },
     orderBy: { inicio: "asc" },
   });
 
-  const porDia: Record<string, { atividade: string; horas: number; usuarioNome: string | null }[]> = {};
+  const porDia: Record<
+    string,
+    { atividade: string; horas: number; usuarioNome: string | null; usuarioFotoUrl: string | null }[]
+  > = {};
   let totalMes = 0;
   registros.forEach((r) => {
     if (!r.fim) return;
     const horas = (r.fim.getTime() - r.inicio.getTime()) / 1000 / 60 / 60;
     const chave = chaveDiaEvento(r.inicio);
-    (porDia[chave] ||= []).push({ atividade: r.atividade, horas, usuarioNome: r.usuario?.nome || null });
+    (porDia[chave] ||= []).push({
+      atividade: r.atividade,
+      horas,
+      usuarioNome: r.usuario?.nome || null,
+      usuarioFotoUrl: r.usuario?.fotoUrl || null,
+    });
     if (r.inicio >= inicioMes && r.inicio <= fimMes) totalMes += horas;
   });
 
@@ -155,10 +178,12 @@ export default async function HorasClientePage({
                     </p>
                     <div className="flex flex-col gap-0.5">
                       {registrosDoDia.slice(0, 2).map((r, i) => (
-                        <p key={i} className="truncate text-[9px] text-muted">
-                          {r.atividade}
-                          {r.usuarioNome ? ` · ${r.usuarioNome}` : ""}
-                        </p>
+                        <div key={i} className="flex items-center gap-1 text-[9px] text-muted">
+                          {r.usuarioNome && (
+                            <AvatarPessoa nome={r.usuarioNome} fotoUrl={r.usuarioFotoUrl} tamanho={11} />
+                          )}
+                          <span className="truncate">{r.atividade}</span>
+                        </div>
                       ))}
                       {registrosDoDia.length > 2 && (
                         <p className="text-[9px] text-muted">+{registrosDoDia.length - 2}</p>

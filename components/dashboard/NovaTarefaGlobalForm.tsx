@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, X } from "lucide-react";
+import { Plus, X, ListChecks } from "lucide-react";
 import { CATEGORIAS_TAREFA } from "@/lib/categoriaTarefaVisual";
+import { PRESETS_CHECKLIST } from "@/lib/presetsChecklist";
 import { DatePicker } from "@/components/ui/DatePicker";
 
 type Cliente = { id: string; nome: string; cor: string | null };
@@ -29,6 +30,8 @@ export function NovaTarefaGlobalForm({
   const [prazo, setPrazo] = useState("");
   const [hora, setHora] = useState("");
   const [observacao, setObservacao] = useState("");
+  const [checklistItens, setChecklistItens] = useState<string[]>([]);
+  const [novoItemChecklist, setNovoItemChecklist] = useState("");
   const [enviando, setEnviando] = useState(false);
 
   function limpar() {
@@ -38,6 +41,14 @@ export function NovaTarefaGlobalForm({
     setPrazo("");
     setHora("");
     setObservacao("");
+    setChecklistItens([]);
+    setNovoItemChecklist("");
+  }
+
+  function adicionarItemChecklist() {
+    if (!novoItemChecklist.trim()) return;
+    setChecklistItens((prev) => [...prev, novoItemChecklist.trim()]);
+    setNovoItemChecklist("");
   }
 
   async function salvar(e: React.FormEvent) {
@@ -54,6 +65,7 @@ export function NovaTarefaGlobalForm({
         categoria: (categoriaFixa || categoria) || null,
         descricao: observacao || null,
         prazo: prazo ? `${prazo}T${hora || "00:00"}:00-03:00` : null,
+        checklistItens: checklistItens.length > 0 ? checklistItens : undefined,
       }),
     });
 
@@ -139,6 +151,72 @@ export function NovaTarefaGlobalForm({
         placeholder="Observação (opcional)"
         className="mb-3 w-full rounded-xl border border-border bg-base/60 px-3.5 py-2.5 text-sm text-text outline-none placeholder:text-muted/50 focus:border-accent/50"
       />
+
+      <div className="mb-3 rounded-xl border border-border/60 bg-base/30 p-3">
+        <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted">
+          <ListChecks size={12} /> Checklist inicial (opcional)
+        </p>
+        <div className="mb-2 flex flex-wrap gap-1.5">
+          {PRESETS_CHECKLIST.map((preset) => (
+            <button
+              key={preset.nome}
+              type="button"
+              onClick={() => setChecklistItens(preset.itens)}
+              className="rounded-full border border-border bg-card/60 px-2.5 py-1 text-[11px] text-muted hover:border-accent/40 hover:text-text"
+            >
+              {preset.nome}
+            </button>
+          ))}
+          {checklistItens.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setChecklistItens([])}
+              className="rounded-full px-2.5 py-1 text-[11px] text-muted hover:text-red-400"
+            >
+              Limpar
+            </button>
+          )}
+        </div>
+
+        {checklistItens.length > 0 && (
+          <div className="mb-2 flex flex-col gap-1">
+            {checklistItens.map((item, i) => (
+              <div key={i} className="flex items-center gap-2 rounded-lg bg-card/40 px-2.5 py-1.5">
+                <span className="flex-1 truncate text-xs text-text">{item}</span>
+                <button
+                  type="button"
+                  onClick={() => setChecklistItens((prev) => prev.filter((_, idx) => idx !== i))}
+                  className="shrink-0 text-muted hover:text-red-400"
+                >
+                  <X size={11} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-center gap-1.5">
+          <input
+            value={novoItemChecklist}
+            onChange={(e) => setNovoItemChecklist(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                adicionarItemChecklist();
+              }
+            }}
+            placeholder="Ou digite um passo e adicione"
+            className="h-8 w-full min-w-0 flex-1 rounded-lg border border-border bg-card/60 px-2.5 text-xs text-text outline-none placeholder:text-muted/50 focus:border-accent/50"
+          />
+          <button
+            type="button"
+            onClick={adicionarItemChecklist}
+            className="flex h-8 shrink-0 items-center gap-1 rounded-lg border border-border px-2 text-[11px] text-muted hover:border-accent/40 hover:text-text"
+          >
+            <Plus size={11} /> Adicionar
+          </button>
+        </div>
+      </div>
 
       <button
         type="submit"

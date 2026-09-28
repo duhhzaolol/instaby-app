@@ -43,6 +43,19 @@ export async function POST(request: NextRequest) {
     },
   });
 
+  // Checklist inicial (opcional) — vem de um preset escolhido na hora de criar
+  // (ex: "Básico") ou digitado na mão, item por item (redesign v144, Parte 3).
+  if (Array.isArray(body.checklistItens) && body.checklistItens.length > 0) {
+    const itensValidos: string[] = body.checklistItens
+      .filter((i: unknown): i is string => typeof i === "string" && i.trim().length > 0)
+      .map((i: string) => i.trim());
+    if (itensValidos.length > 0) {
+      await prisma.checklistItemTarefa.createMany({
+        data: itensValidos.map((titulo, ordem) => ({ tarefaId: tarefa.id, titulo, ordem })),
+      });
+    }
+  }
+
   // Sob demanda: só tenta criar a pasta da semana se for categoria de mídia com
   // prazo e cliente definidos. Best-effort — se o Drive falhar, a tarefa já foi
   // criada normalmente, só fica sem pasta vinculada (tenta de novo numa próxima

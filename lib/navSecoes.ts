@@ -1,7 +1,10 @@
-// Listas de abas de Financeiro e Comercial — usadas tanto pelo menu lateral
-// (pra calcular o link padrão de cada item, já que os dois viraram "1 item só
-// com abas por dentro" no redesign v144) quanto pelo componente de abas em si
-// (components/layout/AbasSecao.tsx), pra não duplicar a lista em dois lugares.
+// Listas de abas de Financeiro e Comercial — no redesign v144 (Parte 1) os
+// dois viraram "1 item só com abas por dentro", com a navegação entre abas
+// numa barra em cima da página (components/layout/AbasSecao.tsx); na Parte 3
+// essa barra saiu e virou o submenu expansível do próprio item no menu
+// lateral (components/layout/Sidebar.tsx), que agora é quem usa essas
+// listas — mantidas aqui, sem duplicar, porque as rotas de cada aba
+// continuam as mesmas de sempre.
 import type { ElementType } from "react";
 import { Trophy, FileText, FileSignature, Package, Package2 } from "lucide-react";
 import type { Permissoes } from "@/components/layout/Sidebar";
@@ -25,9 +28,11 @@ export const ABAS_COMERCIAL: { label: string; href: string; icon: ElementType; f
   { label: "Pacotes", href: "/dashboard/pacotes", icon: Package2, flag: "verCatalogo" },
 ];
 
-// Primeiro link que essa pessoa realmente pode abrir — usado pelo item único
-// "Comercial" do menu lateral (evita mandar pra uma tela que ela não tem
-// permissão de ver e cair num redirect).
+// Primeiro link que essa pessoa realmente pode abrir dentro de Comercial. Sem
+// uso desde que o item "Comercial" do menu lateral virou um grupo expansível
+// (Parte 3) — cada sub-item já é o link de verdade, não precisa mais de um
+// link padrão pro item pai. Mantida aqui (não usada em lugar nenhum) por via
+// das dúvidas — não faz mal nenhum ficar parada.
 export function primeiroLinkComercial(pode: Permissoes): string | null {
   const visivel = ABAS_COMERCIAL.find((a) => pode[a.flag]);
   return visivel ? visivel.href : null;

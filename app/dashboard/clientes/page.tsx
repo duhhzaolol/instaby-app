@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Plus, UserCheck, Wallet, UserPlus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { ToggleOcultarValores } from "@/components/ui/ToggleOcultarValores";
@@ -8,7 +9,7 @@ import { StatTile } from "@/components/ui/StatTile";
 import { ClienteCard, ClienteCardData } from "@/components/dashboard/ClienteCard";
 import { ClientesAgrupados } from "@/components/dashboard/ClientesAgrupados";
 import { AjudaContextual } from "@/components/ui/AjudaContextual";
-import { getUsuarioAtual, clienteIdsPermitidos } from "@/lib/permissoes";
+import { getUsuarioAtual, clienteIdsPermitidos, permissoesDe } from "@/lib/permissoes";
 
 export default async function ClientesPage({
   searchParams,
@@ -17,8 +18,18 @@ export default async function ClientesPage({
 }) {
   const filtro = searchParams.status || "todos";
 
+  // Sem isso, um cookie de sessão ainda válido de alguém desativado caía aqui com
+  // usuarioAtual=null, e idsPermitidos virava null (o mesmo valor que master/
+  // todosClientes usa pra "vê todos os clientes") — mostraria a lista inteira, sem
+  // filtro nenhum (auditoria v147, mesma proteção do layout raiz e da Agenda).
   const usuarioAtual = await getUsuarioAtual();
-  const idsPermitidos = usuarioAtual ? await clienteIdsPermitidos(usuarioAtual) : null;
+  if (!usuarioAtual) redirect("/login");
+
+  const idsPermitidos = await clienteIdsPermitidos(usuarioAtual);
+  // Quem não tem verFinanceiro (ex: Editor) não pode ver R$ em lugar nenhum — nem
+  // aqui na listagem. Zera na origem (não só esconde no visual) pra nunca mandar o
+  // valor pro navegador de quem não pode ver.
+  const verFinanceiro = permissoesDe(usuarioAtual).verFinanceiro;
 
   const clientes = await prisma.cliente.findMany({
     where: {
@@ -50,8 +61,8 @@ export default async function ClientesPage({
       logoUrl: c.logoUrl,
       cor: c.cor,
       status: c.status,
-      mensalidade,
-      totalRecebido,
+      mensalidade: verFinanceiro ? mensalidade : 0,
+      totalRecebido: verFinanceiro ? totalRecebido : 0,
     };
   });
 
@@ -93,19 +104,21 @@ export default async function ClientesPage({
         </div>
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-2 sm:grid-cols-3">
+      <div className={`mb-6 grid grid-cols-1 gap-2 ${verFinanceiro ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
         <StatTile
           icone={<UserCheck size={12} style={{ color: "#22C55E" }} />}
           label="Ativos"
           valor={contagemPorStatus.ativo || 0}
           index={0}
         />
-        <StatTile
-          icone={<Wallet size={12} style={{ color: "#E63946" }} />}
-          label="Mensalidade recorrente"
-          valor={<ValorOcultavelTexto>R$ {mensalidadeRecorrente.toLocaleString("pt-BR")}</ValorOcultavelTexto>}
-          index={1}
-        />
+        {verFinanceiro && (
+          <StatTile
+            icone={<Wallet size={12} style={{ color: "#E63946" }} />}
+            label="Mensalidade recorrente"
+            valor={<ValorOcultavelTexto>R$ {mensalidadeRecorrente.toLocaleString("pt-BR")}</ValorOcultavelTexto>}
+            index={1}
+          />
+        )}
         <StatTile
           icone={<UserPlus size={12} style={{ color: "#F59E0B" }} />}
           label="Leads em aberto"

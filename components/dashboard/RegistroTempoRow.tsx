@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { AvatarPessoa } from "@/components/ui/AvatarPessoa";
 import { formatarDuracao } from "@/lib/formatarDuracao";
 
 export type RegistroTempoData = {
@@ -16,6 +17,7 @@ export type RegistroTempoData = {
   clienteNome?: string | null;
   clienteCor?: string | null;
   usuarioNome?: string | null;
+  usuarioFotoUrl?: string | null;
 };
 
 type Cliente = { id: string; nome: string };
@@ -161,10 +163,10 @@ export function RegistroTempoRow({
           {formatarHora(registro.inicio)}
           {registro.fim ? ` – ${formatarHora(registro.fim)}` : " – em andamento"}
           {duracao !== null && ` · ${formatarDuracao(duracao)}`}
-          {registro.usuarioNome && ` · ${registro.usuarioNome}`}
         </p>
       </div>
       <div className="flex items-center gap-3">
+        {registro.usuarioNome && <AvatarPessoa nome={registro.usuarioNome} fotoUrl={registro.usuarioFotoUrl} tamanho={22} />}
         <button onClick={() => setEditando(true)} className="text-muted hover:text-text">
           <Pencil size={13} />
         </button>

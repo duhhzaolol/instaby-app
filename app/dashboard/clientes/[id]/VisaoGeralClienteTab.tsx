@@ -35,6 +35,7 @@ function compactarMoeda(v: number): string {
 }
 
 export default function VisaoGeralClienteTab({
+  podeVerFinanceiro,
   mensalidade,
   proximaCobranca,
   contratoVigente,
@@ -49,6 +50,11 @@ export default function VisaoGeralClienteTab({
   timeline,
   faturamentoPorMes,
 }: {
+  // R$ — auditoria v147: essa aba mistura financeiro (mensalidade, resultado do
+  // mês, faturamento) com coisa que não é (horas, relatório, próxima atividade,
+  // linha do tempo), então em vez de esconder a aba inteira (que já tem sua
+  // própria trava em page.tsx), só os pedaços com valor ficam atrás dessa flag.
+  podeVerFinanceiro: boolean;
   mensalidade: number;
   proximaCobranca: { valor: number; vencimento: string | null } | null;
   contratoVigente: boolean;
@@ -69,26 +75,30 @@ export default function VisaoGeralClienteTab({
 
   return (
     <div>
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile
-          icone={<Wallet size={12} style={{ color: "#E63946" }} />}
-          label="Mensalidade"
-          valor={<ValorSensivel oculto={oculto}>R$ {mensalidade.toFixed(0)}</ValorSensivel>}
-          index={0}
-        />
-        <StatTile
-          icone={<CalendarClock size={12} style={{ color: "#F59E0B" }} />}
-          label="Próxima cobrança"
-          valor={
-            proximaCobranca ? (
-              <ValorSensivel oculto={oculto}>R$ {proximaCobranca.valor.toFixed(0)}</ValorSensivel>
-            ) : (
-              "Nada pendente"
-            )
-          }
-          sub={proximaCobranca ? fmtData(proximaCobranca.vencimento) : undefined}
-          index={1}
-        />
+      <div className={`mb-6 grid grid-cols-2 gap-3 ${podeVerFinanceiro ? "sm:grid-cols-4" : "sm:grid-cols-2"}`}>
+        {podeVerFinanceiro && (
+          <>
+            <StatTile
+              icone={<Wallet size={12} style={{ color: "#E63946" }} />}
+              label="Mensalidade"
+              valor={<ValorSensivel oculto={oculto}>R$ {mensalidade.toFixed(0)}</ValorSensivel>}
+              index={0}
+            />
+            <StatTile
+              icone={<CalendarClock size={12} style={{ color: "#F59E0B" }} />}
+              label="Próxima cobrança"
+              valor={
+                proximaCobranca ? (
+                  <ValorSensivel oculto={oculto}>R$ {proximaCobranca.valor.toFixed(0)}</ValorSensivel>
+                ) : (
+                  "Nada pendente"
+                )
+              }
+              sub={proximaCobranca ? fmtData(proximaCobranca.vencimento) : undefined}
+              index={1}
+            />
+          </>
+        )}
         <StatTile
           icone={<FileSignature size={12} style={{ color: contratoVigente ? "#22C55E" : "#9CA3AF" }} />}
           label="Contrato"
@@ -111,59 +121,63 @@ export default function VisaoGeralClienteTab({
         />
       </div>
 
-      <AreaTrendChart
-        titulo="Faturamento — últimos 6 meses"
-        dados={faturamentoPorMes}
-        cor="#E63946"
-        oculto={oculto}
-        formatador={compactarMoeda}
-        mensagemVazia="Ainda sem cobranças pagas suficientes pra montar o gráfico."
-      />
+      {podeVerFinanceiro && (
+        <>
+          <AreaTrendChart
+            titulo="Faturamento — últimos 6 meses"
+            dados={faturamentoPorMes}
+            cor="#E63946"
+            oculto={oculto}
+            formatador={compactarMoeda}
+            mensagemVazia="Ainda sem cobranças pagas suficientes pra montar o gráfico."
+          />
 
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.15 }}
-        className="mb-6 rounded-xl border border-accent/20 bg-accent/5 p-4"
-      >
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-3 border-b border-accent/10 pb-4">
-          <p className="flex items-center gap-1.5 text-sm font-medium text-text">
-            <TrendingUp size={14} className="text-accent" /> Resultado do mês
-          </p>
-          <div className="text-right">
-            <p className="text-[11px] text-muted">Rentabilidade</p>
-            <p className={`text-2xl font-semibold leading-tight ${rentabilidade >= 0 ? "text-accent" : "text-red-400"}`}>
-              <ValorSensivel oculto={oculto}>R$ {rentabilidade.toFixed(0)}</ValorSensivel>
-            </p>
-          </div>
-        </div>
-        <div className="grid grid-cols-3 gap-3 text-center">
-          <div>
-            <p className="text-xs text-muted">Receita</p>
-            <p className="text-base font-medium text-emerald-400">
-              <ValorSensivel oculto={oculto}>R$ {receitaMes.toFixed(0)}</ValorSensivel>
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-muted">Despesas diretas</p>
-            <p className="text-base font-medium text-red-400">
-              <ValorSensivel oculto={oculto}>R$ {despesasMes.toFixed(0)}</ValorSensivel>
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-muted">Custo das horas</p>
-            <p className="text-base font-medium text-red-400">
-              <ValorSensivel oculto={oculto}>R$ {custoHoras.toFixed(0)}</ValorSensivel>
-            </p>
-          </div>
-        </div>
-        {custoHoraPadrao === 0 && (
-          <p className="mt-2 text-[11px] text-amber-400">
-            Custo por hora não configurado — Configurações → "Custo por hora". Sem isso, o custo das horas fica
-            zerado e a rentabilidade não desconta o seu tempo trabalhado.
-          </p>
-        )}
-      </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.15 }}
+            className="mb-6 rounded-xl border border-accent/20 bg-accent/5 p-4"
+          >
+            <div className="mb-4 flex flex-wrap items-end justify-between gap-3 border-b border-accent/10 pb-4">
+              <p className="flex items-center gap-1.5 text-sm font-medium text-text">
+                <TrendingUp size={14} className="text-accent" /> Resultado do mês
+              </p>
+              <div className="text-right">
+                <p className="text-[11px] text-muted">Rentabilidade</p>
+                <p className={`text-2xl font-semibold leading-tight ${rentabilidade >= 0 ? "text-accent" : "text-red-400"}`}>
+                  <ValorSensivel oculto={oculto}>R$ {rentabilidade.toFixed(0)}</ValorSensivel>
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div>
+                <p className="text-xs text-muted">Receita</p>
+                <p className="text-base font-medium text-emerald-400">
+                  <ValorSensivel oculto={oculto}>R$ {receitaMes.toFixed(0)}</ValorSensivel>
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted">Despesas diretas</p>
+                <p className="text-base font-medium text-red-400">
+                  <ValorSensivel oculto={oculto}>R$ {despesasMes.toFixed(0)}</ValorSensivel>
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted">Custo das horas</p>
+                <p className="text-base font-medium text-red-400">
+                  <ValorSensivel oculto={oculto}>R$ {custoHoras.toFixed(0)}</ValorSensivel>
+                </p>
+              </div>
+            </div>
+            {custoHoraPadrao === 0 && (
+              <p className="mt-2 text-[11px] text-amber-400">
+                Custo por hora não configurado — Configurações → "Custo por hora". Sem isso, o custo das horas fica
+                zerado e a rentabilidade não desconta o seu tempo trabalhado.
+              </p>
+            )}
+          </motion.div>
+        </>
+      )}
 
       <motion.div
         initial={{ opacity: 0, y: 8 }}

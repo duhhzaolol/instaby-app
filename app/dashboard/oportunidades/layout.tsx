@@ -1,16 +1,11 @@
-import { exigirPermissao, permissoesDe } from "@/lib/permissoes";
-import { AbasSecao } from "@/components/layout/AbasSecao";
-import { abasComercialVisiveis } from "@/lib/navSecoes";
+import { exigirPermissao } from "@/lib/permissoes";
 
-// Comercial virou 1 item só no menu lateral, com abas por dentro (redesign
-// v144, Parte 1) — cada uma dessas 5 telas continua no mesmo endereço de
-// sempre, só ganhou essa barra em cima ligando as outras 4.
+// Comercial virou 1 item só no menu lateral (redesign v144, Parte 1) — a
+// navegação entre as 5 telas morava numa barra em cima da página (AbasSecao)
+// e, na Parte 3, virou o submenu expansível do próprio item "Comercial" no
+// menu lateral (components/layout/Sidebar.tsx). Cada uma dessas 5 telas
+// continua no mesmo endereço de sempre — essa layout só garante a permissão.
 export default async function OportunidadesLayout({ children }: { children: React.ReactNode }) {
-  const usuario = await exigirPermissao("verOportunidades");
-  return (
-    <div>
-      <AbasSecao abas={abasComercialVisiveis(permissoesDe(usuario))} />
-      {children}
-    </div>
-  );
+  await exigirPermissao("verOportunidades");
+  return <div>{children}</div>;
 }

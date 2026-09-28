@@ -22,6 +22,79 @@ export type VersaoNovidades = {
 
 export const NOVIDADES: VersaoNovidades[] = [
   {
+    versao: 147,
+    resumo:
+      "Parte 3 do redesign do painel: configurações pessoais, quadro Kanban pro editor e tráfego pago, e vários ajustes de acesso e visual.",
+    itens: [
+      {
+        tipo: "adicionado",
+        texto:
+          "Configurações pessoais, pra qualquer pessoa da equipe (não só quem gerencia a equipe): foto de perfil, nome, e-mail, senha e links de contato (Discord, WhatsApp, Instagram etc.) — acessa clicando no seu nome no menu lateral.",
+      },
+      {
+        tipo: "melhorado",
+        texto:
+          "Início do editor virou um quadro (A fazer / Fazendo / Pronto), no mesmo estilo do quadro de tarefas — com acesso rápido à pasta do Drive de cada tarefa direto no card, e sub-passos (checklist) que dá pra marcar conforme avança.",
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          'Ao criar uma tarefa, dá pra escolher um checklist pronto (ex.: "Básico" — corte sem som, remover ruído, música, legenda, logo) com um clique, ou digitar os próprios passos.',
+      },
+      {
+        tipo: "melhorado",
+        texto: "Agenda do editor mostra só os itens dele, com o prazo em vermelho quando está apertado ou atrasado.",
+      },
+      {
+        tipo: "adicionado",
+        texto: 'Editor ganhou acesso à aba "Links" dentro da página do cliente.',
+      },
+      {
+        tipo: "adicionado",
+        texto: "Tráfego pago ganhou um Início com quadro pessoal de tarefas e uma Agenda filtrada, no mesmo estilo do editor.",
+      },
+      {
+        tipo: "melhorado",
+        texto:
+          "Página de Tarefas virou o mesmo quadro Kanban (em vez das abas Abertas/Concluídas/Todas) — mais fácil de ver tudo de uma vez.",
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          "Horas e Agenda agora mostram a foto (ou as iniciais) de quem fez cada coisa, em vez de só o nome escrito — mais fácil de reconhecer de relance.",
+      },
+      {
+        tipo: "adicionado",
+        texto: "Em Horas, o dono ganhou um seletor pra ver as horas lançadas por uma pessoa específica da equipe.",
+      },
+      {
+        tipo: "corrigido",
+        texto:
+          "Cada pessoa (fora o dono) agora só vê as próprias horas e os próprios itens na Agenda — antes dava pra ver de todo mundo em algumas telas, mesmo sem ser o dono.",
+      },
+      {
+        tipo: "corrigido",
+        texto:
+          "Auditoria completa de valores em R$: conferido o app inteiro pra garantir que ninguém sem a permissão de ver financeiro consegue ver nenhum valor — corrigidos 4 pontos que ainda vazavam (lista de clientes, o topo da página do cliente, a aba \"Visão Geral\" do cliente e a aba \"Serviços\" do cliente).",
+      },
+      {
+        tipo: "corrigido",
+        texto:
+          "Corrigida uma falha de segurança: quem é desativado em Configurações → Equipe podia continuar acessando o painel normalmente por até 30 dias (enquanto a sessão antiga não expirasse) e, num ponto específico (a Agenda), até ver os dados de todo mundo em vez dos próprios. Agora é desconectado de verdade assim que a sessão dele é conferida de novo.",
+      },
+      {
+        tipo: "melhorado",
+        texto:
+          'Início do dono: "Equipe agora" e "Precisa da sua atenção" ficaram compactos, lado a lado, do tamanho dos cards de cima — antes eram dois blocos enormes antes do gráfico de faturamento.',
+      },
+      {
+        tipo: "melhorado",
+        texto:
+          'Financeiro e Comercial: a barra de abas no topo da página virou um menu que abre dentro do próprio item do menu lateral — clica em "Financeiro" ou "Comercial" pra ver as opções, sem sair do lugar.',
+      },
+    ],
+  },
+  {
     versao: 146,
     resumo: "Corrigido um erro que impedia o site de atualizar com a Parte 2 do redesign.",
     itens: [

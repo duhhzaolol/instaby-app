@@ -1,3 +1,183 @@
+# Instaby App — v147
+
+Parte 3 do redesign do painel — entregue de uma vez, em cima de um lote
+grande de feedback em áudio transcrito, sem estrutura, com autorização
+explícita dele pra tocar tudo sem parar pra perguntar nem esperar aprovação
+da Parte 2 antes de começar (ele que liberou desta vez). Cobre boa parte do
+que tava planejado como Parte 3 (Tarefas) e pedaços da Parte 4
+(Configurações, Horas, Financeiro, Comercial) — o que ficou de fora está
+listado no fim desta seção.
+
+## Configurações pessoais (novo) — pra qualquer pessoa da equipe
+
+- Tela nova em `/dashboard/perfil` (`app/dashboard/perfil/`), fora do
+  bloqueio de `gerenciarConfiguracoes`/`gerenciarEquipe` que trava
+  `/dashboard/configuracoes/*` — de propósito, porque isso aqui é
+  auto-serviço de cada um sobre os PRÓPRIOS dados, não gestão de equipe.
+  Acessa clicando no próprio nome no rodapé do menu lateral.
+- Dá pra trocar: foto (upload via `UploadImagem`, pasta "avatares"), nome,
+  e-mail, senha (pede a senha atual) e uma lista de links de contato
+  (Discord, WhatsApp, Instagram, e-mail, outro).
+- **Detalhe técnico:** troca de e-mail quebraria a sessão sem um ajuste — a
+  sessão do NextAuth é um JWT que não sabia se atualizar sozinho, e
+  `getUsuarioAtual()` busca o usuário pelo e-mail da sessão. Adicionado um
+  `callbacks.jwt` em `lib/auth.ts` (que não tinha nenhum callback antes) pra
+  aceitar `session.update()`; o formulário chama isso depois de salvar, e no
+  caso específico de troca de e-mail força um logout (mais seguro que
+  confiar só na atualização do token). Schema ganhou `Usuario.fotoUrl` e o
+  modelo novo `LinkUsuario` (espelha `LinkCliente`).
+
+## Editor e Tráfego pago: Início virou quadro Kanban pessoal
+
+- Substituído o "Fazendo agora / Minha fila / Disponíveis" (3 seções
+  separadas) por um quadro só (A fazer / Fazendo / Pronto) —
+  `components/dashboard/QuadroTarefasPessoal.tsx`, reaproveitando as cores e
+  o limite de 8 cards em "Pronto" (`COLUNAS`/`LIMITE_FEITO`) exportados do
+  quadro de Tarefas já existente (`QuadroTarefas.tsx`), porque a regra dele
+  foi clara: **todo Kanban do app usa o mesmo estilo, sempre.**
+- Cada card tem acesso rápido à pasta do Drive da tarefa (quando ela tem uma
+  vinculada) e um botão de ação sensível ao contexto: "Pegar pra mim" (tarefa
+  livre), "Iniciar" (assume + muda status + começa um registro de horas sem
+  hora de fim) ou "Marcar feito" + sub-passos expansíveis. Arrastar um card
+  de A fazer pra Fazendo dispara o mesmo "Iniciar"; arrastar de qualquer
+  outro lugar pra Fazendo só muda o status (não reabre um cronômetro à toa).
+- Tráfego pago ganhou a mesma seção "Suas tarefas" no Início, e a Agenda dele
+  também passou a mostrar só os itens dele (ver seção de Horas/Agenda
+  abaixo — mesma regra pro editor e pro tráfego).
+- Checklist com presets ao criar uma tarefa (`lib/presetsChecklist.ts`):
+  "Básico" e "Virais / edições criativas", ou digitar os próprios passos.
+  Usa a tabela `ChecklistItemTarefa` que já existia (sub-passos de UMA
+  tarefa) — diferente do `TemplateTarefas` (que cria VÁRIAS tarefas de uma
+  vez), então não mexeu nisso.
+- Editor ganhou acesso à aba "Links" dentro da página do cliente (antes só
+  quem tinha acesso completo ao cliente via).
+- Página de Tarefas (`/dashboard/tarefas`) virou o mesmo quadro Kanban, no
+  lugar das abas Abertas/Concluídas/Todas — "Nova tarefa" continua separado.
+
+## Horas e Agenda: avatar de quem fez, filtro por funcionário, e privacidade
+
+- `components/ui/AvatarPessoa.tsx` (novo): foto se a pessoa tiver colocado
+  uma em Configurações pessoais, senão iniciais numa cor derivada do nome —
+  cor própria e estável por PESSOA, diferente do círculo de iniciais por
+  PAPEL que já existia na Sidebar/"Equipe agora" (esse não mudou). Usado em
+  Horas (lista do dia, calendário, calendário por cliente) e Agenda (grade
+  mensal + detalhe do dia).
+- Horas ganhou um seletor "ver por funcionário" (só o dono vê essa opção).
+- **Mudança de regra, pra Horas E Agenda:** `usuario.master` virou o único
+  critério de "vê tudo" — todo mundo que não é dono (editor, tráfego, e
+  qualquer papel futuro) só vê os PRÓPRIOS itens, no lugar da regra antiga
+  (que variava por tela). Aplicado também em `/dashboard/horas/[clienteId]`
+  — o calendário de horas por cliente, rota separada acessada direto por URL
+  a partir da página do cliente, que **não tinha nenhuma trava de permissão
+  antes** (nem de cliente, nem de "só vê o próprio"): virava um jeito de
+  furar a regra nova só de saber o endereço. Corrigido com as mesmas travas
+  que a página do cliente já usa (`getUsuarioAtual` + `podeVerCliente`) mais
+  o filtro pessoal.
+
+## Auditoria: zero R$ visível sem a permissão `verFinanceiro`
+
+- Conferido o app inteiro atrás de valor em R$ aparecendo sem essa
+  permissão — em duas passadas (uma própria, e uma segunda revisão
+  independente por cima do que já tinha sido corrigido, que pegou mais 2
+  pontos que a primeira passada tinha deixado passar). Achados e corrigidos
+  4 pontos que vazavam mesmo sem `verFinanceiro`:
+  - Lista de Clientes: StatTile "Mensalidade recorrente" + mensalidade/total
+    recebido em cada card — agora zerados na consulta, não só escondidos na
+    tela.
+  - Chip de mensalidade no topo da página de um cliente — aparecia pra
+    qualquer um que pudesse abrir a página, não só quem tinha acesso
+    financeiro.
+  - **Aba "Visão Geral" do cliente** (`VisaoGeralClienteTab.tsx`):
+    mensalidade, próxima cobrança, receita/despesas/custo-de-horas/
+    rentabilidade do mês e o gráfico de faturamento de 6 meses apareciam
+    inteiros pra qualquer um com `acessoClienteCompleto`, sem checar
+    `verFinanceiro` — o botão de "ocultar valores" só borra visualmente, não
+    é uma permissão, então não contava. O texto da linha do tempo também
+    embutia o valor de cada pagamento recebido direto na frase. Corrigido
+    escondendo só os pedaços com R$ (o resto da aba — horas do mês,
+    relatório, próxima atividade — continua liberado); o valor só entra na
+    linha do tempo pra quem tem a permissão.
+  - **Aba "Serviços" do cliente** (`ServicosContratadosTab.tsx`): mostrava
+    (e deixava editar) o valor de cada serviço contratado, desconto,
+    acréscimo, mensalidade final e valor de renovação, atrás só de
+    `acessoClienteCompleto`. Essa aba é 100% preço/contrato, então em vez de
+    redigir número por número dentro de um editor com bastante estado,
+    ela virou mais uma aba com trava própria (`verFinanceiro`), no mesmo
+    grupo de Financeiro/Orçamentos/Contratos — não a trava genérica
+    `acessoClienteCompleto` de antes.
+
+## Corrigido: sessão de quem é desativado continuava valendo (achado na revisão)
+
+- A segunda revisão (independente, sobre o que já tinha sido feito) achou um
+  problema mais sério: o `middleware.ts` só confere se existe um cookie de
+  sessão válido — não se `usuario.ativo` ainda é `true` no banco (isso exige
+  ir no banco, e o middleware roda antes disso, por design). A sessão dura
+  até 30 dias (`lib/auth.ts`). Então desativar alguém em Configurações →
+  Equipe não derrubava a sessão dele: pelo tempo que sobrasse dela, todo
+  `getUsuarioAtual()` continuava rodando normal até achar `ativo: false` e
+  devolver `null` — e o `app/dashboard/layout.tsx` (a casca que envolve toda
+  página do painel) tratava esse `null` caindo pra um objeto de permissão de
+  **dono, com tudo liberado**, só pra Sidebar não quebrar sem usuário. A
+  `/dashboard/agenda` ia além: com `usuarioAtual=null`, o filtro "só vejo o
+  que é meu" virava um filtro vazio (SEM filtro nenhum) em vez de "nada" —
+  mostraria a agenda inteira da agência, incluindo horas e tarefas de todo
+  mundo.
+- Corrigido nos 3 pontos: `app/dashboard/layout.tsx` agora manda pro login
+  se `usuarioAtual` vier nulo (em vez de fingir ser dono) — como essa layout
+  envolve toda página do painel, isso sozinho já fecha a brecha pra
+  qualquer página que ainda não tivesse essa trava própria; `app/dashboard/
+  agenda/page.tsx` e `app/dashboard/clientes/page.tsx` ganharam a mesma
+  trava, pelo mesmo motivo que `ClienteDetalhePage`/`HorasClientePage` já
+  tinham (defesa em camadas, não só confiar na layout de cima).
+- **Não mexido, de propósito, por ser uma mudança maior de arquitetura, não
+  um ajuste pontual:** o `middleware.ts` continua sem checar `ativo` (só o
+  cookie), e o NextAuth (sessão em JWT) não tem como revogar um token já
+  emitido antes dos 30 dias — então desativar alguém ainda não desconecta
+  ele na hora, só garante que, na próxima vez que uma página realmente
+  checar o banco (o que agora é toda página do painel, graças à trava na
+  layout), ele cai fora. Se quiser desconexão imediata de verdade, dá pra
+  conversar sobre isso numa próxima parte (normalmente envolve trocar pra
+  sessão de banco em vez de JWT, ou guardar um "carimbo de desativação" pra
+  invalidar tokens antigos).
+
+## Início do dono e navegação: ajustes visuais
+
+- "Equipe agora" e "Precisa da sua atenção" — antes dois blocos de largura
+  cheia, um embaixo do outro, bem maiores que os 4 cards de KPI ali em cima —
+  viraram um do lado do outro, do tamanho de 2 cards cada, formando uma
+  segunda fileira. Se só um dos dois tiver conteúdo, ele ocupa a fileira
+  inteira sozinho.
+- Financeiro e Comercial: a barra de abas que ficava em cima da página
+  (`components/layout/AbasSecao.tsx`, removido — sem mais uso) virou um
+  submenu que abre dentro do próprio item "Financeiro"/"Comercial" no menu
+  lateral — clica no item pra abrir/fechar, clica numa sub-opção pra
+  navegar. Abre sozinho ao entrar numa tela da seção; depois disso, quem
+  manda é o clique da pessoa.
+
+## Ficou de fora desta entrega (de propósito)
+
+- **Indefinido, ele mesmo sinalizou que ia voltar a decidir depois:** um
+  jeito de acompanhar "saldo" de verba de anúncio no Tráfego pago, o desenho
+  exato da métrica de tendência mês a mês do Tráfego Pago, e um redesign da
+  lista de Clientes.
+- **Painel lateral de detalhe da tarefa** (da Parte 3 original) não entrou —
+  o que entrou foi o quadro pessoal + checklist dentro do card, que cobre
+  boa parte da mesma necessidade sem o painel em si.
+- **Gap de permissão identificado, não mexido:**
+  `app/api/clientes/[id]/tarefas/route.ts` (rota de criar tarefa dentro de
+  um cliente, mexida nesta entrega pra aceitar o checklist) não tem nenhuma
+  checagem de autenticação/permissão — pré-existente, fora do escopo do que
+  foi pedido, registrando pra decidir depois.
+- **De propósito, não mexido:** o feed `.ics` da Agenda (`/api/agenda.ics`)
+  continua sem filtro nenhum (mostra tudo pra quem tiver o link, inclusive
+  valor) — instrução explícita de não mexer nisso por enquanto.
+- **Detalhe técnico pra registro:** `tsc --noEmit` sem nenhum erro novo —
+  só o barulho de sempre do client do Prisma deste sandbox (nunca terminou
+  de gerar de verdade porque o download do motor dele é bloqueado aqui, e
+  isso faz todo retorno de consulta virar `any`). Schema ganhou
+  `Usuario.fotoUrl` e `LinkUsuario` (roda `prisma db push
+  --accept-data-loss` no build, igual sempre).
+
 # Instaby App — v146
 
 Correção de um erro de build que a v145 subiu sem querer (o deploy dela

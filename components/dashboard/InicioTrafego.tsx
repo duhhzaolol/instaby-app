@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { DollarSign, Target, Percent, Trophy, AlertTriangle, FileBarChart, Palette, Gauge } from "lucide-react";
+import { DollarSign, Target, Percent, Trophy, AlertTriangle, FileBarChart, Palette, Gauge, ListTodo } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { StatTile } from "@/components/ui/StatTile";
 import { visualDaCategoriaTarefa } from "@/lib/categoriaTarefaVisual";
+import QuadroTarefasPessoal, { type TarefaPessoal } from "@/components/dashboard/QuadroTarefasPessoal";
 
 function compactar(v: number): string {
   const abs = Math.abs(v);
@@ -73,17 +74,21 @@ function BarraRitmo({ campanha }: { campanha: CampanhaRitmo }) {
 }
 
 export default function InicioTrafego({
+  usuarioId,
   totais,
   campanhas,
   alertas,
   relatorios,
   criativosPedidos,
+  tarefasQuadro,
 }: {
+  usuarioId: string;
   totais: { investido: number; resultados: number; custoPorResultado: number | null; retorno: number };
   campanhas: CampanhaRitmo[];
   alertas: AlertaTrafego[];
   relatorios: RelatorioResumo[];
   criativosPedidos: TarefaCriativo[];
+  tarefasQuadro: TarefaPessoal[];
 }) {
   return (
     <div>
@@ -115,6 +120,14 @@ export default function InicioTrafego({
           </div>
         </div>
       )}
+
+      <div className="mb-6">
+        <p className="mb-3 flex items-center gap-1.5 text-sm font-medium text-text">
+          <ListTodo size={14} className="text-accent" /> Suas tarefas
+          <span className="font-normal text-muted">— arraste um cartão ou use os botões</span>
+        </p>
+        <QuadroTarefasPessoal usuarioId={usuarioId} tarefas={tarefasQuadro} />
+      </div>
 
       {campanhas.length > 0 && (
         <div className="mb-6">

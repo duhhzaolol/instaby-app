@@ -2,57 +2,56 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { Circle, PlayCircle, CheckCircle2, Trash2, Clock } from "lucide-react";
+import { HardDrive, Play, Inbox, Check, Clock, ChevronDown } from "lucide-react";
+import { COLUNAS, LIMITE_FEITO, TarefaQuadro } from "@/components/dashboard/QuadroTarefas";
 import { visualDaCategoriaTarefa } from "@/lib/categoriaTarefaVisual";
 import { urgenciaPrazo } from "@/lib/urgenciaPrazo";
 import { formatarDuracao } from "@/lib/formatarDuracao";
+import { ChecklistTarefa, type ChecklistItemData } from "@/components/dashboard/ChecklistTarefa";
 
-export type TarefaQuadro = {
-  id: string;
-  titulo: string;
-  status: string;
-  categoria?: string | null;
-  prazo?: string | null;
-  clienteId?: string | null;
-  clienteNome?: string | null;
-  clienteCor?: string | null;
+// Quadro Kanban "pessoal" — mesmo estilo visual de components/dashboard/QuadroTarefas.tsx
+// (cores/ícones/colunas importados de lá, nunca redefinidos aqui), usado no Início do
+// Editor e do Tráfego (redesign v144, Parte 3). Diferença pro quadro genérico: aqui a
+// coluna "A fazer" mistura tarefas sem dono (disponíveis pra qualquer um pegar) com as
+// já assumidas por essa pessoa, e os cartões têm ações específicas — pegar pra mim,
+// iniciar (assume + liga o cronômetro, igual ao antigo botão "Iniciar" da fila pessoal)
+// e marcar como feito (com a mesma opção de registrar horas do quadro genérico).
+export type TarefaPessoal = TarefaQuadro & {
+  responsavelId?: string | null;
+  driveFolderId?: string | null;
+  checklist?: ChecklistItemData[];
 };
-
-// Estilo único de Kanban do sistema — QUALQUER outro quadro Kanban do app (Início
-// do editor/tráfego, futuro etc.) importa isso daqui em vez de redefinir cores/
-// ícones/rótulos, pra nunca ficar diferente por acidente (pedido explícito: "todo
-// Kanban é esse estilo, nada mais que isso").
-export const COLUNAS = [
-  { valor: "a_fazer", label: "A fazer", icone: Circle, cor: "#9CA3AF" },
-  { valor: "em_andamento", label: "Em andamento", icone: PlayCircle, cor: "#38BDF8" },
-  { valor: "feito", label: "Feito", icone: CheckCircle2, cor: "#22C55E" },
-] as const;
-
-export const LIMITE_FEITO = 8;
 
 function horaAtual() {
   const d = new Date();
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
-// Cartão arrastável — HTML5 drag nativo (sem lib nova): o handle é o cartão inteiro,
-// mas o clique de excluir tem seu próprio botão pra não conflitar com o arraste.
-function CartaoTarefa({
+function CartaoPessoal({
   tarefa,
+  usuarioId,
   arrastando,
+  carregando,
   onDragStart,
   onDragEnd,
-  onExcluir,
+  onClaim,
+  onIniciar,
+  onConcluir,
 }: {
-  tarefa: TarefaQuadro;
+  tarefa: TarefaPessoal;
+  usuarioId: string;
   arrastando: boolean;
+  carregando: boolean;
   onDragStart: () => void;
   onDragEnd: () => void;
-  onExcluir: () => void;
+  onClaim: () => void;
+  onIniciar: () => void;
+  onConcluir: () => void;
 }) {
   const { icone: Icon, cor } = visualDaCategoriaTarefa(tarefa.categoria);
   const urgencia = urgenciaPrazo(tarefa.prazo);
+  const minha = tarefa.responsavelId === usuarioId;
+  const [expandido, setExpandido] = useState(false);
 
   return (
     <div
@@ -85,37 +84,73 @@ function CartaoTarefa({
               </span>
             )}
           </p>
+          {tarefa.driveFolderId && (
+            <a
+              href={`https://drive.google.com/drive/folders/${tarefa.driveFolderId}`}
+              target="_blank"
+              onClick={(e) => e.stopPropagation()}
+              className="mt-1.5 inline-flex items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-[10px] text-muted hover:border-accent/40 hover:text-text"
+            >
+              <HardDrive size={9} /> Baixar conteúdo
+            </a>
+          )}
         </div>
-        <button
-          onClick={onExcluir}
-          className="shrink-0 text-muted opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100"
-        >
-          <Trash2 size={11} />
-        </button>
       </div>
+
+      <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-border/60 pt-2">
+        {tarefa.status === "a_fazer" && !minha && (
+          <button
+            onClick={onClaim}
+            disabled={carregando}
+            className="flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-[10px] font-medium text-muted hover:border-accent/40 hover:text-text disabled:opacity-40"
+          >
+            <Inbox size={10} /> {carregando ? "..." : "Pegar pra mim"}
+          </button>
+        )}
+        {tarefa.status === "a_fazer" && minha && (
+          <button
+            onClick={onIniciar}
+            disabled={carregando}
+            className="flex items-center gap-1 rounded-lg bg-accent px-2 py-1 text-[10px] font-semibold text-white disabled:opacity-40"
+          >
+            <Play size={10} /> {carregando ? "..." : "Iniciar"}
+          </button>
+        )}
+        {tarefa.status === "em_andamento" && (
+          <>
+            <button
+              onClick={onConcluir}
+              disabled={carregando}
+              className="flex items-center gap-1 rounded-lg bg-accent px-2 py-1 text-[10px] font-semibold text-white disabled:opacity-40"
+            >
+              <Check size={10} /> {carregando ? "..." : "Marcar feito"}
+            </button>
+            <button
+              onClick={() => setExpandido((v) => !v)}
+              className="flex items-center gap-0.5 text-[10px] text-muted hover:text-text"
+            >
+              Sub-passos <ChevronDown size={10} className={expandido ? "rotate-180" : ""} />
+            </button>
+          </>
+        )}
+      </div>
+
+      {tarefa.status === "em_andamento" && expandido && (
+        <div className="mt-2 border-t border-border/60 pt-2">
+          <ChecklistTarefa tarefaId={tarefa.id} itens={tarefa.checklist || []} />
+        </div>
+      )}
     </div>
   );
 }
 
-export default function QuadroTarefas({
-  tarefas,
-  titulo = "Afazeres",
-  subtitulo = "arraste pra mudar o status",
-  linkVerTudo = "/dashboard/tarefas",
-}: {
-  tarefas: TarefaQuadro[];
-  // Header customizável — a página de Tarefas (que já É "ver tudo") passa
-  // linkVerTudo={null} pra não linkar pra ela mesma; o widget do dashboard usa
-  // os padrões de sempre.
-  titulo?: string;
-  subtitulo?: string;
-  linkVerTudo?: string | null;
-}) {
+export default function QuadroTarefasPessoal({ usuarioId, tarefas }: { usuarioId: string; tarefas: TarefaPessoal[] }) {
   const router = useRouter();
   const [itens, setItens] = useState(tarefas);
   const [arrastandoId, setArrastandoId] = useState<string | null>(null);
   const [colunaSobre, setColunaSobre] = useState<string | null>(null);
-  const [confirmando, setConfirmando] = useState<TarefaQuadro | null>(null);
+  const [carregandoId, setCarregandoId] = useState<string | null>(null);
+  const [confirmando, setConfirmando] = useState<TarefaPessoal | null>(null);
   const [horaInicio, setHoraInicio] = useState(horaAtual());
   const [horaFim, setHoraFim] = useState(horaAtual());
   const [salvandoConclusao, setSalvandoConclusao] = useState(false);
@@ -123,38 +158,55 @@ export default function QuadroTarefas({
 
   useEffect(() => setItens(tarefas), [tarefas]);
 
-  async function aplicarStatus(id: string, status: string) {
-    setItens((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)));
+  async function patchTarefa(id: string, data: Record<string, unknown>) {
     const res = await fetch(`/api/tarefas/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify(data),
     });
     if (!res.ok) {
-      // Card volta pro lugar sozinho quando o router.refresh() trouxer o estado
-      // real do servidor de volta (useEffect que resincroniza `itens` com `tarefas`).
-      const data = await res.json().catch(() => null);
-      alert(data?.erro || "Não consegui mudar o status dessa tarefa.");
+      const d = await res.json().catch(() => null);
+      alert(d?.erro || "Não consegui atualizar essa tarefa.");
+      return false;
     }
+    return true;
+  }
+
+  async function claim(tarefa: TarefaPessoal) {
+    setCarregandoId(tarefa.id);
+    setItens((prev) => prev.map((t) => (t.id === tarefa.id ? { ...t, responsavelId: usuarioId } : t)));
+    await patchTarefa(tarefa.id, { responsavelId: usuarioId });
+    setCarregandoId(null);
     router.refresh();
   }
 
-  function soltar(status: string) {
-    setColunaSobre(null);
-    if (!arrastandoId) return;
-    const tarefa = itens.find((t) => t.id === arrastandoId);
-    setArrastandoId(null);
-    if (!tarefa || tarefa.status === status) return;
-
-    // Marcar "feito" pelo drag pergunta sobre registrar horas, igual já acontecia na
-    // lista antiga — só não faz isso pras outras colunas, que não têm esse gancho.
-    if (status === "feito") {
-      setConfirmando(tarefa);
-      setHoraInicio(horaAtual());
-      setHoraFim(horaAtual());
-      return;
+  async function iniciar(tarefa: TarefaPessoal) {
+    setCarregandoId(tarefa.id);
+    setItens((prev) =>
+      prev.map((t) => (t.id === tarefa.id ? { ...t, status: "em_andamento", responsavelId: usuarioId } : t))
+    );
+    const ok = await patchTarefa(tarefa.id, { status: "em_andamento", responsavelId: usuarioId });
+    if (ok) {
+      // Mesmo mecanismo do cronômetro do topo — um registro de horas sem "fim" fica
+      // rodando até a pessoa parar (na Horas ou no cronômetro da barra superior).
+      await fetch("/api/registros-tempo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clienteId: tarefa.clienteId || null,
+          atividade: tarefa.titulo,
+          inicio: new Date().toISOString(),
+        }),
+      });
     }
-    aplicarStatus(tarefa.id, status);
+    setCarregandoId(null);
+    router.refresh();
+  }
+
+  function pedirConclusao(tarefa: TarefaPessoal) {
+    setConfirmando(tarefa);
+    setHoraInicio(horaAtual());
+    setHoraFim(horaAtual());
   }
 
   async function confirmarConclusao(registrarHoras: boolean) {
@@ -162,19 +214,11 @@ export default function QuadroTarefas({
     setSalvandoConclusao(true);
     const tarefa = confirmando;
 
-    setItens((prev) => prev.map((t) => (t.id === tarefa.id ? { ...t, status: "feito" } : t)));
-    const res = await fetch(`/api/tarefas/${tarefa.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "feito" }),
-    });
+    setItens((prev) => prev.map((t) => (t.id === tarefa.id ? { ...t, status: "feito", responsavelId: usuarioId } : t)));
+    const ok = await patchTarefa(tarefa.id, { status: "feito", responsavelId: usuarioId });
 
-    if (!res.ok) {
-      // Ex.: tarefa de Reel sem vídeo bruto na pasta ainda (gate do servidor, 409) —
-      // sem essa checagem, o cartão só "voltava sozinho" sem explicar por quê.
-      const data = await res.json().catch(() => null);
+    if (!ok) {
       setSalvandoConclusao(false);
-      alert(data?.erro || "Não consegui marcar essa tarefa como feita.");
       router.refresh();
       return;
     }
@@ -201,14 +245,30 @@ export default function QuadroTarefas({
     router.refresh();
   }
 
-  async function excluir(id: string) {
-    if (!confirm("Excluir essa tarefa?")) return;
-    setItens((prev) => prev.filter((t) => t.id !== id));
-    const res = await fetch(`/api/tarefas/${id}`, { method: "DELETE" });
-    if (!res.ok) {
-      alert("Não consegui excluir essa tarefa.");
+  function soltar(status: string) {
+    setColunaSobre(null);
+    if (!arrastandoId) return;
+    const tarefa = itens.find((t) => t.id === arrastandoId);
+    setArrastandoId(null);
+    if (!tarefa || tarefa.status === status) return;
+
+    if (status === "feito") {
+      pedirConclusao(tarefa);
+      return;
     }
-    router.refresh();
+    // Só liga o cronômetro quando é de fato "começar a trabalhar" (saindo de "a
+    // fazer"). Reabrir um "feito" ou devolver "em andamento" pra "a fazer" é só
+    // o status mudando, sem mexer em responsável nem em hora nenhuma.
+    if (status === "em_andamento" && tarefa.status === "a_fazer") {
+      iniciar(tarefa);
+      return;
+    }
+    setCarregandoId(tarefa.id);
+    setItens((prev) => prev.map((t) => (t.id === tarefa.id ? { ...t, status } : t)));
+    patchTarefa(tarefa.id, { status }).then(() => {
+      setCarregandoId(null);
+      router.refresh();
+    });
   }
 
   const duracaoPrevia =
@@ -222,18 +282,7 @@ export default function QuadroTarefas({
       : null;
 
   return (
-    <div className="mb-6">
-      <div className="mb-3 flex items-center justify-between">
-        <p className="text-sm font-medium text-text">
-          {titulo} <span className="font-normal text-muted">— {subtitulo}</span>
-        </p>
-        {linkVerTudo && (
-          <Link href={linkVerTudo} className="text-xs text-muted hover:text-text">
-            Ver tudo →
-          </Link>
-        )}
-      </div>
-
+    <div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {COLUNAS.map((coluna) => {
           const Icon = coluna.icone;
@@ -271,13 +320,17 @@ export default function QuadroTarefas({
                   </p>
                 )}
                 {daColuna.map((t) => (
-                  <CartaoTarefa
+                  <CartaoPessoal
                     key={t.id}
                     tarefa={t}
+                    usuarioId={usuarioId}
                     arrastando={arrastandoId === t.id}
+                    carregando={carregandoId === t.id}
                     onDragStart={() => setArrastandoId(t.id)}
                     onDragEnd={() => setArrastandoId(null)}
-                    onExcluir={() => excluir(t.id)}
+                    onClaim={() => claim(t)}
+                    onIniciar={() => iniciar(t)}
+                    onConcluir={() => pedirConclusao(t)}
                   />
                 ))}
                 {coluna.valor === "feito" && todasDaColuna.length > LIMITE_FEITO && !verTodasFeitas && (

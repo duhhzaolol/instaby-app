@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { X, ExternalLink } from "lucide-react";
 import { visualDoTipoAtividade, type TipoAtividadeAgenda } from "@/lib/tipoAtividadeAgenda";
 import { DatePicker } from "@/components/ui/DatePicker";
+import { AvatarPessoa } from "@/components/ui/AvatarPessoa";
 
 export type EventoAgenda = {
   id: string;
@@ -13,13 +14,17 @@ export type EventoAgenda = {
   tipoAtividade: TipoAtividadeAgenda;
   texto: string;
   clienteNome?: string | null;
-  usuarioNome?: string | null; // só "hora" — quem lançou aquele tempo trabalhado
+  usuarioNome?: string | null; // quem lançou a hora ou é responsável pela tarefa
+  usuarioFotoUrl?: string | null;
   cor?: string | null;
   href: string;
   data: string; // YYYY-MM-DD
   hora?: string | null; // HH:mm — só tarefa
   horaInicio?: string | null; // só hora trabalhada
   horaFim?: string | null; // só hora trabalhada
+  // Só tarefa, só quando ainda não está feita — mesmo cálculo usado em Tarefas/
+  // Kanban (lib/urgenciaPrazo), pra destacar em vermelho o que tá vencendo/vencido.
+  urgencia?: { cor: string; label: string } | null;
 };
 
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -144,13 +149,18 @@ export function AgendaGrid({
                   {eventos.slice(0, 3).map((e, i) => {
                     const visual = visualDoTipoAtividade(e.tipoAtividade);
                     const Icon = visual.icone;
+                    // Prazo vencido/vencendo manda na cor — mais chamativo que o
+                    // tipo de atividade, de propósito (pedido explícito).
+                    const corPill = e.urgencia?.cor || e.cor || visual.cor;
                     return (
                       <button
                         key={i}
                         onClick={() => abrir(e)}
-                        className="flex items-center gap-1 truncate rounded px-1 py-0.5 text-left text-[10px] hover:opacity-80"
-                        style={{ backgroundColor: `${e.cor || visual.cor}1A`, color: e.cor || visual.cor }}
-                        title={e.usuarioNome ? `${e.texto} — ${e.usuarioNome}` : e.texto}
+                        className={`flex items-center gap-1 truncate rounded px-1 py-0.5 text-left text-[10px] hover:opacity-80 ${
+                          e.urgencia ? "font-semibold" : ""
+                        }`}
+                        style={{ backgroundColor: `${corPill}1A`, color: corPill }}
+                        title={[e.texto, e.urgencia?.label, e.usuarioNome].filter(Boolean).join(" — ")}
                       >
                         <Icon size={9} className="shrink-0" />
                         <span className="truncate">{e.texto}</span>
@@ -198,6 +208,7 @@ export function AgendaGrid({
                 const visual = visualDoTipoAtividade(e.tipoAtividade);
                 const Icon = visual.icone;
                 const horario = horarioTexto(e);
+                const corDestaque = e.urgencia?.cor || e.cor || visual.cor;
                 return (
                   <button
                     key={i}
@@ -207,14 +218,19 @@ export function AgendaGrid({
                     {horario && <span className="w-16 shrink-0 text-xs font-medium text-muted">{horario}</span>}
                     <div
                       className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
-                      style={{ backgroundColor: `${e.cor || visual.cor}1A`, color: e.cor || visual.cor }}
+                      style={{ backgroundColor: `${corDestaque}1A`, color: corDestaque }}
                     >
                       <Icon size={13} />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm text-text">{e.texto}</p>
-                      {e.usuarioNome && <p className="truncate text-[11px] text-muted">{e.usuarioNome}</p>}
+                      {e.urgencia && (
+                        <p className="truncate text-[11px] font-medium" style={{ color: e.urgencia.cor }}>
+                          {e.urgencia.label}
+                        </p>
+                      )}
                     </div>
+                    {e.usuarioNome && <AvatarPessoa nome={e.usuarioNome} fotoUrl={e.usuarioFotoUrl} tamanho={22} />}
                   </button>
                 );
               })}

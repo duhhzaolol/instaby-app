@@ -1,5 +1,4 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { garantirRecorrentesDoMes } from "@/lib/garantirRecorrentes";
@@ -17,33 +16,25 @@ export default async function DashboardLayout({
   // de qual página é aberta primeiro).
   await garantirRecorrentesDoMes();
 
-  const session = await getServerSession(authOptions);
-  const nome = session?.user?.name || "Duhzao";
-  const primeiroNome = nome.split(" ")[0];
-
+  // Trava aqui em cima protege TODA a árvore de /dashboard de uma vez: sem isso,
+  // alguém com um cookie de sessão ainda válido mas desativado nas Configurações
+  // (usuario.ativo=false) — o middleware só confere se o cookie existe, não se a
+  // conta ainda tá ativa, e a sessão dura até 30 dias — caía aqui com
+  // usuarioAtual=null. Isso vinha degradando "sem querer" pra um objeto de
+  // permissão de dono (tudo true) só pra a Sidebar não quebrar, o que é o
+  // oposto do que devia acontecer (auditoria v147, achado revisando o resto).
   const usuarioAtual = await getUsuarioAtual();
-  const cargo = usuarioAtual?.cargo || "Adm Master";
-  const pode = usuarioAtual
-    ? permissoesDe(usuarioAtual)
-    : {
-        master: true,
-        verFinanceiro: true,
-        gerenciarFinanceiro: true,
-        verComercial: true,
-        verOportunidades: true,
-        verOrcamentos: true,
-        verContratos: true,
-        verCatalogo: true,
-        gerenciarTrafego: true,
-        gerenciarEquipe: true,
-        gerenciarConfiguracoes: true,
-        todosClientes: true,
-      };
+  if (!usuarioAtual) redirect("/login");
+
+  const nome = usuarioAtual.nome;
+  const primeiroNome = nome.split(" ")[0];
+  const cargo = usuarioAtual.cargo || "Adm Master";
+  const pode = permissoesDe(usuarioAtual);
 
   // Mesmo filtro de cliente-por-permissão já usado em Tarefas/Agenda/Horas —
   // pra ninguém ver, nem em contador do menu nem no seletor do cronômetro/nova
   // tarefa, um cliente que não é dela.
-  const idsPermitidos = usuarioAtual ? await clienteIdsPermitidos(usuarioAtual) : null;
+  const idsPermitidos = await clienteIdsPermitidos(usuarioAtual);
   const filtroClienteId = idsPermitidos ? { id: { in: idsPermitidos } } : {};
   const filtroTarefaCliente = idsPermitidos
     ? { OR: [{ clienteId: null }, { clienteId: { in: idsPermitidos } }] }
@@ -71,6 +62,7 @@ export default async function DashboardLayout({
       <Sidebar
         nome={nome}
         cargo={cargo}
+        fotoUrl={usuarioAtual.fotoUrl}
         pode={pode}
         contadores={{ tarefasAtrasadas, clientesAtivos, cobrancasVencidas }}
       />

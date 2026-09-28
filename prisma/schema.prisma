@@ -45,6 +45,11 @@ model Usuario {
   acessoClienteCompleto  Boolean @default(true)
   todosClientes          Boolean @default(true) // false = só enxerga os clientes listados em clientesPermitidos
 
+  // Perfil pessoal (redesign v144, Parte 3) — cada pessoa edita o próprio, em
+  // Configurações pessoais (/dashboard/perfil), sem precisar de gerenciarEquipe.
+  fotoUrl String?
+  links   LinkUsuario[]
+
   clientesPermitidos ClienteUsuario[]
   registrosTempo     RegistroTempo[]
   // Tarefas atribuídas a essa pessoa (redesign v144, Parte 2) — opcional, campo
@@ -54,6 +59,18 @@ model Usuario {
   createdAt        DateTime  @default(now())
   tentativasFalhas Int       @default(0) // contador de senhas erradas seguidas — zera a cada acerto
   bloqueadoAte     DateTime? // se preenchido e no futuro, login fica bloqueado até essa hora (proteção contra força bruta)
+}
+
+// Links pessoais de contato (Discord, WhatsApp etc.) — mesmo formato de LinkCliente,
+// editado pela própria pessoa em Configurações pessoais (redesign v144, Parte 3).
+model LinkUsuario {
+  id        String   @id @default(uuid())
+  usuarioId String
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  tipo      String // discord | whatsapp | instagram | email | outro
+  label     String?
+  url       String
+  createdAt DateTime @default(now())
 }
 
 // Atribuição de cliente a um usuário não-master com todosClientes=false —

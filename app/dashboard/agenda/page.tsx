@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { ChevronLeft, ChevronRight, CalendarPlus, CalendarCheck, Clock, Sun } from "lucide-react";
 import { prisma } from "@/lib/prisma";
@@ -8,6 +9,7 @@ import { StatTile } from "@/components/ui/StatTile";
 import { formatarDuracao } from "@/lib/formatarDuracao";
 import { TIPOS_ATIVIDADE_AGENDA, classificarTipoAtividade } from "@/lib/tipoAtividadeAgenda";
 import { getUsuarioAtual, clienteIdsPermitidos } from "@/lib/permissoes";
+import { urgenciaPrazo } from "@/lib/urgenciaPrazo";
 
 const NOMES_MESES = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -52,22 +54,42 @@ export default async function AgendaPage({
   const fimGrade = new Date(fimMes);
   fimGrade.setDate(fimGrade.getDate() + (6 - fimMes.getDay()));
 
+  // Sem isso, um cookie de sessão ainda válido de alguém desativado (usuario.ativo=
+  // false — o middleware não reconfere isso, só se o cookie existe) caía aqui com
+  // usuarioAtual=null, e os filtros "só o meu" viravam `{}` (SEM filtro nenhum) em
+  // vez de "nada" — mostraria a agenda inteira da agência, o oposto do pedido.
+  // Auditoria v147: mesma proteção que app/dashboard/layout.tsx ganhou, e que
+  // /dashboard/clientes e /dashboard/horas/[clienteId] já tinham.
   const usuarioAtual = await getUsuarioAtual();
-  const idsPermitidos = usuarioAtual ? await clienteIdsPermitidos(usuarioAtual) : null;
+  if (!usuarioAtual) redirect("/login");
+
+  const idsPermitidos = await clienteIdsPermitidos(usuarioAtual);
   // Igual em Tarefas/Horas: quem não tem "todos os clientes" só vê itens sem cliente
   // (internos) ou dos clientes liberados pra ele — nunca a agenda inteira da agência.
   const filtroCliente = idsPermitidos
     ? { OR: [{ clienteId: null }, { clienteId: { in: idsPermitidos } }] }
     : {};
+  // Só o dono vê a agenda da agência inteira — editor/tráfego (e qualquer outro
+  // papel não-master) veem só o que é deles: tarefa da qual são responsáveis e
+  // hora que eles mesmos lançaram (pedido explícito: "não a agência inteira").
+  const verTudo = usuarioAtual.master;
+  const filtroPessoalTarefa = verTudo ? {} : { responsavelId: usuarioAtual.id };
+  const filtroPessoalHora = verTudo ? {} : { usuarioId: usuarioAtual.id };
 
   const [tarefas, registrosTempo] = await Promise.all([
     prisma.tarefa.findMany({
-      where: { prazo: { gte: inicioGrade, lte: fimGrade }, ...filtroCliente },
-      include: { cliente: { select: { id: true, nome: true, cor: true } } },
+      where: { prazo: { gte: inicioGrade, lte: fimGrade }, ...filtroCliente, ...filtroPessoalTarefa },
+      include: {
+        cliente: { select: { id: true, nome: true, cor: true } },
+        responsavel: { select: { nome: true, fotoUrl: true } },
+      },
     }),
     prisma.registroTempo.findMany({
-      where: { inicio: { gte: inicioGrade, lte: fimGrade }, ...filtroCliente },
-      include: { cliente: { select: { id: true, nome: true, cor: true } }, usuario: { select: { nome: true } } },
+      where: { inicio: { gte: inicioGrade, lte: fimGrade }, ...filtroCliente, ...filtroPessoalHora },
+      include: {
+        cliente: { select: { id: true, nome: true, cor: true } },
+        usuario: { select: { nome: true, fotoUrl: true } },
+      },
     }),
   ]);
 
@@ -83,16 +105,23 @@ export default async function AgendaPage({
         : classificarTipoAtividade(t.titulo, !!t.cliente);
     if (!tiposAtivos.has(tipoAtividade)) return;
     const chave = chaveDiaEvento(t.prazo);
+    // Destaque de prazo vencido/vencendo — mesma régua do resto do app (Tarefas,
+    // Kanban), e só faz sentido pra quem ainda não terminou (tarefa já feita não
+    // precisa de alarme vermelho de atraso).
+    const urgencia = t.status !== "feito" ? urgenciaPrazo(t.prazo) : null;
     (eventosPorDia[chave] ||= []).push({
       id: t.id,
       origem: "tarefa",
       tipoAtividade,
       texto: t.cliente ? `${t.titulo} · ${t.cliente.nome}` : t.titulo,
       clienteNome: t.cliente?.nome || null,
+      usuarioNome: t.responsavel?.nome || null,
+      usuarioFotoUrl: t.responsavel?.fotoUrl || null,
       cor: t.cliente?.cor,
       href: t.cliente ? `/dashboard/clientes/${t.cliente.id}?aba=tarefas` : "/dashboard",
       data: chave,
       hora: horaBR(t.prazo) !== "00:00" ? horaBR(t.prazo) : null,
+      urgencia,
     });
   });
 
@@ -107,6 +136,7 @@ export default async function AgendaPage({
       texto: r.cliente ? `${r.atividade} · ${r.cliente.nome}` : r.atividade,
       clienteNome: r.cliente?.nome || null,
       usuarioNome: r.usuario?.nome || null,
+      usuarioFotoUrl: r.usuario?.fotoUrl || null,
       cor: r.cliente?.cor,
       href: r.cliente ? `/dashboard/horas/${r.cliente.id}` : "/dashboard/horas",
       data: chave,

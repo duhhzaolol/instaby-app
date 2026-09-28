@@ -82,9 +82,22 @@ export default async function ClienteDetalhePage({
     if (a.valor === "contratos") return pode.verContratos;
     if (a.valor === "trafego") return pode.gerenciarTrafego;
     if (a.valor === "arquivos") return pode.verArquivos;
-    // Abas "gerais" do cliente (Visão Geral, Contatos, Links, Onboarding, Solicitações,
-    // Tarefas, Serviços) — atrás de acessoClienteCompleto pra dar pra restringir alguém
-    // (ex: um Editor, que só deve ver Arquivos) sem esconder as áreas com permissão própria.
+    // Links não tem nada sensível (só ícone+nome+URL) — liberado também pra quem só
+    // tem verArquivos (ex: Editor), não só acessoClienteCompleto (pedido explícito).
+    if (a.valor === "links") return pode.acessoClienteCompleto || pode.verArquivos;
+    // Serviços é 100% preço/contrato (valor por serviço, desconto, acréscimo,
+    // mensalidade final, valor de renovação — tudo editável ali) — é R$ tanto quanto
+    // Financeiro/Orçamentos/Contratos, então usa o mesmo tipo de trava específica
+    // (verFinanceiro), não a genérica acessoClienteCompleto (auditoria de R$, v147:
+    // achado depois de marcada "completa" — tinha ficado de fora do primeiro pente-fino).
+    if (a.valor === "servicos") return pode.verFinanceiro;
+    // Abas "gerais" do cliente (Visão Geral, Contatos, Onboarding, Solicitações,
+    // Tarefas) — atrás de acessoClienteCompleto pra dar pra restringir alguém (ex: um
+    // Editor, que só deve ver Arquivos e Links) sem esconder as áreas com permissão
+    // própria. Visão Geral tem R$ por dentro (mensalidade, resultado do mês,
+    // faturamento) — esses pedaços específicos ficam atrás de verFinanceiro dentro do
+    // próprio VisaoGeralClienteTab, não a aba inteira, porque o resto dela (horas do
+    // mês, relatório, próxima atividade, linha do tempo) não é financeiro.
     return pode.acessoClienteCompleto;
   });
   const abaPedida = searchParams.aba || "visao_geral";
@@ -185,7 +198,13 @@ export default async function ClienteDetalhePage({
   const timeline: EventoTimeline[] = [
     ...cliente.cobrancas
       .filter((c) => c.status === "pago")
-      .map((c) => ({ texto: `Pagamento recebido — R$ ${Number(c.valor).toFixed(0)}`, data: c.createdAt, tipo: "pagamento" })),
+      .map((c) => ({
+        // Valor só entra no texto pra quem tem verFinanceiro — o fato "teve um
+        // pagamento" por si só não é R$, mas o valor em si é (auditoria v147).
+        texto: pode.verFinanceiro ? `Pagamento recebido — R$ ${Number(c.valor).toFixed(0)}` : "Pagamento recebido",
+        data: c.createdAt,
+        tipo: "pagamento",
+      })),
     ...cliente.contratos.filter((c) => c.status === "assinado").map((c) => ({ texto: "Contrato assinado", data: c.createdAt, tipo: "contrato" })),
     ...orcamentosAceitos.map((o) => ({ texto: "Proposta aceita", data: o.createdAt, tipo: "orcamento" })),
   ]
@@ -249,7 +268,11 @@ export default async function ClienteDetalhePage({
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <MensalidadeChip clienteId={cliente.id} mensalidade={mensalidade} diasParaRenovar={diasParaRenovar} />
+          {/* Mensalidade é R$ — nunca aparece pra quem não tem verFinanceiro (ex: Editor),
+              mesmo que essa pessoa possa abrir esse cliente por causa de Horas/Arquivos/Links. */}
+          {pode.verFinanceiro && (
+            <MensalidadeChip clienteId={cliente.id} mensalidade={mensalidade} diasParaRenovar={diasParaRenovar} />
+          )}
           <Link
             href={`/dashboard/clientes/${cliente.id}/editar`}
             className="flex items-center gap-1.5 rounded-lg border border-border bg-card/60 px-3 py-1.5 text-xs text-text hover:bg-hover"
@@ -277,6 +300,7 @@ export default async function ClienteDetalhePage({
 
       {aba === "visao_geral" && (
         <VisaoGeralClienteTab
+          podeVerFinanceiro={pode.verFinanceiro}
           mensalidade={mensalidade}
           proximaCobranca={proximaCobranca ? { valor: Number(proximaCobranca.valor), vencimento: proximaCobranca.vencimento?.toISOString() || null } : null}
           contratoVigente={!!contratoVigente}

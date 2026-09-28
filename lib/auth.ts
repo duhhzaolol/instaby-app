@@ -77,4 +77,21 @@ export const authOptions: AuthOptions = {
       },
     }),
   ],
+  callbacks: {
+    // Configurações pessoais (redesign v144, Parte 3): quando a própria pessoa
+    // muda nome ou e-mail, o formulário chama `useSession().update({...})` do
+    // next-auth logo depois de salvar — isso dispara esse callback com
+    // trigger="update", e sem isso o token (e portanto nome/e-mail mostrados no
+    // resto do app) ficaria com o valor antigo até a pessoa sair e entrar de
+    // novo. getUsuarioAtual() busca no banco pelo e-mail da sessão, então
+    // atualizar o e-mail aqui junto é o que evita a pessoa "sumir" (sessão
+    // apontando pro e-mail antigo, que não existe mais) logo depois de trocar.
+    async jwt({ token, trigger, session }) {
+      if (trigger === "update" && session) {
+        if (session.name) token.name = session.name;
+        if (session.email) token.email = session.email;
+      }
+      return token;
+    },
+  },
 };

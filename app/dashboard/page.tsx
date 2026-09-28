@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import DashboardClient from "@/components/dashboard/DashboardClient";
 import InicioEditor, { type TarefaEditor } from "@/components/dashboard/InicioEditor";
+import { type TarefaPessoal } from "@/components/dashboard/QuadroTarefasPessoal";
 import InicioTrafego, {
   type CampanhaRitmo,
   type AlertaTrafego,
@@ -441,21 +442,23 @@ async function InicioEditorPage({ usuario }: { usuario: Usuario }) {
     checklist: { orderBy: { ordem: "asc" as const } },
   };
 
-  const [fazendoAgoraRaw, minhaFilaRaw, disponiveisRaw, proximasCaptacoesRaw, registrosSemana] = await Promise.all([
+  const [poolRaw, feitoRaw, proximasCaptacoesRaw, registrosSemana] = await Promise.all([
+    // "A fazer" + "Fazendo" do quadro: tudo que não é dela (sem dono, disponível
+    // pra qualquer editor pegar) OU já é dela — nunca a fila de outro editor.
     prisma.tarefa.findMany({
-      where: { responsavelId: usuarioId, status: "em_andamento", ...filtroClienteTarefa },
+      where: {
+        status: { not: "feito" },
+        AND: [{ OR: [{ responsavelId: null }, { responsavelId: usuarioId }] }, filtroClienteTarefa],
+      },
       include: incluirTarefa,
       orderBy: { createdAt: "desc" },
     }),
+    // "Pronto" do quadro: só o que essa pessoa concluiu (histórico pessoal).
     prisma.tarefa.findMany({
-      where: { responsavelId: usuarioId, status: "a_fazer", ...filtroClienteTarefa },
+      where: { status: "feito", responsavelId: usuarioId, ...filtroClienteTarefa },
       include: incluirTarefa,
-    }),
-    prisma.tarefa.findMany({
-      where: { responsavelId: null, status: { not: "feito" }, ...filtroClienteTarefa },
-      include: { cliente: { select: { nome: true, cor: true } } },
-      orderBy: { createdAt: "desc" },
-      take: 15,
+      orderBy: { concluidaEm: "desc" },
+      take: 20,
     }),
     prisma.tarefa.findMany({
       where: {
@@ -484,22 +487,23 @@ async function InicioEditorPage({ usuario }: { usuario: Usuario }) {
     });
   }
 
-  function mapear(t: (typeof fazendoAgoraRaw)[number]): TarefaEditor {
+  function mapearQuadro(t: (typeof poolRaw)[number]): TarefaPessoal {
     return {
       id: t.id,
       titulo: t.titulo,
+      status: t.status,
       categoria: t.categoria,
       prazo: t.prazo?.toISOString() || null,
       clienteId: t.clienteId,
       clienteNome: t.cliente?.nome || null,
       clienteCor: t.cliente?.cor || null,
+      responsavelId: t.responsavelId,
+      driveFolderId: t.driveFolderId,
       checklist: t.checklist.map((c) => ({ id: c.id, titulo: c.titulo, feito: c.feito })),
     };
   }
 
-  // Mesmo formato de `mapear`, mas pras duas listas sem checklist (disponíveis e
-  // próximas captações vêm da mesma query base, sem o include de checklist).
-  function mapearSimples(t: (typeof disponiveisRaw)[number]): TarefaEditor {
+  function mapearSimples(t: (typeof proximasCaptacoesRaw)[number]): TarefaEditor {
     return {
       id: t.id,
       titulo: t.titulo,
@@ -516,9 +520,7 @@ async function InicioEditorPage({ usuario }: { usuario: Usuario }) {
   return (
     <InicioEditor
       usuarioId={usuarioId}
-      fazendoAgora={ordenarPorPrazo(fazendoAgoraRaw).map(mapear)}
-      minhaFila={ordenarPorPrazo(minhaFilaRaw).map(mapear)}
-      disponiveis={disponiveisRaw.map(mapearSimples)}
+      tarefasQuadro={[...poolRaw.map(mapearQuadro), ...feitoRaw.map(mapearQuadro)]}
       proximasCaptacoes={ordenarPorPrazo(proximasCaptacoesRaw).map(mapearSimples)}
       horasSemana={horasSemana}
     />
@@ -530,10 +532,15 @@ async function InicioEditorPage({ usuario }: { usuario: Usuario }) {
 // v144, Parte 2). Sem ligação com Financeiro (verba não passa pela agência).
 // ─────────────────────────────────────────────────────────────────────────
 async function InicioTrafegoPage({ usuario }: { usuario: Usuario }) {
+  const usuarioId = usuario.id;
   const idsPermitidos = await clienteIdsPermitidos(usuario);
   const filtroCliente = idsPermitidos ? { clienteId: { in: idsPermitidos } } : {};
+  // Igual ao filtro usado pra Tarefa no Início do Editor — Tarefa.clienteId é opcional
+  // (diferente de Campanha, sempre ligada a um cliente), então aqui precisa da versão
+  // com "OR clienteId nulo" pra não esconder tarefa interna/geral sem cliente.
+  const filtroClienteTarefa = idsPermitidos ? { OR: [{ clienteId: null }, { clienteId: { in: idsPermitidos } }] } : {};
 
-  const [resultadosDoMes, campanhasAtivas, resultadosUltimos7Dias, relatoriosDoMes, criativosPedidosRaw] = await Promise.all([
+  const [resultadosDoMes, campanhasAtivas, resultadosUltimos7Dias, relatoriosDoMes, criativosPedidosRaw, tarefasPoolRaw, tarefasFeitoRaw] = await Promise.all([
     prisma.resultadoCampanha.findMany({
       where: { campanha: filtroCliente, inicio: { gte: inicioMes() } },
       select: { inicio: true, fim: true, verbaInvestida: true, impressoes: true, alcance: true, resultados: true, planosFechados: true, valorRetorno: true, campanhaId: true },
@@ -568,6 +575,22 @@ async function InicioTrafegoPage({ usuario }: { usuario: Usuario }) {
       include: { cliente: { select: { nome: true, cor: true } } },
       orderBy: { createdAt: "desc" },
       take: 10,
+    }),
+    // Quadro pessoal de tarefas do gestor de tráfego (redesign v144, Parte 3) —
+    // mesma lógica do quadro do Editor: "a fazer" mistura sem-dono com as dela.
+    prisma.tarefa.findMany({
+      where: {
+        status: { not: "feito" },
+        AND: [{ OR: [{ responsavelId: null }, { responsavelId: usuarioId }] }, filtroClienteTarefa],
+      },
+      include: { cliente: { select: { nome: true, cor: true } }, checklist: { orderBy: { ordem: "asc" } } },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.tarefa.findMany({
+      where: { status: "feito", responsavelId: usuarioId, ...filtroClienteTarefa },
+      include: { cliente: { select: { nome: true, cor: true } }, checklist: { orderBy: { ordem: "asc" } } },
+      orderBy: { concluidaEm: "desc" },
+      take: 20,
     }),
   ]);
 
@@ -630,8 +653,25 @@ async function InicioTrafegoPage({ usuario }: { usuario: Usuario }) {
     clienteCor: t.cliente?.cor || null,
   }));
 
+  function mapearQuadroTrafego(t: (typeof tarefasPoolRaw)[number]): TarefaPessoal {
+    return {
+      id: t.id,
+      titulo: t.titulo,
+      status: t.status,
+      categoria: t.categoria,
+      prazo: t.prazo?.toISOString() || null,
+      clienteId: t.clienteId,
+      clienteNome: t.cliente?.nome || null,
+      clienteCor: t.cliente?.cor || null,
+      responsavelId: t.responsavelId,
+      driveFolderId: t.driveFolderId,
+      checklist: t.checklist.map((c) => ({ id: c.id, titulo: c.titulo, feito: c.feito })),
+    };
+  }
+
   return (
     <InicioTrafego
+      usuarioId={usuarioId}
       totais={{
         investido: totaisRaw.totalInvestido,
         resultados: totaisRaw.totalResultados,
@@ -642,6 +682,7 @@ async function InicioTrafegoPage({ usuario }: { usuario: Usuario }) {
       alertas={alertas}
       relatorios={relatorios}
       criativosPedidos={criativosPedidos}
+      tarefasQuadro={[...tarefasPoolRaw.map(mapearQuadroTrafego), ...tarefasFeitoRaw.map(mapearQuadroTrafego)]}
     />
   );
 }

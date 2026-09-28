@@ -277,32 +277,44 @@ export default function DashboardClient({
         })}
       </div>
 
-      {alertas.length > 0 && (
-        <div className="mb-6 rounded-2xl border border-border bg-card/60 p-4">
-          <p className="mb-3 flex items-center gap-1.5 text-sm font-medium text-text">
-            <AlertTriangle size={14} className="text-amber-400" /> Precisa da sua atenção
-          </p>
-          <div className="flex flex-col gap-1.5">
-            {alertas.map((a) => (
-              <Link
-                key={a.label}
-                href={a.href}
-                className="flex items-center justify-between rounded-lg px-2.5 py-1.5 text-sm hover:bg-hover"
-              >
-                <span className="text-text">{a.label}</span>
-                <span
-                  className="rounded-full px-2 py-0.5 text-xs font-medium"
-                  style={{ backgroundColor: `${a.cor}1A`, color: a.cor }}
-                >
-                  {a.contagem}
-                </span>
-              </Link>
-            ))}
-          </div>
+      {/* "Precisa da sua atenção" + "Equipe agora" — compactados lado a lado (Parte
+          3) pra ficarem do tamanho dos 4 cards de KPI ali em cima, formando uma
+          segunda fileira, em vez de dois blocos gigantes de largura cheia antes
+          do gráfico. Se só um dos dois tiver conteúdo, ele ocupa a fileira toda. */}
+      {(alertas.length > 0 || equipeAgora.length > 0) && (
+        <div
+          className={`mb-6 grid grid-cols-1 gap-3 ${
+            alertas.length > 0 && equipeAgora.length > 0 ? "lg:grid-cols-2" : ""
+          }`}
+        >
+          {alertas.length > 0 && (
+            <Card hoverable={false} index={4} className="p-4">
+              <p className="mb-2.5 flex items-center gap-1.5 text-sm font-medium text-text">
+                <AlertTriangle size={14} className="text-amber-400" /> Precisa da sua atenção
+              </p>
+              <div className="flex max-h-[220px] flex-col gap-1.5 overflow-y-auto pr-0.5">
+                {alertas.map((a) => (
+                  <Link
+                    key={a.label}
+                    href={a.href}
+                    className="flex items-center justify-between rounded-lg px-2.5 py-1.5 text-sm hover:bg-hover"
+                  >
+                    <span className="text-text">{a.label}</span>
+                    <span
+                      className="rounded-full px-2 py-0.5 text-xs font-medium"
+                      style={{ backgroundColor: `${a.cor}1A`, color: a.cor }}
+                    >
+                      {a.contagem}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          <EquipeAgora pessoas={equipeAgora} index={5} />
         </div>
       )}
-
-      <EquipeAgora pessoas={equipeAgora} />
 
       <GraficoFaturamento dados={faturamentoPorMes} oculto={oculto} />
 
