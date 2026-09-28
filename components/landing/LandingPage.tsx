@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { useArrastarScroll } from "@/lib/useArrastarScroll";
 import {
   Instagram,
   Youtube,
@@ -133,6 +134,7 @@ function GradeNeon() {
 type Indicador = { valor: string; legenda: string };
 type ServicoOverride = { nome: string; descricao: string; destino: string; imagemUrl?: string | null; foco?: string | null };
 type DiferencialOverride = { titulo: string; texto: string };
+type EtapaOverride = { titulo?: string; texto?: string; imagemUrl?: string | null; foco?: string | null };
 type Resultado = { valor: string; legenda: string };
 type Pilar = { nome: string; texto: string; indicadores?: Indicador[] };
 type ImagemGaleria = { url: string; foco?: string | null };
@@ -171,12 +173,15 @@ export function LandingPage({
   sobreFoco,
   sobreBotaoTexto,
   sobreBotaoUrl,
+  provaSocialTitulo,
+  provaSocialTexto,
   processoTexto,
   processoBotaoTexto,
   processoBotaoUrl,
   processoImagemUrl,
   processoImagemUrlMobile,
   processoFoco,
+  processoEtapas,
   ctaTitulo,
   ctaTexto,
   ctaBotaoTexto,
@@ -221,12 +226,15 @@ export function LandingPage({
   sobreFoco?: string | null;
   sobreBotaoTexto?: string | null;
   sobreBotaoUrl?: string | null;
+  provaSocialTitulo?: string | null;
+  provaSocialTexto?: string | null;
   processoTexto?: string | null;
   processoBotaoTexto?: string | null;
   processoBotaoUrl?: string | null;
   processoImagemUrl?: string | null;
   processoImagemUrlMobile?: string | null;
   processoFoco?: string | null;
+  processoEtapas?: EtapaOverride[] | null;
   ctaTitulo?: string | null;
   ctaTexto?: string | null;
   ctaBotaoTexto?: string | null;
@@ -254,6 +262,10 @@ export function LandingPage({
   mapaLocais?: LocalMapa[] | null;
 }) {
   const [menuAberto, setMenuAberto] = useState(false);
+  // Arrastar com o mouse nos carrosséis horizontais (Serviços no celular e o
+  // novo carrossel do Processo) — sem isso, só touch/trackpad rolava a lista.
+  const arrasteServicos = useArrastarScroll<HTMLDivElement>();
+  const arrasteProcesso = useArrastarScroll<HTMLDivElement>();
 
   // Cabeçalho flutua transparente sobre o Hero (uma cena só com a foto, sem
   // barra separada por cima) e só ganha fundo sólido depois que a pessoa rola
@@ -338,6 +350,27 @@ export function LandingPage({
     processoTexto || "Um processo simples, sem mistério, que coloca o seu negócio no caminho certo.";
   const processoBotaoTextoFinal = processoBotaoTexto || "Falar com um especialista";
   const processoBotaoUrlFinal = processoBotaoUrl || linkWhatsapp || "#contato";
+  const processoEtapasFinal = PROCESSO.map((padrao, i) => ({
+    passo: padrao.passo,
+    titulo: processoEtapas?.[i]?.titulo || padrao.titulo,
+    texto: processoEtapas?.[i]?.texto || padrao.texto,
+    imagemUrl: processoEtapas?.[i]?.imagemUrl || null,
+    foco: processoEtapas?.[i]?.foco || "50% 50%",
+  }));
+
+  // Card vermelho vibrante de prova social, logo após "Quem somos" — só
+  // aparece quando pelo menos o título estiver preenchido (padrão embutido
+  // cobre o caso mais comum, de já ter sido configurado antes).
+  const provaSocialTituloFinal =
+    provaSocialTitulo || "Se você chegou até aqui, é bem provável que já tenha visto a gente em algum lugar.";
+  const provaSocialTextoFinal =
+    provaSocialTexto || "A Instaby está espalhada — nas redes, nos eventos, na boca do povo da região.";
+
+  // Rodapé: lista de cidades marcadas no mapa (Configurações → Site → "Onde a
+  // gente atende"), no lugar dos links de navegação que saíram do rodapé.
+  const cidadesRodape = (
+    mapaLocais && mapaLocais.length > 0 ? mapaLocais : [{ nome: "Araras, SP" }, { nome: "Limeira, SP" }, { nome: "Rio Claro, SP" }]
+  ).map((l) => l.nome.replace(/,\s*SP$/i, ""));
 
   const ctaTituloFinal = ctaTitulo || "Sua marca pode estar aqui também.";
   const ctaTextoFinal = ctaTexto || "Conta um pouco sobre seu negócio e a gente te mostra como pode ajudar.";
@@ -387,9 +420,10 @@ export function LandingPage({
 
           <button
             onClick={() => setMenuAberto((v) => !v)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted md:hidden"
+            aria-label={menuAberto ? "Fechar menu" : "Abrir menu"}
+            className="flex h-11 w-11 items-center justify-center rounded-xl border border-border text-muted transition-all active:scale-95 active:bg-hover md:hidden"
           >
-            {menuAberto ? <X size={16} /> : <Menu size={16} />}
+            {menuAberto ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
 
@@ -434,13 +468,14 @@ export function LandingPage({
         {usaGaleria ? (
           <>
             {galeriaValida.map((g, i) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <motion.img
                 key={g.url + i}
                 src={g.url}
                 alt="Instaby"
                 className="absolute inset-0 h-full w-full object-cover transition-opacity duration-[1400ms] ease-in-out"
                 style={{ objectPosition: g.foco || "50% 50%", opacity: i === indiceGaleria ? 1 : 0 }}
+                animate={{ scale: i === indiceGaleria ? 1.08 : 1 }}
+                transition={{ duration: 5, ease: "easeOut" }}
               />
             ))}
             <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-black/20" />
@@ -448,19 +483,23 @@ export function LandingPage({
           </>
         ) : heroImagemUrl ? (
           <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <motion.img
               src={heroImagemUrlMobile || heroImagemUrl}
               alt="Instaby"
               className="absolute inset-0 h-full w-full object-cover sm:hidden"
               style={{ objectPosition: heroFocoFinal }}
+              initial={{ scale: 1 }}
+              animate={{ scale: 1.09 }}
+              transition={{ duration: 22, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
             />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <motion.img
               src={heroImagemUrl}
               alt="Instaby"
               className="absolute inset-0 hidden h-full w-full object-cover sm:block"
               style={{ objectPosition: heroFocoFinal }}
+              initial={{ scale: 1 }}
+              animate={{ scale: 1.09 }}
+              transition={{ duration: 22, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
             />
             <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-black/20" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
@@ -468,7 +507,7 @@ export function LandingPage({
         ) : (
           <div
             className="absolute inset-0"
-            style={{ background: "radial-gradient(ellipse at top left, rgba(230,57,70,0.25), transparent 65%), #131519" }}
+            style={{ background: "radial-gradient(ellipse at top left, rgba(230,57,70,0.25), transparent 65%), #0A0A0C" }}
           />
         )}
         {/* reforço de legibilidade pro cabeçalho, que flutua transparente por cima —
@@ -602,9 +641,24 @@ export function LandingPage({
               </p>
             </motion.div>
           </div>
-          {/* Celular: carrossel horizontal com swipe — a mesma grade 4×2 virava lista gigante */}
-          <p className="mb-2 text-[10px] uppercase tracking-wider text-muted/50 sm:hidden">Deslize pra ver mais →</p>
-          <div className="-mx-6 mb-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-6 pb-2 sm:hidden">
+          {/* Celular: carrossel horizontal com swipe — a mesma grade 4×2 virava lista gigante.
+              Também arrasta com o mouse (testando no computador com a janela estreita, por
+              exemplo) — só touch/trackpad rolava antes. */}
+          <p className="mb-2 flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted/60 sm:hidden">
+            Arraste pra ver mais
+            <motion.span animate={{ x: [0, 4, 0] }} transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}>
+              <ArrowRight size={11} />
+            </motion.span>
+          </p>
+          <div
+            ref={arrasteServicos.ref}
+            onPointerDown={arrasteServicos.onPointerDown}
+            onPointerMove={arrasteServicos.onPointerMove}
+            onPointerUp={arrasteServicos.onPointerUp}
+            onPointerLeave={arrasteServicos.onPointerLeave}
+            onClickCapture={arrasteServicos.onClickCapture}
+            className={`-mx-6 mb-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-6 pb-2 sm:hidden ${arrasteServicos.className}`}
+          >
             {servicosFinal.map((s, i) => {
               const Icon = s.icone;
               return (
@@ -620,6 +674,7 @@ export function LandingPage({
                       <img
                         src={s.imagemUrl}
                         alt={s.nome}
+                        draggable={false}
                         className="absolute inset-0 h-full w-full object-cover"
                         style={{ objectPosition: s.foco || "50% 50%" }}
                       />
@@ -717,19 +772,23 @@ export function LandingPage({
         </ElementoFlutuante>
         {sobreImagemUrl ? (
           <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <motion.img
               src={sobreImagemUrlMobile || sobreImagemUrl}
               alt="Instaby"
               className="absolute inset-0 h-full w-full object-cover sm:hidden"
               style={{ objectPosition: sobreFocoFinal }}
+              initial={{ scale: 1.09 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 22, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
             />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <motion.img
               src={sobreImagemUrl}
               alt="Instaby"
               className="absolute inset-0 hidden h-full w-full object-cover sm:block"
               style={{ objectPosition: sobreFocoFinal }}
+              initial={{ scale: 1.09 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 22, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
             />
             <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/55 to-black/10" />
 
@@ -776,6 +835,35 @@ export function LandingPage({
             </motion.a>
           </div>
         )}
+      </section>
+
+      {/* Prova social — card vermelho vibrante ("estouro"), logo após "Quem somos".
+          Texto abaixo é um placeholder editável em Configurações → Site: o card
+          original (de antes desse site atual) não foi encontrado pra recuperar o
+          texto exato, então esse aqui é novo, no mesmo espírito. */}
+      <section className="relative overflow-hidden px-6 py-14 sm:py-16">
+        <div
+          aria-hidden
+          className="absolute inset-0"
+          style={{ background: "linear-gradient(135deg, #ff3b4a 0%, #e63946 55%, #b81926 100%)" }}
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-30"
+          style={{ background: "radial-gradient(circle at 15% 20%, rgba(255,255,255,0.4), transparent 55%)" }}
+        />
+        <ElementoFlutuante className="right-[8%] top-[18%] hidden lg:block" duracao={7} delay={0.2}>
+          <IconeFlutuanteMini Icon={Sparkles} className="border-white/25 text-white/45" />
+        </ElementoFlutuante>
+        <ElementoFlutuante className="left-[6%] bottom-[14%] hidden lg:block" duracao={9} delay={0.6}>
+          <IconeFlutuanteMini Icon={CheckCircle2} className="border-white/25 text-white/45" />
+        </ElementoFlutuante>
+        <motion.div {...fadeUp()} className="relative mx-auto max-w-3xl text-center">
+          <h2 className="text-2xl font-bold leading-snug text-white sm:text-3xl">{provaSocialTituloFinal}</h2>
+          {provaSocialTextoFinal && (
+            <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-white/85 sm:text-base">{provaSocialTextoFinal}</p>
+          )}
+        </motion.div>
       </section>
 
       {/* Faixa de diferenciais — compacta, logo abaixo do Sobre */}
@@ -865,19 +953,23 @@ export function LandingPage({
       <section className="relative overflow-hidden px-6 py-16">
         {processoImagemUrl ? (
           <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <motion.img
               src={processoImagemUrlMobile || processoImagemUrl}
               alt="Instaby"
               className="absolute inset-0 h-full w-full object-cover sm:hidden"
               style={{ objectPosition: processoFocoFinal }}
+              initial={{ scale: 1 }}
+              animate={{ scale: 1.08 }}
+              transition={{ duration: 26, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
             />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <motion.img
               src={processoImagemUrl}
               alt="Instaby"
               className="absolute inset-0 hidden h-full w-full object-cover sm:block"
               style={{ objectPosition: processoFocoFinal }}
+              initial={{ scale: 1 }}
+              animate={{ scale: 1.08 }}
+              transition={{ duration: 26, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
             />
             <div
               className="absolute inset-0"
@@ -918,16 +1010,51 @@ export function LandingPage({
               </a>
             </motion.div>
           </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {PROCESSO.map((p, i) => (
+          {/* Carrossel grande, estilo banner deslizante — arrasta com o dedo ou com o
+              mouse (mesmo utilitário do carrossel de Serviços). Cada etapa pode ter
+              uma foto (Configurações → Site → Processo); sem foto, o cartão continua
+              só com o gradiente de sempre. */}
+          <p className="mb-3 flex items-center gap-1 text-[10px] uppercase tracking-wider text-white/50">
+            Arraste para o lado
+            <motion.span animate={{ x: [0, 4, 0] }} transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}>
+              <ArrowRight size={11} />
+            </motion.span>
+          </p>
+          <div
+            ref={arrasteProcesso.ref}
+            onPointerDown={arrasteProcesso.onPointerDown}
+            onPointerMove={arrasteProcesso.onPointerMove}
+            onPointerUp={arrasteProcesso.onPointerUp}
+            onPointerLeave={arrasteProcesso.onPointerLeave}
+            onClickCapture={arrasteProcesso.onClickCapture}
+            className={`-mx-6 flex snap-x snap-mandatory gap-4 overflow-x-auto px-6 pb-3 sm:-mx-0 sm:px-0 ${arrasteProcesso.className}`}
+          >
+            {processoEtapasFinal.map((p, i) => (
               <motion.div
                 key={p.passo}
                 {...fadeUp(i * 0.08)}
-                className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-sm transition-colors duration-300 hover:border-white/20 hover:bg-white/[0.07]"
+                className="group relative aspect-[3/4] w-[240px] shrink-0 snap-start overflow-hidden rounded-2xl border border-white/10 shadow-[0_18px_40px_-14px_rgba(0,0,0,0.6)] transition-transform duration-300 hover:-translate-y-1 sm:w-[280px] lg:w-[300px]"
               >
-                <p className="mb-2 text-2xl font-semibold text-red-400/80">{p.passo}</p>
-                <p className="mb-1.5 text-sm font-medium text-white">{p.titulo}</p>
-                <p className="text-xs leading-relaxed text-white/60">{p.texto}</p>
+                {p.imagemUrl ? (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={p.imagemUrl}
+                      alt={p.titulo}
+                      draggable={false}
+                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"
+                      style={{ objectPosition: p.foco }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/45 to-black/10" />
+                  </>
+                ) : (
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/[0.06] via-white/[0.03] to-transparent" />
+                )}
+                <p className="absolute left-5 top-5 text-3xl font-bold text-red-400/80">{p.passo}</p>
+                <div className="absolute inset-x-0 bottom-0 p-5">
+                  <p className="mb-1.5 text-base font-semibold text-white">{p.titulo}</p>
+                  <p className="text-xs leading-relaxed text-white/65">{p.texto}</p>
+                </div>
               </motion.div>
             ))}
           </div>
@@ -944,19 +1071,23 @@ export function LandingPage({
         </ElementoFlutuante>
         {ctaImagemUrl ? (
           <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <motion.img
               src={ctaImagemUrlMobile || ctaImagemUrl}
               alt="Instaby"
               className="absolute inset-0 h-full w-full object-cover sm:hidden"
               style={{ objectPosition: ctaFocoFinal }}
+              initial={{ scale: 1 }}
+              animate={{ scale: 1.09 }}
+              transition={{ duration: 24, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
             />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <motion.img
               src={ctaImagemUrl}
               alt="Instaby"
               className="absolute inset-0 hidden h-full w-full object-cover sm:block"
               style={{ objectPosition: ctaFocoFinal }}
+              initial={{ scale: 1 }}
+              animate={{ scale: 1.09 }}
+              transition={{ duration: 24, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
             />
             <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/65 to-black/30" />
           </>
@@ -1005,19 +1136,16 @@ export function LandingPage({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt="Instaby" className="h-5 w-auto opacity-70 grayscale" />
 
-            <nav className="flex flex-wrap items-center justify-center gap-4 text-xs text-muted">
-              {NAV.map((n) => (
-                <a key={n.href} href={n.href} className="hover:text-text">
-                  {n.label}
-                </a>
+            {/* Cidades marcadas no mapa (Configurações → Site → "Onde a gente atende"),
+                no lugar dos links de navegação/painel que ficavam aqui antes. */}
+            <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs text-muted">
+              {cidadesRodape.map((nome, i) => (
+                <span key={nome} className="inline-flex items-center gap-2">
+                  {nome}
+                  {i < cidadesRodape.length - 1 && <span className="text-muted/40">·</span>}
+                </span>
               ))}
-              <Link href="/link" className="hover:text-text">
-                Links
-              </Link>
-              <Link href="/app" className="hover:text-text">
-                Painel administrativo
-              </Link>
-            </nav>
+            </p>
 
             {temSociais && (
               <div className="flex items-center gap-3">

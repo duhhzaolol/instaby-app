@@ -26,6 +26,8 @@ type ConfigSite = {
   siteSobreFoco: string | null;
   siteSobreBotaoTexto: string | null;
   siteSobreBotaoUrl: string | null;
+  siteProvaSocialTitulo: string | null;
+  siteProvaSocialTexto: string | null;
   siteRodapeRegiao: string | null;
   siteRodapeDireitos: string | null;
   siteRodapeTexto: string | null;
@@ -57,6 +59,8 @@ export default function SiteTextosForm({ config }: { config: ConfigSite }) {
   const [sobreFoco, setSobreFoco] = useState(config.siteSobreFoco || "50% 50%");
   const [sobreBotaoTexto, setSobreBotaoTexto] = useState(config.siteSobreBotaoTexto || "");
   const [sobreBotaoUrl, setSobreBotaoUrl] = useState(config.siteSobreBotaoUrl || "");
+  const [provaSocialTitulo, setProvaSocialTitulo] = useState(config.siteProvaSocialTitulo || "");
+  const [provaSocialTexto, setProvaSocialTexto] = useState(config.siteProvaSocialTexto || "");
   const [rodapeRegiao, setRodapeRegiao] = useState(config.siteRodapeRegiao || "");
   const [rodapeDireitos, setRodapeDireitos] = useState(config.siteRodapeDireitos || "");
   const [rodapeTexto, setRodapeTexto] = useState(config.siteRodapeTexto || "");
@@ -107,6 +111,8 @@ export default function SiteTextosForm({ config }: { config: ConfigSite }) {
         siteSobreFoco: sobreFoco || null,
         siteSobreBotaoTexto: sobreBotaoTexto || null,
         siteSobreBotaoUrl: sobreBotaoUrl || null,
+        siteProvaSocialTitulo: provaSocialTitulo || null,
+        siteProvaSocialTexto: provaSocialTexto || null,
         siteRodapeRegiao: rodapeRegiao || null,
         siteRodapeDireitos: rodapeDireitos || null,
         siteRodapeTexto: rodapeTexto || null,
@@ -339,6 +345,29 @@ export default function SiteTextosForm({ config }: { config: ConfigSite }) {
             />
           </div>
         </div>
+      </div>
+
+      <div className="border-t border-border pt-5">
+        <p className="mb-1 text-sm font-medium text-text">Card vermelho — prova social, logo após "Quem somos"</p>
+        <p className="mb-3 text-[11px] leading-relaxed text-muted">
+          Faixa vermelha vibrante de destaque, tipo "o povo já viu, já conhece a Instaby". Deixe os dois campos
+          vazios pra esconder essa faixa inteira do site.
+        </p>
+        <Label>Título de impacto</Label>
+        <Textarea
+          value={provaSocialTitulo}
+          onChange={(e) => setProvaSocialTitulo(e.target.value)}
+          rows={2}
+          placeholder="Se você chegou até aqui, já deve ter visto a gente em algum lugar."
+          className="mb-3"
+        />
+        <Label>Linha de apoio (opcional)</Label>
+        <Textarea
+          value={provaSocialTexto}
+          onChange={(e) => setProvaSocialTexto(e.target.value)}
+          rows={2}
+          placeholder="É que a Instaby está espalhada — nas redes, nos eventos, na boca do povo da região."
+        />
       </div>
 
       <div className="border-t border-border pt-5">

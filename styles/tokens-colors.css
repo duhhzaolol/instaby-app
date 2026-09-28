@@ -10,7 +10,7 @@
      (bug real da v141, corrigido aqui). Pra usar fora do Tailwind (CSS puro,
      style inline), sempre envolver em rgb(...): rgb(var(--card)) ou
      rgb(var(--card) / 0.6). */
-  --base:19 21 25;            /* #131519 — app background */
+  --base:10 10 12;            /* #0A0A0C — app background (site público/portfólio; painel usa .tema-painel) */
   --card:28 32 40;            /* #1C2028 — card / panel fill (usually at 60–70% alpha over --base) */
   --hover:40 45 56;           /* #282D38 — row + button hover fill */
   --accent:230 57 70;         /* #E63946 — brand red */

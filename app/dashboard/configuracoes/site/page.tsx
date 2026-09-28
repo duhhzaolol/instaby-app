@@ -58,6 +58,8 @@ export default async function SiteConfigPage() {
             siteSobreFoco: config?.siteSobreFoco || null,
             siteSobreBotaoTexto: config?.siteSobreBotaoTexto || null,
             siteSobreBotaoUrl: config?.siteSobreBotaoUrl || null,
+            siteProvaSocialTitulo: config?.siteProvaSocialTitulo || null,
+            siteProvaSocialTexto: config?.siteProvaSocialTexto || null,
             siteRodapeRegiao: config?.siteRodapeRegiao || null,
             siteRodapeDireitos: config?.siteRodapeDireitos || null,
             siteRodapeTexto: config?.siteRodapeTexto || null,
@@ -137,6 +139,8 @@ export default async function SiteConfigPage() {
             siteProcessoImagemUrl: config?.siteProcessoImagemUrl || null,
             siteProcessoImagemUrlMobile: config?.siteProcessoImagemUrlMobile || null,
             siteProcessoFoco: config?.siteProcessoFoco || null,
+            siteProcessoEtapas:
+              (config?.siteProcessoEtapas as { titulo: string; texto: string; imagemUrl: string | null; foco: string }[] | null) || null,
             siteCtaTitulo: config?.siteCtaTitulo || null,
             siteCtaTexto: config?.siteCtaTexto || null,
             siteCtaBotaoTexto: config?.siteCtaBotaoTexto || null,

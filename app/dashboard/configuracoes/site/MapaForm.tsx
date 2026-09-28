@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Plus, Trash2 } from "lucide-react";
+import { Check, MapPin } from "lucide-react";
 import { Input, Label, Textarea } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { CIDADES_REGIAO } from "@/lib/cidadesRegiao";
 
 type Local = { nome: string };
 
-const LOCAIS_PADRAO: Local[] = [{ nome: "Araras, SP" }, { nome: "Limeira, SP" }, { nome: "Estados Unidos" }];
+const BASE = "Araras, SP";
 
 export default function MapaForm({
   mapaTitulo,
@@ -22,32 +23,37 @@ export default function MapaForm({
   const router = useRouter();
   const [titulo, setTitulo] = useState(mapaTitulo || "");
   const [texto, setTexto] = useState(mapaTexto || "");
-  const [locais, setLocais] = useState<Local[]>(mapaLocais && mapaLocais.length > 0 ? mapaLocais : LOCAIS_PADRAO);
+  // Araras é sempre a base (primeiro item, em destaque no mapa) — o restante
+  // da lista salva é o conjunto de cidades marcadas aqui.
+  const marcadosIniciais = new Set(
+    (mapaLocais && mapaLocais.length > 0 ? mapaLocais : [{ nome: BASE }, { nome: "Limeira, SP" }, { nome: "Rio Claro, SP" }])
+      .map((l) => l.nome)
+      .filter((n) => n !== BASE)
+  );
+  const [marcados, setMarcados] = useState<Set<string>>(marcadosIniciais);
   const [salvando, setSalvando] = useState(false);
   const [salvo, setSalvo] = useState(false);
 
-  function atualizarNome(i: number, valor: string) {
-    setLocais((prev) => prev.map((item, idx) => (idx === i ? { nome: valor } : item)));
-  }
-
-  function adicionar() {
-    setLocais((prev) => [...prev, { nome: "" }]);
-  }
-
-  function remover(i: number) {
-    setLocais((prev) => prev.filter((_, idx) => idx !== i));
+  function alternar(nome: string) {
+    setMarcados((prev) => {
+      const novo = new Set(prev);
+      if (novo.has(nome)) novo.delete(nome);
+      else novo.add(nome);
+      return novo;
+    });
   }
 
   async function salvar() {
     setSalvando(true);
     setSalvo(false);
+    const locais: Local[] = [{ nome: BASE }, ...Array.from(marcados).map((nome) => ({ nome }))];
     await fetch("/api/configuracao", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         siteMapaTitulo: titulo || null,
         siteMapaTexto: texto || null,
-        siteMapaLocais: locais.filter((l) => l.nome.trim()),
+        siteMapaLocais: locais,
       }),
     });
     setSalvando(false);
@@ -59,9 +65,9 @@ export default function MapaForm({
   return (
     <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card/60 p-5">
       <p className="text-[11px] text-muted">
-        Seção "Onde a gente atende" — um mapa ilustrativo (não é um mapa real, não precisa de endereço completo), com
-        um pino pra cada cidade ou cliente. O primeiro da lista é sempre a base e aparece em destaque, no centro; os
-        outros orbitam ao redor, ligados por uma linha. Dá pra adicionar quantos quiser conforme a carteira cresce.
+        Seção "Onde a gente atende" — agora é um mapa de verdade (Leaflet, sem custo). A base (Araras) sempre aparece
+        em destaque no centro; marque abaixo quais outras cidades da região devem aparecer também, ligadas à base por
+        uma linha. Alguma cidade que falta na lista? É só pedir que eu adiciono.
       </p>
       <div>
         <Label>Título da seção</Label>
@@ -80,29 +86,38 @@ export default function MapaForm({
         />
       </div>
 
-      <div className="flex flex-col gap-2">
-        {locais.map((local, i) => (
-          <div key={i} className="flex items-end gap-2">
-            <div className="flex-1">
-              <Label>{i === 0 ? "Base (fica no centro do mapa)" : `Local ${i + 1}`}</Label>
-              <Input
-                value={local.nome}
-                onChange={(e) => atualizarNome(i, e.target.value)}
-                placeholder={i === 0 ? "Araras, SP" : 'Cidade, ou "Estados Unidos", por exemplo'}
-              />
-            </div>
-            {i > 0 && (
-              <Button variant="danger" size="sm" onClick={() => remover(i)} className="shrink-0" title="Remover local">
-                <Trash2 size={13} />
-              </Button>
-            )}
-          </div>
-        ))}
+      <div>
+        <Label>Cidades atendidas</Label>
+        <div className="mb-2 flex items-center gap-2 rounded-xl border border-accent/30 bg-accent/10 px-3 py-2 text-xs text-accent">
+          <MapPin size={13} /> {BASE} — base, sempre marcada
+        </div>
+        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+          {CIDADES_REGIAO.filter((c) => c.nome !== BASE).map((c) => {
+            const ativo = marcados.has(c.nome);
+            return (
+              <button
+                key={c.nome}
+                type="button"
+                onClick={() => alternar(c.nome)}
+                className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-left text-xs transition-colors ${
+                  ativo
+                    ? "border-accent/50 bg-accent/15 text-text"
+                    : "border-border bg-base/40 text-muted hover:border-border/80 hover:text-text"
+                }`}
+              >
+                <span
+                  className={`flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border ${
+                    ativo ? "border-accent bg-accent" : "border-muted/50"
+                  }`}
+                >
+                  {ativo && <Check size={9} className="text-white" />}
+                </span>
+                {c.nome}
+              </button>
+            );
+          })}
+        </div>
       </div>
-
-      <Button variant="secondary" onClick={adicionar} className="w-full">
-        <Plus size={14} /> Adicionar local
-      </Button>
 
       <Button onClick={salvar} disabled={salvando} className="w-full">
         {salvo ? <Check size={14} /> : null} {salvando ? "Salvando..." : salvo ? "Salvo!" : "Salvar mapa"}

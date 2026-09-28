@@ -49,12 +49,19 @@ export default async function Home() {
       sobreFoco={config?.siteSobreFoco || null}
       sobreBotaoTexto={config?.siteSobreBotaoTexto || null}
       sobreBotaoUrl={config?.siteSobreBotaoUrl || null}
+      provaSocialTitulo={config?.siteProvaSocialTitulo || null}
+      provaSocialTexto={config?.siteProvaSocialTexto || null}
       processoTexto={config?.siteProcessoTexto || null}
       processoBotaoTexto={config?.siteProcessoBotaoTexto || null}
       processoBotaoUrl={config?.siteProcessoBotaoUrl || null}
       processoImagemUrl={config?.siteProcessoImagemUrl || null}
       processoImagemUrlMobile={config?.siteProcessoImagemUrlMobile || null}
       processoFoco={config?.siteProcessoFoco || null}
+      processoEtapas={
+        (config?.siteProcessoEtapas as
+          | { titulo?: string; texto?: string; imagemUrl?: string | null; foco?: string | null }[]
+          | null) || null
+      }
       ctaTitulo={config?.siteCtaTitulo || null}
       ctaTexto={config?.siteCtaTexto || null}
       ctaBotaoTexto={config?.siteCtaBotaoTexto || null}

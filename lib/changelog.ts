@@ -22,6 +22,61 @@ export type VersaoNovidades = {
 
 export const NOVIDADES: VersaoNovidades[] = [
   {
+    versao: 148,
+    resumo:
+      "Site principal: mapa de verdade com seletor de cidades, card vermelho de prova social de volta, carrossel do Processo com fotos, mais efeitos e vários ajustes visuais.",
+    itens: [
+      {
+        tipo: "adicionado",
+        texto:
+          '"Onde a gente atende" agora é um mapa de verdade (baseado no mapa real da região, sem custo nenhum) — em Configurações → Site, é só marcar quais cidades aparecem, sempre ligadas à base em Araras.',
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          'Voltou o card vermelho de destaque logo depois do "Quem somos" — título e texto editáveis em Configurações → Site (o texto original de antes desse site não foi encontrado em lugar nenhum, então esse aqui é um texto novo, no mesmo espírito).',
+      },
+      {
+        tipo: "melhorado",
+        texto:
+          'A seção "Do planejamento ao resultado" (Processo) virou um carrossel grande, que dá pra arrastar, com espaço pra uma foto em cada uma das 4 etapas.',
+      },
+      {
+        tipo: "corrigido",
+        texto:
+          "Os carrosséis que só respondiam ao toque (Serviços no celular e o novo do Processo) agora também arrastam com o mouse — resolve o problema de testar o site no computador numa janela estreita e não conseguir ver o resto.",
+      },
+      {
+        tipo: "melhorado",
+        texto: 'Fundo do site ficou preto de verdade (antes tinha um leve tom acinzentado).',
+      },
+      {
+        tipo: "melhorado",
+        texto:
+          'Banners de fundo (abertura, "Quem somos", Processo e chamada final) ganharam um leve efeito de zoom contínuo, pra ficar menos parado.',
+      },
+      {
+        tipo: "melhorado",
+        texto: "Botão do menu no celular ficou maior e mais fácil de tocar.",
+      },
+      {
+        tipo: "melhorado",
+        texto:
+          'Álbuns: cada cartão ganhou uma "pontinha" atrás e uma fitinha decorativa, pra nunca ficar com cara de vazio quando só tem um trabalho publicado.',
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          "Página /link ganhou mais ícones (câmera, edição, design) e alguns elementos flutuantes coloridos, além de balõezinhos decorativos no botão do WhatsApp.",
+      },
+      {
+        tipo: "removido",
+        texto:
+          "Rodapé do site não mostra mais os links de navegação nem o link pro painel administrativo — no lugar, mostra as cidades marcadas no mapa.",
+      },
+    ],
+  },
+  {
     versao: 147,
     resumo:
       "Parte 3 do redesign do painel: configurações pessoais, quadro Kanban pro editor e tráfego pago, e vários ajustes de acesso e visual.",

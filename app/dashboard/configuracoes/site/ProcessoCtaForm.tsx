@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/Button";
 import { UploadImagem } from "@/components/ui/UploadImagem";
 import { FocoImagem } from "@/components/ui/FocoImagem";
 
+type Etapa = { titulo: string; texto: string; imagemUrl: string | null; foco: string };
+
 type Config = {
   siteProcessoTexto: string | null;
   siteProcessoBotaoTexto: string | null;
@@ -15,6 +17,7 @@ type Config = {
   siteProcessoImagemUrl: string | null;
   siteProcessoImagemUrlMobile: string | null;
   siteProcessoFoco: string | null;
+  siteProcessoEtapas: Etapa[] | null;
   siteCtaTitulo: string | null;
   siteCtaTexto: string | null;
   siteCtaBotaoTexto: string | null;
@@ -22,6 +25,18 @@ type Config = {
   siteCtaImagemUrlMobile: string | null;
   siteCtaFoco: string | null;
 };
+
+// Mesmo texto padrão embutido no site (components/landing/LandingPage.tsx,
+// constante PROCESSO) — só pra mostrar como placeholder aqui quando a etapa
+// ainda não tem override. O número do passo (01-04) continua fixo no código.
+const PROCESSO_PADRAO = [
+  { titulo: "Diagnóstico", texto: "Entendemos seu negócio, seu público e onde você quer chegar." },
+  { titulo: "Estratégia", texto: "Montamos o plano — conteúdo, tráfego, ou os dois — com metas claras." },
+  { titulo: "Execução", texto: "Produção, publicação e gestão de campanhas no ritmo combinado." },
+  { titulo: "Acompanhamento", texto: "Relatórios periódicos e ajuste de rota conforme os resultados." },
+];
+
+const ETAPAS_VAZIAS: Etapa[] = PROCESSO_PADRAO.map(() => ({ titulo: "", texto: "", imagemUrl: null, foco: "50% 50%" }));
 
 export default function ProcessoCtaForm({ config }: { config: Config }) {
   const router = useRouter();
@@ -31,6 +46,9 @@ export default function ProcessoCtaForm({ config }: { config: Config }) {
   const [processoImagemUrl, setProcessoImagemUrl] = useState<string | null>(config.siteProcessoImagemUrl);
   const [processoImagemUrlMobile, setProcessoImagemUrlMobile] = useState<string | null>(config.siteProcessoImagemUrlMobile);
   const [processoFoco, setProcessoFoco] = useState(config.siteProcessoFoco || "50% 50%");
+  const [etapas, setEtapas] = useState<Etapa[]>(
+    config.siteProcessoEtapas && config.siteProcessoEtapas.length === 4 ? config.siteProcessoEtapas : ETAPAS_VAZIAS
+  );
   const [ctaTitulo, setCtaTitulo] = useState(config.siteCtaTitulo || "");
   const [ctaTexto, setCtaTexto] = useState(config.siteCtaTexto || "");
   const [ctaBotaoTexto, setCtaBotaoTexto] = useState(config.siteCtaBotaoTexto || "");
@@ -39,6 +57,18 @@ export default function ProcessoCtaForm({ config }: { config: Config }) {
   const [ctaFoco, setCtaFoco] = useState(config.siteCtaFoco || "50% 50%");
   const [salvando, setSalvando] = useState(false);
   const [salvo, setSalvo] = useState(false);
+
+  function atualizarEtapaCampo(i: number, campo: "titulo" | "texto", valor: string) {
+    setEtapas((prev) => prev.map((et, idx) => (idx === i ? { ...et, [campo]: valor } : et)));
+  }
+
+  function atualizarEtapaImagem(i: number, url: string | null) {
+    setEtapas((prev) => prev.map((et, idx) => (idx === i ? { ...et, imagemUrl: url } : et)));
+  }
+
+  function atualizarEtapaFoco(i: number, foco: string) {
+    setEtapas((prev) => prev.map((et, idx) => (idx === i ? { ...et, foco } : et)));
+  }
 
   async function salvar() {
     setSalvando(true);
@@ -53,6 +83,7 @@ export default function ProcessoCtaForm({ config }: { config: Config }) {
         siteProcessoImagemUrl: processoImagemUrl,
         siteProcessoImagemUrlMobile: processoImagemUrlMobile,
         siteProcessoFoco: processoFoco || null,
+        siteProcessoEtapas: etapas,
         siteCtaTitulo: ctaTitulo || null,
         siteCtaTexto: ctaTexto || null,
         siteCtaBotaoTexto: ctaBotaoTexto || null,
@@ -136,6 +167,46 @@ export default function ProcessoCtaForm({ config }: { config: Config }) {
               proporcao="4:5, vertical"
             />
           </div>
+        </div>
+      </div>
+
+      <div className="border-t border-border pt-5">
+        <p className="mb-1 text-sm font-medium text-text">As 4 etapas do Processo (carrossel "estilo Netflix")</p>
+        <p className="mb-4 text-[11px] leading-relaxed text-muted">
+          O número do passo (01 a 04) é fixo — edite só o título, o texto e, se quiser, uma foto por etapa. Sem
+          foto, a etapa continua só com o cartão de sempre, sem imagem.
+        </p>
+        <div className="flex flex-col gap-3">
+          {etapas.map((et, i) => (
+            <div key={i} className="rounded-xl border border-border/60 bg-base/40 p-3">
+              <p className="mb-2 text-xs font-medium text-accent">Etapa {String(i + 1).padStart(2, "0")}</p>
+              <Input
+                value={et.titulo}
+                onChange={(e) => atualizarEtapaCampo(i, "titulo", e.target.value)}
+                placeholder={PROCESSO_PADRAO[i].titulo}
+                className="mb-2"
+              />
+              <Textarea
+                value={et.texto}
+                onChange={(e) => atualizarEtapaCampo(i, "texto", e.target.value)}
+                rows={2}
+                placeholder={PROCESSO_PADRAO[i].texto}
+                className="mb-2"
+              />
+              <UploadImagem
+                value={et.imagemUrl}
+                onChange={(url) => atualizarEtapaImagem(i, url)}
+                pasta="site-processo-etapas"
+                tamanhoRecomendado="800 × 1000px"
+                proporcao="4:5, vertical"
+              />
+              {et.imagemUrl && (
+                <div className="mt-2">
+                  <FocoImagem imagemUrl={et.imagemUrl} valor={et.foco} onChange={(v) => atualizarEtapaFoco(i, v)} />
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       </div>
 

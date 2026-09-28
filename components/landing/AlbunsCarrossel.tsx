@@ -107,22 +107,37 @@ export function AlbunsCarrossel({
               const destino = c.link || `/portfolio/${c.id}`;
               const externo = !!c.link;
               const cartao = (
-                <div className="group/card relative aspect-[3/4] w-[220px] shrink-0 overflow-hidden rounded-2xl border border-border bg-card/30 sm:w-[268px]">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={c.imagemUrl!}
-                    alt={c.nome}
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover/card:scale-[1.06]"
-                    style={{ objectPosition: c.imagemFoco || "50% 50%" }}
+                <div className="group/card relative w-[220px] shrink-0 sm:w-[268px]">
+                  {/* Ponta atrás, meio de lado — profundidade tipo pilha de fotos, pra
+                      nenhum cartão (principalmente quando só tem um álbum) ficar
+                      parecendo sozinho/vazio */}
+                  <div
+                    aria-hidden
+                    className="absolute -right-2.5 top-3 aspect-[3/4] w-full rotate-[5deg] rounded-2xl border border-border/50 bg-card/50"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/15 to-transparent" />
-                  <div className="absolute bottom-0 left-0 flex w-full items-end justify-between p-4">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-white">{c.nome}</p>
-                      {c.categoria && <p className="truncate text-[10px] text-white/60">{c.categoria}</p>}
+                  <div className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl border border-border bg-card/30 shadow-[0_14px_30px_-12px_rgba(0,0,0,0.55)]">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={c.imagemUrl!}
+                      alt={c.nome}
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover/card:scale-[1.06]"
+                      style={{ objectPosition: c.imagemFoco || "50% 50%" }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/15 to-transparent" />
+                    <div className="absolute bottom-0 left-0 flex w-full items-end justify-between p-4">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-white">{c.nome}</p>
+                        {c.categoria && <p className="truncate text-[10px] text-white/60">{c.categoria}</p>}
+                      </div>
+                      <ArrowUpRight size={14} className="shrink-0 text-white/70" />
                     </div>
-                    <ArrowUpRight size={14} className="shrink-0 text-white/70" />
                   </div>
+                  {/* rolo de fita washi no canto — efeito "polaroid colada" */}
+                  <div
+                    aria-hidden
+                    className="absolute -top-2.5 left-6 h-5 w-14 rotate-[-7deg] bg-white/25 shadow-[0_2px_6px_rgba(0,0,0,0.3)] backdrop-blur-[1px]"
+                    style={{ clipPath: "polygon(4% 0, 96% 0, 100% 100%, 0% 100%)" }}
+                  />
                 </div>
               );
               // key inclui o índice pq a lista é duplicada (mesma id aparece 2x, lado a lado)

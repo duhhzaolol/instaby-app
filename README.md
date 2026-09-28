@@ -1,3 +1,126 @@
+# Instaby App — v148
+
+Lote grande de feedback sobre **o site principal** (`/` e `/link`), mandado de
+uma vez só, em áudio transcrito e sem estrutura (~10 pedidos diferentes
+misturados num texto só). Executado inteiro em modo automático (autorização
+já dada em turnos anteriores), com as decisões de interpretação registradas
+aqui e também explicadas pra ele na resposta final.
+
+## Novo: card vermelho de prova social, depois do "Quem somos"
+
+- Pedido de volta: um card vermelho vibrante ("estouro") que existia num site
+  anterior (antes desse rebuild em Next.js, feito por outra IA) e sumiu nesse
+  processo. **Procurei o texto original em tudo que tinha disponível no
+  projeto (README, plano de implementação, auditoria, design system) e não
+  encontrei rastro nenhum** — o texto atual é novo, escrito no mesmo espírito
+  ("prova social"/"o povo já viu"), não uma restauração do original.
+- Schema: `Configuracao.siteProvaSocialTitulo` e `siteProvaSocialTexto`
+  (ambos `String?`, opcionais/aditivos). Editável em Configurações → Site,
+  entre "Quem somos" e "Cor dos textos". Título e texto vazios escondem a
+  seção inteira.
+- Faixa full-width em `components/landing/LandingPage.tsx`, gradiente
+  vermelho vibrante (`#ff3b4a → #e63946 → #b81926`) — de propósito mais
+  saturada que o vermelho escuro já usado no "Processo" logo mais abaixo, pra
+  não parecerem a mesma faixa repetida.
+
+## Processo virou carrossel grande, "estilo Netflix", com foto por etapa
+
+- Ele descreveu duas ideias (mini-fotos nos cards, ou um carrossel grande
+  estilo Netflix) com mais entusiasmo na segunda — implementei as duas
+  juntas: cartões grandes e arrastáveis, cada um com espaço opcional pra
+  foto, sombra e overlay.
+- Schema: `Configuracao.siteProcessoEtapas` (`Json?`, aditivo) — array de até
+  4 `{titulo, texto, imagemUrl, foco}`, indexado (índice ausente/vazio usa o
+  texto padrão já embutido no código, sem foto). O número do passo (01-04)
+  continua fixo no código, não editável.
+- Editor novo em `ProcessoCtaForm.tsx` (Configurações → Site → "Processo e
+  chamada final"), um card por etapa com upload de imagem + ponto de
+  enquadramento, mesmo padrão já usado em outras imagens do site.
+- Renderização em `LandingPage.tsx`: `overflow-x-auto` com `snap-x`, arrasta
+  com o mouse (ver hook novo abaixo).
+
+## "Onde a gente atende" virou um mapa de verdade
+
+- Antes era um SVG ilustrativo com posições fixas, sem geografia real. Agora
+  usa **Leaflet** com tiles escuros gratuitos da **CARTO**
+  (`basemaps.cartocdn.com/dark_all`, sem chave de API, sem custo) — pino
+  maior e pulsando pra Araras (base), pinos menores pras demais cidades,
+  linha tracejada vermelha ligando cada uma à base, `fitBounds` pra
+  enquadrar tudo automaticamente. Ícones custom via `L.divIcon()` (evita o
+  bug clássico do ícone padrão do Leaflet quebrando com Next/webpack).
+- `lib/cidadesRegiao.ts` (novo): tabela com coordenadas reais de ~22 cidades
+  da região de Campinas/Araras. **Não mudou o formato salvo no banco** —
+  `Configuracao.siteMapaLocais` continua `Json?` com só `[{nome: string}]`;
+  as coordenadas são resolvidas pelo nome na hora de desenhar o mapa, sem
+  precisar editar schema nem pedir latitude/longitude a ele.
+- `MapaForm.tsx` reescrito: Araras fixo como base (sempre marcada, não dá
+  pra desmarcar) + grade de botões pra marcar/desmarcar as outras cidades da
+  tabela — clique liga/desliga, sem precisar digitar nome de cidade.
+
+## Arrastar com o mouse nos carrosséis (antes só tocava)
+
+- Bug relatado: testando o site no computador com a janela estreita (ou
+  dando zoom), o carrossel de Serviços não respondia ao arrastar com o
+  mouse — só touch/trackpad rolavam.
+- `lib/useArrastarScroll.ts` (novo, reutilizável): hook com pointer events
+  que só age quando `pointerType === "mouse"` (nunca interfere no swipe de
+  toque nativo) e cancela o clique seguinte se houve arraste de verdade,
+  pra não "ativar" um link por baixo do mouse sem querer. Aplicado no
+  carrossel de Serviços (celular) e no novo carrossel do Processo. Dica
+  "Arraste pra ver mais" com seta animada, mais visível que antes.
+
+## Mais efeito nos banners (Ken Burns) e botão do menu maior
+
+- Hero, "Quem somos", Processo e chamada final: fotos de fundo ganharam um
+  zoom lento e contínuo (`framer-motion`, `scale` de 1 → ~1.08-1.09,
+  20-26s, `repeatType: "mirror"`) em vez de ficarem estáticas.
+- Botão do menu (hambúrguer) no celular: de 36px pra 44px (padrão de área de
+  toque confortável), com feedback ao tocar.
+
+## Fundo do site: cinza → preto de verdade
+
+- `styles/tokens-colors.css`: `--base` de `19 21 25` (#131519) pra
+  `10 10 12` (#0A0A0C). Esse token só afeta site público/portfólio — o
+  painel interno usa a paleta isolada em `.tema-painel` e não foi tocado
+  (confirmado via grep em todo uso de `bg-base` antes de mexer).
+
+## Álbuns: efeito de profundidade nos cartões
+
+- Card "sozinho" (só um álbum publicado) ficava parecendo vazio. Adicionado
+  um cartão-fantasma rotacionado atrás (efeito pilha de fotos) + uma
+  fitinha washi decorativa no canto, em todo cartão do carrossel — não só
+  quando tem um só.
+
+## /link: mais ícones e elementos flutuantes coloridos
+
+- `iconePara()` ganhou mais palavras-chave (câmera, Photoshop/design,
+  Premiere/edição/vídeo) — link cadastrado com esses termos no título já
+  sai com o ícone certo.
+- Ícones flutuantes decorativos (Instagram, câmera, YouTube) no topo da
+  página, cada um com uma cor diferente — não precisa ficar só no
+  vermelho/preto do resto do site, como pedido.
+- Balõezinhos de chat decorativos (verde do WhatsApp, única exceção
+  combinada ao tema vermelho/preto) no botão de WhatsApp.
+
+## Rodapé: sem links de navegação nem painel administrativo
+
+- Removida a fileira de links (Início/Contato/etc. + "Painel
+  administrativo") do rodapé do site público. No lugar, mostra as cidades
+  marcadas no mapa (mesma fonte de dados do mapa de atendimento).
+- **Não mexido de propósito:** o menu do celular (☰) ainda tem um link
+  pequeno "Entrar no painel" — ele reclamou especificamente do rodapé
+  ("o final" da página), não desse atalho discreto no menu, que parece ser
+  o jeito dele de entrar no próprio painel pelo celular. Fica fácil de tirar
+  também se ele preferir.
+
+## Verificação
+
+- `tsc --noEmit`: 323 erros, igual ao baseline conhecido (nenhum erro novo
+  introduzido pelas mudanças desta versão — conferido arquivo por arquivo
+  entre os que foram tocados).
+
+---
+
 # Instaby App — v147
 
 Parte 3 do redesign do painel — entregue de uma vez, em cima de um lote

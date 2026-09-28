@@ -573,12 +573,21 @@ model Configuracao {
   siteSobreFoco         String? // ponto de enquadramento, ex: "50% 30%"
   siteSobreBotaoTexto   String? // ex: "Conheça nossa história"
   siteSobreBotaoUrl     String?
+  // Card vermelho vibrante logo após "Quem somos" (prova social/confiança) — título
+  // curto e uma linha de apoio opcional. Vazio = usa o texto padrão embutido.
+  siteProvaSocialTitulo String?
+  siteProvaSocialTexto  String?
   siteProcessoTexto     String?
   siteProcessoBotaoTexto String?
   siteProcessoBotaoUrl  String?
   siteProcessoImagemUrl String? // foto de fundo opcional da faixa "Processo" — some atrás do gradiente vermelho, não substitui ele
   siteProcessoImagemUrlMobile String? // opcional — mesma lógica do Hero/Sobre
   siteProcessoFoco      String? // ponto de enquadramento, ex: "50% 30%"
+  // Override opcional das 4 etapas do Processo (carrossel) — o número do passo
+  // (01-04) continua fixo no código, só título/texto/foto por etapa são editáveis:
+  // [{"titulo":..,"texto":..,"imagemUrl":..,"foco":..}]. Índice ausente/vazio usa
+  // o padrão embutido (sem foto).
+  siteProcessoEtapas    Json?
   siteCtaTitulo         String?
   siteCtaTexto          String?
   siteCtaBotaoTexto     String?

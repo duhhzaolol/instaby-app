@@ -14,7 +14,11 @@ import {
   FileText,
   Megaphone,
   ArrowUpRight,
+  Camera,
+  Palette,
+  Clapperboard,
 } from "lucide-react";
+import { ElementoFlutuante, IconeFlutuanteMini } from "./FloatingGear";
 
 type LinkItem = {
   titulo: string;
@@ -23,6 +27,20 @@ type LinkItem = {
   imagemUrl: string | null;
   destaque: boolean;
 };
+
+// Balão de chat, estilo bolha de mensagem — decorativo, reforça a referência a
+// "balões do WhatsApp" pedida, com o verde característico do WhatsApp (a única
+// exceção combinada ao tema vermelho/preto, só aqui, de propósito).
+function BalaoChat({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 64 52" fill="none" className={className} aria-hidden>
+      <path
+        d="M8 6h48a6 6 0 0 1 6 6v22a6 6 0 0 1-6 6H24l-10 10v-10H8a6 6 0 0 1-6-6V12a6 6 0 0 1 6-6Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
 
 // O ícone de cada link na lista é escolhido pelo título — então "Instagram",
 // "TikTok" etc, cadastrados como um link normal em vez de ficarem no bloco
@@ -34,6 +52,9 @@ function iconePara(titulo: string) {
   if (t.includes("youtube")) return Youtube;
   if (t.includes("tiktok")) return Music2;
   if (t.includes("linkedin")) return Linkedin;
+  if (t.includes("câmera") || t.includes("camera") || t.includes("foto") || t.includes("captação") || t.includes("captacao")) return Camera;
+  if (t.includes("photoshop") || t.includes("design") || t.includes("arte") || t.includes("identidade")) return Palette;
+  if (t.includes("premiere") || t.includes("edição") || t.includes("edicao") || t.includes("vídeo") || t.includes("video")) return Clapperboard;
   if (t.includes("portfólio") || t.includes("portfolio") || t.includes("trabalho")) return Briefcase;
   if (t.includes("case") || t.includes("depoimento") || t.includes("avalia")) return Star;
   if (t.includes("serviço") || t.includes("servico")) return Megaphone;
@@ -69,6 +90,18 @@ export function LinkPage({
     <div className="flex min-h-screen flex-col items-center bg-[#0a0a0c] text-white">
       {/* Hero de topo */}
       <div className="relative flex w-full flex-col justify-end overflow-hidden" style={{ minHeight: imagemUrl ? "56vh" : "auto" }}>
+        {/* Ícones flutuantes — não precisa ficar só no vermelho/preto: um toque de
+            cor por ícone, referência às redes e à produção (Instagram, câmera,
+            YouTube), sem pesar no visual. */}
+        <ElementoFlutuante className="left-[6%] top-[12%] hidden sm:block" duracao={8} delay={0.1}>
+          <IconeFlutuanteMini Icon={Instagram} className="border-pink-400/20 text-pink-300/40" />
+        </ElementoFlutuante>
+        <ElementoFlutuante className="right-[8%] top-[20%] hidden sm:block" duracao={9} delay={0.5}>
+          <IconeFlutuanteMini Icon={Camera} className="border-amber-300/20 text-amber-200/40" />
+        </ElementoFlutuante>
+        <ElementoFlutuante className="left-[10%] bottom-[10%] hidden sm:block" duracao={7.5} delay={0.3}>
+          <IconeFlutuanteMini Icon={Youtube} className="border-red-400/20 text-red-300/40" />
+        </ElementoFlutuante>
         {imagemUrl ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -151,16 +184,19 @@ export function LinkPage({
               transition={{ duration: 0.4, delay: 0.15 }}
               href={linkWhatsapp}
               target="_blank"
-              className="flex items-center gap-3 rounded-2xl bg-accent px-4 py-3.5 text-sm font-medium text-white shadow-glow transition-transform hover:scale-[1.01]"
+              className="relative flex items-center gap-3 overflow-hidden rounded-2xl bg-accent px-4 py-3.5 text-sm font-medium text-white shadow-glow transition-transform hover:scale-[1.01]"
             >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15">
+              {/* balõezinhos de chat, decorativos, no canto do botão */}
+              <BalaoChat className="pointer-events-none absolute -right-2 -top-3 h-14 w-14 rotate-[12deg] text-white/10" />
+              <BalaoChat className="pointer-events-none absolute -right-6 bottom-[-10px] h-9 w-9 rotate-[-8deg] text-white/10" />
+              <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15">
                 <MessageCircle size={16} />
               </span>
-              <span className="flex-1 text-left">
+              <span className="relative flex-1 text-left">
                 <span className="block">Falar no WhatsApp</span>
                 <span className="block text-xs font-normal text-white/80">Atendimento rápido</span>
               </span>
-              <ArrowUpRight size={16} className="shrink-0 opacity-70" />
+              <ArrowUpRight size={16} className="relative shrink-0 opacity-70" />
             </motion.a>
           )}
 
