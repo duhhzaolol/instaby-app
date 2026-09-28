@@ -1,12 +1,41 @@
-# Instaby App — v145
+# Instaby App — v146
 
-Parte 2 do redesign completo do painel: as 3 telas de Início (dono, editor,
-gestor de tráfego), cada uma mostrando só o que faz sentido pra função da
-pessoa. Faltam ainda as Partes 3 a 5 (Tarefas — quadro e painel lateral —,
-Clientes/Financeiro em si/Comercial em si/Horas/Configurações, Login+páginas
-do celular) — combinado de fazer aos poucos, uma parte de cada vez, com
-aprovação antes de seguir. **Aguardando aprovação desta Parte 2 antes de
-começar a Parte 3.**
+Correção de um erro de build que a v145 subiu sem querer (o deploy dela
+falhava no ar — ver "Correção de build" logo abaixo). O conteúdo da Parte 2
+do redesign (as 3 telas de Início) é o mesmo descrito na seção da v145,
+alguns parágrafos abaixo — só o código quebrado foi corrigido, nada mudou
+no que a tela mostra. Faltam ainda as Partes 3 a 5 (Tarefas — quadro e
+painel lateral —, Clientes/Financeiro em si/Comercial em si/Horas/
+Configurações, Login+páginas do celular). **Aguardando aprovação da Parte 2
+antes de começar a Parte 3.**
+
+## Correção de build (v146): erro de tipo travava o deploy da v145
+
+- A v145 falhava no build da Vercel (ficava na versão antiga no ar, o commit
+  novo nunca ia pro ar) com este erro: `Type 'Decimal' is not assignable to
+  type 'number'` em `app/dashboard/page.tsx`, na função que soma os
+  resultados de tráfego pago do mês pro Início do gestor de tráfego.
+- Causa: campo de dinheiro do banco (`verbaInvestida`/`valorRetorno` de
+  Resultado de Campanha) chega do Prisma como um tipo especial de número
+  decimal (`Decimal`), não um `number` puro do JavaScript — mesma natureza
+  do ajuste feito lá na v110 (`lib/prisma.ts`), só que daquela vez pra
+  serialização de resposta de API, e aqui é o `page.tsx` lendo direto do
+  banco (sem passar por API no meio) e entregando pra uma função que
+  esperava `number` de verdade. Sem `prisma generate` funcionando neste
+  sandbox de trabalho (bloqueio de rede de sempre), essa peça específica só
+  aparece quando o Prisma de verdade é gerado — e isso só acontece no build
+  da Vercel, não aqui. Por isso passou despercebido na entrega da v145: a
+  verificação por aqui não tem como pegar esse tipo de erro específico
+  (registrado na memória do projeto, pra não repetir a mesma surpresa numa
+  parte futura).
+- Corrigido convertendo esse valor pra `number` assim que ele sai da
+  consulta ao banco — mesmo padrão (`Number(...)`) já usado em todo o resto
+  do arquivo pra outros valores de dinheiro. Conferido a mão, campo por
+  campo do schema, que não sobrou nenhum outro ponto do código da Parte 2
+  com esse mesmo problema.
+- **Depois de subir esta correção pro GitHub, espera a Vercel terminar o
+  deploy novo antes de testar** — o site só reflete a Parte 2 de verdade a
+  partir daí.
 
 ## Parte 2 do redesign: as 3 telas de Início (dono, editor, tráfego)
 

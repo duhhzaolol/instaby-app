@@ -22,6 +22,17 @@ export type VersaoNovidades = {
 
 export const NOVIDADES: VersaoNovidades[] = [
   {
+    versao: 146,
+    resumo: "Corrigido um erro que impedia o site de atualizar com a Parte 2 do redesign.",
+    itens: [
+      {
+        tipo: "corrigido",
+        texto:
+          "A versão anterior (v145) tinha um erro que travava a atualização do site no ar — a página continuava na versão antiga até isso ser corrigido. Já corrigido; as novidades da Parte 2 (as 3 telas de Início) passam a valer a partir desta versão.",
+      },
+    ],
+  },
+  {
     versao: 145,
     resumo: "Parte 2 do redesign do painel: 3 telas de Início, uma pra cada função (dono, editor, tráfego).",
     itens: [

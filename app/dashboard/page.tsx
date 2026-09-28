@@ -571,13 +571,22 @@ async function InicioTrafegoPage({ usuario }: { usuario: Usuario }) {
     }),
   ]);
 
-  const totaisRaw = totalizarResultados(resultadosDoMes);
+  // verbaInvestida/valorRetorno vêm do Prisma como Decimal, não como number de
+  // verdade pro TypeScript (mesma natureza do ajuste em lib/prisma.ts) — convertido
+  // aqui, na saída da query, igual todo outro valor de dinheiro deste arquivo.
+  const resultadosDoMesConvertidos = resultadosDoMes.map((r) => ({
+    ...r,
+    verbaInvestida: r.verbaInvestida ? Number(r.verbaInvestida) : null,
+    valorRetorno: r.valorRetorno ? Number(r.valorRetorno) : null,
+  }));
+
+  const totaisRaw = totalizarResultados(resultadosDoMesConvertidos);
 
   // Investido de cada campanha ativa NESSE mês (deduplicado), pra ritmo de gasto —
   // mesma regra de agrupamento por mês do restante do módulo de Tráfego Pago.
   const totalizadoresPorCampanha = new Map<string, ReturnType<typeof totalizarResultados>>();
   campanhasAtivas.forEach((c) => {
-    const doMes = resultadosDoMes.filter((r) => r.campanhaId === c.id);
+    const doMes = resultadosDoMesConvertidos.filter((r) => r.campanhaId === c.id);
     totalizadoresPorCampanha.set(c.id, totalizarResultados(doMes));
   });
 
