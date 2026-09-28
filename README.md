@@ -1,4 +1,24 @@
-# Instaby App — v142
+# Instaby App — v143
+
+Um pedido direto: faltava um jeito de sair da conta pelo próprio app.
+
+## Adicionado: botão de sair da conta
+
+- Novo botão ao lado do de trocar o tema (ícone de trocar, ⏻), na caixa com
+  seu nome e e-mail no rodapé do menu lateral — funciona igual no desktop e
+  no menu mobile, porque os dois usam o mesmo bloco por baixo dos panos.
+- Pede uma confirmação antes de sair de verdade (mesmo padrão de aviso que
+  já existe nos botões de excluir espalhados pelo app), pra evitar deslogar
+  sem querer com um clique errado logo ali do lado do botão de tema. Ao
+  confirmar, encerra a sessão e volta pra tela de login.
+- **Detalhe técnico pra registro:** `tsc --noEmit` no mesmo total de sempre
+  (305, barulho conhecido do client do Prisma desatualizado), zero erro
+  novo. Como o espaço ali no rodapé do menu é apertado (avatar + nome +
+  e-mail + dois botões), conferi visualmente com um mockup usando o CSS
+  real do projeto, inclusive simulando um nome bem comprido, pra garantir
+  que não quebra ou fica espremido.
+
+## v142
 
 Correção de um bug visual sério que a v141 introduziu sem querer (várias
 caixas do app perdendo o fundo escuro), mais dois ajustes pedidos depois de

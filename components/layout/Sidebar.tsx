@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutGrid,
@@ -25,8 +26,18 @@ import {
   Menu,
   X,
   Megaphone,
+  LogOut,
 } from "lucide-react";
 import { BotaoTema } from "@/components/ui/TemaAlternativo";
+
+// Confirma antes de sair — o botão fica bem coladinho no de trocar tema, no
+// mesmo cantinho, e um clique sem querer ali no meio do trabalho é chato de
+// mais pra não ter uma trava simples (mesmo padrão de confirm() já usado nos
+// "excluir" espalhados pelo app).
+function sairDaConta() {
+  if (!confirm("Sair da sua conta?")) return;
+  signOut({ callbackUrl: "/login" });
+}
 
 export type Permissoes = {
   master: boolean;
@@ -201,6 +212,13 @@ function ConteudoSidebar({
           <p className="truncate text-xs text-muted">{email}</p>
         </div>
         <BotaoTema />
+        <button
+          onClick={sairDaConta}
+          title="Sair da conta"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-card/60 text-muted transition-colors hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-400"
+        >
+          <LogOut size={15} />
+        </button>
       </div>
     </>
   );

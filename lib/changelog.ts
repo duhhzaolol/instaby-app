@@ -22,6 +22,17 @@ export type VersaoNovidades = {
 
 export const NOVIDADES: VersaoNovidades[] = [
   {
+    versao: 143,
+    resumo: "Novo botão de sair da conta.",
+    itens: [
+      {
+        tipo: "adicionado",
+        texto:
+          "Botão de sair da conta, do lado do botão de trocar o tema, na caixa com seu nome no rodapé do menu lateral. Pede uma confirmação antes de sair de verdade, pra não acontecer sem querer.",
+      },
+    ],
+  },
+  {
     versao: 142,
     resumo: "Correção de um bug visual que a v141 introduziu, e a Novidades mudou de lugar.",
     itens: [
