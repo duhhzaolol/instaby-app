@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { HardDrive, Play, Inbox, Check, Clock, ChevronDown } from "lucide-react";
+import { useRouter, usePathname } from "next/navigation";
+import { HardDrive, Play, Inbox, Check, Lock, Clock, ChevronDown } from "lucide-react";
 import { COLUNAS, LIMITE_FEITO, TarefaQuadro } from "@/components/dashboard/QuadroTarefas";
 import { visualDaCategoriaTarefa } from "@/lib/categoriaTarefaVisual";
 import { urgenciaPrazo } from "@/lib/urgenciaPrazo";
@@ -34,6 +34,7 @@ function CartaoPessoal({
   carregando,
   onDragStart,
   onDragEnd,
+  onAbrir,
   onClaim,
   onIniciar,
   onConcluir,
@@ -44,6 +45,7 @@ function CartaoPessoal({
   carregando: boolean;
   onDragStart: () => void;
   onDragEnd: () => void;
+  onAbrir: () => void;
   onClaim: () => void;
   onIniciar: () => void;
   onConcluir: () => void;
@@ -67,7 +69,7 @@ function CartaoPessoal({
       }`}
       style={tarefa.clienteCor ? { borderLeft: `2px solid ${tarefa.clienteCor}` } : undefined}
     >
-      <div className="flex items-start gap-2">
+      <button type="button" onClick={onAbrir} className="flex w-full items-start gap-2 text-left">
         <div
           className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md"
           style={{ backgroundColor: `${cor}1A`, color: cor }}
@@ -95,7 +97,7 @@ function CartaoPessoal({
             </a>
           )}
         </div>
-      </div>
+      </button>
 
       <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-border/60 pt-2">
         {tarefa.status === "a_fazer" && !minha && (
@@ -126,12 +128,26 @@ function CartaoPessoal({
               <Check size={10} /> {carregando ? "..." : "Marcar feito"}
             </button>
             <button
+              onClick={onAbrir}
+              className="flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-[10px] text-muted hover:border-red-500/40 hover:text-red-400"
+            >
+              <Lock size={10} /> Bloquear
+            </button>
+            <button
               onClick={() => setExpandido((v) => !v)}
               className="flex items-center gap-0.5 text-[10px] text-muted hover:text-text"
             >
               Sub-passos <ChevronDown size={10} className={expandido ? "rotate-180" : ""} />
             </button>
           </>
+        )}
+        {tarefa.status === "bloqueada" && (
+          <button
+            onClick={onAbrir}
+            className="flex items-center gap-1 rounded-lg border border-red-500/30 bg-red-500/10 px-2 py-1 text-[10px] font-medium text-red-400"
+          >
+            <Lock size={10} /> Bloqueada — ver detalhes
+          </button>
         )}
       </div>
 
@@ -146,6 +162,7 @@ function CartaoPessoal({
 
 export default function QuadroTarefasPessoal({ usuarioId, tarefas }: { usuarioId: string; tarefas: TarefaPessoal[] }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [itens, setItens] = useState(tarefas);
   const [arrastandoId, setArrastandoId] = useState<string | null>(null);
   const [colunaSobre, setColunaSobre] = useState<string | null>(null);
@@ -158,7 +175,10 @@ export default function QuadroTarefasPessoal({ usuarioId, tarefas }: { usuarioId
 
   useEffect(() => setItens(tarefas), [tarefas]);
 
-  async function patchTarefa(id: string, data: Record<string, unknown>) {
+  // Retorna o corpo da resposta (inclui registroTempoFechado, quando aplicável)
+  // em vez de só true/false, pra quem precisar checar o que o servidor fez —
+  // ver confirmarConclusao() e o combate a horas duplicadas (Etapa 1 item 9).
+  async function patchTarefa(id: string, data: Record<string, unknown>): Promise<any | null> {
     const res = await fetch(`/api/tarefas/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -167,9 +187,18 @@ export default function QuadroTarefasPessoal({ usuarioId, tarefas }: { usuarioId
     if (!res.ok) {
       const d = await res.json().catch(() => null);
       alert(d?.erro || "Não consegui atualizar essa tarefa.");
-      return false;
+      return null;
     }
-    return true;
+    return res.json().catch(() => ({}));
+  }
+
+  // Painel lateral de detalhes (Etapa 1 v152) — mesma técnica de QuadroTarefas.tsx
+  // (lê window.location.search na hora do clique, sem useSearchParams, pra não
+  // exigir <Suspense> em toda página que renderiza esse quadro pessoal).
+  function abrirPainel(id: string) {
+    const params = new URLSearchParams(window.location.search);
+    params.set("tarefa", id);
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
   }
 
   async function claim(tarefa: TarefaPessoal) {
@@ -185,15 +214,19 @@ export default function QuadroTarefasPessoal({ usuarioId, tarefas }: { usuarioId
     setItens((prev) =>
       prev.map((t) => (t.id === tarefa.id ? { ...t, status: "em_andamento", responsavelId: usuarioId } : t))
     );
-    const ok = await patchTarefa(tarefa.id, { status: "em_andamento", responsavelId: usuarioId });
-    if (ok) {
+    const atualizado = await patchTarefa(tarefa.id, { status: "em_andamento", responsavelId: usuarioId });
+    if (atualizado) {
       // Mesmo mecanismo do cronômetro do topo — um registro de horas sem "fim" fica
       // rodando até a pessoa parar (na Horas ou no cronômetro da barra superior).
+      // tarefaId é o que permite o servidor achar e fechar esse registro sozinho
+      // quando a tarefa for concluída (ou bloqueada) por qualquer caminho — sem
+      // isso o combate a horas duplicadas da Etapa 1 item 9 não tem o que fechar.
       await fetch("/api/registros-tempo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           clienteId: tarefa.clienteId || null,
+          tarefaId: tarefa.id,
           atividade: tarefa.titulo,
           inicio: new Date().toISOString(),
         }),
@@ -215,15 +248,21 @@ export default function QuadroTarefasPessoal({ usuarioId, tarefas }: { usuarioId
     const tarefa = confirmando;
 
     setItens((prev) => prev.map((t) => (t.id === tarefa.id ? { ...t, status: "feito", responsavelId: usuarioId } : t)));
-    const ok = await patchTarefa(tarefa.id, { status: "feito", responsavelId: usuarioId });
+    const atualizado = await patchTarefa(tarefa.id, { status: "feito", responsavelId: usuarioId });
 
-    if (!ok) {
+    if (!atualizado) {
       setSalvandoConclusao(false);
       router.refresh();
       return;
     }
 
-    if (registrarHoras && horaInicio && horaFim) {
+    // Se essa tarefa tinha cronômetro rodando (ligado pelo botão "Iniciar" logo
+    // abaixo), o servidor já fechou ele sozinho — não cria um segundo registro
+    // aqui, o que duplicaria a hora (Etapa 1 item 9).
+    const fechouCronometroExistente = !!atualizado.registroTempoFechado;
+    if (fechouCronometroExistente && registrarHoras) {
+      alert("Já tinha um cronômetro rodando pra essa tarefa — fechei ele automaticamente, sem duplicar registro (os horários digitados aqui não foram usados).");
+    } else if (registrarHoras && horaInicio && horaFim) {
       const hoje = new Date().toLocaleDateString("en-CA");
       const resHoras = await fetch("/api/registros-tempo", {
         method: "POST",
@@ -256,6 +295,12 @@ export default function QuadroTarefasPessoal({ usuarioId, tarefas }: { usuarioId
       pedirConclusao(tarefa);
       return;
     }
+    // Bloquear exige motivo — não dá pra coletar isso só com um arraste, então
+    // isso abre o painel (lá tem o formulário certo) em vez de aplicar direto.
+    if (status === "bloqueada") {
+      abrirPainel(tarefa.id);
+      return;
+    }
     // Só liga o cronômetro quando é de fato "começar a trabalhar" (saindo de "a
     // fazer"). Reabrir um "feito" ou devolver "em andamento" pra "a fazer" é só
     // o status mudando, sem mexer em responsável nem em hora nenhuma.
@@ -283,12 +328,35 @@ export default function QuadroTarefasPessoal({ usuarioId, tarefas }: { usuarioId
 
   return (
     <div>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {COLUNAS.map((coluna) => {
           const Icon = coluna.icone;
           const todasDaColuna = itens.filter((t) => t.status === coluna.valor);
           const daColuna =
             coluna.valor === "feito" && !verTodasFeitas ? todasDaColuna.slice(0, LIMITE_FEITO) : todasDaColuna;
+          // Etapa 1 item 5: em "A fazer", separa visualmente o que já é meu do que
+          // ainda está disponível pra qualquer um pegar — nas outras colunas não
+          // faz diferença (só chega lá depois de alguém já ter assumido).
+          const disponiveis = coluna.valor === "a_fazer" ? daColuna.filter((t) => !t.responsavelId) : [];
+          const minhas = coluna.valor === "a_fazer" ? daColuna.filter((t) => t.responsavelId === usuarioId) : daColuna;
+
+          function renderCartao(t: TarefaPessoal) {
+            return (
+              <CartaoPessoal
+                key={t.id}
+                tarefa={t}
+                usuarioId={usuarioId}
+                arrastando={arrastandoId === t.id}
+                carregando={carregandoId === t.id}
+                onDragStart={() => setArrastandoId(t.id)}
+                onDragEnd={() => setArrastandoId(null)}
+                onAbrir={() => abrirPainel(t.id)}
+                onClaim={() => claim(t)}
+                onIniciar={() => iniciar(t)}
+                onConcluir={() => pedirConclusao(t)}
+              />
+            );
+          }
 
           return (
             <div
@@ -319,20 +387,26 @@ export default function QuadroTarefasPessoal({ usuarioId, tarefas }: { usuarioId
                     {colunaSobre === coluna.valor ? "Solte aqui" : "Nada por aqui"}
                   </p>
                 )}
-                {daColuna.map((t) => (
-                  <CartaoPessoal
-                    key={t.id}
-                    tarefa={t}
-                    usuarioId={usuarioId}
-                    arrastando={arrastandoId === t.id}
-                    carregando={carregandoId === t.id}
-                    onDragStart={() => setArrastandoId(t.id)}
-                    onDragEnd={() => setArrastandoId(null)}
-                    onClaim={() => claim(t)}
-                    onIniciar={() => iniciar(t)}
-                    onConcluir={() => pedirConclusao(t)}
-                  />
-                ))}
+                {coluna.valor === "a_fazer" ? (
+                  <>
+                    {minhas.length > 0 && (
+                      <>
+                        <p className="px-0.5 text-[10px] font-medium uppercase tracking-wide text-muted/70">Minhas</p>
+                        {minhas.map(renderCartao)}
+                      </>
+                    )}
+                    {disponiveis.length > 0 && (
+                      <>
+                        <p className="mt-1 px-0.5 text-[10px] font-medium uppercase tracking-wide text-muted/70">
+                          Disponíveis pra assumir
+                        </p>
+                        {disponiveis.map(renderCartao)}
+                      </>
+                    )}
+                  </>
+                ) : (
+                  daColuna.map(renderCartao)
+                )}
                 {coluna.valor === "feito" && todasDaColuna.length > LIMITE_FEITO && !verTodasFeitas && (
                   <button
                     onClick={() => setVerTodasFeitas(true)}

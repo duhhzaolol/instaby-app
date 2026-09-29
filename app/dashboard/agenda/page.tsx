@@ -118,7 +118,9 @@ export default async function AgendaPage({
       usuarioNome: t.responsavel?.nome || null,
       usuarioFotoUrl: t.responsavel?.fotoUrl || null,
       cor: t.cliente?.cor,
-      href: t.cliente ? `/dashboard/clientes/${t.cliente.id}?aba=tarefas` : "/dashboard",
+      // Abre o painel lateral de detalhes (Etapa 1 v152) direto na Agenda, sem
+      // navegar pra outra página — preserva mês/filtros atuais na URL.
+      href: `/dashboard/agenda?mes=${ano}-${mes + 1}&tipos=${Array.from(tiposAtivos).join(",")}&tarefa=${t.id}`,
       data: chave,
       hora: horaBR(t.prazo) !== "00:00" ? horaBR(t.prazo) : null,
       urgencia,

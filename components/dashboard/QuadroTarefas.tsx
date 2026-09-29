@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { Circle, PlayCircle, CheckCircle2, Trash2, Clock } from "lucide-react";
+import { Circle, PlayCircle, CheckCircle2, Lock, Trash2, Clock } from "lucide-react";
 import { visualDaCategoriaTarefa } from "@/lib/categoriaTarefaVisual";
 import { urgenciaPrazo } from "@/lib/urgenciaPrazo";
 import { formatarDuracao } from "@/lib/formatarDuracao";
@@ -26,6 +26,9 @@ export type TarefaQuadro = {
 export const COLUNAS = [
   { valor: "a_fazer", label: "A fazer", icone: Circle, cor: "#9CA3AF" },
   { valor: "em_andamento", label: "Em andamento", icone: PlayCircle, cor: "#38BDF8" },
+  // Bloqueada (Etapa 1 v152) — sempre entre "Em andamento" e "Feito": uma tarefa
+  // bloqueada já teve trabalho começado, só está esperando algo pra continuar.
+  { valor: "bloqueada", label: "Bloqueada", icone: Lock, cor: "#EF4444" },
   { valor: "feito", label: "Feito", icone: CheckCircle2, cor: "#22C55E" },
 ] as const;
 
@@ -43,12 +46,14 @@ function CartaoTarefa({
   arrastando,
   onDragStart,
   onDragEnd,
+  onAbrir,
   onExcluir,
 }: {
   tarefa: TarefaQuadro;
   arrastando: boolean;
   onDragStart: () => void;
   onDragEnd: () => void;
+  onAbrir: () => void;
   onExcluir: () => void;
 }) {
   const { icone: Icon, cor } = visualDaCategoriaTarefa(tarefa.categoria);
@@ -63,6 +68,7 @@ function CartaoTarefa({
         onDragStart();
       }}
       onDragEnd={onDragEnd}
+      onClick={onAbrir}
       className={`group cursor-grab rounded-xl border border-border bg-base/60 p-3 transition-all active:cursor-grabbing ${
         arrastando ? "opacity-30" : "hover:border-white/20 hover:shadow-premium"
       }`}
@@ -87,7 +93,10 @@ function CartaoTarefa({
           </p>
         </div>
         <button
-          onClick={onExcluir}
+          onClick={(e) => {
+            e.stopPropagation();
+            onExcluir();
+          }}
           className="shrink-0 text-muted opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100"
         >
           <Trash2 size={11} />
@@ -112,6 +121,7 @@ export default function QuadroTarefas({
   linkVerTudo?: string | null;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [itens, setItens] = useState(tarefas);
   const [arrastandoId, setArrastandoId] = useState<string | null>(null);
   const [colunaSobre, setColunaSobre] = useState<string | null>(null);
@@ -122,6 +132,18 @@ export default function QuadroTarefas({
   const [verTodasFeitas, setVerTodasFeitas] = useState(false);
 
   useEffect(() => setItens(tarefas), [tarefas]);
+
+  // Painel lateral de detalhes (Etapa 1 v152) — abre em cima da URL atual
+  // (?tarefa=ID), funciona em qualquer página que use esse quadro (Início do
+  // master, Kanban) sem precisar de estado próprio — ver PainelDetalheTarefaHost.
+  // Lê window.location.search direto (em vez do hook useSearchParams) de propósito:
+  // esse hook exige um <Suspense> acima dele em toda página que o usa, e esse
+  // quadro é renderizado em várias — ler a URL na hora do clique evita isso.
+  function abrirPainel(id: string) {
+    const params = new URLSearchParams(window.location.search);
+    params.set("tarefa", id);
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  }
 
   async function aplicarStatus(id: string, status: string) {
     setItens((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)));
@@ -154,6 +176,13 @@ export default function QuadroTarefas({
       setHoraFim(horaAtual());
       return;
     }
+    // Bloquear exige motivo (e opcionalmente quem desbloqueia) — não dá pra
+    // coletar isso só com um arraste, então o drag pra essa coluna abre o painel
+    // em vez de aplicar o status direto (lá tem o formulário certo).
+    if (status === "bloqueada") {
+      abrirPainel(tarefa.id);
+      return;
+    }
     aplicarStatus(tarefa.id, status);
   }
 
@@ -179,7 +208,14 @@ export default function QuadroTarefas({
       return;
     }
 
-    if (registrarHoras && horaInicio && horaFim) {
+    const atualizado = await res.json().catch(() => null);
+    // Se já tinha cronômetro rodando pra essa tarefa, o servidor já fechou ele
+    // sozinho (ver registroTempoFechado) — não cria um segundo registro aqui,
+    // o que evitaria o duplicado pedido na Etapa 1 item 9.
+    const fechouCronometroExistente = !!atualizado?.registroTempoFechado;
+    if (fechouCronometroExistente && registrarHoras) {
+      alert("Já tinha um cronômetro rodando pra essa tarefa — fechei ele automaticamente, sem duplicar registro (os horários digitados aqui não foram usados).");
+    } else if (registrarHoras && horaInicio && horaFim) {
       const hoje = new Date().toLocaleDateString("en-CA");
       const resHoras = await fetch("/api/registros-tempo", {
         method: "POST",
@@ -234,7 +270,7 @@ export default function QuadroTarefas({
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {COLUNAS.map((coluna) => {
           const Icon = coluna.icone;
           const todasDaColuna = itens.filter((t) => t.status === coluna.valor);
@@ -277,6 +313,7 @@ export default function QuadroTarefas({
                     arrastando={arrastandoId === t.id}
                     onDragStart={() => setArrastandoId(t.id)}
                     onDragEnd={() => setArrastandoId(null)}
+                    onAbrir={() => abrirPainel(t.id)}
                     onExcluir={() => excluir(t.id)}
                   />
                 ))}

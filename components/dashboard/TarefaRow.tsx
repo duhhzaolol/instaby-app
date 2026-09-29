@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Trash2, ChevronDown, Clock, HardDrive, ExternalLink, CheckCircle2, AlertCircle } from "lucide-react";
+import { useRouter, usePathname } from "next/navigation";
+import { Trash2, ChevronDown, Clock, HardDrive, ExternalLink, CheckCircle2, AlertCircle, PanelRight } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { visualDaCategoriaTarefa, PRIORIDADES, CATEGORIAS_QUE_PRECISAM_VIDEO_BRUTO } from "@/lib/categoriaTarefaVisual";
 import { formatarDuracao } from "@/lib/formatarDuracao";
@@ -39,6 +39,7 @@ export function TarefaRow({
   clienteCor?: string | null;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [excluindo, setExcluindo] = useState(false);
   const [detalheAberto, setDetalheAberto] = useState(false);
   const [descricao, setDescricao] = useState(tarefa.descricao || "");
@@ -70,9 +71,24 @@ export function TarefaRow({
         })()
       : null;
 
+  // Painel lateral de detalhes (Etapa 1 v152) — aberto pelo botão dedicado (ver
+  // abaixo); é lá que ficam comentários, histórico e o formulário de bloqueio.
+  function abrirPainel() {
+    const params = new URLSearchParams(window.location.search);
+    params.set("tarefa", tarefa.id);
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  }
+
   async function mudarStatus(status: string) {
     if (status === "feito" && tarefa.status !== "feito") {
       setConfirmandoConclusao(true);
+      return;
+    }
+    if (status === "bloqueada") {
+      // Bloquear exige motivo — o <select> aqui não tem espaço pra isso, então
+      // abre o painel completo (lá tem o formulário certo) em vez de tentar
+      // aplicar direto (o servidor recusaria sem motivo mesmo).
+      abrirPainel();
       return;
     }
     const res = await fetch(`/api/tarefas/${tarefa.id}`, {
@@ -113,7 +129,14 @@ export function TarefaRow({
       return;
     }
 
-    if (registrarHoras && horaInicioConclusao && horaFimConclusao) {
+    const atualizado = await res.json().catch(() => null);
+    // Se essa tarefa já tinha um cronômetro rodando, o servidor fechou ele sozinho
+    // (registroTempoFechado) — não lança um segundo registro aqui, o que duplicaria
+    // a hora (Etapa 1 item 9).
+    const fechouCronometroExistente = !!atualizado?.registroTempoFechado;
+    if (fechouCronometroExistente && registrarHoras) {
+      alert("Já tinha um cronômetro rodando pra essa tarefa — fechei ele automaticamente, sem duplicar registro (os horários digitados aqui não foram usados).");
+    } else if (registrarHoras && horaInicioConclusao && horaFimConclusao) {
       // Data local do navegador (não UTC) — depois das 21h, toISOString() já cai no dia
       // seguinte e a hora lançada ia pro dia errado.
       const hoje = new Date().toLocaleDateString("en-CA");
@@ -205,6 +228,8 @@ export function TarefaRow({
             className={`rounded-full border px-2.5 py-1 text-xs ${
               tarefa.status === "feito"
                 ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+                : tarefa.status === "bloqueada"
+                ? "border-red-500/20 bg-red-500/10 text-red-400"
                 : tarefa.status === "em_andamento"
                 ? "border-sky-500/20 bg-sky-500/10 text-sky-400"
                 : "border-white/10 bg-white/5 text-muted"
@@ -212,8 +237,12 @@ export function TarefaRow({
           >
             <option value="a_fazer">A fazer</option>
             <option value="em_andamento">Em andamento</option>
+            <option value="bloqueada">Bloqueada</option>
             <option value="feito">Feito</option>
           </select>
+          <button onClick={abrirPainel} title="Abrir painel completo" className="text-muted hover:text-text">
+            <PanelRight size={13} />
+          </button>
           <button onClick={excluir} disabled={excluindo} className="text-muted hover:text-red-400">
             <Trash2 size={13} />
           </button>

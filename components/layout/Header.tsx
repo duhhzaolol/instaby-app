@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { Search, Bell, Sparkles, X, Users, FileText } from "lucide-react";
+import { Search, Sparkles, X, Users, FileText } from "lucide-react";
 import { ULTIMA_VERSAO_NOVIDADES } from "@/lib/changelog";
 import { CronometroTopbar } from "@/components/layout/CronometroTopbar";
 import { NovaTarefaTopbar } from "@/components/layout/NovaTarefaTopbar";
+import { SinoNotificacoes } from "@/components/layout/SinoNotificacoes";
 
 // Mesma chave usada em components/dashboard/MarcarNovidadesVistas.tsx.
 const CHAVE_NOVIDADES_VISTAS = "instaby:novidades-vista";
@@ -222,14 +223,7 @@ export function Header({ nomePrimeiro, clientes }: { nomePrimeiro: string; clien
           <Sparkles size={16} />
           {temNovidadeNaoVista && <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-accent" />}
         </Link>
-        {/* Ainda só decorativo — não existe um sistema de notificação de verdade
-           por trás (nunca existiu, não é regressão da v141/v142). */}
-        <button
-          title="Notificações (ainda não implementado)"
-          className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-muted transition-colors hover:bg-hover hover:text-text"
-        >
-          <Bell size={16} />
-        </button>
+        <SinoNotificacoes />
 
         <NovaTarefaTopbar clientes={clientes} />
       </div>

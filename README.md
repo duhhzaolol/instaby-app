@@ -1,3 +1,259 @@
+# Instaby App — v152
+
+**Etapa 1** do plano de evolução em 11 etapas ("Unificar tarefas e
+implementar notificações"), a partir da especificação anexada pelo usuário.
+Reaproveita a estrutura existente de tarefas (`Tarefa`, `ChecklistItemTarefa`,
+os três quadros Kanban, `TarefaRow`) e de permissões (`lib/permissoes.ts`) —
+nenhum módulo novo duplicado, tudo aditivo ao banco. Entregue em modo
+automático (autorização já dada em turnos anteriores); decisões reversíveis
+tomadas sozinho, sinalizadas abaixo em "Decisões tomadas sem perguntar".
+
+## O que é isso, resumindo
+
+Toda tarefa ganhou um painel lateral único (comentários internos, histórico
+de alterações, estado "Bloqueada" com motivo/responsável, edição completa),
+acessível de qualquer lugar que já mostra tarefas. Um sino de notificações de
+verdade substituiu o botão decorativo do cabeçalho. Comentário de cliente em
+relatório público agora chega pra dentro do painel, com notificação e
+resposta da agência. Cronômetro nunca mais duplica hora quando a tarefa é
+concluída/bloqueada por qualquer um dos 4 pontos de entrada. De passagem,
+corrigidas 2 rotas que não pediam login nenhum (relatório e criação de tarefa
+por cliente).
+
+## Schema novo (`prisma/schema.prisma`) — tudo aditivo
+
+- `Tarefa`: `motivoBloqueio`, `bloqueioResponsavelId` + relação
+  (`bloqueioResponsavel`), `bloqueadaEm`; relação `responsavel` renomeada
+  pra `@relation("TarefaResponsavel", ...)` (só efeito no schema, zero
+  efeito no banco — precisou de nome porque agora há uma 2ª relação com
+  `Usuario`, a de bloqueio).
+- `ComentarioTarefa` (novo): comentário interno, nunca editado/apagado —
+  mesmo espírito de `MovimentacaoVerba`. `onDelete: Cascade` em `tarefaId`
+  (obrigatório — comentário não sobrevive sem a tarefa).
+- `HistoricoTarefa` (novo): uma linha por campo alterado num PATCH
+  (`campo`/`valorAntigo`/`valorNovo`/quem/quando), calculado no servidor
+  antes de aplicar o update. `onDelete: Cascade` em `tarefaId`.
+- `Notificacao` (novo): `usuarioId` (destinatário, obrigatório,
+  `onDelete: Cascade` — é caixa de entrada efêmera, não precisa sobreviver à
+  remoção de alguém da equipe, diferente do histórico/comentários, que ficam
+  como registro), `tarefaId`/`clienteId`/`relatorioId` opcionais (sem
+  cascade — default `SetNull`, preserva a notificação como registro solto se
+  o que ela referenciava for apagado), `agrupadorChave` +`contador` (ver
+  "Sino" abaixo), `lidaEm`/`adiadaAte`.
+- `RegistroTempo`: `tarefaId` opcional (sem cascade) — vincula um cronômetro
+  a uma tarefa específica, sem o que o fechamento automático (item 9) não
+  teria o que fechar.
+- `RelatorioPeriodo`: `comentarioClienteEm` — marca quando
+  `comentarioCliente` foi de fato alterado (não só criado), pra saber quando
+  disparar notificação sem comparar strings toda hora.
+- Armadilha evitada: toda outra FK pra `Usuario` no schema inteiro é
+  opcional; `Notificacao.usuarioId` teve que ser obrigatória (notificação
+  sem destinatário não faz sentido) — se usasse o comportamento padrão do
+  Prisma pra FK obrigatória (`Restrict`), a primeira pessoa da equipe
+  removida que já tivesse recebido uma notificação quebraria
+  `DELETE /api/equipe/[id]`. Resolvido com `onDelete: Cascade` só nessa
+  relação, verificado contra as 3 rotas de DELETE existentes
+  (cliente/equipe/relatório) antes de aplicar.
+
+## Painel lateral de detalhes da tarefa
+
+`components/dashboard/PainelDetalheTarefa.tsx` — busca os próprios dados
+(`GET /api/tarefas/[id]`, que agora devolve checklist + comentários +
+histórico + cronômetro aberto de uma vez) em vez de depender de cada página
+mudar a própria consulta. Editável ali: título, descrição, responsável,
+prioridade, prazo, link, além de checklist (reaproveita `ChecklistTarefa`
+existente, não duplicado) e o fluxo de bloqueio/conclusão.
+
+Abre com `?tarefa=ID` na URL, montado **uma vez** em
+`app/dashboard/layout.tsx` (`PainelDetalheTarefaHost`, dentro de
+`<Suspense>` — é o único lugar do app que usa `useSearchParams()` pra isso).
+Os 4 pontos de acesso pedidos só precisaram de um `onClick`/`href` cada,
+sem tocar a consulta das páginas grandes (`dashboard/page.tsx`,
+`clientes/[id]/page.tsx`, ambas com centenas de linhas):
+
+- **Início / Kanban** (`QuadroTarefas.tsx`, `QuadroTarefasPessoal.tsx`,
+  `TarefaRow.tsx`): clique no card/linha abre o painel; um botão dedicado
+  (`PanelRight`) foi acrescentado em `TarefaRow` sem remover o quick-edit
+  inline que já existia (clique no título).
+- **Agenda** (`app/dashboard/agenda/page.tsx`): o link de um evento de
+  tarefa agora fica na própria Agenda com `?tarefa=ID` em vez de navegar pra
+  fora; `AgendaGrid.tsx` não precisou mudar (seu próprio modal só edita
+  prazo, e o link que ele usa já vinha corrigido de fora).
+- **Ficha do cliente**: mesma técnica, herdada de graça pelas tarefas
+  listadas lá (mesmos componentes de quadro/linha).
+
+Técnica usada nos 3 componentes de quadro/linha pra abrir o painel: leem
+`window.location.search` na hora do clique em vez de `useSearchParams()` —
+esse hook exige `<Suspense>` em toda página que renderiza o componente, e
+esses três são usados em várias.
+
+## Comentários internos, histórico e estado "Bloqueada"
+
+- Comentários (`POST /api/tarefas/[id]/comentarios`): cria e notifica o
+  responsável da tarefa (se não foi ele quem comentou). Nunca editado nem
+  apagado.
+- Histórico: calculado no `PATCH /api/tarefas/[id]` comparando o corpo da
+  requisição contra o estado atual, campo por campo, **antes** de aplicar o
+  update — só grava o que realmente mudou.
+- Bloqueada: motivo obrigatório (validado no servidor, não só na tela),
+  responsável pelo desbloqueio opcional. Sai de bloqueada → os 3 campos
+  (`motivoBloqueio`/`bloqueioResponsavelId`/`bloqueadaEm`) somem sozinhos.
+  Nova coluna própria (vermelha) nos 3 quadros Kanban, entre "Em andamento"
+  e "Feito". A trava que impede sair de "A fazer" numa tarefa de Reel sem
+  vídeo bruto (pré-existente) foi ajustada pra **não** valer pra "Bloqueada"
+  — bloquear é exatamente o que se faz quando falta o vídeo bruto; a trava
+  antiga impediria registrar esse motivo.
+- Item 5 (separar disponíveis de atribuídas): só faz sentido na coluna "A
+  fazer" dos quadros **pessoais** (`QuadroTarefasPessoal.tsx`, usado no
+  Início do editor/tráfego) — os outros quadros não têm esse conceito de
+  "fila pessoal", então não foram alterados nesse ponto.
+
+## Sino de notificações (`components/layout/SinoNotificacoes.tsx`)
+
+Substitui o botão decorativo do cabeçalho (`Header.tsx`). Tipos:
+`tarefa_atribuida`, `tarefa_bloqueada`, `comentario_tarefa`,
+`comentario_relatorio` (o 5º tipo já reservado no schema,
+`tarefa_sem_responsavel`, ficou sem gatilho nesta etapa — ver "Decisões"
+abaixo). Ações por notificação: abrir (clique na linha, sempre), responder
+(comentário de tarefa ou relatório), revisar (atalho pra `tarefa_bloqueada`),
+atribuir (qualquer notificação com `tarefaId`), adiar (1h/amanhã/semana que
+vem) e marcar lida/não lida — as 4 ações pedidas (abrir/responder/
+revisar/atribuir) mais adiar e lida, que já estavam no item 8.
+
+Agrupamento (item 8): `criarNotificacao()` em `lib/notificacoes.ts` calcula
+uma `agrupadorChave` (por padrão `tipo:tarefaId|clienteId|relatorioId`) e,
+se já existir uma notificação **não lida** com a mesma chave pro mesmo
+destinatário, só incrementa `contador` e atualiza título/corpo/link em vez
+de criar uma linha nova — é isso que colapsa repetições em "3x" no sino.
+
+## Cronômetro sem duplicar hora (item 9)
+
+Fechamento automático centralizado no servidor
+(`PATCH /api/tarefas/[id]`, `statusFechaCronometro()` em `lib/tarefas.ts`):
+sempre que o status entra em "feito" ou "bloqueada", qualquer
+`RegistroTempo` aberto (`fim: null`) ligado à tarefa via o novo
+`RegistroTempo.tarefaId` é fechado sozinho, e a resposta inclui
+`registroTempoFechado`. Funciona **não importa qual dos 4 pontos de entrada**
+mudou o status, porque mora no PATCH, não em cada tela.
+
+Do lado do cliente, os 4 lugares que podem concluir uma tarefa
+(`PainelDetalheTarefa`, `QuadroTarefas`, `QuadroTarefasPessoal`, `TarefaRow`)
+checam `registroTempoFechado` na resposta e **não** lançam um segundo
+registro manual quando ele vem preenchido — só avisam ("já tinha cronômetro
+rodando, fechei sozinho, os horários digitados não foram usados") em vez de
+duplicar silenciosamente. Pra isso funcionar de ponta a ponta, o botão
+"Iniciar" de `QuadroTarefasPessoal.tsx` (que é quem liga o cronômetro ao sair
+de "A fazer") passou a mandar `tarefaId` pro
+`POST /api/registros-tempo` — sem isso o registro nascia sem vínculo com a
+tarefa e o fechamento automático não tinha o que fechar. `/api/registros-tempo`
+ganhou a validação correspondente (tarefa existe + `podeVerCliente`).
+
+## Comentários de relatórios públicos → painel interno (item 7)
+
+`PATCH /api/relatorios/[id]` — reescrita. O comentário do cliente (campo
+`comentarioCliente`, enviado sem login pela página pública do relatório,
+como sempre foi) agora, quando muda de verdade, marca
+`comentarioClienteEm` e dispara uma notificação `comentario_relatorio` pra
+quem tem acesso operacional completo àquele cliente
+(`usuariosComAcessoAoCliente()`, filtrado por `acessoClienteCompleto` —
+ver "Permissões"). Chave de agrupamento explícita por **relatório**, não só
+por cliente, pra comentários em 2 relatórios diferentes do mesmo cliente não
+se misturarem numa notificação só.
+
+A resposta da agência (`comentarioAgencia`) — que antes só dava pra definir
+na hora de criar o relatório (`NovoRelatorioForm`) — agora também é editável
+depois, de dois jeitos: direto no card do relatório dentro da ficha do
+cliente (`RelatorioCard.tsx`, seção nova que mostra o comentário do cliente
+e um campo de resposta) ou pela ação "Responder" no próprio sino.
+
+## Falhas de segurança corrigidas de passagem
+
+Encontradas revisando o entorno do que a Etapa 1 pedia pra mexer — corrigidas
+junto, não deixadas pra depois, seguindo a regra geral de aplicar permissão
+no servidor:
+
+- `PATCH`/`DELETE /api/relatorios/[id]` não tinham **nenhuma** autenticação:
+  qualquer pessoa que soubesse o ID de um relatório conseguia apagá-lo ou
+  escrever um "comentário oficial da Instaby" nele (campo que aparece pro
+  cliente na página pública), sem estar logada. Agora exige login +
+  `acessoClienteCompleto` + acesso àquele cliente especificamente pra
+  `comentarioAgencia`/DELETE. `comentarioCliente` continua aberto sem login
+  de propósito — é o único uso legítimo (o cliente não tem conta).
+- `POST /api/clientes/[id]/tarefas` também não tinha autenticação nenhuma —
+  criava tarefa em qualquer cliente sabendo só o ID dele. Agora exige login +
+  `podeVerCliente`, mesma trava de `/api/tarefas`.
+
+## Permissões
+
+Nada novo inventado — só aplicado o que já existia
+(`getUsuarioAtual`/`podeVerCliente`/`clienteIdsPermitidos`/`exigirPermissaoApi`
+de `lib/permissoes.ts`) nas rotas novas, mais um helper novo,
+`usuariosComAcessoAoCliente(clienteId)` (master OU `todosClientes` OU
+`ClienteUsuario` explícito), usado pra decidir quem recebe notificação de
+comentário de relatório — filtrado ainda por `acessoClienteCompleto` (a
+mesma trava que já protege a aba Relatórios), pra ninguém receber uma
+notificação que a própria tela não deixaria ela abrir ou responder (ex.: um
+Gestor de Tráfego com acesso só à verba de mídia, sem acesso operacional
+completo àquele cliente). Nenhum campo de valor/financeiro passou a
+aparecer em tarefa, comentário, histórico ou notificação — o painel de
+tarefa e o sino são seguros pra Editor.
+
+## Decisões tomadas sem perguntar (reversíveis)
+
+- **"Atribuir" no sino** vira uma ação em cima de qualquer notificação que já
+  tenha `tarefaId` (bloqueio, comentário), em vez de existir um tipo de
+  notificação dedicado "tarefa sem responsável" — o schema já reserva esse
+  tipo (`tarefa_sem_responsavel`) pra uma etapa futura decidir o gatilho
+  certo (ex.: um job periódico, ou no momento em que a tarefa é criada sem
+  responsável), porque disparar isso a cada tarefa sem dono, toda vez,
+  seria ruidoso demais sem mais contexto de quando faz sentido avisar.
+- **Resposta da agência a um comentário de relatório substitui o texto
+  anterior** (é um campo único no banco, não uma lista de mensagens, ao
+  contrário do comentário de tarefa) — o sino avisa disso antes de mandar
+  ("substitui o anterior, se já tinha"). Virar uma conversa de verdade
+  (histórico de idas e vindas) é uma mudança de modelo de dados maior, fora
+  do que a Etapa 1 pedia.
+
+## Validação
+
+- Sem acesso a banco nesta sandbox (mesma limitação já documentada na v151)
+  — não dá pra rodar os fluxos de ponta a ponta de verdade. Verificação foi
+  por leitura cuidadosa de todas as rotas/telas tocadas, cruzando nome de
+  campo por nome de campo contra o schema novo (relação, `onDelete`,
+  obrigatório/opcional) e reconferindo os 3 fluxos de permissão pedidos
+  (Administrador/Editor/Gestor de Tráfego) rota por rota: nenhum dado de
+  valor/contrato/financeiro aparece em tarefa/comentário/histórico/
+  notificação; acesso a cliente sempre passa por `podeVerCliente` ou
+  equivalente; a notificação de comentário de relatório só vai pra quem a
+  própria aba deixaria agir.
+- Casos de borda conferidos por leitura: reimportar o mesmo comentário de
+  cliente sem mudança não duplica notificação (compara com o texto
+  anterior); duas notificações do mesmo tipo pro mesmo destinatário viram
+  uma só com contador; cronômetro aberto por qualquer um dos 4 pontos de
+  entrada fecha sozinho não importa qual dos 4 conclui a tarefa; remover
+  alguém da equipe não quebra mais (cascade só na caixa de notificação, não
+  no histórico/comentários).
+
+## Verificação
+
+- `tsc --noEmit`: 332 erros — **mesmo total exato da v151**. Zero erros nos
+  arquivos tocados nesta etapa (painel, quadros, sino, rotas de tarefas/
+  notificações/relatórios, `lib/tarefas.ts`, `lib/notificacoes.ts`). Os 332
+  são o mesmo ruído já documentado (Prisma Client não gerado nesta sandbox —
+  toda chamada `prisma.*` tipa como `any`, o que também significa que typo
+  de nome de campo/relação do Prisma **não** seria pego pelo `tsc` aqui; por
+  isso a conferência principal foi manual, campo por campo, contra o
+  schema).
+- `prisma generate`/`prisma validate`: continuam bloqueados nesta sandbox
+  (sem rede pra `binaries.prisma.sh`, testado de novo incluindo a variável
+  de ambiente `PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING` sugerida pelo próprio
+  Prisma pra ambiente offline — nem assim, porque falta o binário em si, não
+  só o checksum). A sincronização de schema de verdade só acontece no
+  próximo deploy (`prisma db push --accept-data-loss`, já é assim desde
+  sempre neste projeto).
+
+---
+
 # Instaby App — v151
 
 Módulo de **Tráfego Pago** reconstruído do zero como um sistema completo de

@@ -500,6 +500,9 @@ export default async function ClienteDetalhePage({
             seguidoresFim: r.seguidoresFim,
             investimento: r.investimento ? Number(r.investimento) : null,
             leads: r.leads,
+            comentarioCliente: r.comentarioCliente,
+            comentarioClienteEm: r.comentarioClienteEm ? r.comentarioClienteEm.toISOString() : null,
+            comentarioAgencia: r.comentarioAgencia,
           }))}
         />
       )}

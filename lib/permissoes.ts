@@ -90,3 +90,16 @@ export async function podeVerCliente(usuario: Usuario, clienteId: string) {
   });
   return !!permitido;
 }
+
+// Todo mundo ativo que enxerga esse cliente específico — master, quem tem
+// todosClientes=true, e quem tem esse cliente liberado em ClienteUsuario (Etapa 1
+// v152, usado pra endereçar notificação de comentário de relatório: quem tem
+// acesso ao cliente é quem devia saber que o cliente comentou algo).
+export async function usuariosComAcessoAoCliente(clienteId: string): Promise<Usuario[]> {
+  return prisma.usuario.findMany({
+    where: {
+      ativo: true,
+      OR: [{ master: true }, { todosClientes: true }, { clientesPermitidos: { some: { clienteId } } }],
+    },
+  });
+}

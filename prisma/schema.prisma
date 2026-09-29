@@ -54,7 +54,21 @@ model Usuario {
   registrosTempo     RegistroTempo[]
   // Tarefas atribuídas a essa pessoa (redesign v144, Parte 2) — opcional, campo
   // novo (Tarefa não tinha responsável nenhum antes). Ver Tarefa.responsavelId.
-  tarefasResponsavel Tarefa[]
+  tarefasResponsavel Tarefa[] @relation("TarefaResponsavel")
+
+  // Tarefas onde essa pessoa é a responsável pelo DESBLOQUEIO (Etapa 1 v152) — ver
+  // Tarefa.bloqueioResponsavelId. Relação nomeada à parte de tarefasResponsavel
+  // porque as duas apontam pra Usuario a partir de Tarefa.
+  tarefasBloqueioResponsavel Tarefa[] @relation("TarefaBloqueioResponsavel")
+  // Comentários internos que essa pessoa escreveu em tarefas (Etapa 1 v152).
+  comentariosTarefa ComentarioTarefa[]
+  // Linhas de histórico geradas por alterações que essa pessoa fez em tarefas
+  // (Etapa 1 v152) — opcional, mesmo padrão de RegistroTempo.usuarioId.
+  historicoTarefaAlteracoes HistoricoTarefa[]
+  // Notificações internas (Etapa 1 v152): a caixa de entrada dela (destinatário) e,
+  // à parte, as que ela mesma originou (ex.: comentário que avisou outra pessoa).
+  notificacoes        Notificacao[] @relation("NotificacaoDestinatario")
+  notificacoesCriadas Notificacao[] @relation("NotificacaoCriadaPor")
 
   // Autoria no módulo de Tráfego Pago (v151) — mesmo padrão de RegistroTempo.usuarioId:
   // opcional, preenchido a partir da sessão em cada rota, nunca adivinhado.
@@ -144,6 +158,10 @@ model Cliente {
   verbaTrafego        VerbaTrafego?
   lotesImportacao     LoteImportacao[]
   relatoriosTrafego   RelatorioTrafego[]
+
+  // Notificações internas vinculadas a esse cliente (Etapa 1 v152) — ex.:
+  // comentário de relatório, tarefa bloqueada de um conteúdo dele etc.
+  notificacoes Notificacao[]
 }
 
 // Relatório de performance por rede e por período — dado lançado manualmente (Fase 1).
@@ -173,8 +191,16 @@ model RelatorioPeriodo {
 
   comentarioAgencia String?
   comentarioCliente String?
+  // Preenchido/atualizado sozinho sempre que comentarioCliente muda (rota pública
+  // de PATCH) — permite saber se é um comentário NOVO, pra notificar (Etapa 1
+  // v152), sem comparar strings toda vez.
+  comentarioClienteEm DateTime?
 
   createdAt DateTime @default(now())
+
+  // Notificações internas geradas a partir de um comentário de cliente nesse
+  // relatório (Etapa 1 v152) — ver Notificacao.
+  notificacoes Notificacao[]
 }
 
 // Contatos adicionais do cliente — o campo antigo Cliente.contatoNome continua existindo
@@ -302,7 +328,7 @@ model Tarefa {
   categoria  String? // gravacao | arte | reel | fotos | campanha | reuniao | contato | orcamento | ideia | outra
   descricao  String?
   prioridade String? // baixa | media | alta
-  status     String    @default("a_fazer") // a_fazer | em_andamento | feito
+  status     String    @default("a_fazer") // a_fazer | em_andamento | bloqueada | feito
   prazo      DateTime?
   link       String?
   createdAt DateTime @default(now())
@@ -312,7 +338,17 @@ model Tarefa {
   // (nunca automático/adivinhado). Alimenta a fila pessoal do Início de cada
   // pessoa e o alerta de "tarefa sem responsável" no Início do dono.
   responsavelId String?
-  responsavel   Usuario? @relation(fields: [responsavelId], references: [id])
+  responsavel   Usuario? @relation("TarefaResponsavel", fields: [responsavelId], references: [id])
+
+  // Estado "Bloqueada" (Etapa 1 v152) — motivo obrigatório pra bloquear (a rota
+  // recusa se vier vazio), responsável pelo desbloqueio opcional (dá pra bloquear
+  // sem ainda saber quem resolve). Os 3 campos são limpos sozinhos quando a tarefa
+  // sai desse status — nunca ficam "sujos" de um bloqueio antigo (ver PATCH de
+  // /api/tarefas/[id]).
+  motivoBloqueio        String?
+  bloqueioResponsavelId String?
+  bloqueioResponsavel   Usuario?  @relation("TarefaBloqueioResponsavel", fields: [bloqueioResponsavelId], references: [id])
+  bloqueadaEm           DateTime?
 
   // Preenchido sozinho quando o status vira "feito" (e limpo se voltar pra outro
   // status) — ver PATCH de /api/tarefas/[id]. Sem isso não dava pra saber QUANDO
@@ -332,6 +368,19 @@ model Tarefa {
   // tem vídeo bruto (arquivo de vídeo lá dentro) antes de deixar a tarefa avançar de
   // "A fazer" — ver o PATCH de /api/tarefas/[id].
   driveFolderId String?
+
+  // Painel lateral de tarefa (Etapa 1 v152): comentários internos e histórico de
+  // alterações — nunca editados/apagados depois de criados, mesmo padrão de
+  // MovimentacaoVerba (extrato, não estado). Ver ComentarioTarefa/HistoricoTarefa.
+  comentarios ComentarioTarefa[]
+  historico   HistoricoTarefa[]
+
+  // Horas com essa tarefa vinculada (Etapa 1 v152) — opcional, só quem nascer a
+  // partir de agora vem preenchido. Ver RegistroTempo.tarefaId.
+  registrosTempo RegistroTempo[]
+
+  // Notificações internas que apontam pra essa tarefa (Etapa 1 v152).
+  notificacoes Notificacao[]
 }
 
 // Sub-passo de dentro de uma tarefa (redesign v144, Parte 2) — ver Tarefa.checklist.
@@ -343,6 +392,82 @@ model ChecklistItemTarefa {
   feito     Boolean  @default(false)
   ordem     Int      @default(0)
   createdAt DateTime @default(now())
+}
+
+// Comentário interno numa tarefa (Etapa 1 v152) — nunca editado/apagado depois de
+// criado (é o próprio histórico da conversa), mesmo padrão de MovimentacaoVerba.
+// Comentário de CLIENTE vindo de relatório público é outra coisa (ver
+// RelatorioPeriodo.comentarioCliente) e não vira ComentarioTarefa — a ligação dos
+// dois com o painel interno é só por notificação (ver lib/notificacoes.ts).
+model ComentarioTarefa {
+  id       String @id @default(uuid())
+  tarefaId String
+  tarefa   Tarefa @relation(fields: [tarefaId], references: [id], onDelete: Cascade)
+  // Opcional só pra não quebrar se a pessoa for removida da equipe depois — mesmo
+  // padrão de RegistroTempo.usuarioId. Todo comentário novo vem preenchido a
+  // partir da sessão de quem escreveu (nunca informado pelo corpo da requisição).
+  usuarioId String?
+  usuario   Usuario? @relation(fields: [usuarioId], references: [id])
+  texto     String
+  createdAt DateTime @default(now())
+}
+
+// Histórico de alterações de uma tarefa (Etapa 1 v152) — uma linha por campo
+// alterado, sempre em ADIÇÃO (nunca editado/apagado), pra reconstruir "quem mudou
+// o quê e quando" no painel lateral. Não registra toda alteração possível, só as
+// visíveis no painel (título, descrição, responsável, prioridade, prazo, categoria,
+// status/bloqueio, link) — ver PATCH de /api/tarefas/[id].
+model HistoricoTarefa {
+  id          String   @id @default(uuid())
+  tarefaId    String
+  tarefa      Tarefa   @relation(fields: [tarefaId], references: [id], onDelete: Cascade)
+  usuarioId   String?
+  usuario     Usuario? @relation(fields: [usuarioId], references: [id])
+  campo       String // titulo | descricao | responsavel | prioridade | prazo | categoria | status | link
+  valorAntigo String?
+  valorNovo   String?
+  createdAt   DateTime @default(now())
+}
+
+// Notificação interna (Etapa 1 v152) — nasce de um evento do sistema (tarefa
+// atribuída, comentário novo, tarefa bloqueada, comentário de cliente no relatório
+// etc.) endereçada a UM usuário. "lidaEm"/"adiadaAte" são o único estado que muda
+// depois de criada — pra histórico de verdade, ver HistoricoTarefa. Repetições do
+// mesmo assunto (mesma agrupadorChave) não criam linha nova enquanto a anterior não
+// for lida: só sobem o "contador" e atualizam título/corpo/link/atualizadoEm (ver
+// lib/notificacoes.ts) — é isso que resolve "agrupar notificações repetidas".
+model Notificacao {
+  id        String  @id @default(uuid())
+  usuarioId String
+  // Cascade de propósito: notificação é caixa de entrada (estado efêmero), não
+  // histórico — se a pessoa for removida da equipe (DELETE /api/equipe/[id]), as
+  // notificações dela somem junto, sem impedir a remoção (diferente de
+  // HistoricoTarefa/ComentarioTarefa, que preservam autoria como "opcional").
+  usuario Usuario @relation("NotificacaoDestinatario", fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  tipo   String // tarefa_atribuida | tarefa_sem_responsavel | comentario_tarefa | tarefa_bloqueada | comentario_relatorio
+  titulo String
+  corpo  String?
+  link   String? // rota interna pra abrir ao clicar, ex: "/dashboard/tarefas?tarefa=ID"
+
+  tarefaId  String?
+  tarefa    Tarefa?           @relation(fields: [tarefaId], references: [id])
+  clienteId String?
+  cliente   Cliente?          @relation(fields: [clienteId], references: [id])
+  relatorioId String?
+  relatorio   RelatorioPeriodo? @relation(fields: [relatorioId], references: [id])
+
+  agrupadorChave String? // mesmo assunto = mesma chave — ver lib/notificacoes.ts
+  contador       Int     @default(1)
+
+  lidaEm    DateTime?
+  adiadaAte DateTime? // "adiar" = some da lista até essa hora, sem marcar como lida
+
+  criadaPorId String?
+  criadaPor   Usuario? @relation("NotificacaoCriadaPor", fields: [criadaPorId], references: [id])
+
+  createdAt    DateTime @default(now()) // quando o assunto surgiu a 1ª vez
+  atualizadoEm DateTime @updatedAt // sobe a cada repetição agrupada — usado pra ordenar o sino
 }
 
 // Catálogo reutilizável de serviços — a "esteira de produto"
@@ -370,6 +495,13 @@ model RegistroTempo {
   // isso preenchido a partir da sessão de quem estava logado.
   usuarioId String?
   usuario   Usuario?  @relation(fields: [usuarioId], references: [id])
+  // Tarefa de onde esse tempo veio (Etapa 1 v152) — opcional, só quem nasce do
+  // "Iniciar" do quadro pessoal ou da conclusão de uma tarefa vem preenchido; o
+  // cronômetro genérico da barra do topo continua sem tarefa (isso não muda). É
+  // isso que permite FECHAR o registro certo em vez de criar um novo quando a
+  // tarefa é concluída — ver PATCH de /api/tarefas/[id].
+  tarefaId  String?
+  tarefa    Tarefa?   @relation(fields: [tarefaId], references: [id])
   atividade String // ex: "Captação", "Edição", "Reunião"
   inicio    DateTime
   fim       DateTime?

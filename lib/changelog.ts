@@ -22,6 +22,58 @@ export type VersaoNovidades = {
 
 export const NOVIDADES: VersaoNovidades[] = [
   {
+    versao: 152,
+    resumo:
+      "Tarefas ganharam um painel completo de detalhes (comentários, histórico e bloqueio) e um sino de notificações de verdade; relatórios de cliente agora avisam a agência quando alguém comenta.",
+    itens: [
+      {
+        tipo: "adicionado",
+        texto:
+          "Toda tarefa agora abre um painel lateral com todos os detalhes — dá pra editar título, descrição, responsável, prioridade, prazo, checklist e link, tudo no mesmo lugar. Abre clicando em qualquer tarefa no Início, no quadro Kanban, na Agenda ou dentro da ficha do cliente.",
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          "Comentários internos dentro da tarefa (só a equipe vê, nunca o cliente) e um histórico de tudo que já foi alterado nela — quem mudou o quê e quando.",
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          'Novo status "Bloqueada", com motivo obrigatório e, se quiser, quem é responsável por desbloquear. Aparece como uma coluna própria (vermelha) em todos os quadros Kanban, entre "Em andamento" e "Feito".',
+      },
+      {
+        tipo: "melhorado",
+        texto:
+          'No Início pessoal (editor e tráfego), a coluna "A fazer" agora separa o que já é seu do que ainda está disponível pra qualquer um pegar — mais fácil de ver o que falta assumir.',
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          "Sino de notificações de verdade, no lugar do antigo ícone decorativo: avisa quando uma tarefa é atribuída pra você, quando ela é bloqueada, quando alguém comenta nela, e agora também quando um cliente comenta um relatório. Cada notificação já vem com atalho pra abrir, responder, revisar ou atribuir, sem precisar procurar a tarefa em outro lugar.",
+      },
+      {
+        tipo: "melhorado",
+        texto:
+          'Notificações repetidas do mesmo assunto se agrupam numa só (com um contador, tipo "3x"), em vez de empilhar uma embaixo da outra. Dá pra marcar como lida ou adiar pra depois (1 hora, amanhã de manhã ou semana que vem).',
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          'Comentário que um cliente deixa no relatório público agora chega pra dentro do painel: a agência recebe uma notificação e pode responder ali mesmo, ou depois direto no card do relatório dentro da ficha do cliente — antes, esse comentário só existia se alguém entrasse na página pública do relatório pra conferir.',
+      },
+      {
+        tipo: "corrigido",
+        texto:
+          "Cronômetro nunca mais duplica hora lançada: se você inicia o cronômetro de uma tarefa e depois marca ela como feita (ou bloqueada) por qualquer caminho do app, o sistema fecha o cronômetro sozinho, em vez de deixar ele aberto ou pedir pra lançar a hora de novo na mão.",
+      },
+      {
+        tipo: "corrigido",
+        texto:
+          'Corrigidas duas falhas de segurança: a página pública de relatório permitia, sem login nenhum, apagar relatórios e escrever no "comentário da agência" que aparece pro cliente; e criar tarefas num cliente também não pedia login. As duas agora exigem estar logado e ter acesso àquele cliente especificamente — a única coisa que continua aberta sem login, de propósito, é o cliente comentar no próprio relatório dele.',
+      },
+    ],
+  },
+  {
     versao: 151,
     resumo:
       "Tráfego Pago virou um módulo completo: importação do Meta Ads com reconciliação automática, controle de verba/saldo por cliente, avaliação de campanha e relatórios em PDF.",

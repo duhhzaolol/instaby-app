@@ -1,10 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getUsuarioAtual, podeVerCliente } from "@/lib/permissoes";
 
+// Essa rota não tinha NENHUMA checagem de autenticação — qualquer um que soubesse
+// o ID de um cliente conseguia criar tarefas nele, sem login. Corrigido (Etapa 1
+// v152, mesma trava de /api/tarefas: autenticado + acesso a esse cliente
+// especificamente), sem mudar o resto do comportamento.
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const usuario = await getUsuarioAtual();
+  if (!usuario) return NextResponse.json({ erro: "Não autenticado" }, { status: 401 });
+  if (!(await podeVerCliente(usuario, params.id))) {
+    return NextResponse.json({ erro: "Não autorizado" }, { status: 403 });
+  }
+
   const body = await request.json();
 
   if (!body.titulo) {

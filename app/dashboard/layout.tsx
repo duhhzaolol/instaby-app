@@ -1,6 +1,8 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
+import { PainelDetalheTarefaHost } from "@/components/dashboard/PainelDetalheTarefaHost";
 import { garantirRecorrentesDoMes } from "@/lib/garantirRecorrentes";
 import { getUsuarioAtual, permissoesDe, clienteIdsPermitidos } from "@/lib/permissoes";
 import { prisma } from "@/lib/prisma";
@@ -74,6 +76,11 @@ export default async function DashboardLayout({
           Instaby App · painel interno da agência
         </footer>
       </div>
+      {/* Painel lateral de tarefa (Etapa 1 v152) — montado uma vez pro dashboard
+         inteiro, abre sozinho quando a URL tem "?tarefa=ID" (ver PainelDetalheTarefaHost). */}
+      <Suspense fallback={null}>
+        <PainelDetalheTarefaHost />
+      </Suspense>
     </div>
   );
 }
