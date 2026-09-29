@@ -11,7 +11,7 @@ import {
   Wallet,
   Clock,
   Calendar,
-  CheckSquare,
+  Clapperboard,
   Trophy,
   Settings,
   Menu,
@@ -21,6 +21,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { BotaoTema } from "@/components/ui/TemaAlternativo";
+import { IconeEstilizado } from "@/components/ui/IconeEstilizado";
 import { ABAS_FINANCEIRO, abasComercialVisiveis } from "@/lib/navSecoes";
 
 // Confirma antes de sair — mesmo padrão de confirm() já usado nos "excluir"
@@ -58,7 +59,7 @@ export type ContadoresMenu = {
 // pago, Horas.
 const menuGeral = [
   { chave: "inicio", label: "Início", href: "/dashboard", icon: LayoutGrid },
-  { chave: "tarefas", label: "Tarefas", href: "/dashboard/tarefas", icon: CheckSquare },
+  { chave: "tarefas", label: "Tarefas", href: "/dashboard/tarefas", icon: Clapperboard },
   { chave: "agenda", label: "Agenda", href: "/dashboard/agenda", icon: Calendar },
   { chave: "clientes", label: "Clientes", href: "/dashboard/clientes", icon: Users },
   { chave: "trafego", label: "Tráfego pago", href: "/dashboard/trafego", icon: Megaphone },
@@ -95,7 +96,7 @@ function ItemMenu({
           ativo ? "font-medium text-accent" : "text-muted hover:bg-hover hover:text-text"
         }`}
       >
-        <Icon size={17} strokeWidth={1.75} />
+        <IconeEstilizado icon={Icon} tamanho={28} />
         <span className="flex-1">{item.label}</span>
         {mostrarContador && (
           <span
@@ -186,7 +187,7 @@ function ItemMenuExpansivel({
           ativoSecao ? "font-medium text-text" : "text-muted hover:bg-hover hover:text-text"
         }`}
       >
-        <Icon size={17} strokeWidth={1.75} />
+        <IconeEstilizado icon={Icon} tamanho={28} />
         <span className="flex-1 text-left">{label}</span>
         {mostrarContador && (
           <span

@@ -1,3 +1,78 @@
+# Instaby App — v150
+
+Novo estilo de ícone (preto e vermelho, com brilho, "3D glossy") no menu do
+painel e na cena de abertura do site — a partir de 4 imagens de referência
+que ele mandou (claquete, duas pessoas, alvo, cronômetro).
+
+## Ícone novo: `IconeEstilizado` (`components/ui/IconeEstilizado.tsx`)
+
+- Não existe gerador de imagem disponível nesta sessão pra replicar o render
+  3D de verdade das imagens de referência — o que foi feito é a aproximação
+  possível com CSS/SVG puro: um "palco" escuro (gradiente quase preto,
+  FIXO — não muda com o tema do painel, de propósito, pra garantir contraste
+  e brilho sempre) + o ícone com um glow vermelho ao redor (drop-shadow,
+  acompanha o contorno exato do desenho) + um reflexo "de vidro" no terço de
+  cima, pra dar sensação de profundidade. Aceita ícone do lucide-react ou de
+  outra lib (usado pro logo do Google, que o lucide não tem — ver abaixo).
+- Componente único, reusado nos dois lugares abaixo — mesmo visual, só muda
+  o tamanho.
+- Testado visualmente antes de entregar: renderizei o componente de verdade
+  (fora do navegador, via script) e tirei print em tamanho pequeno (28px,
+  como no menu) e grande (96px, como na abertura), pra conferir contraste e
+  legibilidade antes de mandar pra produção.
+
+## Menu do painel (`components/layout/Sidebar.tsx`)
+
+- Todos os ícones da lista "Geral" (Início, Tarefas, Agenda, Clientes,
+  Tráfego pago, Horas) e dos grupos "Financeiro"/"Comercial" agora usam o
+  novo ícone estilizado, no lugar do ícone simples de antes.
+- O ícone de **Tarefas** virou uma claquete de cinema (`Clapperboard`, do
+  lucide-react) — ele gostou desse ícone específico nas imagens de
+  referência e pediu pra usar em alguma coisa como tarefas.
+- Não mexi nos ícones pequenos de Configurações/Sair no rodapé do menu (já
+  têm um tratamento próprio, de botão quadrado) nem nos ícones dentro dos
+  `StatTile` (cartõezinhos de número, ex: painel do Tráfego Pago) — são
+  pequenos demais (12px) pra esse visual valer a pena, e mexer neles também
+  mudaria a cor semântica que já indica alerta/atenção em cada um.
+
+## Abertura do site — "ícones que voam e formam o logo" (`CinematicIntro.tsx`)
+
+- Os 6 ícones que convergem pro centro e formam o logo (Instagram, YouTube,
+  Play, TrendingUp, Heart, Film) agora usam o mesmo ícone estilizado, no
+  lugar do "vidro fosco" de antes.
+- Adicionado **Facebook** (lucide-react) e **Google** ao conjunto, a pedido
+  dele. O lucide-react não tem logo do Google — instalada a lib
+  `react-icons` só pra esse ícone (`react-icons/si`), mesmo espírito de já
+  usar Instagram/YouTube/Linkedin do lucide-react pra essa finalidade,
+  prática já existente neste projeto desde antes dessa versão. Os dois
+  ícones novos aparecem só no desktop (`soDesktop`), mesma regra que já
+  existia pra Play/TrendingUp — mantém o celular com a mesma quantidade de
+  ícones de antes, sem lotar a tela.
+- Sobre "ícones originais deles, recortado o fundo" (pedido dele): o que foi
+  usado são os desenhos de contorno reconhecíveis de cada marca (mesma
+  natureza do que o site já fazia com Instagram/YouTube/Linkedin), não uma
+  imagem/logo oficial baixada — não tenho como gerar ou baixar imagem nesta
+  sessão (ver limitação abaixo). Sendo vetor, também não tem "fundo" pra
+  recortar — já nascem transparentes.
+
+## Limitação: sem gerador de imagem nesta sessão
+
+- As 4 imagens de referência que ele mandou têm cara de render 3D de
+  verdade (profundidade, material, luz) — isso não dá pra replicar com
+  código, só aproximar (o que foi feito acima). Se ele quiser o resultado
+  mais parecido possível com as imagens de referência em algum lugar
+  específico (e não só a aproximação em CSS), o caminho é ele gerar essas
+  imagens (do jeito que gerou as 4 de referência) e mandar aqui — a
+  integração no app a partir de imagens prontas é rápida.
+
+## Verificação (v150)
+
+- `tsc --noEmit`: 323 erros, mesmo baseline já conhecido (stub do Prisma),
+  zero erro novo — e zero erro nos 3 arquivos tocados/criados
+  (`IconeEstilizado.tsx`, `Sidebar.tsx`, `CinematicIntro.tsx`).
+
+---
+
 # Instaby App — v149
 
 Correção de um bug real que a v148 subiu sem querer no mapa "Onde a gente

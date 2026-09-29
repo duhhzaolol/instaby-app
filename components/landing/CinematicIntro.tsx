@@ -28,8 +28,10 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Instagram, Youtube, Play, TrendingUp, Heart, Film } from "lucide-react";
+import { Instagram, Youtube, Facebook, Play, TrendingUp, Heart, Film } from "lucide-react";
+import { SiGoogle } from "react-icons/si";
 import { SvgRec } from "./FloatingGear";
+import { IconeEstilizado } from "@/components/ui/IconeEstilizado";
 
 type ConfigIcone = {
   Icon: React.ElementType;
@@ -41,7 +43,11 @@ type ConfigIcone = {
 };
 
 // Espalhados o bastante pro tamanho maior dos ícones (2ª rodada de aumento —
-// pedido explícito de novo: "aumente esses elementos").
+// pedido explícito de novo: "aumente esses elementos"). Facebook e Google
+// (SiGoogle, via react-icons — o lucide-react não tem logo do Google) entraram
+// depois, a pedido dele — ambos só desktop (soDesktop), pra manter o celular
+// com a mesma quantidade de ícones de antes (regra que já valia pra Play/
+// TrendingUp, "pra não lotar um celular estreito").
 const ICONES: ConfigIcone[] = [
   { Icon: Instagram, x: -235, y: -185, rotate: -14 },
   { Icon: Youtube, x: 235, y: -215, rotate: 12 },
@@ -49,6 +55,8 @@ const ICONES: ConfigIcone[] = [
   { Icon: TrendingUp, x: 265, y: 175, rotate: -10, soDesktop: true },
   { Icon: Heart, x: -95, y: -290, rotate: -6 },
   { Icon: Film, x: 110, y: 270, rotate: 14 },
+  { Icon: Facebook, x: -330, y: -20, rotate: -9, soDesktop: true },
+  { Icon: SiGoogle, x: 325, y: 20, rotate: 11, soDesktop: true },
 ];
 
 // Timeline (segundos, a partir do carregamento da página). A "apresentação"
@@ -92,11 +100,11 @@ function IconeConvergindo({ config }: { config: ConfigIcone }) {
         opacity: [1, 1, 0],
       }}
       transition={{ duration: DURACAO_ICONES, times: [0, 0.6, 1], ease: "easeInOut" }}
-      className={`absolute left-1/2 top-1/2 z-10 -ml-10 -mt-10 flex h-20 w-20 items-center justify-center rounded-2xl border border-white/15 bg-white/[0.04] text-white/70 backdrop-blur-sm sm:-ml-12 sm:-mt-12 sm:h-24 sm:w-24 ${
+      className={`absolute left-1/2 top-1/2 z-10 -ml-10 -mt-10 flex h-20 w-20 items-center justify-center sm:-ml-12 sm:-mt-12 sm:h-24 sm:w-24 ${
         config.soDesktop ? "hidden sm:flex" : ""
       }`}
     >
-      <Icon size={32} />
+      <IconeEstilizado icon={Icon} tamanho="100%" tamanhoIcone={36} />
     </motion.div>
   );
 }

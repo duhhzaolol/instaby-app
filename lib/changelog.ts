@@ -22,6 +22,23 @@ export type VersaoNovidades = {
 
 export const NOVIDADES: VersaoNovidades[] = [
   {
+    versao: 150,
+    resumo:
+      "Novo visual de ícone (escuro, com brilho vermelho) no menu do painel e na abertura do site; Facebook e Google entraram no time de ícones da abertura.",
+    itens: [
+      {
+        tipo: "adicionado",
+        texto:
+          "Os ícones do menu lateral do painel (Tarefas, Agenda, Clientes, Tráfego pago, Horas, Financeiro, Comercial) ganharam um visual novo — escuros, com um brilho vermelho na borda, no estilo das imagens de referência que ele mandou (claquete, alvo, cronômetro etc.). O ícone de Tarefas virou uma claquete de cinema.",
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          "A cena de abertura do site (os ícones que voam e formam o logo) ganhou o mesmo visual novo, e o Facebook e o Google entraram no meio dos ícones que convergem, ao lado do Instagram e do YouTube que já estavam lá.",
+      },
+    ],
+  },
+  {
     versao: 149,
     resumo: 'Corrigido o mapa "Onde a gente atende", que ficou com uma marca d\'água por cima depois da v148.',
     itens: [
