@@ -1,3 +1,39 @@
+# Instaby App — v154
+
+Correção de um bug real reportado por ele em produção (log copiado do Vercel):
+abrir Tráfego Pago e escolher um cliente (Visão geral, Verba, Histórico de
+importações ou Relatórios) dava erro e a tela não carregava. Nada mais mudou
+nesta versão — o conteúdo da Etapa 2 é o mesmo descrito na seção da v153,
+logo abaixo.
+
+## Correção (v154): seletor de cliente do Tráfego Pago sem `"use client"`
+
+- Causa: `components/dashboard/trafego/SeletorClienteTrafego.tsx` é quem
+  desenha tanto a lista de clientes pra escolher (antes de selecionar) quanto
+  o `<select>` de trocar de cliente (depois de selecionado) — mas o arquivo
+  não tinha `"use client"` no topo. Enquanto só a lista de botões aparecia
+  (`<Link>`, sem interatividade própria), passava despercebido; assim que um
+  cliente era escolhido, o outro ramo do mesmo componente entrava em cena —
+  um `<select>` com `onChange` — e um Server Component não pode mandar uma
+  função (`onChange`) como prop pro navegador, só um Client Component pode.
+  É exatamente esse o erro do log copiado por ele: "Event handlers cannot be
+  passed to Client Component props", com o formato dos props (`defaultValue`/
+  `onChange`/`className`/`children`) batendo com esse `<select>` específico.
+- Esse bug **não foi introduzido pela Etapa 2 (v153)** — já existia desde a
+  reconstrução do módulo de Tráfego Pago (v151); só não tinha sido pego até
+  agora porque, aparentemente, ninguém tinha trocado de cliente ali desde
+  então nesta instalação em produção.
+- Corrigido com uma linha (`"use client";` no topo do arquivo) — não muda
+  nada visualmente nem no comportamento esperado, só permite que o `onChange`
+  funcione de verdade. Conferido com uma varredura em todo `app/` e
+  `components/` por qualquer outro elemento com `onChange`/`onClick`/
+  `onSubmit` dentro de um arquivo sem `"use client"` — esse era o único caso
+  no projeto inteiro.
+- Verificação: `tsc --noEmit` em 334 (mesmo total da v153, sem mudança —
+  adicionar `"use client"` não afeta tipos), zero erro no arquivo corrigido.
+
+---
+
 # Instaby App — v153
 
 **Etapa 2** do plano de evolução em 11 etapas ("Revisão e aprovação de

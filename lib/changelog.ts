@@ -22,6 +22,17 @@ export type VersaoNovidades = {
 
 export const NOVIDADES: VersaoNovidades[] = [
   {
+    versao: 154,
+    resumo: "Corrigido um erro que impedia abrir o Tráfego Pago depois de escolher um cliente.",
+    itens: [
+      {
+        tipo: "corrigido",
+        texto:
+          'Escolher um cliente dentro do Tráfego Pago (Visão geral, Verba, Histórico de importações ou Relatórios) dava erro e a tela não abria — um problema no componente do seletor de cliente, presente desde a reconstrução desse módulo, que só se manifestava depois de escolher o cliente (a tela de "escolha um cliente" antes disso funcionava normal). Corrigido; nada mudou na aparência nem no jeito de usar.',
+      },
+    ],
+  },
+  {
     versao: 153,
     resumo:
       "Reels e artes agora têm um fluxo completo de revisão e aprovação (com página pública pro cliente comentar e aprovar), e o vídeo bruto de cada tarefa deixou de ser compartilhado com as outras da mesma semana.",
