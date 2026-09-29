@@ -56,6 +56,13 @@ model Usuario {
   // novo (Tarefa não tinha responsável nenhum antes). Ver Tarefa.responsavelId.
   tarefasResponsavel Tarefa[]
 
+  // Autoria no módulo de Tráfego Pago (v151) — mesmo padrão de RegistroTempo.usuarioId:
+  // opcional, preenchido a partir da sessão em cada rota, nunca adivinhado.
+  lotesImportacaoCriados    LoteImportacao[]
+  movimentacoesVerbaCriadas MovimentacaoVerba[]
+  campanhasAvaliadas        Campanha[]
+  relatoriosTrafegoGerados  RelatorioTrafego[]
+
   createdAt        DateTime  @default(now())
   tentativasFalhas Int       @default(0) // contador de senhas erradas seguidas — zera a cada acerto
   bloqueadoAte     DateTime? // se preenchido e no futuro, login fica bloqueado até essa hora (proteção contra força bruta)
@@ -131,6 +138,12 @@ model Cliente {
   solicitacoes        Solicitacao[]
   usuariosPermitidos  ClienteUsuario[]
   campanhas           Campanha[]
+
+  // Módulo de Tráfego Pago (v151) — verba/saldo é controle interno da agência,
+  // sem ligação com Financeiro (ver comentário no model Campanha).
+  verbaTrafego        VerbaTrafego?
+  lotesImportacao     LoteImportacao[]
+  relatoriosTrafego   RelatorioTrafego[]
 }
 
 // Relatório de performance por rede e por período — dado lançado manualmente (Fase 1).
@@ -492,8 +505,11 @@ model Patrimonio {
   createdAt       DateTime  @default(now())
 }
 
-// Tráfego pago — gestão da campanha (verba, plataforma, período). A verba não passa
-// pela agência (vai direto do cliente pra plataforma), então não tem ligação com Financeiro.
+// Tráfego pago — gestão da campanha (verba, plataforma, período). A verba de mídia
+// (ver VerbaTrafego) não passa pela agência (vai direto do cliente pra plataforma),
+// então não tem ligação com Financeiro — só os honorários da agência (mensalidade,
+// em ServicoContratado/Cobranca) é que passam por ali, e o módulo de tráfego nunca
+// lê nem mostra nada de lá (gerenciarTrafego não abre Financeiro).
 model Campanha {
   id           String    @id @default(uuid())
   clienteId    String
@@ -502,13 +518,61 @@ model Campanha {
   plataforma   String // meta_ads | google_ads | tiktok_ads | outro
   objetivo     String? // conversao | alcance | trafego | engajamento | leads | vendas | outro
   verbaMensal  Decimal   @default(0)
+  // Legado (era o único status, "ativa"/"pausada"/"encerrada") — a partir da v151
+  // é mantido em espelho de statusInterno (ver mapStatusInternoParaLegado em
+  // lib/trafego.ts), só pra não quebrar quem já lia esse campo: o Início do
+  // gestor de tráfego (app/dashboard/page.tsx, 3 queries com status:"ativa") e
+  // o alerta de criativos pendentes. Toda tela nova do módulo lê/escreve
+  // statusInterno; esse campo aqui nunca é editado direto por elas.
   status       String    @default("ativa") // ativa | pausada | encerrada
   dataInicio   DateTime  @default(now())
   dataFim      DateTime?
   observacoes  String?
   createdAt    DateTime  @default(now())
 
-  resultados ResultadoCampanha[]
+  // Identidade externa pra importação do Meta (v151). idExternoMeta só vem
+  // preenchido se a exportação do Meta incluir uma coluna de ID (hoje não inclui —
+  // ver ImportarCampanhasMeta). Sem ID, a conciliação usa chaveCorrespondencia
+  // (nome + configuração de atribuição normalizados) e, quando isso também for
+  // ambíguo (ex: nome duplicado com a mesma atribuição), cai pra conferência
+  // manual — nunca uni campanhas só pelo nome. nomesOriginaisMeta guarda todo
+  // nome bruto já vinculado aqui manualmente, pra a próxima importação reconhecer
+  // de novo sem perguntar (ver lib/importacaoMeta.ts).
+  idExternoMeta        String?   @unique
+  chaveCorrespondencia String?
+  nomesOriginaisMeta   String[]  @default([])
+
+  // Status interno (v151) — controle SEU, "em acompanhamento/pausada/finalizada/
+  // arquivada", completamente separado do que o Meta reporta (ultimoStatusMeta,
+  // abaixo). Finalizar ou arquivar aqui NUNCA desliga a campanha na Meta de
+  // verdade nem some com o gasto histórico dela — é só organização (ver
+  // lib/trafego.ts: gastoAcumuladoCampanha soma independente de statusInterno).
+  statusInterno String @default("em_acompanhamento") // em_acompanhamento | pausada | finalizada | arquivada
+
+  // Último status de veiculação reportado pelo Meta na importação mais recente —
+  // puramente informativo (mostrado ao lado do statusInterno na tela), nunca usado
+  // pra decidir nada sozinho.
+  ultimoStatusMeta   String?
+  ultimoStatusMetaEm DateTime?
+
+  // Orçamento do conjunto de anúncios da campanha (não é a verba/saldo do cliente
+  // nem a verbaMensal acima) — só informativo, vindo da última importação.
+  orcamentoConjunto Decimal?
+  tipoOrcamento     String? // ex: "Diário", "Usando o orçamento do conjunto de anúncios"
+
+  // Avaliação (v151) — separada do statusInterno de propósito: uma campanha pode
+  // estar "finalizada" e nunca ter sido avaliada, ou "em acompanhamento" e já
+  // estar "abaixo da meta". Uma campanha inativa não significa que fracassou.
+  avaliacao            String    @default("nao_avaliada") // nao_avaliada | dentro_da_meta | abaixo_da_meta | inconclusiva
+  avaliacaoObjetivo    String?
+  avaliacaoMeta        String?
+  avaliacaoObservacoes String?
+  avaliadoPorId        String?
+  avaliadoPor          Usuario?  @relation(fields: [avaliadoPorId], references: [id])
+  avaliadoEm           DateTime?
+
+  resultados      ResultadoCampanha[]
+  itensImportacao ItemImportacao[]
 }
 
 // Resultado de campanha — lançado manualmente pelo gestor de tráfego (fase 3 do módulo)
@@ -540,6 +604,134 @@ model ResultadoCampanha {
   createdAt         DateTime  @default(now())
 
   @@unique([campanhaId, inicio, fim])
+}
+
+// Verba de mídia por cliente (v151) — controle INTERNO da agência, não uma consulta
+// ao saldo da Meta. saldoInicial é ajustado manualmente na virada do mês, de propósito
+// (ver MovimentacaoVerba, tipo "saldo_transportado") — nada aqui reseta sozinho.
+// Saldo restante nunca é guardado direto: é sempre CALCULADO como
+// saldoInicial + soma(movimentacoes.valor) − gastoAcumuladoCliente(clienteId)
+// (ver lib/trafego.ts), onde gastoAcumuladoCliente soma o gasto de TODAS as
+// campanhas do cliente, inclusive finalizadas/arquivadas — arquivar não tira nada
+// dessa conta.
+model VerbaTrafego {
+  id           String   @id @default(uuid())
+  clienteId    String   @unique
+  cliente      Cliente  @relation(fields: [clienteId], references: [id])
+  saldoInicial Decimal  @default(0)
+  observacoes  String?
+  atualizadoEm DateTime @updatedAt
+  createdAt    DateTime @default(now())
+
+  movimentacoes MovimentacaoVerba[]
+}
+
+// Histórico de aportes/devoluções/ajustes/saldo transportado de um cliente — nunca
+// editado nem apagado depois de criado (é o próprio extrato). "tipo" separa o aporte
+// de mídia normal de uma correção pontual (devolução do Meta, ajuste de divergência)
+// e do registro explícito de virada de mês. "valor" é sempre a MAGNITUDE (positivo);
+// quem decide se soma ou subtrai do saldo é o "tipo" (ver calcularSaldoCliente em
+// lib/trafego.ts) — aporte/saldo_transportado somam, devolução/ajuste subtraem.
+model MovimentacaoVerba {
+  id            String       @id @default(uuid())
+  verbaId       String
+  verba         VerbaTrafego @relation(fields: [verbaId], references: [id])
+  tipo          String // aporte | devolucao | ajuste | saldo_transportado
+  valor         Decimal // sempre positivo — a magnitude do lançamento
+  descricao     String?
+  dataMovimento DateTime @default(now())
+  criadoPorId   String?
+  criadoPor     Usuario? @relation(fields: [criadoPorId], references: [id])
+  createdAt     DateTime @default(now())
+}
+
+// Um lote = um arquivo CSV do Meta já CONFIRMADO pelo usuário — nada é gravado
+// enquanto só está em prévia (ver app/api/campanhas/importar-meta/preview, que não
+// grava nada, e .../confirmar, que grava tudo isto de uma vez, dentro de uma
+// transação). arquivoUrl preserva o arquivo original de verdade, subido pro Vercel
+// Blob (mesmo padrão já usado em upload-contrato/upload-logo/upload-imagem) — assim
+// dá sempre pra abrir de novo o CSV exato que gerou cada lote.
+model LoteImportacao {
+  id                String   @id @default(uuid())
+  clienteId         String
+  cliente           Cliente  @relation(fields: [clienteId], references: [id])
+  contaAnuncios     String? // nome da conta de anúncios, só quando identificável no arquivo
+  nomeArquivo       String
+  arquivoUrl        String // URL do arquivo original no Vercel Blob
+  periodoInicio     DateTime
+  periodoFim        DateTime
+  // true = o período desse arquivo é mais antigo que a última importação já
+  // confirmada desse cliente — nesse caso nada foi aplicado automaticamente
+  // (ver lib/importacaoMeta.ts); só chega a existir gravado se o usuário confirmou
+  // essa aplicação explicitamente na prévia.
+  arquivoAntigo     Boolean  @default(false)
+  linhasTotal       Int
+  linhasComGasto    Int
+  gastoTotalArquivo Decimal
+  criadoPorId       String?
+  criadoPor         Usuario? @relation(fields: [criadoPorId], references: [id])
+  createdAt         DateTime @default(now())
+
+  itens ItemImportacao[]
+}
+
+// Uma linha do arquivo já resolvida (vinculada a uma Campanha existente ou marcada
+// como nova) com o cálculo do incremento preservado. É esse histórico — não um
+// contador solto — que garante reimportação segura: o "gasto anterior" de uma
+// importação nova é sempre lido daqui (do lote confirmado anterior no mesmo mês),
+// nunca de um campo único que alguém poderia sobrescrever.
+model ItemImportacao {
+  id         String          @id @default(uuid())
+  loteId     String
+  lote       LoteImportacao  @relation(fields: [loteId], references: [id], onDelete: Cascade)
+  campanhaId String?
+  campanha   Campanha?       @relation(fields: [campanhaId], references: [id])
+
+  nomeOriginal       String
+  idExternoOriginal  String?
+  statusMetaOriginal String?
+  configAtribuicao   String?
+
+  gastoAcumuladoArquivo Decimal // valor bruto do arquivo pra essa campanha (acumulado desde o dia 1 do mês, segundo o Meta)
+  gastoAnterior         Decimal // o que o sistema já sabia antes desse import (0 se é a 1ª aparição no mês)
+  gastoIncremental      Decimal // gastoAcumuladoArquivo − gastoAnterior — pode ser negativo numa correção pra baixo
+
+  impressoes         Int?
+  alcance            Int?
+  resultados         Int?
+  indicadorResultado String?
+  custoPorResultado  Decimal?
+  orcamentoConjunto  Decimal?
+  tipoOrcamento      String?
+  termino            DateTime?
+
+  resolucao String // auto_id | auto_chave | manual | nova_campanha
+  createdAt DateTime @default(now())
+}
+
+// Versão congelada de um relatório gerado pro cliente — o "Baixar PDF" imprime
+// sempre uma dessas linhas, nunca um recálculo ao vivo, porque preservar versão
+// significa continuar mostrando amanhã exatamente o que foi gerado hoje. Cada
+// clique em "Gerar relatório" cria uma linha nova (nunca sobrescreve).
+model RelatorioTrafego {
+  id                   String   @id @default(uuid())
+  clienteId            String
+  cliente              Cliente  @relation(fields: [clienteId], references: [id])
+  periodoInicio        DateTime
+  periodoFim           DateTime
+  parcial              Boolean  @default(false) // true quando os dados disponíveis não cobrem o período inteiro pedido
+  campanhaIds          String[] // selecionar campanhas pro relatório não mexe no saldo do cliente
+  dadosSnapshot        Json // resumo, por-campanha, indicadores e pontos de gráfico já calculados no momento da geração
+  avaliacaoGeral       String?
+  observacoes          String?
+  proximosPassos       String?
+  dataAtualizacaoDados DateTime // data do lote mais recente considerado nesse snapshot
+  versao               Int // sequencial por cliente (1, 2, 3...)
+  geradoPorId          String?
+  geradoPor            Usuario? @relation(fields: [geradoPorId], references: [id])
+  createdAt            DateTime @default(now())
+
+  @@unique([clienteId, versao])
 }
 
 // Depoimentos fixos — aparecem em toda página de orçamento

@@ -21,6 +21,7 @@ import { Clock } from "lucide-react";
 import { getUsuarioAtual, permissoesDe, podeVerCliente } from "@/lib/permissoes";
 import { garantirPastasCliente, linkDaPasta } from "@/lib/google";
 import { redirect } from "next/navigation";
+import { repararStatusInternoLegado, snapshotCampanhaAtual, snapshotCampanhaTotal } from "@/lib/trafego";
 
 export default async function ClienteDetalhePage({
   params,
@@ -50,7 +51,7 @@ export default async function ClienteDetalhePage({
         links: { orderBy: { createdAt: "asc" } },
         onboarding: { include: { itens: { orderBy: { ordem: "asc" } } } },
         solicitacoes: { orderBy: { createdAt: "desc" } },
-        campanhas: { orderBy: { createdAt: "desc" } },
+        campanhas: { orderBy: { createdAt: "desc" }, include: { avaliadoPor: { select: { nome: true } } } },
       },
     }),
     prisma.servico.findMany({ orderBy: [{ categoria: "asc" }, { nome: "asc" }] }),
@@ -120,6 +121,76 @@ export default async function ClienteDetalhePage({
     } catch (e) {
       console.error("Erro ao preparar pastas do Drive desse cliente:", e);
     }
+  }
+
+  // Mesma lógica: só monta os números de Tráfego Pago (que fazem uma consulta por
+  // campanha) quando a aba realmente está aberta. repararStatusInternoLegado corrige,
+  // na leitura, campanhas de antes da v151 que ficaram com o valor padrão da coluna
+  // nova em vez do status legado de verdade (ver comentário em lib/trafego.ts).
+  let campanhasTrafego: Array<{
+    id: string;
+    clienteId: string;
+    clienteNome: string;
+    clienteCor: string | null;
+    nome: string;
+    plataforma: string;
+    objetivo: string | null;
+    verbaMensal: number;
+    statusInterno: string;
+    ultimoStatusMeta: string | null;
+    avaliacao: string;
+    avaliacaoObjetivo: string | null;
+    avaliacaoMeta: string | null;
+    avaliacaoObservacoes: string | null;
+    avaliadoPorNome: string | null;
+    dataInicio: string;
+    dataFim: string | null;
+    observacoes: string | null;
+    snapshot: {
+      gasto: number;
+      impressoes: number | null;
+      alcance: number | null;
+      resultadosPorIndicador: { indicador: string; label: string; total: number; qtdCampanhas: number }[];
+      dataAtualizacao: string | null;
+      temDados: boolean;
+    };
+  }> = [];
+  if (aba === "trafego" && pode.gerenciarTrafego) {
+    const campanhasCorrigidas = repararStatusInternoLegado(cliente.campanhas);
+    campanhasTrafego = await Promise.all(
+      campanhasCorrigidas.map(async (c) => {
+        const finalizada = c.statusInterno === "finalizada" || c.statusInterno === "arquivada";
+        const snap = finalizada ? await snapshotCampanhaTotal(c.id) : await snapshotCampanhaAtual(c.id);
+        return {
+          id: c.id,
+          clienteId: c.clienteId,
+          clienteNome: cliente.nome,
+          clienteCor: cliente.cor,
+          nome: c.nome,
+          plataforma: c.plataforma,
+          objetivo: c.objetivo,
+          verbaMensal: Number(c.verbaMensal),
+          statusInterno: c.statusInterno,
+          ultimoStatusMeta: c.ultimoStatusMeta,
+          avaliacao: c.avaliacao,
+          avaliacaoObjetivo: c.avaliacaoObjetivo,
+          avaliacaoMeta: c.avaliacaoMeta,
+          avaliacaoObservacoes: c.avaliacaoObservacoes,
+          avaliadoPorNome: c.avaliadoPor?.nome || null,
+          dataInicio: c.dataInicio.toISOString(),
+          dataFim: c.dataFim?.toISOString() || null,
+          observacoes: c.observacoes,
+          snapshot: {
+            gasto: snap.gasto,
+            impressoes: snap.impressoes,
+            alcance: snap.alcance,
+            resultadosPorIndicador: snap.resultadosPorIndicador,
+            dataAtualizacao: snap.dataAtualizacao ? snap.dataAtualizacao.toISOString() : null,
+            temDados: snap.temDados,
+          },
+        };
+      })
+    );
   }
 
   const orcamentosAceitos = cliente.orcamentos.filter((o) => o.status === "aceito");
@@ -560,24 +631,12 @@ export default async function ClienteDetalhePage({
           </div>
         </div>
       )}
-      {aba === "trafego" && (
+      {aba === "trafego" && pode.gerenciarTrafego && (
         <TrafegoClient
-          campanhas={cliente.campanhas.map((c) => ({
-            id: c.id,
-            clienteId: c.clienteId,
-            clienteNome: cliente.nome,
-            clienteCor: cliente.cor,
-            nome: c.nome,
-            plataforma: c.plataforma,
-            objetivo: c.objetivo,
-            verbaMensal: Number(c.verbaMensal),
-            status: c.status,
-            dataInicio: c.dataInicio.toISOString(),
-            dataFim: c.dataFim?.toISOString() || null,
-            observacoes: c.observacoes,
-          }))}
+          campanhas={campanhasTrafego}
           clientes={[{ id: cliente.id, nome: cliente.nome, cor: cliente.cor }]}
           clienteFixo={cliente.id}
+          contexto="tudo"
         />
       )}
 

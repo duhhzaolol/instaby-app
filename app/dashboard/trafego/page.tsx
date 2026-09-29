@@ -1,17 +1,40 @@
 import Link from "next/link";
-import { CheckSquare, Megaphone, ListChecks, Zap, Wallet, PauseCircle } from "lucide-react";
+import {
+  CheckSquare,
+  Megaphone,
+  ListChecks,
+  LayoutDashboard,
+  Archive,
+  Wallet,
+  History as HistoryIcon,
+  FileBarChart,
+} from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { AjudaContextual } from "@/components/ui/AjudaContextual";
-import { StatTile } from "@/components/ui/StatTile";
 import TrafegoClient from "@/components/dashboard/TrafegoClient";
 import { TarefaRow } from "@/components/dashboard/TarefaRow";
 import { NovaTarefaGlobalForm } from "@/components/dashboard/NovaTarefaGlobalForm";
 import { getUsuarioAtual, clienteIdsPermitidos } from "@/lib/permissoes";
+import { repararStatusInternoLegado, snapshotCampanhaAtual, snapshotCampanhaTotal, calcularSaldoCliente } from "@/lib/trafego";
+import { SeletorClienteTrafego } from "@/components/dashboard/trafego/SeletorClienteTrafego";
+import { VisaoGeralTrafego } from "@/components/dashboard/trafego/VisaoGeralTrafego";
+import { VerbaMovimentacoes } from "@/components/dashboard/trafego/VerbaMovimentacoes";
+import { HistoricoImportacoes } from "@/components/dashboard/trafego/HistoricoImportacoes";
+import { RelatoriosTrafego } from "@/components/dashboard/trafego/RelatoriosTrafego";
 
+// Views client-agnósticas (uma tabela cruzando todos os clientes autorizados) vs.
+// client-scoped (operam sobre UM cliente por vez, escolhido via ?clienteId=) — ver
+// SeletorClienteTrafego. gerenciarTrafego em si já é exigido por app/dashboard/trafego/
+// layout.tsx; aqui só falta escopar por cliente autorizado (spec §7).
 const VISOES = [
-  { valor: "campanhas", label: "Campanhas", icone: Megaphone },
-  { valor: "rotina", label: "Rotina", icone: ListChecks },
-];
+  { valor: "visao-geral", label: "Visão geral", icone: LayoutDashboard, clientScoped: true },
+  { valor: "campanhas", label: "Campanhas", icone: Megaphone, clientScoped: false },
+  { valor: "finalizadas", label: "Finalizadas", icone: Archive, clientScoped: false },
+  { valor: "verba", label: "Verba e movimentações", icone: Wallet, clientScoped: true },
+  { valor: "importacoes", label: "Histórico de importações", icone: HistoryIcon, clientScoped: true },
+  { valor: "relatorios", label: "Relatórios", icone: FileBarChart, clientScoped: true },
+  { valor: "rotina", label: "Rotina", icone: ListChecks, clientScoped: false },
+] as const;
 
 const ABAS_ROTINA = [
   { valor: "abertas", label: "Abertas" },
@@ -19,64 +42,50 @@ const ABAS_ROTINA = [
   { valor: "todas", label: "Todas" },
 ];
 
+function serializarSnapshot(snap: {
+  gasto: number;
+  impressoes: number | null;
+  alcance: number | null;
+  resultadosPorIndicador: { indicador: string; label: string; total: number; qtdCampanhas: number }[];
+  dataAtualizacao: Date | null;
+  temDados: boolean;
+}) {
+  return {
+    gasto: snap.gasto,
+    impressoes: snap.impressoes,
+    alcance: snap.alcance,
+    resultadosPorIndicador: snap.resultadosPorIndicador,
+    dataAtualizacao: snap.dataAtualizacao ? snap.dataAtualizacao.toISOString() : null,
+    temDados: snap.temDados,
+  };
+}
+
 export default async function TrafegoPage({
   searchParams,
 }: {
-  searchParams: { visao?: string; status?: string };
+  searchParams: { visao?: string; clienteId?: string; status?: string; campanhaIds?: string };
 }) {
-  const visao = searchParams.visao === "rotina" ? "rotina" : "campanhas";
+  const visaoInfo = VISOES.find((v) => v.valor === searchParams.visao) || VISOES[0];
+  const visao = visaoInfo.valor;
   const filtroStatusRotina = searchParams.status || "abertas";
 
   const usuarioAtual = await getUsuarioAtual();
   const idsPermitidos = usuarioAtual ? await clienteIdsPermitidos(usuarioAtual) : null;
   const filtroClienteCliente = idsPermitidos ? { id: { in: idsPermitidos } } : {};
-  // Tarefa sem cliente (rotina interna de tráfego, sem vínculo) continua visível
-  // pra todo mundo — só restringe a que é de um cliente fora da lista permitida.
   const filtroClienteTarefa = idsPermitidos ? { OR: [{ clienteId: null }, { clienteId: { in: idsPermitidos } }] } : {};
 
-  const whereRotina =
-    filtroStatusRotina === "feito"
-      ? { categoria: "campanha", status: "feito", ...filtroClienteTarefa }
-      : filtroStatusRotina === "todas"
-      ? { categoria: "campanha", ...filtroClienteTarefa }
-      : { categoria: "campanha", status: { not: "feito" }, ...filtroClienteTarefa };
+  const clientes = await prisma.cliente.findMany({
+    where: filtroClienteCliente,
+    select: { id: true, nome: true, cor: true },
+    orderBy: { nome: "asc" },
+  });
 
-  const [campanhas, clientes, tarefasRotina] = await Promise.all([
-    prisma.campanha.findMany({
-      where: idsPermitidos ? { clienteId: { in: idsPermitidos } } : undefined,
-      include: { cliente: { select: { id: true, nome: true, cor: true } } },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.cliente.findMany({
-      where: filtroClienteCliente,
-      select: { id: true, nome: true, cor: true },
-      orderBy: { nome: "asc" },
-    }),
-    prisma.tarefa.findMany({
-      where: whereRotina,
-      include: { cliente: { select: { nome: true, cor: true } } },
-      orderBy: { createdAt: "desc" },
-    }),
-  ]);
-
-  const dados = campanhas.map((c) => ({
-    id: c.id,
-    clienteId: c.clienteId,
-    clienteNome: c.cliente.nome,
-    clienteCor: c.cliente.cor,
-    nome: c.nome,
-    plataforma: c.plataforma,
-    objetivo: c.objetivo,
-    verbaMensal: Number(c.verbaMensal),
-    status: c.status,
-    dataInicio: c.dataInicio.toISOString(),
-    dataFim: c.dataFim?.toISOString() || null,
-    observacoes: c.observacoes,
-  }));
-
-  const verbaAtiva = dados.filter((c) => c.status === "ativa").reduce((s, c) => s + c.verbaMensal, 0);
-  const qtdAtivas = dados.filter((c) => c.status === "ativa").length;
-  const qtdPausadas = dados.filter((c) => c.status === "pausada").length;
+  // "Autorizado" aqui é só pertencer à lista acima, que já veio filtrada por
+  // clienteIdsPermitidos — não precisa de uma segunda consulta pra confirmar. Resolvido
+  // independente da visão atual ser client-scoped ou não, só pra dar pra manter o
+  // mesmo cliente ao trocar de aba (ex: de Verba pra Relatórios) mesmo passando por uma
+  // aba sem cliente (ex: Campanhas) no meio do caminho.
+  const clienteSelecionado = searchParams.clienteId ? clientes.find((c) => c.id === searchParams.clienteId) : undefined;
 
   return (
     <div>
@@ -85,50 +94,25 @@ export default async function TrafegoPage({
           Tráfego Pago
           <AjudaContextual
             titulo="Tráfego Pago"
-            texto="Organize as campanhas de anúncio de cada cliente — plataforma, objetivo, verba mensal e período — e a rotina de tarefas do gestor de tráfego. A verba não passa pela agência (o cliente manda direto pra plataforma), então isso não mexe em nada do Financeiro — é só controle e organização do seu trabalho de gestão."
-            exemplo="Ex.: Meta Ads · Conversão · R$ 1.500/mês · ativa desde 01/09. Na Rotina, tarefas tipo 'Trocar criativo' ou 'Revisar públicos'."
+            texto="Organize campanhas por cliente, importe relatórios do Meta Ads semanalmente, controle a verba de mídia disponibilizada por cada cliente e gere relatórios em PDF. O saldo aqui é o controle interno da verba de mídia — separado do Financeiro da agência (contratos, mensalidades, cobranças), que fica em outro módulo."
+            exemplo="Ex.: importa o CSV acumulado do mês toda segunda-feira — o sistema calcula sozinho quanto cada campanha gastou a mais desde a última importação e atualiza o saldo restante do cliente."
           />
         </p>
-        <p className="text-sm text-muted">
-          {qtdAtivas} campanha{qtdAtivas === 1 ? "" : "s"} ativa{qtdAtivas === 1 ? "" : "s"}
-          {verbaAtiva > 0 && ` · R$ ${verbaAtiva.toLocaleString("pt-BR", { minimumFractionDigits: 0 })} de verba/mês sob gestão`}
-        </p>
+        <p className="text-sm text-muted">Campanhas, verba, importações e relatórios de tráfego pago.</p>
       </div>
 
-      {dados.length > 0 && (
-        <div className="mb-5 grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <StatTile
-            icone={<Zap size={12} style={{ color: "#22C55E" }} />}
-            label="Campanhas ativas"
-            valor={qtdAtivas}
-            index={0}
-          />
-          <StatTile
-            icone={<Wallet size={12} style={{ color: "#E63946" }} />}
-            label="Verba ativa sob gestão"
-            valor={`R$ ${verbaAtiva.toLocaleString("pt-BR", { minimumFractionDigits: 0 })}/mês`}
-            index={1}
-          />
-          <StatTile
-            icone={<PauseCircle size={12} style={{ color: "#F59E0B" }} />}
-            label="Pausadas"
-            valor={qtdPausadas}
-            index={2}
-          />
-        </div>
-      )}
-
-      <div className="mb-5 flex gap-2">
+      <div className="mb-5 flex flex-wrap gap-2">
         {VISOES.map((v) => {
           const Icon = v.icone;
+          const ativo = visao === v.valor;
+          const href =
+            v.clientScoped && clienteSelecionado ? `/dashboard/trafego?visao=${v.valor}&clienteId=${clienteSelecionado.id}` : `/dashboard/trafego?visao=${v.valor}`;
           return (
             <Link
               key={v.valor}
-              href={`/dashboard/trafego?visao=${v.valor}`}
+              href={href}
               className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                visao === v.valor
-                  ? "bg-accent text-white"
-                  : "border border-border bg-card/60 text-muted hover:text-text"
+                ativo ? "bg-accent text-white" : "border border-border bg-card/60 text-muted hover:text-text"
               }`}
             >
               <Icon size={12} /> {v.label}
@@ -137,62 +121,389 @@ export default async function TrafegoPage({
         })}
       </div>
 
-      {visao === "campanhas" ? (
-        <TrafegoClient campanhas={dados} clientes={clientes} />
+      {/* ───────────── Telas escopadas por cliente ───────────── */}
+      {visaoInfo.clientScoped && !clienteSelecionado && (
+        <SeletorClienteTrafego clientes={clientes} visao={visao} />
+      )}
+
+      {visaoInfo.clientScoped && clienteSelecionado && visao === "visao-geral" && (
+        <VisaoGeralVisao clienteId={clienteSelecionado.id} clienteNome={clienteSelecionado.nome} clientes={clientes} visao={visao} />
+      )}
+
+      {visaoInfo.clientScoped && clienteSelecionado && visao === "verba" && (
+        <VerbaVisao clienteId={clienteSelecionado.id} clienteNome={clienteSelecionado.nome} clientes={clientes} visao={visao} />
+      )}
+
+      {visaoInfo.clientScoped && clienteSelecionado && visao === "importacoes" && (
+        <ImportacoesVisao clienteId={clienteSelecionado.id} clienteNome={clienteSelecionado.nome} clientes={clientes} visao={visao} />
+      )}
+
+      {visaoInfo.clientScoped && clienteSelecionado && visao === "relatorios" && (
+        <RelatoriosVisao
+          clienteId={clienteSelecionado.id}
+          clienteNome={clienteSelecionado.nome}
+          clientes={clientes}
+          visao={visao}
+          campanhaIdsParam={searchParams.campanhaIds}
+        />
+      )}
+
+      {/* ───────────── Campanhas / Finalizadas (cruzam todos os clientes) ───────────── */}
+      {(visao === "campanhas" || visao === "finalizadas") && (
+        <CampanhasOuFinalizadas idsPermitidos={idsPermitidos} clientes={clientes} visao={visao} />
+      )}
+
+      {/* ───────────── Rotina (sem mudanças — já existia antes desse módulo) ───────────── */}
+      {visao === "rotina" && (
+        <RotinaVisao filtroClienteTarefa={filtroClienteTarefa} clientes={clientes} filtroStatusRotina={filtroStatusRotina} />
+      )}
+    </div>
+  );
+}
+
+async function VisaoGeralVisao({
+  clienteId,
+  clienteNome,
+  clientes,
+  visao,
+}: {
+  clienteId: string;
+  clienteNome: string;
+  clientes: { id: string; nome: string; cor: string | null }[];
+  visao: string;
+}) {
+  const [campanhasCliente, saldo, ultimoLote] = await Promise.all([
+    prisma.campanha.findMany({
+      where: { clienteId },
+      select: { id: true, nome: true, status: true, statusInterno: true, ultimoStatusMeta: true, avaliacao: true },
+      orderBy: { createdAt: "desc" },
+    }),
+    calcularSaldoCliente(clienteId),
+    prisma.loteImportacao.findFirst({ where: { clienteId }, orderBy: { periodoFim: "desc" }, select: { periodoFim: true } }),
+  ]);
+
+  const corrigidas = repararStatusInternoLegado(campanhasCliente);
+  const ativas = corrigidas.filter((c) => c.statusInterno === "em_acompanhamento" || c.statusInterno === "pausada");
+  const snapshots = await Promise.all(ativas.map((c) => snapshotCampanhaAtual(c.id)));
+  const campanhasView = ativas.map((c, i) => ({
+    id: c.id,
+    nome: c.nome,
+    statusInterno: c.statusInterno,
+    ultimoStatusMeta: c.ultimoStatusMeta,
+    avaliacao: c.avaliacao,
+    snapshot: serializarSnapshot(snapshots[i]),
+  }));
+
+  const hoje = new Date();
+  const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  const periodoLabel = `${inicioMes.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} – ${hoje.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  })}`;
+
+  return (
+    <div>
+      <SeletorClienteTrafego clientes={clientes} clienteIdAtual={clienteId} visao={visao} />
+      <VisaoGeralTrafego
+        clienteId={clienteId}
+        clienteNome={clienteNome}
+        saldo={saldo}
+        campanhas={campanhasView}
+        periodoLabel={periodoLabel}
+        ultimaAtualizacao={ultimoLote?.periodoFim ? ultimoLote.periodoFim.toISOString() : null}
+      />
+    </div>
+  );
+}
+
+async function VerbaVisao({
+  clienteId,
+  clienteNome,
+  clientes,
+  visao,
+}: {
+  clienteId: string;
+  clienteNome: string;
+  clientes: { id: string; nome: string; cor: string | null }[];
+  visao: string;
+}) {
+  const [verba, saldo] = await Promise.all([
+    prisma.verbaTrafego.findUnique({
+      where: { clienteId },
+      include: { movimentacoes: { orderBy: { dataMovimento: "desc" }, include: { criadoPor: { select: { nome: true } } } } },
+    }),
+    calcularSaldoCliente(clienteId),
+  ]);
+
+  const movimentacoesView = (verba?.movimentacoes || []).map((m: any) => ({
+    id: m.id,
+    tipo: m.tipo,
+    valor: Number(m.valor),
+    descricao: m.descricao,
+    dataMovimento: m.dataMovimento.toISOString(),
+    criadoPorNome: m.criadoPor?.nome || null,
+  }));
+
+  return (
+    <div>
+      <SeletorClienteTrafego clientes={clientes} clienteIdAtual={clienteId} visao={visao} />
+      <VerbaMovimentacoes
+        clienteId={clienteId}
+        clienteNome={clienteNome}
+        saldoInicial={verba ? Number(verba.saldoInicial) : 0}
+        observacoesVerba={verba?.observacoes || null}
+        movimentacoes={movimentacoesView}
+        saldo={saldo}
+      />
+    </div>
+  );
+}
+
+async function ImportacoesVisao({
+  clienteId,
+  clienteNome,
+  clientes,
+  visao,
+}: {
+  clienteId: string;
+  clienteNome: string;
+  clientes: { id: string; nome: string; cor: string | null }[];
+  visao: string;
+}) {
+  const lotes = await prisma.loteImportacao.findMany({
+    where: { clienteId },
+    orderBy: { createdAt: "desc" },
+    include: {
+      criadoPor: { select: { nome: true } },
+      itens: { include: { campanha: { select: { nome: true } } }, orderBy: { gastoIncremental: "desc" } },
+    },
+  });
+
+  const lotesView = lotes.map((l: any) => ({
+    id: l.id,
+    nomeArquivo: l.nomeArquivo,
+    arquivoUrl: l.arquivoUrl,
+    periodoInicio: l.periodoInicio.toISOString(),
+    periodoFim: l.periodoFim.toISOString(),
+    arquivoAntigo: l.arquivoAntigo,
+    linhasTotal: l.linhasTotal,
+    linhasComGasto: l.linhasComGasto,
+    gastoTotalArquivo: Number(l.gastoTotalArquivo),
+    criadoPorNome: l.criadoPor?.nome || null,
+    createdAt: l.createdAt.toISOString(),
+    itens: l.itens.map((i: any) => ({
+      id: i.id,
+      nomeOriginal: i.nomeOriginal,
+      campanhaNomeAtual: i.campanha?.nome || null,
+      gastoAcumuladoArquivo: Number(i.gastoAcumuladoArquivo),
+      gastoAnterior: Number(i.gastoAnterior),
+      gastoIncremental: Number(i.gastoIncremental),
+      resolucao: i.resolucao,
+    })),
+  }));
+
+  return (
+    <div>
+      <SeletorClienteTrafego clientes={clientes} clienteIdAtual={clienteId} visao={visao} />
+      <HistoricoImportacoes clienteId={clienteId} clienteNome={clienteNome} lotes={lotesView} />
+    </div>
+  );
+}
+
+async function RelatoriosVisao({
+  clienteId,
+  clienteNome,
+  clientes,
+  visao,
+  campanhaIdsParam,
+}: {
+  clienteId: string;
+  clienteNome: string;
+  clientes: { id: string; nome: string; cor: string | null }[];
+  visao: string;
+  campanhaIdsParam?: string;
+}) {
+  const [campanhasCliente, versoes] = await Promise.all([
+    prisma.campanha.findMany({
+      where: { clienteId },
+      select: { id: true, nome: true, status: true, statusInterno: true },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.relatorioTrafego.findMany({
+      where: { clienteId },
+      orderBy: { versao: "desc" },
+      include: { geradoPor: { select: { nome: true } } },
+    }),
+  ]);
+
+  const campanhasOpcoes = repararStatusInternoLegado(campanhasCliente).map((c: any) => ({
+    id: c.id,
+    nome: c.nome,
+    statusInterno: c.statusInterno,
+  }));
+  const versoesView = versoes.map((v: any) => ({
+    id: v.id,
+    versao: v.versao,
+    periodoInicio: v.periodoInicio.toISOString(),
+    periodoFim: v.periodoFim.toISOString(),
+    parcial: v.parcial,
+    geradoPorNome: v.geradoPor?.nome || null,
+    createdAt: v.createdAt.toISOString(),
+  }));
+
+  const hoje = new Date();
+  const inicioMesIso = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toLocaleDateString("en-CA");
+  const hojeIso = hoje.toLocaleDateString("en-CA");
+  const campanhaIdsPre = campanhaIdsParam ? campanhaIdsParam.split(",").filter(Boolean) : undefined;
+
+  return (
+    <div>
+      <SeletorClienteTrafego clientes={clientes} clienteIdAtual={clienteId} visao={visao} />
+      <RelatoriosTrafego
+        clienteId={clienteId}
+        clienteNome={clienteNome}
+        campanhas={campanhasOpcoes}
+        versoes={versoesView}
+        periodoInicioDefault={inicioMesIso}
+        periodoFimDefault={hojeIso}
+        campanhaIdsPreSelecionadas={campanhaIdsPre}
+      />
+    </div>
+  );
+}
+
+async function CampanhasOuFinalizadas({
+  idsPermitidos,
+  clientes,
+  visao,
+}: {
+  idsPermitidos: string[] | null;
+  clientes: { id: string; nome: string; cor: string | null }[];
+  visao: "campanhas" | "finalizadas";
+}) {
+  const todasCampanhas = await prisma.campanha.findMany({
+    where: idsPermitidos ? { clienteId: { in: idsPermitidos } } : undefined,
+    include: { cliente: { select: { id: true, nome: true, cor: true } }, avaliadoPor: { select: { nome: true } } },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const corrigidas = repararStatusInternoLegado(todasCampanhas);
+  const doTipo = corrigidas.filter((c: any) =>
+    visao === "campanhas"
+      ? c.statusInterno === "em_acompanhamento" || c.statusInterno === "pausada"
+      : c.statusInterno === "finalizada" || c.statusInterno === "arquivada"
+  );
+  const snapshots = await Promise.all(
+    doTipo.map((c: any) => (visao === "campanhas" ? snapshotCampanhaAtual(c.id) : snapshotCampanhaTotal(c.id)))
+  );
+  const dados = doTipo.map((c: any, i: number) => ({
+    id: c.id,
+    clienteId: c.clienteId,
+    clienteNome: c.cliente.nome,
+    clienteCor: c.cliente.cor,
+    nome: c.nome,
+    plataforma: c.plataforma,
+    objetivo: c.objetivo,
+    verbaMensal: Number(c.verbaMensal),
+    statusInterno: c.statusInterno,
+    ultimoStatusMeta: c.ultimoStatusMeta,
+    avaliacao: c.avaliacao,
+    avaliacaoObjetivo: c.avaliacaoObjetivo,
+    avaliacaoMeta: c.avaliacaoMeta,
+    avaliacaoObservacoes: c.avaliacaoObservacoes,
+    avaliadoPorNome: c.avaliadoPor?.nome || null,
+    dataInicio: c.dataInicio.toISOString(),
+    dataFim: c.dataFim?.toISOString() || null,
+    observacoes: c.observacoes,
+    snapshot: serializarSnapshot(snapshots[i]),
+  }));
+
+  return (
+    <div>
+      {visao === "finalizadas" && (
+        <p className="mb-4 text-xs text-muted">
+          Finalizar ou arquivar aqui é só organização interna — não desliga a campanha na Meta, e não significa que
+          ela fracassou. Use a avaliação pra registrar o que de fato aconteceu com ela.
+        </p>
+      )}
+      <TrafegoClient campanhas={dados} clientes={clientes} contexto={visao === "campanhas" ? "ativas" : "finalizadas"} />
+    </div>
+  );
+}
+
+async function RotinaVisao({
+  filtroClienteTarefa,
+  clientes,
+  filtroStatusRotina,
+}: {
+  filtroClienteTarefa: any;
+  clientes: { id: string; nome: string; cor: string | null }[];
+  filtroStatusRotina: string;
+}) {
+  const whereRotina =
+    filtroStatusRotina === "feito"
+      ? { categoria: "campanha", status: "feito", ...filtroClienteTarefa }
+      : filtroStatusRotina === "todas"
+      ? { categoria: "campanha", ...filtroClienteTarefa }
+      : { categoria: "campanha", status: { not: "feito" }, ...filtroClienteTarefa };
+
+  const tarefasRotina = await prisma.tarefa.findMany({
+    where: whereRotina,
+    include: { cliente: { select: { nome: true, cor: true } } },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return (
+    <div>
+      <div className="mb-5 flex gap-2">
+        {ABAS_ROTINA.map((a) => (
+          <Link
+            key={a.valor}
+            href={`/dashboard/trafego?visao=rotina&status=${a.valor}`}
+            className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+              filtroStatusRotina === a.valor ? "bg-accent text-white" : "border border-border bg-card/60 text-muted hover:text-text"
+            }`}
+          >
+            {a.label}
+          </Link>
+        ))}
+      </div>
+
+      <NovaTarefaGlobalForm
+        clientes={clientes}
+        categoriaFixa="campanha"
+        placeholder="Ex: Trocar criativo, revisar públicos, ajustar verba..."
+        textoBotao="Nova tarefa de tráfego"
+      />
+
+      {tarefasRotina.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-border bg-card/40 py-16 text-center">
+          <CheckSquare size={28} className="mb-3 text-muted" />
+          <p className="text-sm text-muted">Nenhuma tarefa de tráfego aqui.</p>
+        </div>
       ) : (
-        <div>
-          <div className="mb-5 flex gap-2">
-            {ABAS_ROTINA.map((a) => (
-              <Link
-                key={a.valor}
-                href={`/dashboard/trafego?visao=rotina&status=${a.valor}`}
-                className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                  filtroStatusRotina === a.valor
-                    ? "bg-accent text-white"
-                    : "border border-border bg-card/60 text-muted hover:text-text"
-                }`}
-              >
-                {a.label}
-              </Link>
-            ))}
-          </div>
-
-          <NovaTarefaGlobalForm
-            clientes={clientes}
-            categoriaFixa="campanha"
-            placeholder="Ex: Trocar criativo, revisar públicos, ajustar verba..."
-            textoBotao="Nova tarefa de tráfego"
-          />
-
-          {tarefasRotina.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-2xl border border-border bg-card/40 py-16 text-center">
-              <CheckSquare size={28} className="mb-3 text-muted" />
-              <p className="text-sm text-muted">Nenhuma tarefa de tráfego aqui.</p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {tarefasRotina.map((t, i) => (
-                <TarefaRow
-                  key={t.id}
-                  index={i}
-                  clienteNome={t.cliente?.nome || null}
-                  clienteCor={t.cliente?.cor || null}
-                  tarefa={{
-                    id: t.id,
-                    titulo: t.titulo,
-                    tipo: t.tipo,
-                    status: t.status,
-                    prazo: t.prazo?.toISOString() || null,
-                    categoria: t.categoria,
-                    descricao: t.descricao,
-                    prioridade: t.prioridade,
-                    clienteId: t.clienteId,
-                    driveFolderId: t.driveFolderId,
-                  }}
-                />
-              ))}
-            </div>
-          )}
+        <div className="flex flex-col gap-2">
+          {tarefasRotina.map((t: any, i: number) => (
+            <TarefaRow
+              key={t.id}
+              index={i}
+              clienteNome={t.cliente?.nome || null}
+              clienteCor={t.cliente?.cor || null}
+              tarefa={{
+                id: t.id,
+                titulo: t.titulo,
+                tipo: t.tipo,
+                status: t.status,
+                prazo: t.prazo?.toISOString() || null,
+                categoria: t.categoria,
+                descricao: t.descricao,
+                prioridade: t.prioridade,
+                clienteId: t.clienteId,
+                driveFolderId: t.driveFolderId,
+              }}
+            />
+          ))}
         </div>
       )}
     </div>

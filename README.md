@@ -1,3 +1,166 @@
+# Instaby App — v151
+
+Módulo de **Tráfego Pago** reconstruído do zero como um sistema completo de
+gestão de mídia paga, a partir de uma especificação detalhada dele (~7
+seções). Reaproveita a estrutura, o layout e as permissões já existentes do
+painel — não é uma tela nova solta, é uma extensão do que já existia
+(`Campanha`, a antiga tela de Tráfego, o botão "Importar do Meta Ads").
+Entregue inteiro em modo automático (autorização já dada em turnos
+anteriores).
+
+## O que é isso, resumindo
+
+Antes, Tráfego Pago era só uma lista de campanhas com gasto manual. Agora:
+importa o relatório (CSV/Excel) que o Meta exporta, concilia sozinho quanto
+cada campanha gastou a mais desde a última importação, controla a verba e o
+saldo de mídia de cada cliente, separa "status que o Meta reporta" de
+"organização interna da equipe", registra avaliação de campanha, e gera
+relatórios em PDF com histórico de versões.
+
+## Schema novo (`prisma/schema.prisma`)
+
+Tudo aditivo — nenhum campo/tabela removido, `Campanha` ganhou colunas novas
+em vez de ser substituída:
+
+- `Campanha`: `statusInterno` (`em_acompanhamento | pausada | finalizada |
+  arquivada` — ver "Status" abaixo), `avaliacao` +
+  `avaliacaoObjetivo`/`avaliacaoMeta`/`avaliacaoObservacoes` +
+  `avaliadoPorId`/`avaliadoEm`, `idExternoMeta`, `chaveCorrespondencia`,
+  `nomesOriginaisMeta` (`String[]`), `ultimoStatusMeta`/`ultimoStatusMetaEm`,
+  `orcamentoConjunto`, `tipoOrcamento`.
+- `LoteImportacao` (novo): um registro por arquivo confirmado — período,
+  `arquivoUrl` (upload original preservado no Vercel Blob), totais do
+  arquivo, `arquivoAntigo`, quem importou.
+- `ItemImportacao` (novo): o ledger de verdade — uma linha por campanha por
+  importação confirmada, nunca editada nem apagada depois.
+  `gastoAcumuladoArquivo` (o valor bruto do arquivo), `gastoAnterior` (o que
+  o sistema já sabia antes), `gastoIncremental` (a diferença, pode ser
+  negativo numa correção pra baixo).
+- `VerbaTrafego` + `MovimentacaoVerba` (novos): saldo inicial por cliente +
+  extrato de aportes/devoluções/ajustes/saldo transportado, cada um com
+  valor sempre positivo (o *tipo* decide se soma ou subtrai).
+- `RelatorioTrafego` (novo): uma versão congelada por relatório gerado —
+  nunca recalculada, `dadosSnapshot` (`Json`) guarda o resultado exato que
+  foi mostrado/impresso naquele momento.
+
+## Motor de importação (`lib/parseCampanhasMeta.ts` + `lib/importacaoMeta.ts`)
+
+- Reconhece colunas do export do Meta (PT/EN variam um pouco) por nome,
+  tolerando variação de idioma/acentuação. Usa a lista de cabeçalhos
+  **declarada** pelo arquivo (`Papa.parse` `meta.fields` / primeira linha
+  real do XLSX) em vez de inferir pelas chaves da primeira linha de dados —
+  corrigido depois de testar com um arquivo real em que o Meta manda só uma
+  linha de texto "No data available." quando não há campanha no período
+  (isso quebrava o reconhecimento pra 1 de 16 colunas). Esse caso agora vira
+  um aviso específico ("o Meta não retornou nenhuma campanha nesse
+  período") em vez do erro genérico de "arquivo não reconhecido".
+- Identidade da campanha: por `ID da campanha` quando o export inclui essa
+  coluna (mais confiável); senão por nome + configuração de atribuição.
+  Nome duplicado com a mesma atribuição (ou ID que não bate com nada) nunca
+  é decidido sozinho — cai pra conferência manual, com os candidatos
+  prováveis listados.
+- Conciliação por período acumulado: o Meta manda o gasto acumulado *desde
+  o dia 1 do mês*, então o "gasto anterior" de cada campanha é sempre a
+  última leitura conhecida daquele mês (nunca uma soma) — reimportar o
+  mesmo arquivo dá incremento zero, uma correção pra baixo dá incremento
+  negativo, e um arquivo mais antigo que a última importação confirmada
+  (`arquivoAntigo`) exige confirmação explícita antes de aplicar. Validação
+  nova: um arquivo "cumulativo" (uma linha por campanha cobrindo o período
+  inteiro) que não começa no dia 1 do mês ou atravessa a virada do mês é
+  recusado com uma mensagem explicando como reexportar certo — não se aplica
+  a um export dia-a-dia, que já concilia corretamente por linha.
+- Campanha ausente numa importação nunca é zerada nem apagada — o sistema só
+  grava o que veio no arquivo; o que não veio mantém o último valor
+  conhecido.
+- Prévia (`/api/campanhas/importar-meta/preview`) mostra cliente, período,
+  campanhas encontradas, conflitos e o **impacto no saldo** (saldo atual →
+  saldo projetado depois de confirmar) antes de qualquer gravação — esse
+  último ponto existia na rota mas não estava sendo mostrado na tela; agora
+  está.
+
+## Verba e saldo por cliente (`lib/trafego.ts`)
+
+`saldoRestante = saldoInicial + aportes + saldo transportado − devoluções −
+ajustes − gasto acumulado`. Gasto acumulado nunca é filtrado por status —
+arquivar/finalizar uma campanha não tira o gasto dela da conta. Corrigido
+nesta versão: o cálculo do "valor mais atual" (tanto do saldo quanto de
+qualquer tela que lê o histórico) agora desempata por *criado mais
+recentemente* quando duas importações cobrem exatamente o mesmo período —
+sem isso, uma correção de gasto reimportada pro mesmo período podia perder
+pra ordem (não garantida) em que o banco devolvia as linhas.
+
+## Status separado (Meta vs. interno) + reparo automático
+
+`statusInterno` (em_acompanhamento/pausada/finalizada/arquivada) é o
+controle de verdade a partir de agora; o campo antigo `status`
+(ativa/pausada/encerrada) é mantido em espelho só pra não quebrar quem
+ainda lê ele (Início do gestor, alerta de criativos pendentes). **Armadilha
+encontrada e corrigida:** como não há acesso a banco nesta sessão pra rodar
+uma migração de verdade, adicionar a coluna nova via `db push` preenche
+*todas* as campanhas já existentes com o valor padrão
+("em_acompanhamento"), inclusive as que já estavam pausadas/encerradas —
+`statusInternoEfetivo()`/`repararStatusInternoLegado()` corrigem isso na
+leitura (comparando com o `status` legado) e gravam o valor certo de volta
+na primeira vez que a campanha é lida, sem precisar de migração.
+
+## Telas novas, dentro de Tráfego Pago
+
+Sete abas: Visão Geral, Campanhas, Finalizadas, Verba e movimentações,
+Histórico de importações, Relatórios, Rotina (a última já existia). As
+quatro primeiras operam sobre **um cliente por vez** (`?clienteId=`);
+Campanhas/Finalizadas cruzam todos os clientes autorizados. Campanhas e
+Finalizadas reusam o mesmo componente (`TrafegoClient`, estendido — não
+duplicado) também usado na aba "Tráfego Pago" dentro da ficha do cliente.
+Relatórios: escolhe campanhas e período, vê prévia, gera PDF (imprimível),
+mantém todas as versões já geradas.
+
+## Permissões
+
+Tudo já existia (`gerenciarTrafego` + `clienteIdsPermitidos`/`podeVerCliente`
+de `lib/permissoes.ts`) — essa versão só aplicou em cada rota/tela nova, sem
+inventar um modelo novo. Conferido rota por rota: toda rota de API sob
+`/api/campanhas/importar-meta/*`, `/api/relatorios-trafego*` e
+`/api/clientes/[id]/verba*` exige `gerenciarTrafego` **e** checa
+`podeVerCliente` pro cliente específico do corpo/URL. A página de impressão
+do relatório (`/relatorio-trafego/[id]`) faz a mesma checagem no servidor
+antes de renderizar — abrir o link direto sem permissão redireciona, não
+mostra nada. Endurecido nesta versão: a aba "Tráfego Pago" dentro da ficha
+do cliente agora também confere a permissão no ponto de renderização (antes
+só no fetch dos dados — mesmo padrão pré-existente da aba Arquivos), não só
+no menu de abas.
+
+## Validação
+
+- Testado com os 4 arquivos reais de exemplo (incluindo o CSV de
+  referência do pedido original: 20 campanhas, 3 com gasto, R$ 105,43 e
+  6.621 impressões em 01–28/09 — bateu exatamente). Os outros três
+  expuseram os dois problemas de reconhecimento de arquivo descritos acima
+  (já corrigidos e reconfirmados rodando de novo contra os 4 arquivos).
+- Cenários pedidos conferidos por leitura cuidadosa do código (banco de
+  dados não está disponível nesta sessão sandbox, então não dá pra rodar
+  um teste de ponta a ponta de verdade): importação repetida, períodos
+  sobrepostos, nomes duplicados, correção de gasto, arquivo antigo,
+  importação parcial e arquivamento sem alterar o saldo — todos conferem
+  com o esperado pela spec.
+
+## Verificação
+
+- `tsc --noEmit`: 332 erros. A grande maioria é ruído já conhecido (o
+  Prisma Client não tem como ser gerado nesta sandbox — sem acesso ao
+  banco/à internet certa — então toda chamada `prisma.*` tipa como `any`,
+  e isso produz avisos de "implicitamente `any`" em callbacks por todo o
+  projeto, não só nas partes tocadas aqui). Os ~17 erros a mais desta
+  versão são um artefato confirmado desse mesmo problema: uma função
+  genérica que espalha (`{...c, ...}`) o parâmetro dentro do próprio corpo
+  só consegue tipar esse spread pelo *constraint* declarado — com um
+  `PrismaClient` de verdade (gerado no build real, via `prisma generate`,
+  que roda antes do `next build`), o argumento chega com o tipo completo e
+  o erro desaparece; confirmado com um teste isolado reproduzindo os dois
+  casos lado a lado. Os 7 erros restantes são de telas não tocadas nesta
+  versão (`orçamentos`, `equipe`, `serviços`), pré-existentes.
+
+---
+
 # Instaby App — v150
 
 Novo estilo de ícone (preto e vermelho, com brilho, "3D glossy") no menu do

@@ -22,6 +22,58 @@ export type VersaoNovidades = {
 
 export const NOVIDADES: VersaoNovidades[] = [
   {
+    versao: 151,
+    resumo:
+      "Tráfego Pago virou um módulo completo: importação do Meta Ads com reconciliação automática, controle de verba/saldo por cliente, avaliação de campanha e relatórios em PDF.",
+    itens: [
+      {
+        tipo: "adicionado",
+        texto:
+          "Importação de relatórios do Meta Ads (CSV ou Excel) direto na tela — reconhece as campanhas automaticamente e, antes de confirmar, mostra o que vai mudar (campanhas novas, já conhecidas, quanto cada uma gastou a mais e o impacto no saldo do cliente). Reimportar o mesmo arquivo nunca duplica campanha nem desconta o gasto duas vezes, e um arquivo mais antigo nunca sobrescreve sozinho um dado mais recente.",
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          "Cada cliente agora tem um controle de verba: quanto foi disponibilizado, aportes e devoluções ao longo do tempo, e o saldo restante calculado sozinho conforme os gastos importados. Esse saldo é um controle interno da agência — não é uma consulta ao saldo de verdade dentro do Meta.",
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          'Nova tela "Visão Geral" por cliente: verba, gasto, saldo restante e o desempenho de cada campanha ativa, tudo num só lugar, com os números em destaque.',
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          "Status da campanha agora tem dois níveis: o que o Meta reporta (ativa/pausada) e uma organização própria da equipe (em acompanhamento, pausada, finalizada, arquivada). Finalizar ou arquivar aqui é só organização interna — não desliga a campanha lá no Meta, e não quer dizer que ela foi mal.",
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          "Avaliação de campanha: marcar se ficou dentro da meta, abaixo da meta ou inconclusiva, com objetivo, meta e observações — fica registrado quem avaliou e quando.",
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          "Histórico de importações: cada arquivo enviado fica guardado, com link pro arquivo original, mostrando exatamente o que mudou em cada campanha naquela importação.",
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          "Relatórios de tráfego em PDF: escolhe cliente, período e campanhas, vê uma prévia e gera um relatório com investimento, resultados e avaliação de cada campanha. Cada versão gerada fica salva pra sempre — nunca é sobrescrita por uma nova.",
+      },
+      {
+        tipo: "melhorado",
+        texto:
+          "Os números de resultado nunca misturam coisas incompatíveis: resultados de tipos diferentes (conversas, engajamentos, visualizações de vídeo) ficam sempre separados uns dos outros, e alcance de campanhas diferentes não é somado como se fosse a mesma pessoa alcançada duas vezes.",
+      },
+      {
+        tipo: "melhorado",
+        texto:
+          "Acesso à verba, ao gasto e ao saldo de tráfego pago segue as mesmas permissões de sempre: só quem gerencia tráfego vê, só dos clientes autorizados pra essa pessoa, e nunca aparece pra quem só tem acesso de Editor — vale também pros relatórios em PDF.",
+      },
+    ],
+  },
+  {
     versao: 150,
     resumo:
       "Novo visual de ícone (escuro, com brilho vermelho) no menu do painel e na abertura do site; Facebook e Google entraram no time de ícones da abertura.",
