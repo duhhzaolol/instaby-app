@@ -22,6 +22,17 @@ export type VersaoNovidades = {
 
 export const NOVIDADES: VersaoNovidades[] = [
   {
+    versao: 149,
+    resumo: 'Corrigido o mapa "Onde a gente atende", que ficou com uma marca d\'água por cima depois da v148.',
+    itens: [
+      {
+        tipo: "corrigido",
+        texto:
+          'O serviço que fornecia o mapa de fundo (introduzido na v148) passou a pedir uma chave de acesso que a gente não tinha, e isso aparecia como uma marca d\'água "API KEY REQUIRED" cobrindo o mapa inteiro (os pinos e nomes de cidade continuavam certos). Trocado por outro serviço de mapa, também gratuito — já corrigido.',
+      },
+    ],
+  },
+  {
     versao: 148,
     resumo:
       "Site principal: mapa de verdade com seletor de cidades, card vermelho de prova social de volta, carrossel do Processo com fotos, mais efeitos e vários ajustes visuais.",

@@ -1,10 +1,23 @@
 "use client";
 
-// Seção "onde a gente atende" — mapa real (Leaflet + tiles escuros gratuitos
-// da CARTO, sem chave de API nenhuma), trocando a versão v124 que era só uma
-// ilustração (SVG com posições fixas, sem geografia de verdade) — ele
-// reportou que a versão antiga "não parecia os Estados Unidos" (o local de
-// exemplo do padrão), ou seja, não lia como um mapa real.
+// Seção "onde a gente atende" — mapa real (Leaflet + tiles escuros gratuitos),
+// trocando a versão v124 que era só uma ilustração (SVG com posições fixas,
+// sem geografia de verdade) — ele reportou que a versão antiga "não parecia
+// os Estados Unidos" (o local de exemplo do padrão), ou seja, não lia como um
+// mapa real.
+//
+// **Hotfix v149**: os tiles escuros da CARTO (`basemaps.cartocdn.com`) usados
+// desde a v148 passaram a exigir chave de API — CARTO mudou isso depois do
+// meu conhecimento (jan/2026), e o gratuito-sem-chave que eu descrevi na v148
+// não era mais verdade no momento da entrega. Resultado real (reportado por
+// print): tile cinza com marca d'água repetida "API KEY REQUIRED" por cima do
+// mapa inteiro, só os pinos (que são HTML nosso, não tile) apareciam certos.
+// Confirmado por busca que isso pegou vários projetos ao mesmo tempo — não
+// foi só aqui. Trocado pra tiles da Esri (`server.arcgisonline.com`,
+// `World_Dark_Gray_Base` + `World_Dark_Gray_Reference` pra nomes de lugar/
+// rodovias por cima) — continua gratuito e sem chave, mas **se isso quebrar
+// de novo no futuro, é sinal de que a política da Esri também mudou; nesse
+// caso vale conferir de novo antes de trocar às cegas**.
 //
 // O que continua igual: o primeiro item de `locais` é sempre a base (Araras),
 // vem maior/em destaque com anel pulsante; os demais são pinos secundários
@@ -29,12 +42,20 @@ type Local = { nome: string };
 
 const LOCAIS_PADRAO: Local[] = [{ nome: "Araras, SP" }, { nome: "Limeira, SP" }, { nome: "Rio Claro, SP" }];
 
-// Tiles escuros gratuitos (CARTO Dark Matter) — sem necessidade de chave de
-// API, atribuição obrigatória (linha pequena, discreta, exigida pelos termos
-// de uso gratuito da CARTO/OpenStreetMap).
-const TILE_URL = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
-const TILE_ATTR =
-  '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>';
+// Tiles escuros gratuitos da Esri (World Dark Gray Canvas) — sem necessidade
+// de chave de API nem conta. Reparar `{z}/{y}/{x}` (ordem invertida em
+// relação ao padrão `{z}/{x}/{y}` da maioria dos outros provedores, CARTO
+// incluso) — é assim que o serviço da Esri espera. Duas camadas, uma por
+// cima da outra: "Base" é só o fundo cinza-escuro (sem nome nenhum
+// desenhado), "Reference" desenha por cima os nomes de rodovia/lugar em
+// branco — sem ela o mapa fica um cinza liso demais, sem cara de mapa de
+// verdade. `maxNativeZoom: 16` porque esse serviço não tem tile além do
+// zoom 16 — sem isso, aproximar mais que isso mostraria tile em branco; como
+// esse mapa nunca chega perto desse nível (é sempre visão de região/cidade),
+// isso não tira nitidez nenhuma na prática, só evita o tile faltando.
+const TILE_BASE_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}";
+const TILE_REF_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}";
+const TILE_ATTR = '&copy; <a href="https://www.esri.com/" target="_blank" rel="noreferrer">Esri</a>, HERE, Garmin';
 
 function pinoHtml(destaque: boolean, nome: string) {
   // divIcon aceita só HTML puro (não é React) — replica o visual dos pinos
@@ -85,7 +106,8 @@ export function MapaAtuacao({
         scrollWheelZoom: false,
         dragging: true,
       }).setView([-22.45, -47.45], 9);
-      L.tileLayer(TILE_URL, { attribution: TILE_ATTR, maxZoom: 19, subdomains: "abcd" }).addTo(mapa);
+      L.tileLayer(TILE_BASE_URL, { attribution: TILE_ATTR, maxZoom: 19, maxNativeZoom: 16 }).addTo(mapa);
+      L.tileLayer(TILE_REF_URL, { maxZoom: 19, maxNativeZoom: 16 }).addTo(mapa);
       L.control.zoom({ position: "bottomright" }).addTo(mapa);
       mapRef.current = mapa;
       // dispara o desenho inicial dos pinos assim que o mapa existir

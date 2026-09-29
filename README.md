@@ -1,3 +1,45 @@
+# Instaby App — v149
+
+Correção de um bug real que a v148 subiu sem querer no mapa "Onde a gente
+atende" — reportado por ele, por print. Nada mais mudou desde a v148; todo o
+resto do conteúdo dessa versão (mapa de verdade, card vermelho, carrossel do
+Processo, Ken Burns, rodapé etc.) continua descrito na seção da v148, logo
+abaixo.
+
+## Correção (v149): tiles do mapa quebrados — "API KEY REQUIRED" por cima de tudo
+
+- A v148 trocou o mapa ilustrativo por um mapa de verdade usando tiles
+  escuros gratuitos da CARTO (`basemaps.cartocdn.com`), descrito naquela
+  seção como "sem chave de API nenhuma". Isso deixou de ser verdade: a CARTO
+  passou a exigir chave pra esse mesmo serviço — mudança posterior ao meu
+  conhecimento (cutoff de jan/2026), que eu não tinha como prever e não
+  conferi de novo antes de entregar. Resultado reportado por ele, por print:
+  o mapa inteiro (menos os pinos, que são HTML nosso, não tile) virou um
+  cinza com a marca d'água repetida "API KEY REQUIRED" por cima.
+- Antes de trocar às cegas de novo, pesquisei: confirmado que isso pegou
+  vários projetos ao mesmo tempo (não foi só aqui) — e que a correção mais
+  usada em conserto recente de outros projetos com o mesmo problema foi
+  trocar pra tiles da Esri (`server.arcgisonline.com`), que continuam
+  gratuitos, sem chave e sem conta.
+- `components/landing/MapaAtuacao.tsx`: trocada a única camada CARTO por
+  duas camadas Esri empilhadas — `World_Dark_Gray_Base` (fundo) +
+  `World_Dark_Gray_Reference` (nomes de rodovia/lugar por cima, sem ela o
+  mapa ficava um cinza liso demais). Adicionado `maxNativeZoom: 16` — esse
+  serviço da Esri não tem tile além do zoom 16; sem esse limite, um zoom
+  maior mostraria tile em branco. Como esse mapa nunca passa de visão de
+  região/cidade na prática, isso não tira nitidez nenhuma. Atribuição do
+  rodapé do mapa atualizada de CARTO pra Esri. Reparar também a ordem da URL
+  — `{z}/{y}/{x}`, invertida em relação ao padrão `{z}/{x}/{y}` da CARTO e
+  da maioria dos outros provedores — é assim que o serviço da Esri espera.
+- **Não dá pra garantir que isso nunca quebra de novo** — é serviço gratuito
+  de terceiro, sem contrato: se a Esri também decidir exigir chave no
+  futuro, o sintoma vai ser o mesmo (tile virando placeholder) e a correção
+  vai ser a mesma ideia (achar o substituto gratuito atual e trocar).
+  Deixado registrado em comentário no próprio arquivo, pra não reconstruir
+  essa investigação do zero se acontecer de novo.
+- Verificação: `tsc --noEmit` em 323 (mesmo baseline), zero erro novo;
+  `MapaAtuacao.tsx` conferido sem erro nenhum.
+
 # Instaby App — v148
 
 Lote grande de feedback sobre **o site principal** (`/` e `/link`), mandado de
