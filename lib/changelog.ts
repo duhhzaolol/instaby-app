@@ -22,6 +22,43 @@ export type VersaoNovidades = {
 
 export const NOVIDADES: VersaoNovidades[] = [
   {
+    versao: 153,
+    resumo:
+      "Reels e artes agora têm um fluxo completo de revisão e aprovação (com página pública pro cliente comentar e aprovar), e o vídeo bruto de cada tarefa deixou de ser compartilhado com as outras da mesma semana.",
+    itens: [
+      {
+        tipo: "adicionado",
+        texto:
+          'Tarefas de "Criar Reel" e "Criar arte" ganharam um fluxo de revisão dentro do próprio painel da tarefa: Produção → Revisão interna → Aprovação do cliente → Agendado → Publicado. Dá pra enviar o material (vídeo/imagem + legenda), comentar, aprovar e registrar o link e a data de quando foi publicado de verdade — mesmo quando a publicação é feita na mão, fora do app.',
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          "Cada envio de material vira uma versão nova, guardada pra sempre — nada é substituído por cima. Se o conteúdo já tinha sido aprovado e alguém manda uma versão corrigida, a aprovação anterior não vale mais pra essa versão nova: precisa aprovar de novo antes de agendar ou publicar.",
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          "Nova página pública de revisão (link só da tarefa, sem precisar de login, igual já funcionava com os relatórios): o cliente assiste o vídeo ou vê a imagem, comenta num momento específico do vídeo ou aponta um lugar exato da imagem, e aprova a versão direto por ali, no celular.",
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          "Comentários de revisão podem ser marcados como internos (só a equipe vê) ou compartilhados — os internos nunca aparecem na página pública do cliente, em nenhuma hipótese.",
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          'Pra conteúdo que nunca teve gravação própria (ex.: reel feito só com banco de imagens), dá pra registrar uma exceção justificada em vez de ficar travado esperando um vídeo bruto que não existe.',
+      },
+      {
+        tipo: "corrigido",
+        texto:
+          'A checagem de "vídeo bruto" de uma tarefa de "Criar Reel" olhava pra pasta da SEMANA no Drive, que era compartilhada por todas as tarefas do mesmo cliente com prazo naquela semana — então bastava UMA tarefa ter recebido a gravação pra todas as outras da semana passarem no teste, mesmo sem ter a própria gravação. Agora cada tarefa tem sua própria pasta (dentro da pasta da semana, que continua existindo só pra organização) — o teste do vídeo bruto olha só pra ela. Tarefas antigas continuam como estavam (pra não perder gravação já enviada) — só as tarefas que ainda não tinham pasta passam a usar a correção automaticamente.',
+      },
+    ],
+  },
+  {
     versao: 152,
     resumo:
       "Tarefas ganharam um painel completo de detalhes (comentários, histórico e bloqueio) e um sino de notificações de verdade; relatórios de cliente agora avisam a agência quando alguém comenta.",

@@ -20,9 +20,11 @@ import {
   visualDaCategoriaTarefa,
   PRIORIDADES,
   CATEGORIAS_QUE_PRECISAM_VIDEO_BRUTO,
+  CATEGORIAS_COM_REVISAO,
 } from "@/lib/categoriaTarefaVisual";
 import { STATUS_LABEL, campoHistoricoLabel } from "@/lib/tarefas";
 import { ChecklistTarefa, type ChecklistItemData } from "@/components/dashboard/ChecklistTarefa";
+import { PainelRevisaoConteudo, type VersaoConteudoData } from "@/components/dashboard/PainelRevisaoConteudo";
 import { DatePicker } from "@/components/ui/DatePicker";
 
 type Pessoa = { id: string; nome: string; fotoUrl?: string | null };
@@ -62,6 +64,16 @@ type TarefaDetalhe = {
   comentarios: Comentario[];
   historico: HistoricoItem[];
   registroTempoAberto: { id: string; inicio: string } | null;
+  // Revisão/aprovação de conteúdo (Etapa 2 v153) — ver PainelRevisaoConteudo.
+  statusConteudo: string | null;
+  linkPublicacao: string | null;
+  publicadoEm: string | null;
+  versoes: VersaoConteudoData[];
+  // Exceção justificada de vídeo bruto (Etapa 2 v153).
+  videoBrutoExcecao: boolean;
+  videoBrutoExcecaoMotivo: string | null;
+  videoBrutoExcecaoPor: Pessoa | null;
+  videoBrutoExcecaoEm: string | null;
 };
 
 function horaAtual() {
@@ -117,6 +129,10 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
   const [checandoVideo, setChecandoVideo] = useState(false);
   const [temVideoBrutoInfo, setTemVideoBrutoInfo] = useState<boolean | null>(null);
 
+  const [videoBrutoExcecao, setVideoBrutoExcecao] = useState(false);
+  const [videoBrutoExcecaoMotivo, setVideoBrutoExcecaoMotivo] = useState("");
+  const [salvandoExcecao, setSalvandoExcecao] = useState(false);
+
   async function carregar() {
     setCarregando(true);
     setErro(null);
@@ -138,6 +154,8 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
       setLink(d.link || "");
       setMotivoBloqueio(d.motivoBloqueio || "");
       setBloqueioResponsavelId(d.bloqueioResponsavelId || "");
+      setVideoBrutoExcecao(d.videoBrutoExcecao || false);
+      setVideoBrutoExcecaoMotivo(d.videoBrutoExcecaoMotivo || "");
       setStatusPendente(null);
     } finally {
       setCarregando(false);
@@ -277,6 +295,20 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
     const d = await res.json().catch(() => null);
     setTemVideoBrutoInfo(d?.temBruto ?? false);
     setChecandoVideo(false);
+  }
+
+  async function salvarExcecaoVideoBruto() {
+    if (videoBrutoExcecao && !videoBrutoExcecaoMotivo.trim()) {
+      alert("Descreve o motivo da exceção.");
+      return;
+    }
+    setSalvandoExcecao(true);
+    const atualizado = await patch({
+      videoBrutoExcecao,
+      videoBrutoExcecaoMotivo: videoBrutoExcecao ? videoBrutoExcecaoMotivo.trim() : null,
+    });
+    setSalvandoExcecao(false);
+    if (atualizado) setTarefa((t) => (t ? { ...t, ...atualizado } : t));
   }
 
   async function enviarComentario(e: React.FormEvent) {
@@ -584,6 +616,43 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
                     </span>
                   )}
                 </div>
+
+                {/* Exceção justificada (Etapa 2 v153) — pra conteúdo sem gravação
+                    própria (ex.: banco de imagens/motion), quando o vídeo bruto de
+                    verdade nunca vai existir. */}
+                <div className="mt-3 border-t border-border pt-2.5">
+                  <label className="flex items-center gap-1.5 text-xs text-muted">
+                    <input
+                      type="checkbox"
+                      checked={videoBrutoExcecao}
+                      onChange={(e) => setVideoBrutoExcecao(e.target.checked)}
+                    />
+                    Exceção: esse conteúdo não tem gravação própria
+                  </label>
+                  {videoBrutoExcecao && (
+                    <textarea
+                      value={videoBrutoExcecaoMotivo}
+                      onChange={(e) => setVideoBrutoExcecaoMotivo(e.target.value)}
+                      rows={2}
+                      placeholder="Explique o motivo (ex.: reel feito só com banco de imagens)"
+                      className="mb-1.5 mt-1.5 w-full rounded-lg border border-border bg-base px-3 py-2 text-xs text-text outline-none focus:border-accent/50"
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={salvarExcecaoVideoBruto}
+                    disabled={salvandoExcecao}
+                    className="mt-1.5 h-8 rounded-lg border border-border px-2.5 text-xs text-text hover:bg-hover disabled:opacity-50"
+                  >
+                    {salvandoExcecao ? "Salvando..." : "Salvar exceção"}
+                  </button>
+                  {tarefa.videoBrutoExcecao && (
+                    <p className="mt-1.5 text-[11px] text-amber-400">
+                      Exceção registrada{tarefa.videoBrutoExcecaoPor ? ` por ${tarefa.videoBrutoExcecaoPor.nome}` : ""}
+                      {tarefa.videoBrutoExcecaoEm ? ` em ${new Date(tarefa.videoBrutoExcecaoEm).toLocaleString("pt-BR")}` : ""}.
+                    </p>
+                  )}
+                </div>
               </div>
             )}
 
@@ -600,6 +669,11 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
               <p className="mb-2 text-xs font-medium text-text">Sub-passos</p>
               <ChecklistTarefa tarefaId={tarefa.id} itens={tarefa.checklist} />
             </div>
+
+            {/* Revisão/aprovação de conteúdo (Etapa 2 v153) — só reel/arte */}
+            {CATEGORIAS_COM_REVISAO.includes((tarefa.categoria || "") as any) && (
+              <PainelRevisaoConteudo tarefa={tarefa} patch={patch} recarregar={carregar} />
+            )}
 
             {/* Comentários internos */}
             <div className="mb-4 border-t border-border pt-3">

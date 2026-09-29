@@ -51,6 +51,14 @@ export const CATEGORIAS_COM_PASTA_DRIVE: CategoriaTarefa[] = ["gravacao", "reel"
 // delas É a origem do material, não depende de nada existir antes.
 export const CATEGORIAS_QUE_PRECISAM_VIDEO_BRUTO: CategoriaTarefa[] = ["reel"];
 
+// Categorias que passam pelo fluxo de revisão/aprovação de conteúdo (Etapa 2
+// v153): Produção → Revisão interna → Aprovação do cliente → Agendado → Publicado
+// (ver Tarefa.statusConteudo e lib/revisaoConteudo.ts). São as duas categorias que
+// geram uma peça publicável de verdade — gravação/fotos são só a captação (viram
+// material bruto pra um "reel" ou pra uma "arte"), não têm conteúdo próprio pra
+// revisar.
+export const CATEGORIAS_COM_REVISAO: CategoriaTarefa[] = ["reel", "arte"];
+
 export const PRIORIDADES = [
   { valor: "alta", label: "🔥 Alta", cor: "#EF4444" },
   { valor: "media", label: "◆ Média", cor: "#F59E0B" },

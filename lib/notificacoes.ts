@@ -5,7 +5,11 @@ export type TipoNotificacao =
   | "tarefa_sem_responsavel"
   | "comentario_tarefa"
   | "tarefa_bloqueada"
-  | "comentario_relatorio";
+  | "comentario_relatorio"
+  // Etapa 2 v153 — fluxo de revisão/aprovação de conteúdo (ver VersaoConteudo/
+  // ComentarioRevisao em prisma/schema.prisma).
+  | "comentario_revisao"
+  | "revisao_aprovada";
 
 type CriarNotificacaoInput = {
   usuarioId: string; // destinatário

@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUsuarioAtual, podeVerCliente } from "@/lib/permissoes";
-import { garantirPastaSemana, temVideoBruto } from "@/lib/google";
+import { garantirPastaTarefa, temVideoBruto } from "@/lib/google";
 import {
   CATEGORIAS_COM_PASTA_DRIVE,
+  CATEGORIAS_COM_REVISAO,
   CATEGORIAS_QUE_PRECISAM_VIDEO_BRUTO,
   PRIORIDADES,
   visualDaCategoriaTarefa,
 } from "@/lib/categoriaTarefaVisual";
 import { STATUS_VALIDOS, statusFechaCronometro, statusLabel } from "@/lib/tarefas";
+import { STATUS_CONTEUDO_VALIDOS, statusConteudoLabel } from "@/lib/revisaoConteudo";
 import { criarNotificacao } from "@/lib/notificacoes";
 
 // Detalhe completo — alimenta o painel lateral (Etapa 1 v152): checklist,
@@ -27,6 +29,23 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       checklist: { orderBy: { ordem: "asc" } },
       comentarios: { orderBy: { createdAt: "asc" }, include: { usuario: { select: { nome: true, fotoUrl: true } } } },
       historico: { orderBy: { createdAt: "desc" }, include: { usuario: { select: { nome: true } } } },
+      // Revisão/aprovação de conteúdo (Etapa 2 v153) — versões mais recentes
+      // primeiro, cada uma já com seus comentários (internos e compartilhados
+      // misturados aqui; quem exibe decide o que mostrar pra cada perfil).
+      versoes: {
+        orderBy: { numero: "desc" },
+        include: {
+          criadoPor: { select: { nome: true, fotoUrl: true } },
+          aprovadoPorContato: { select: { id: true, nome: true } },
+          comentarios: {
+            orderBy: { createdAt: "asc" },
+            include: {
+              usuario: { select: { nome: true, fotoUrl: true } },
+              contato: { select: { nome: true } },
+            },
+          },
+        },
+      },
     },
   });
   if (!tarefa) return NextResponse.json({ erro: "Não encontrada" }, { status: 404 });
@@ -71,23 +90,120 @@ export async function PATCH(
   if (body.status !== undefined && !STATUS_VALIDOS.includes(body.status)) {
     return NextResponse.json({ erro: "Status inválido." }, { status: 400 });
   }
+  if (
+    body.statusConteudo !== undefined &&
+    body.statusConteudo !== null &&
+    !STATUS_CONTEUDO_VALIDOS.includes(body.statusConteudo)
+  ) {
+    return NextResponse.json({ erro: "Status de conteúdo inválido." }, { status: 400 });
+  }
+
+  // Fluxo de revisão de conteúdo (Etapa 2 v153) — só faz sentido pra categoria
+  // reel/arte (ver CATEGORIAS_COM_REVISAO).
+  const categoriaFinal = body.categoria !== undefined ? body.categoria : existente.categoria;
+  if (body.statusConteudo && !CATEGORIAS_COM_REVISAO.includes((categoriaFinal || "") as any)) {
+    return NextResponse.json({ erro: "Essa categoria de tarefa não usa o fluxo de revisão de conteúdo." }, { status: 400 });
+  }
+
+  // Regras do fluxo (Etapa 2 v153): não dá pra pedir revisão/aprovação sem ter
+  // material nenhum enviado, e não dá pra agendar/publicar sem a versão MAIS
+  // RECENTE estar aprovada — é isso que garante "exigir nova aprovação quando o
+  // conteúdo aprovado for alterado" na prática (uma versão nova sempre nasce sem
+  // aprovação, e criar uma versão nova joga o status de volta pra revisão interna
+  // sozinho — ver POST /api/tarefas/[id]/versoes).
+  if (body.statusConteudo && body.statusConteudo !== "producao") {
+    const versoesCount = await prisma.versaoConteudo.count({ where: { tarefaId: existente.id } });
+    if (versoesCount === 0) {
+      return NextResponse.json({ erro: "Envie uma versão do material antes de avançar nessa revisão." }, { status: 409 });
+    }
+    if (body.statusConteudo === "agendado" || body.statusConteudo === "publicado") {
+      const ultimaVersao = await prisma.versaoConteudo.findFirst({
+        where: { tarefaId: existente.id },
+        orderBy: { numero: "desc" },
+      });
+      if (!ultimaVersao?.aprovadoEm) {
+        return NextResponse.json(
+          { erro: "A versão mais recente desse conteúdo ainda não foi aprovada pelo cliente." },
+          { status: 409 }
+        );
+      }
+    }
+  }
+  if (
+    body.statusConteudo === "publicado" &&
+    existente.statusConteudo !== "publicado" &&
+    !(body.linkPublicacao || existente.linkPublicacao)
+  ) {
+    return NextResponse.json({ erro: "Informe o link da publicação antes de marcar como publicado." }, { status: 400 });
+  }
+
+  // Publicar o conteúdo conclui a tarefa geral sozinho (Etapa 2 v153) — evita
+  // marcar "feito" duas vezes (uma no quadro, outra na revisão). Só entra em ação
+  // quando o pedido não trouxe um status geral explícito diferente.
+  let statusPedido: string | undefined = body.status;
+  if (body.statusConteudo === "publicado" && statusPedido === undefined && existente.status !== "feito") {
+    statusPedido = "feito";
+  }
+  const statusFinal = statusPedido !== undefined ? statusPedido : existente.status;
+  const statusMudou = statusPedido !== undefined && statusPedido !== existente.status;
+
+  // Exceção justificada de vídeo bruto (Etapa 2 v153) — mesma regra de
+  // motivoBloqueio: motivo obrigatório pra ligar, os campos somem sozinhos ao
+  // desligar. Calculada antes da trava abaixo pra poder liberar a passagem no
+  // mesmo pedido que registra a exceção.
+  let dadosExcecaoVideoBruto: {
+    videoBrutoExcecao?: boolean;
+    videoBrutoExcecaoMotivo?: string | null;
+    videoBrutoExcecaoPorId?: string | null;
+    videoBrutoExcecaoEm?: Date | null;
+  } = {};
+  if (body.videoBrutoExcecao !== undefined) {
+    if (body.videoBrutoExcecao) {
+      const motivoExcecao = body.videoBrutoExcecaoMotivo as string | null | undefined;
+      if (!motivoExcecao || !motivoExcecao.trim()) {
+        return NextResponse.json({ erro: "Informe o motivo da exceção de vídeo bruto." }, { status: 400 });
+      }
+      dadosExcecaoVideoBruto = {
+        videoBrutoExcecao: true,
+        videoBrutoExcecaoMotivo: motivoExcecao.trim(),
+        videoBrutoExcecaoPorId: usuario.id,
+        videoBrutoExcecaoEm: existente.videoBrutoExcecao ? existente.videoBrutoExcecaoEm : new Date(),
+      };
+    } else {
+      dadosExcecaoVideoBruto = {
+        videoBrutoExcecao: false,
+        videoBrutoExcecaoMotivo: null,
+        videoBrutoExcecaoPorId: null,
+        videoBrutoExcecaoEm: null,
+      };
+    }
+  }
+  const excecaoVideoBrutoAtiva =
+    dadosExcecaoVideoBruto.videoBrutoExcecao !== undefined
+      ? dadosExcecaoVideoBruto.videoBrutoExcecao
+      : existente.videoBrutoExcecao;
 
   // Trava: uma tarefa de "Criar Reel" com pasta vinculada só sai de "A fazer" (pra
-  // em_andamento/feito) quando já existe um arquivo de vídeo lá dentro. Bloquear
-  // (ver abaixo) fica de fora dessa trava de propósito — a falta do bruto costuma
-  // ser exatamente o MOTIVO do bloqueio, travar isso também não deixaria registrar
-  // o problema.
+  // em_andamento/feito) quando já existe um arquivo de vídeo lá dentro — a não ser
+  // que tenha uma exceção justificada registrada (Etapa 2 v153). Bloquear (ver
+  // abaixo) fica de fora dessa trava de propósito — a falta do bruto costuma ser
+  // exatamente o MOTIVO do bloqueio, travar isso também não deixaria registrar o
+  // problema.
   if (
-    body.status !== undefined &&
-    body.status !== "a_fazer" &&
-    body.status !== "bloqueada" &&
+    statusPedido !== undefined &&
+    statusPedido !== "a_fazer" &&
+    statusPedido !== "bloqueada" &&
     existente.driveFolderId &&
-    CATEGORIAS_QUE_PRECISAM_VIDEO_BRUTO.includes((existente.categoria || "") as any)
+    CATEGORIAS_QUE_PRECISAM_VIDEO_BRUTO.includes((existente.categoria || "") as any) &&
+    !excecaoVideoBrutoAtiva
   ) {
     const temBruto = await temVideoBruto(existente.driveFolderId);
     if (!temBruto) {
       return NextResponse.json(
-        { erro: "Essa tarefa ainda não tem o vídeo bruto na pasta do Drive dela — coloca o arquivo lá antes de avançar." },
+        {
+          erro:
+            "Essa tarefa ainda não tem o vídeo bruto na pasta do Drive dela — coloca o arquivo lá antes de avançar (ou registre uma exceção justificada).",
+        },
         { status: 409 }
       );
     }
@@ -96,16 +212,31 @@ export async function PATCH(
   // concluidaEm segue o status sozinho — marca a hora exata em que virou "feito"
   // (pra dar pra contar "feitas essa semana" no Início) e limpa se voltar atrás
   // (reabriu por engano, cliente pediu ajuste etc.), nunca fica com data velha.
-  const statusMudou = body.status !== undefined && body.status !== existente.status;
   let concluidaEm: Date | null | undefined = undefined;
   if (statusMudou) {
-    if (body.status === "feito") concluidaEm = new Date();
+    if (statusFinal === "feito") concluidaEm = new Date();
     else if (existente.status === "feito") concluidaEm = null;
+  }
+
+  // publicadoEm segue statusConteudo sozinho (mesmo espírito de concluidaEm), mas
+  // aceita uma data explícita no corpo — "registrar link e data da publicação,
+  // mesmo quando ela for realizada manualmente" (Etapa 2), pra quando a publicação
+  // de verdade aconteceu antes de alguém atualizar o Instaby.
+  let publicadoEmNovo: Date | null | undefined = undefined;
+  if (body.publicadoEm !== undefined) {
+    publicadoEmNovo = body.publicadoEm ? new Date(body.publicadoEm) : null;
+  } else if (body.statusConteudo === "publicado" && existente.statusConteudo !== "publicado") {
+    publicadoEmNovo = new Date();
+  } else if (
+    body.statusConteudo !== undefined &&
+    body.statusConteudo !== "publicado" &&
+    existente.statusConteudo === "publicado"
+  ) {
+    publicadoEmNovo = null;
   }
 
   // Estado "Bloqueada" (Etapa 1 v152) — motivo obrigatório, responsável pelo
   // desbloqueio opcional. Sai de bloqueada -> os 3 campos somem sozinhos.
-  const statusFinal = body.status !== undefined ? body.status : existente.status;
   let dadosBloqueio: {
     motivoBloqueio?: string | null;
     bloqueioResponsavelId?: string | null;
@@ -190,11 +321,32 @@ export async function PATCH(
   if (statusMudou) {
     historico.push({ campo: "status", valorAntigo: statusLabel(existente.status), valorNovo: statusLabel(statusFinal) });
   }
+  if (body.statusConteudo !== undefined && (body.statusConteudo || null) !== (existente.statusConteudo || null)) {
+    historico.push({
+      campo: "statusConteudo",
+      valorAntigo: statusConteudoLabel(existente.statusConteudo),
+      valorNovo: statusConteudoLabel(body.statusConteudo),
+    });
+  }
+  if (body.linkPublicacao !== undefined && (body.linkPublicacao || null) !== (existente.linkPublicacao || null)) {
+    historico.push({
+      campo: "linkPublicacao",
+      valorAntigo: existente.linkPublicacao || "Nenhum",
+      valorNovo: body.linkPublicacao || "Nenhum",
+    });
+  }
+  if (body.videoBrutoExcecao !== undefined && !!body.videoBrutoExcecao !== !!existente.videoBrutoExcecao) {
+    historico.push({
+      campo: "videoBrutoExcecao",
+      valorAntigo: existente.videoBrutoExcecao ? "Com exceção" : "Sem exceção",
+      valorNovo: body.videoBrutoExcecao ? "Com exceção" : "Sem exceção",
+    });
+  }
 
   const tarefa = await prisma.tarefa.update({
     where: { id: params.id },
     data: {
-      ...(body.status !== undefined && { status: body.status }),
+      ...(statusPedido !== undefined && { status: statusPedido }),
       ...(body.titulo !== undefined && { titulo: body.titulo }),
       ...(body.descricao !== undefined && { descricao: body.descricao }),
       ...(body.prioridade !== undefined && { prioridade: body.prioridade }),
@@ -206,6 +358,10 @@ export async function PATCH(
       ...(body.responsavelId !== undefined && { responsavelId: body.responsavelId || null }),
       ...(concluidaEm !== undefined && { concluidaEm }),
       ...dadosBloqueio,
+      ...(body.statusConteudo !== undefined && { statusConteudo: body.statusConteudo || null }),
+      ...(body.linkPublicacao !== undefined && { linkPublicacao: body.linkPublicacao || null }),
+      ...(publicadoEmNovo !== undefined && { publicadoEm: publicadoEmNovo }),
+      ...dadosExcecaoVideoBruto,
     },
   });
 
@@ -266,7 +422,7 @@ export async function PATCH(
   // completada depois, por exemplo) — se ainda não tinha pasta, tenta criar.
   if (!tarefa.driveFolderId && tarefa.clienteId && tarefa.prazo && CATEGORIAS_COM_PASTA_DRIVE.includes((tarefa.categoria || "") as any)) {
     try {
-      const driveFolderId = await garantirPastaSemana(tarefa.id);
+      const driveFolderId = await garantirPastaTarefa(tarefa.id);
       if (driveFolderId) (tarefa as any).driveFolderId = driveFolderId;
     } catch (e) {
       console.error("Erro ao preparar pasta do Drive pra essa tarefa:", e);

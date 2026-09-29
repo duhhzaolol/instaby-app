@@ -1,3 +1,276 @@
+# Instaby App — v153
+
+**Etapa 2** do plano de evolução em 11 etapas ("Revisão e aprovação de
+conteúdo"), a partir da especificação anexada pelo usuário. Reaproveita o
+painel lateral de tarefas (`PainelDetalheTarefa`, da Etapa 1) e o padrão de
+página pública sem login já usado no relatório de tráfego (`/relatorio/[id]`)
+— nenhuma tela solta nova, tudo aditivo ao banco. Entregue em modo automático
+(autorização dada via "proximo" em turno anterior); decisões reversíveis
+tomadas sozinho, sinalizadas abaixo em "Decisões tomadas sem perguntar".
+
+## O que é isso, resumindo
+
+Tarefas de **Reel** e **Arte** (as categorias com material visual pra
+aprovar) ganharam um fluxo de revisão dentro do próprio painel lateral:
+Produção → Revisão interna → Aprovação do cliente → Agendado → Publicado.
+Cada envio de material (link de vídeo, link de imagem e/ou legenda) vira uma
+**versão numerada**; comentário pode ser geral ou preso a um momento
+específico do vídeo (`mm:ss`) ou a um ponto clicado na imagem, e é sempre
+marcado como interno (só a equipe) ou compartilhado com o cliente — nunca os
+dois de uma vez. Aprovação registra quem aprovou, quando e qual versão, e
+some sozinha (estruturalmente, não por um botão de "desfazer") assim que uma
+versão nova é enviada — a tarefa volta pra "Revisão interna" e exige
+aprovação de novo. Publicação (link + data) fica registrada mesmo quando
+feita manualmente fora do sistema (rede social, agendador de terceiro etc.).
+O cliente participa numa página pública própria (`/revisao/[tarefaId]`, link
+direto, sem login, mesmo espírito do relatório) com boa experiência no
+celular, vendo só os comentários compartilhados. De passagem, corrigido um
+bug real no vínculo do vídeo bruto no Drive: tarefas do mesmo cliente na
+mesma semana compartilhavam uma única pasta, então o vídeo bruto de uma
+liberava a validação de todas as outras.
+
+## Schema novo (`prisma/schema.prisma`) — tudo aditivo
+
+- `VersaoConteudo` (novo): uma linha por versão de material enviado —
+  `numero` (sequencial por tarefa, `@@unique([tarefaId, numero])`),
+  `linkVideo`/`linkImagem`/`legenda` (livres, pelo menos um obrigatório na
+  API), `criadoPorId` (quem enviou), `aprovadoPorContatoId` **ou**
+  `aprovadoPorNomeLivre` (cliente sem cadastro em `Contato` ainda pode
+  aprovar, digitando o nome) + `aprovadoEm`. Nunca editada depois de criada —
+  mudança de conteúdo é sempre versão nova, nunca um update; aprovação
+  também é gravada uma única vez (ver "Decisões" abaixo). `onDelete: Cascade`
+  em `tarefaId` (obrigatório — versão não sobrevive sem a tarefa).
+- `ComentarioRevisao` (novo): preso a uma versão (`onDelete: Cascade` em
+  `versaoId`), autor é `usuarioId` **ou** `contatoId` **ou**
+  `autorNomeLivre` (visitante da página pública sem cadastro), `interno`
+  (`Boolean`, default `false`) separa os dois públicos, `momentoVideoSegundos`
+  **ou** `pontoImagemX`/`pontoImagemY` (excludentes na prática, vídeo tem
+  prioridade se os dois vierem). Nunca editado nem apagado — mesmo espírito
+  de `ComentarioTarefa`/`MovimentacaoVerba`.
+- `Tarefa`: `statusConteudo` (`producao | revisao_interna | aprovacao_cliente
+  | agendado | publicado`, `String?` — null pra tarefas fora do fluxo de
+  revisão, ex. categorias fora de `CATEGORIAS_COM_REVISAO`), `linkPublicacao`
+  + `publicadoEm`, relação `versoes`; e pro vídeo bruto —
+  `videoBrutoExcecao` (`Boolean`, default `false`) + `videoBrutoExcecaoMotivo`
+  + `videoBrutoExcecaoPorId`/`videoBrutoExcecaoPor` (relação
+  `@relation("TarefaVideoBrutoExcecaoPor", ...)` — 3ª relação distinta com
+  `Usuario`, precisou de nome) + `videoBrutoExcecaoEm`.
+- `Usuario`/`Contato`: relações inversas das duas tabelas novas
+  (`versoesConteudoCriadas` e `comentariosRevisao` em `Usuario`,
+  `aprovacoes` e `comentariosRevisao` em `Contato`,
+  `tarefasVideoBrutoExcecaoConcedida` em `Usuario`) — sem campo novo de
+  fato, só o lado espelhado da FK.
+- `Notificacao.tipo`: mais dois valores possíveis, só documentação no
+  comentário (`comentario_revisao`, `revisao_aprovada`) — mesmo esquema sem
+  enum de banco já usado nos tipos anteriores.
+
+## Painel de revisão (dentro do painel lateral da tarefa)
+
+`components/dashboard/PainelRevisaoConteudo.tsx` (novo) — monta dentro de
+`PainelDetalheTarefa` só pras categorias em `CATEGORIAS_COM_REVISAO`
+(`lib/categoriaTarefaVisual.ts`: hoje `["reel", "arte"]`), logo depois do
+Checklist. Recebe a tarefa já carregada por ele (sem consulta própria, mesmo
+padrão do resto do painel) e um `recarregar()` pra atualizar depois de cada
+ação:
+
+- **Status**: pills clicáveis (Produção/Revisão interna/Aprovação do
+  cliente/Agendado/Publicado) — clique dispara `PATCH` direto; o servidor é
+  quem garante a ordem certa (não dá pra pular pra "Agendado" sem versão
+  aprovada, nem pra "Publicado" sem link — ver validação abaixo).
+- **Link de revisão pro cliente**: botão que copia `/revisao/[id da
+  tarefa]` pra área de transferência.
+- **Nova versão**: formulário com link de vídeo, link de imagem e legenda
+  (pelo menos um preenchido) — `POST /api/tarefas/[id]/versoes`. Some
+  sozinho o status "aprovação do cliente"/"agendado"/"publicado" de antes,
+  voltando pra "revisão interna" (com linha no histórico registrando isso).
+- **Lista de versões**, mais nova primeiro: só a mais nova tem formulário de
+  aprovação e de comentário ativos — as anteriores ficam só de leitura,
+  mostrando a aprovação que tiveram na época (ou "substituída por uma versão
+  mais nova, sem aprovação registrada", se nunca foi aprovada). Aprovação
+  aceita escolher um contato já cadastrado do cliente ou digitar um nome
+  avulso. Comentário tem os mesmos campos de momento/ponto da página
+  pública (ver abaixo) e um checkbox "interno" que só existe aqui — a
+  página pública nunca consegue marcar um comentário como interno (ver
+  "Permissões").
+
+## Página pública de revisão (`/revisao/[tarefaId]`)
+
+Mesmo padrão do relatório de tráfego (`/relatorio/[id]`): link direto (UUID
+da própria tarefa), sem login, porque não existe conta de cliente neste
+sistema — a segurança é "precisa saber/receber o link", igual ao relatório.
+`notFound()` se a tarefa não existir, não tiver cliente vinculado ou não for
+de uma categoria com revisão.
+
+- Busca tudo direto no server component e **já filtra o comentário interno
+  na própria consulta** (`where: { interno: false }`) — nunca chega no
+  navegador do cliente pra ser escondido depois na tela; é filtro de
+  consulta, não de exibição.
+- Stepper de status (só leitura), texto/logo/cores usando os tokens
+  semânticos globais (`bg-base`/`text-text`/`border-border`/`bg-card`/
+  `text-accent` — confirmados definidos em `:root`, fora de `.tema-painel`,
+  então servem tanto pro site público quanto pra essa página, ao contrário
+  do `/relatorio/[id]` mais antigo, que usa hex direto de antes desse
+  sistema de tokens existir).
+- `RevisaoInterativa.tsx` (client component): vídeo com campo `mm:ss` +
+  botão "usar momento atual do vídeo" (lê `currentTime` do próprio
+  `<video>`); imagem com clique-pra-marcar-ponto (calcula % x/y a partir do
+  retângulo do elemento, mostra um marcador visual); aprovação e comentário
+  pedem nome (guardado em `localStorage` só pra não redigitar a cada
+  comentário na mesma visita, nunca enviado como autenticação de verdade);
+  `<video>`/`<img>` com `onError` caindo pra link simples, pro caso de um
+  link colado que não seja embutível direto. Versões antigas aparecem numa
+  lista simples e recolhida (legenda resumida + "substituída").
+
+## Correção do vínculo do vídeo bruto no Drive
+
+**Bug encontrado**: `garantirPastaSemana()` (renomeada, ver abaixo) buscava
+uma pasta do Drive pelo **nome da semana**, dentro da pasta "Conteúdo" do
+cliente — então todas as tarefas do mesmo cliente com prazo na mesma semana
+caíam na mesma pasta/`driveFolderId`. A validação que libera sair de "A
+fazer" numa tarefa de Reel (`temVideoBruto()`, pré-existente) só confere "tem
+algum vídeo nessa pasta" — com pasta compartilhada, o vídeo bruto de uma
+tarefa liberava a validação de qualquer tarefa irmã da mesma semana, mesmo
+sem gravação própria nenhuma.
+
+**Corrigido** em `lib/google.ts` (`garantirPastaSemana` →
+`garantirPastaTarefa`): a pasta da semana continua existindo, como
+"prateleira" organizacional, mas agora **cada tarefa sempre ganha sua
+própria subpasta**, criada na hora (nunca buscada por nome e reaproveitada,
+justamente pra garantir que não repita) — é o ID dessa subpasta que vira o
+`driveFolderId` da tarefa. Bruto, versão em revisão e arquivo final agora são
+coisas fisicamente distintas: pasta própria da tarefa (bruto) vs. campos de
+link na versão (`VersaoConteudo.linkVideo`/`linkImagem`, revisão/final), sem
+depender de nomear arquivo dentro da mesma pasta pra diferenciar.
+
+**Limitação assumida, não corrigida**: tarefas já existentes **não são
+migradas** — continuam com o `driveFolderId` antigo (compartilhado); não
+tentei mover ou recriar pasta pra elas, pra não correr o risco de "perder"
+vídeo já enviado numa pasta que deixaria de ser referenciada. Tarefa antiga
+que precisar da validação sem ter vídeo bruto próprio pode usar a exceção
+abaixo como contorno manual, ou (fora do escopo automático desta etapa)
+receber uma pasta dedicada na mão.
+
+**Exceção justificada** (pedida na spec, "conteúdos sem gravação original"):
+checkbox + motivo obrigatório no painel lateral
+(`videoBrutoExcecao`/`videoBrutoExcecaoMotivo`), registrado com quem marcou e
+quando. Enquanto ativa, libera sair de "A fazer" mesmo sem vídeo bruto na
+pasta. Motivo é exigido tanto pra ativar quanto gravado no histórico
+(`HistoricoTarefa`), mesmo padrão já usado em `motivoBloqueio`.
+
+## Permissões
+
+Nada novo inventado — as rotas de versão/comentário reusam
+`getUsuarioAtual`/`podeVerCliente` de `lib/permissoes.ts`, mais um helper
+novo, `usuariosParaNotificarRevisao(clienteId, responsavelId?)`: parte do
+mesmo grupo de "acesso operacional completo" já usado pra notificação de
+relatório (`usuariosComAcessoAoCliente`, filtrado por
+`master`/`acessoClienteCompleto`) e garante que o responsável pela tarefa
+entra na lista mesmo que o acesso dele ao cliente seja parcial — pra quem
+está tocando a tarefa saber que ela recebeu aprovação/comentário, mesmo sem
+acesso financeiro/completo àquele cliente.
+
+Todas as rotas novas (`versoes` POST, `versoes/[id]` PATCH,
+`versoes/[id]/comentarios` POST, e a leitura ampliada em
+`GET /api/tarefas/[id]`) são de área operacional — sem valor, contrato ou
+financeiro em nenhum campo — então Editor acessa normalmente pelas mesmas
+travas de sempre. A página pública (`/revisao/[tarefaId]`) nunca autentica
+ninguém (mesmo espírito de `/relatorio/[id]`) e é a única via que **não
+pode** marcar comentário como interno nem aprovar em nome de um contato
+específico — só nome livre — o que é aplicado no servidor, não só escondido
+na tela: as rotas de aprovação e de comentário checam `await
+getUsuarioAtual()` e, se vier vazio, ignoram/recusam qualquer tentativa de
+mandar `interno: true` ou `aprovadoPorContatoId`.
+
+## Decisões tomadas sem perguntar (reversíveis)
+
+- **Só Reel e Arte entram no fluxo de revisão** (`CATEGORIAS_COM_REVISAO`) —
+  são as categorias com material visual que faz sentido aprovar
+  versão-a-versão; as demais continuam só com o Kanban de status normal, sem
+  o painel de revisão aparecer. Fácil de estender a lista se outra categoria
+  também precisar.
+- **Aprovação é um evento único e imutável, nunca "desfeita"** — não existe
+  botão de "reprovar"/"desaprovar" uma versão já aprovada; o jeito de
+  corrigir uma aprovação indevida é subir uma versão nova, que estrutural e
+  automaticamente volta a exigir aprovação (a própria regra pedida na spec —
+  "exigir nova aprovação quando o conteúdo aprovado for alterado" — resolvida
+  fazendo disso a única saída, em vez de um botão a mais pra manter
+  sincronizado com o resto do fluxo).
+- **`statusConteudo` é campo próprio, separado do `status` operacional da
+  tarefa** (a fazer/em andamento/bloqueada/feito) — os dois avançam em
+  paralelo; publicar um conteúdo marca a tarefa como "feito" automaticamente
+  (a não ser que o corpo do PATCH já mande um `status` explícito), mas nada
+  impede registrar o conteúdo como publicado numa tarefa que por algum
+  motivo ainda precise ficar aberta.
+- **Sem selo/indicador de revisão nos cards do Kanban** — as 3 telas de
+  quadro (`QuadroTarefas`, `QuadroTarefasPessoal`, `TarefaRow`) não ganharam
+  nenhum badge novo pro `statusConteudo`; toda a informação de revisão fica
+  dentro do painel lateral, que já é o lugar único de detalhe da tarefa
+  desde a Etapa 1. Evita redesenhar 3 componentes de cartão só pra essa
+  etapa; se fizer falta, dá pra somar depois sem mexer no que já existe.
+- **Nenhum atalho novo no sino de notificações** — os dois tipos novos
+  (`comentario_revisao`, `revisao_aprovada`) não ganharam clique de resposta
+  rápida no sino (`SinoNotificacoes.tsx`); o fallback dele pra tipo não
+  reconhecido (só "abrir", sem ação específica) já é o comportamento seguro
+  — resolver isso direito exigiria saber qual comentário/versão responder
+  dentro de uma lista com várias, o que o modelo atual de notificação não
+  carrega. "Abrir" (que já funciona pra qualquer tipo) leva direto pro
+  painel de revisão dentro da tarefa.
+- **Exceção de vídeo bruto exige motivo, sem aprovação de um segundo
+  perfil** — qualquer pessoa que já acesse a tarefa pode marcar a exceção,
+  contanto que justifique por escrito (fica no histórico com nome/data de
+  quem marcou); não criei um fluxo de "pedir aprovação da exceção"
+  separado, por não estar na spec e por já existir o rastreamento
+  (quem/quando/motivo) que cobre a auditoria implícita no pedido.
+
+## Validação
+
+- Sem acesso a banco nesta sandbox (mesma limitação documentada desde a
+  v151) — verificação por leitura cuidadosa de todas as rotas/telas
+  tocadas, campo por campo contra o schema novo (relação, `onDelete`,
+  obrigatório/opcional, nome de relação nas 3 relações de `Usuario` com
+  `Tarefa`), e reconferindo os 3 perfis de acesso (Administrador/Editor/
+  Gestor de Tráfego) rota por rota — nenhum dado de valor/contrato/
+  financeiro em versão, comentário ou notificação; página pública nunca
+  recebe comentário interno (filtrado na consulta, não na tela) nem
+  consegue aprovar em nome de contato específico ou marcar comentário como
+  interno (as duas coisas recusadas no servidor pro caller anônimo).
+- Casos de borda conferidos por leitura, seguindo o fluxo mentalmente ponta
+  a ponta: versão criada quando a tarefa já estava "aprovação do
+  cliente"/"agendado"/"publicado" volta sozinha pra "revisão interna" (com
+  linha no histórico); tentar aprovar uma versão já aprovada é recusado
+  (409) — a única saída é versão nova; tentar avançar `statusConteudo` pra
+  "agendado"/"publicado" sem a versão mais recente aprovada, ou pra
+  "publicado" sem `linkPublicacao`, é recusado; publicar preenche
+  `publicadoEm` sozinho (ou aceita data explícita) e reverter de "publicado"
+  pra um status anterior zera `publicadoEm` de novo; duas tarefas do mesmo
+  cliente na mesma semana passam a receber pastas do Drive diferentes
+  (conferido lendo a lógica nova de `garantirPastaTarefa` contra a antiga,
+  já que não dá pra chamar a API do Drive de verdade nesta sandbox);
+  exceção de vídeo bruto recusada sem motivo preenchido, mesmo padrão de
+  `motivoBloqueio`.
+
+## Verificação
+
+- `tsc --noEmit`: 334 erros — **332 (mesmo baseline da v152) + 2 esperados**,
+  os dois em `app/revisao/[tarefaId]/page.tsx` (`.map((v) => ...)`/
+  `.map((c) => ...)` sobre o resultado de uma consulta Prisma, que tipa como
+  `any` nesta sandbox por falta do Client gerado — mesma causa-raiz de
+  dezenas de erros já existentes no baseline, incluindo um caso idêntico já
+  presente em `app/relatorio/[id]/page.tsx`; deixado sem anotação manual
+  aqui também, pra manter o mesmo padrão do arquivo irmão. Zero erro novo em
+  qualquer outro arquivo tocado ou criado nesta etapa (schema, rotas de
+  tarefas/versões/comentários, `PainelDetalheTarefa`,
+  `PainelRevisaoConteudo`, `RevisaoInterativa`, `lib/google.ts`,
+  `lib/permissoes.ts`, `lib/notificacoes.ts`, `lib/tarefas.ts`,
+  `lib/revisaoConteudo.ts`, `lib/categoriaTarefaVisual.ts`) — conferido
+  arquivo por arquivo via grep isolando cada um.
+- `prisma generate`/`prisma validate`: continuam bloqueados nesta sandbox
+  (mesmo teste de rede de sempre, sem sucesso) — sincronização de schema de
+  verdade só acontece no próximo deploy (`prisma db push
+  --accept-data-loss`).
+
+---
+
 # Instaby App — v152
 
 **Etapa 1** do plano de evolução em 11 etapas ("Unificar tarefas e

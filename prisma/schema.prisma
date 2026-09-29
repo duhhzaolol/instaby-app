@@ -70,6 +70,14 @@ model Usuario {
   notificacoes        Notificacao[] @relation("NotificacaoDestinatario")
   notificacoesCriadas Notificacao[] @relation("NotificacaoCriadaPor")
 
+  // Revisão e aprovação de conteúdo (Etapa 2 v153): versões que essa pessoa enviou
+  // e comentários de revisão que escreveu. tarefasVideoBrutoExcecaoConcedida é
+  // relação nomeada porque Usuario já aponta pra Tarefa de duas outras formas
+  // (tarefasResponsavel, tarefasBloqueioResponsavel).
+  versoesConteudoCriadas            VersaoConteudo[]    @relation("VersaoConteudoCriadaPor")
+  comentariosRevisao                ComentarioRevisao[]
+  tarefasVideoBrutoExcecaoConcedida Tarefa[]            @relation("TarefaVideoBrutoExcecaoPor")
+
   // Autoria no módulo de Tráfego Pago (v151) — mesmo padrão de RegistroTempo.usuarioId:
   // opcional, preenchido a partir da sessão em cada rota, nunca adivinhado.
   lotesImportacaoCriados    LoteImportacao[]
@@ -223,6 +231,14 @@ model Contato {
   contratos          Boolean @default(false)
 
   createdAt DateTime @default(now())
+
+  // Revisão e aprovação de conteúdo (Etapa 2 v153) — aprovações registradas em
+  // nome desse contato e comentários que ele escreveu na página pública de
+  // revisão. aprovacaoConteudo acima é só um rótulo informativo (não trava nada
+  // sozinho); qualquer contato pode aprovar/comentar, esse marcador só ajuda a
+  // equipe a saber com quem falar.
+  aprovacoes         VersaoConteudo[]
+  comentariosRevisao ComentarioRevisao[]
 }
 
 // Links e referências do cliente (Drive, Canva, redes sociais, etc) — Cliente.linkDrive
@@ -361,12 +377,16 @@ model Tarefa {
   // vez a partir de uma lista) — isso aqui vive dentro de UMA tarefa só.
   checklist ChecklistItemTarefa[]
 
-  // Pasta da semana no Google Drive (dentro de Conteúdo do cliente), criada sob
-  // demanda quando a tarefa tem categoria de mídia (gravacao/reel/fotos) + prazo +
-  // cliente com Drive conectado — ver lib/google.ts: garantirPastaSemana. Pra
-  // categoria "reel" especificamente, essa pasta também é onde a gente checa se já
-  // tem vídeo bruto (arquivo de vídeo lá dentro) antes de deixar a tarefa avançar de
-  // "A fazer" — ver o PATCH de /api/tarefas/[id].
+  // Pasta PRÓPRIA dessa tarefa no Google Drive (dentro da pasta da semana, dentro
+  // de Conteúdo do cliente), criada sob demanda quando a tarefa tem categoria de
+  // mídia (gravacao/reel/fotos) + prazo + cliente com Drive conectado — ver
+  // lib/google.ts: garantirPastaTarefa. Pra categoria "reel" especificamente, essa
+  // pasta também é onde a gente checa se já tem vídeo bruto (arquivo de vídeo lá
+  // dentro) antes de deixar a tarefa avançar de "A fazer" — ver o PATCH de
+  // /api/tarefas/[id]. Até a Etapa 2 v153 essa pasta era compartilhada por TODAS as
+  // tarefas do cliente na mesma semana (bug: vídeo de uma liberava as outras) —
+  // corrigido pra uma pasta por tarefa; ver o comentário completo em
+  // garantirPastaTarefa sobre tarefas antigas não migradas automaticamente.
   driveFolderId String?
 
   // Painel lateral de tarefa (Etapa 1 v152): comentários internos e histórico de
@@ -381,6 +401,31 @@ model Tarefa {
 
   // Notificações internas que apontam pra essa tarefa (Etapa 1 v152).
   notificacoes Notificacao[]
+
+  // Fluxo de revisão/aprovação de conteúdo (Etapa 2 v153) — só usado em tarefas de
+  // categoria "reel" ou "arte" (ver CATEGORIAS_COM_REVISAO em
+  // lib/categoriaTarefaVisual.ts). Separado do "status" genérico (a_fazer/
+  // em_andamento/bloqueada/feito) de propósito: são duas dimensões diferentes (uma
+  // tarefa pode estar "em_andamento" no quadro e, ao mesmo tempo, com o conteúdo em
+  // "revisao_interna"). Null = tarefa fora desse fluxo, ou ainda não chegou em
+  // "produção". Ao virar "publicado" pelo PATCH de /api/tarefas/[id], o status
+  // geral da tarefa também vira "feito" sozinho (evita ficar marcando duas vezes).
+  statusConteudo String? // producao | revisao_interna | aprovacao_cliente | agendado | publicado
+  linkPublicacao String? // link do post/reel já publicado — preenchido manualmente, não existe API de publicação automática
+  publicadoEm    DateTime?
+
+  versoes VersaoConteudo[]
+
+  // Exceção justificada pra tarefa "reel" sem vídeo bruto (Etapa 2 v153) — ex.: reel
+  // feito 100% de banco de imagens/motion, sem captação própria. Só relevante pra
+  // CATEGORIAS_QUE_PRECISAM_VIDEO_BRUTO; motivo obrigatório pra ligar (mesma regra
+  // de motivoBloqueio acima). Os 4 campos são limpos sozinhos se a exceção for
+  // desligada — nunca ficam "sujos" de uma exceção antiga.
+  videoBrutoExcecao       Boolean   @default(false)
+  videoBrutoExcecaoMotivo String?
+  videoBrutoExcecaoPorId  String?
+  videoBrutoExcecaoPor    Usuario?  @relation("TarefaVideoBrutoExcecaoPor", fields: [videoBrutoExcecaoPorId], references: [id])
+  videoBrutoExcecaoEm     DateTime?
 }
 
 // Sub-passo de dentro de uma tarefa (redesign v144, Parte 2) — ver Tarefa.checklist.
@@ -429,6 +474,81 @@ model HistoricoTarefa {
   createdAt   DateTime @default(now())
 }
 
+// Versão de material de conteúdo em revisão (Etapa 2 v153) — cada rodada de
+// produção gera uma linha NOVA aqui (nunca edita uma já existente: vídeo, imagem e
+// legenda ficam congelados no momento do envio), pra que os comentários de uma
+// versão nunca se percam/misturem com os da versão seguinte. Escopo: só tarefas de
+// categoria "reel" ou "arte" (ver CATEGORIAS_COM_REVISAO em
+// lib/categoriaTarefaVisual.ts). O fluxo Produção → Revisão interna → Aprovação do
+// cliente → Agendado → Publicado mora em Tarefa.statusConteudo, não aqui — esse
+// model só guarda o material e a aprovação de CADA versão.
+model VersaoConteudo {
+  id       String @id @default(uuid())
+  tarefaId String
+  tarefa   Tarefa @relation(fields: [tarefaId], references: [id], onDelete: Cascade)
+  numero   Int // sequencial por tarefa (1, 2, 3...) — mostrado como "Versão 2" etc.
+
+  linkVideo  String? // link do material em revisão (Drive, WeTransfer etc.) — igual Tarefa.link, texto livre
+  linkImagem String? // idem, pra arte/imagem estática
+  legenda    String? // texto da legenda proposta pra essa versão
+
+  // Preenchido a partir da sessão de quem enviou essa versão — opcional só pra não
+  // quebrar se a pessoa sair da equipe depois (mesmo padrão de ComentarioTarefa.usuarioId).
+  criadoPorId String?
+  criadoPor   Usuario? @relation("VersaoConteudoCriadaPor", fields: [criadoPorId], references: [id])
+
+  // Aprovação DESSA versão específica (nunca da tarefa toda) — "exigir nova
+  // aprovação quando o conteúdo aprovado for alterado" fica garantido de graça: uma
+  // alteração sempre nasce como versão nova, com aprovadoEm=null de novo. Como não
+  // existe login de cliente no sistema, o aprovador é um Contato cadastrado OU um
+  // nome livre digitado na hora (ex.: quem respondeu no WhatsApp e não está
+  // cadastrado) — nunca os dois.
+  aprovadoPorContatoId String?
+  aprovadoPorContato   Contato?  @relation(fields: [aprovadoPorContatoId], references: [id])
+  aprovadoPorNomeLivre String?
+  aprovadoEm           DateTime?
+
+  createdAt DateTime @default(now())
+
+  comentarios ComentarioRevisao[]
+
+  @@unique([tarefaId, numero])
+}
+
+// Comentário de revisão numa versão específica (Etapa 2 v153) — nunca
+// editado/apagado depois de criado, mesmo espírito de ComentarioTarefa. Duas
+// diferenças: pode vir de um Contato do cliente (ou de nome livre, pela página
+// pública de revisão) e pode apontar pra um momento do vídeo ou ponto da imagem.
+model ComentarioRevisao {
+  id       String         @id @default(uuid())
+  versaoId String
+  versao   VersaoConteudo @relation(fields: [versaoId], references: [id], onDelete: Cascade)
+
+  // Autor: equipe (usuarioId) OU contato cadastrado (contatoId) OU nome livre
+  // (autorNomeLivre — comentário pela página pública sem estar cadastrado como
+  // Contato). Preenchido a partir da sessão/formulário, nunca os três ao mesmo tempo.
+  usuarioId      String?
+  usuario        Usuario? @relation(fields: [usuarioId], references: [id])
+  contatoId      String?
+  contato        Contato? @relation(fields: [contatoId], references: [id])
+  autorNomeLivre String?
+
+  texto String
+
+  // true = só a equipe vê (painel interno); false = compartilhado com o cliente,
+  // aparece na página pública de revisão. Comentário vindo da página pública
+  // (usuarioId nulo) sempre nasce com interno=false — cliente não comenta "pra si".
+  interno Boolean @default(false)
+
+  // Ponto exato do comentário — nunca os dois preenchidos ao mesmo tempo; todos
+  // nulos = comentário geral da versão, sem apontar pra um instante/ponto.
+  momentoVideoSegundos Int? // segundos desde o início do vídeo
+  pontoImagemX         Float? // 0–100, percentual da largura
+  pontoImagemY         Float? // 0–100, percentual da altura
+
+  createdAt DateTime @default(now())
+}
+
 // Notificação interna (Etapa 1 v152) — nasce de um evento do sistema (tarefa
 // atribuída, comentário novo, tarefa bloqueada, comentário de cliente no relatório
 // etc.) endereçada a UM usuário. "lidaEm"/"adiadaAte" são o único estado que muda
@@ -445,7 +565,7 @@ model Notificacao {
   // HistoricoTarefa/ComentarioTarefa, que preservam autoria como "opcional").
   usuario Usuario @relation("NotificacaoDestinatario", fields: [usuarioId], references: [id], onDelete: Cascade)
 
-  tipo   String // tarefa_atribuida | tarefa_sem_responsavel | comentario_tarefa | tarefa_bloqueada | comentario_relatorio
+  tipo   String // tarefa_atribuida | tarefa_sem_responsavel | comentario_tarefa | tarefa_bloqueada | comentario_relatorio | comentario_revisao | revisao_aprovada
   titulo String
   corpo  String?
   link   String? // rota interna pra abrir ao clicar, ex: "/dashboard/tarefas?tarefa=ID"

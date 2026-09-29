@@ -103,3 +103,22 @@ export async function usuariosComAcessoAoCliente(clienteId: string): Promise<Usu
     },
   });
 }
+
+// Quem deve ser avisado de um evento de revisão de conteúdo — comentário ou
+// aprovação numa versão (Etapa 2 v153): gente com acesso operacional completo ao
+// cliente (mesmo filtro já usado pra comentário de relatório) MAIS a pessoa
+// responsável pela tarefa, mesmo que ela não tenha acessoClienteCompleto — é o
+// trabalho dela sendo revisado, ela precisa saber independente do nível de acesso
+// financeiro/contratual (esse acesso restrito é sobre a aba de cliente, não sobre
+// o painel da própria tarefa, que ela já abre no dia a dia).
+export async function usuariosParaNotificarRevisao(
+  clienteId: string,
+  responsavelId?: string | null
+): Promise<Usuario[]> {
+  const comAcesso = (await usuariosComAcessoAoCliente(clienteId)).filter((p) => p.master || p.acessoClienteCompleto);
+  if (responsavelId && !comAcesso.some((p) => p.id === responsavelId)) {
+    const responsavel = await prisma.usuario.findUnique({ where: { id: responsavelId } });
+    if (responsavel && responsavel.ativo) comAcesso.push(responsavel);
+  }
+  return comAcesso;
+}

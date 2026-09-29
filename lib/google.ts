@@ -173,10 +173,33 @@ export async function garantirPastasCliente(clienteId: string): Promise<PastasCl
   return pastas;
 }
 
-// Garante a pasta da semana (dentro de Conteúdo) da tarefa informada, criando o
-// cliente inteiro se for a primeira vez. Devolve o ID da pasta, ou null se o
-// Drive não está conectado, a tarefa não tem cliente/prazo, ou algo falhou.
-export async function garantirPastaSemana(tarefaId: string): Promise<string | null> {
+// Garante a pasta DESSA TAREFA (dentro da pasta da semana, dentro de Conteúdo),
+// criando o cliente inteiro e a pasta da semana também se for a primeira vez.
+// Devolve o ID da pasta, ou null se o Drive não está conectado, a tarefa não tem
+// cliente/prazo, ou algo falhou.
+//
+// Etapa 2 v153 — CORREÇÃO: antes (garantirPastaSemana), essa função devolvia o ID
+// da pasta da SEMANA, compartilhada por TODAS as tarefas do mesmo cliente com
+// prazo na mesma semana, e temVideoBruto() só checava "existe algum vídeo nessa
+// pasta?" — então uma tarefa "Criar Reel" que nunca recebeu a própria gravação
+// passava no teste do mesmo jeito, bastando uma tarefa IRMÃ (da mesma semana) já
+// ter vídeo lá dentro. Agora cada tarefa ganha uma subpasta SÓ DELA, sempre criada
+// nova (nunca reaproveitada por busca de nome — duas tarefas com título igual não
+// podem cair na mesma pasta), dentro da pasta da semana. A pasta da semana
+// continua existindo como "prateleira" organizacional (navegar por semana no
+// Drive continua fácil), mas deixou de ser ela quem decide se uma tarefa tem
+// vídeo bruto — isso agora é sempre por pasta individual.
+//
+// LIMITAÇÃO ASSUMIDA: tarefas antigas que já tinham driveFolderId apontando pra
+// uma pasta de semana compartilhada NÃO são migradas automaticamente — a função
+// devolve direto o ID já salvo (linha abaixo) sem recriar nada. Migrar sozinho
+// arriscaria "perder de vista" uma gravação que já tinha sido enviada pra pasta
+// antiga. Pra uma tarefa antiga específica que precise da correção, a forma
+// segura é: mover o vídeo bruto de verdade pra dentro da nova pasta (depois de
+// limpar o driveFolderId dela, o que faz essa função criar a pasta nova no
+// próximo acesso) — ou, se não há gravação própria pra mover, usar a exceção
+// justificada (Tarefa.videoBrutoExcecao) em vez de tentar reencaixar no Drive.
+export async function garantirPastaTarefa(tarefaId: string): Promise<string | null> {
   const tarefa = await prisma.tarefa.findUnique({ where: { id: tarefaId } });
   if (!tarefa || !tarefa.clienteId || !tarefa.prazo) return null;
   if (tarefa.driveFolderId) return tarefa.driveFolderId;
@@ -187,25 +210,33 @@ export async function garantirPastaSemana(tarefaId: string): Promise<string | nu
   const pastas = await garantirPastasCliente(tarefa.clienteId);
   if (!pastas) return null;
 
-  const nome = nomeSemanaDe(tarefa.prazo);
+  const nomeSemana = nomeSemanaDe(tarefa.prazo);
 
-  // Procura por nome antes de criar — se outra tarefa da mesma semana já criou
-  // essa pasta primeiro, reaproveita em vez de duplicar.
-  const nomeEscapado = nome.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-  const busca = await drive.files.list({
-    q: `'${pastas.driveConteudoFolderId}' in parents and name = '${nomeEscapado}' and trashed = false`,
+  // Pasta da semana: continua compartilhada entre tarefas do mesmo cliente/semana
+  // de propósito (é só uma prateleira organizacional) — procura por nome antes de
+  // criar, mesma lógica de sempre, pra não duplicar pasta de semana.
+  const nomeSemanaEscapado = nomeSemana.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+  const buscaSemana = await drive.files.list({
+    q: `'${pastas.driveConteudoFolderId}' in parents and name = '${nomeSemanaEscapado}' and trashed = false`,
     fields: "files(id)",
   });
-  let folderId: string | null | undefined = busca.data.files?.[0]?.id;
-
-  if (!folderId) {
-    folderId = await criarPasta(drive, nome, pastas.driveConteudoFolderId);
-    await compartilharComQuemTemLink(drive, folderId, "writer");
+  let pastaSemanaId: string | null | undefined = buscaSemana.data.files?.[0]?.id;
+  if (!pastaSemanaId) {
+    pastaSemanaId = await criarPasta(drive, nomeSemana, pastas.driveConteudoFolderId);
+    await compartilharComQuemTemLink(drive, pastaSemanaId, "writer");
   }
 
-  await prisma.tarefa.update({ where: { id: tarefaId }, data: { driveFolderId: folderId } });
+  // Subpasta da tarefa em si — sempre CRIADA (nunca buscada por nome), e
+  // persistida no banco antes de qualquer uso futuro: é o driveFolderId salvo que
+  // garante idempotência daqui pra frente (a próxima chamada já devolve direto na
+  // primeira linha da função, sem tocar no Drive de novo).
+  const nomeTarefa = `${tarefa.titulo} (${tarefa.id.slice(0, 8)})`.slice(0, 200);
+  const pastaTarefaId = await criarPasta(drive, nomeTarefa, pastaSemanaId);
+  await compartilharComQuemTemLink(drive, pastaTarefaId, "writer");
 
-  return folderId;
+  await prisma.tarefa.update({ where: { id: tarefaId }, data: { driveFolderId: pastaTarefaId } });
+
+  return pastaTarefaId;
 }
 
 // Existe algum arquivo de vídeo dentro dessa pasta? Usado pra travar tarefas de
