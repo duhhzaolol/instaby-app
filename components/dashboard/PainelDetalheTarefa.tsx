@@ -128,6 +128,7 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
 
   const [checandoVideo, setChecandoVideo] = useState(false);
   const [temVideoBrutoInfo, setTemVideoBrutoInfo] = useState<boolean | null>(null);
+  const [gerandoPasta, setGerandoPasta] = useState(false);
 
   const [videoBrutoExcecao, setVideoBrutoExcecao] = useState(false);
   const [videoBrutoExcecaoMotivo, setVideoBrutoExcecaoMotivo] = useState("");
@@ -295,6 +296,30 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
     const d = await res.json().catch(() => null);
     setTemVideoBrutoInfo(d?.temBruto ?? false);
     setChecandoVideo(false);
+  }
+
+  // Gera (ou substitui) a pasta própria da tarefa no Drive — sob demanda, pelo
+  // botão. Principal uso: "destravar" uma tarefa que ainda aponta pra pasta
+  // COMPARTILHADA da semana (jeito de antes da v153, não migrado automaticamente)
+  // sem precisar mexer direto no banco. Não move nenhum arquivo da pasta antiga —
+  // avisa disso antes, se já existia uma pasta vinculada.
+  async function gerarPastaDrive() {
+    if (tarefa?.driveFolderId) {
+      const ok = window.confirm(
+        "Isso cria uma pasta nova e vazia só pra esta tarefa. Nada é movido automaticamente — se já tinha arquivo na pasta antiga, mova pra pasta nova depois de gerá-la. Continuar?"
+      );
+      if (!ok) return;
+    }
+    setGerandoPasta(true);
+    const res = await fetch(`/api/tarefas/${tarefaId}/pasta-drive`, { method: "POST" });
+    const d = await res.json().catch(() => null);
+    setGerandoPasta(false);
+    if (!res.ok) {
+      alert(d?.erro || "Não consegui gerar a pasta.");
+      return;
+    }
+    setTemVideoBrutoInfo(null);
+    setTarefa((t) => (t ? { ...t, driveFolderId: d.driveFolderId } : t));
   }
 
   async function salvarExcecaoVideoBruto() {
@@ -584,38 +609,60 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
               className="mb-3 h-9 w-full rounded-lg border border-border bg-card/60 px-3 text-xs text-text outline-none focus:border-accent/50"
             />
 
-            {tarefa.driveFolderId && CATEGORIAS_QUE_PRECISAM_VIDEO_BRUTO.includes((tarefa.categoria || "") as any) && (
+            {CATEGORIAS_QUE_PRECISAM_VIDEO_BRUTO.includes((tarefa.categoria || "") as any) && (
               <div className="mb-3 rounded-lg border border-border bg-card/60 p-3">
                 <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-text">
-                  <HardDrive size={12} /> Pasta desta semana no Drive
+                  <HardDrive size={12} /> Pasta da tarefa no Drive
                 </p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <a
-                    href={`https://drive.google.com/drive/folders/${tarefa.driveFolderId}`}
-                    target="_blank"
-                    className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs text-text hover:bg-hover"
-                  >
-                    <ExternalLink size={11} /> Abrir pasta
-                  </a>
-                  <button
-                    type="button"
-                    onClick={verificarVideoBruto}
-                    disabled={checandoVideo}
-                    className="rounded-lg border border-border px-2.5 py-1.5 text-xs text-muted hover:text-text disabled:opacity-50"
-                  >
-                    {checandoVideo ? "Verificando..." : "Verificar vídeo bruto"}
-                  </button>
-                  {temVideoBrutoInfo === true && (
-                    <span className="flex items-center gap-1 text-xs text-emerald-400">
-                      <CheckCircle2 size={12} /> Pronto pra editar
-                    </span>
-                  )}
-                  {temVideoBrutoInfo === false && (
-                    <span className="flex items-center gap-1 text-xs text-amber-400">
-                      <AlertCircle size={12} /> Ainda sem vídeo bruto
-                    </span>
-                  )}
-                </div>
+                {tarefa.driveFolderId ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <a
+                      href={`https://drive.google.com/drive/folders/${tarefa.driveFolderId}`}
+                      target="_blank"
+                      className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs text-text hover:bg-hover"
+                    >
+                      <ExternalLink size={11} /> Abrir pasta
+                    </a>
+                    <button
+                      type="button"
+                      onClick={verificarVideoBruto}
+                      disabled={checandoVideo}
+                      className="rounded-lg border border-border px-2.5 py-1.5 text-xs text-muted hover:text-text disabled:opacity-50"
+                    >
+                      {checandoVideo ? "Verificando..." : "Verificar vídeo bruto"}
+                    </button>
+                    {temVideoBrutoInfo === true && (
+                      <span className="flex items-center gap-1 text-xs text-emerald-400">
+                        <CheckCircle2 size={12} /> Pronto pra editar
+                      </span>
+                    )}
+                    {temVideoBrutoInfo === false && (
+                      <span className="flex items-center gap-1 text-xs text-amber-400">
+                        <AlertCircle size={12} /> Ainda sem vídeo bruto
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={gerarPastaDrive}
+                      disabled={gerandoPasta}
+                      className="text-[11px] text-muted underline decoration-dotted hover:text-text disabled:opacity-50"
+                    >
+                      {gerandoPasta ? "Gerando..." : "Gerar pasta nova"}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs text-muted">Esta tarefa ainda não tem pasta própria no Drive.</span>
+                    <button
+                      type="button"
+                      onClick={gerarPastaDrive}
+                      disabled={gerandoPasta}
+                      className="rounded-lg border border-border px-2.5 py-1.5 text-xs text-text hover:bg-hover disabled:opacity-50"
+                    >
+                      {gerandoPasta ? "Gerando..." : "Gerar pasta"}
+                    </button>
+                  </div>
+                )}
 
                 {/* Exceção justificada (Etapa 2 v153) — pra conteúdo sem gravação
                     própria (ex.: banco de imagens/motion), quando o vídeo bruto de

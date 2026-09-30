@@ -22,6 +22,17 @@ export type VersaoNovidades = {
 
 export const NOVIDADES: VersaoNovidades[] = [
   {
+    versao: 155,
+    resumo: "Novo botão pra gerar (ou trocar) a pasta do Drive de uma tarefa na hora, sem precisar mexer em nada por fora.",
+    itens: [
+      {
+        tipo: "adicionado",
+        texto:
+          'Tarefas de "Criar Reel" e "Criar arte" ganharam um botão "Gerar pasta" (ou "Gerar pasta nova", se já tinha uma) dentro do próprio painel — útil pra tarefas mais antigas que ainda apontam pra pasta compartilhada da semana (de antes da correção da v153) e pra tarefas que nunca chegaram a ganhar pasta própria. Não move nenhum arquivo que já estivesse na pasta anterior — avisa disso antes de trocar.',
+      },
+    ],
+  },
+  {
     versao: 154,
     resumo: "Corrigido um erro que impedia abrir o Tráfego Pago depois de escolher um cliente.",
     itens: [

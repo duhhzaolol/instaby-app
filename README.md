@@ -1,3 +1,36 @@
+# Instaby App — v155
+
+Ajuste pedido por ele depois de testar a v154 ao vivo: uma tarefa criada antes
+da correção da v153 (Etapa 2) ainda apontava pra pasta COMPARTILHADA da semana
+no Drive em vez de ter uma pasta só dela — exatamente a limitação já disclosed
+na v153 ("tarefas antigas não são migradas automaticamente"), só que numa
+tarefa criada no mesmo dia, poucas horas antes da correção ir pro ar. Em vez de
+pedir pra mexer direto no banco (não dá, sem acesso nesta sandbox) ou mover
+arquivo pra pasta errada de propósito, ele pediu um jeito de simplesmente gerar
+a pasta certa e testar o fluxo inteiro de novo, incluindo a aprovação do
+cliente.
+
+## Botão "Gerar pasta" / "Gerar pasta nova" no painel da tarefa
+
+- Nova rota `POST /api/tarefas/[id]/pasta-drive` (autenticada, mesma checagem
+  de `podeVerCliente` das outras rotas de tarefa) — zera o `driveFolderId`
+  atual (se houver) e chama de novo `garantirPastaTarefa`, que aí cria uma
+  subpasta nova, só dessa tarefa, do zero (mesma lógica da v153, só disparada
+  manualmente em vez de só na primeira vez que a tarefa é editada).
+- No painel: se a tarefa ainda não tem pasta, aparece "Gerar pasta" direto. Se
+  já tinha uma (inclusive uma pasta de semana compartilhada, do jeito antigo),
+  aparece "Gerar pasta nova", com uma confirmação antes explicando que nada é
+  movido automaticamente — quem usa o botão numa tarefa que já tinha conteúdo
+  precisa mover o arquivo pra pasta nova depois, na mão, pelo próprio Drive.
+- De passagem, a seção mudou de nome de "Pasta desta semana no Drive" pra
+  "Pasta da tarefa no Drive" — o texto antigo tinha ficado desatualizado desde
+  a v153 (a pasta que conta pra validação do vídeo bruto é a da tarefa, não
+  mais a da semana inteira).
+- Verificação: `tsc --noEmit` em 334 (mesmo total da v154), zero erro nos 2
+  arquivos tocados (`PainelDetalheTarefa.tsx`, rota nova `pasta-drive`).
+
+---
+
 # Instaby App — v154
 
 Correção de um bug real reportado por ele em produção (log copiado do Vercel):
