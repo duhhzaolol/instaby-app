@@ -64,6 +64,8 @@ export async function POST(request: NextRequest) {
       // alguém desliga de propósito (ex: preset "Editor" no formulário de Equipe).
       acessoClienteCompleto: body.acessoClienteCompleto === undefined ? true : !!body.acessoClienteCompleto,
       todosClientes: !!body.todosClientes,
+      // Etapa 4 (v158) — se não vier preenchido, usa o default do schema (40h).
+      cargaHorariaSemanal: Number(body.cargaHorariaSemanal) > 0 ? Number(body.cargaHorariaSemanal) : undefined,
       clientesPermitidos: !body.todosClientes && clienteIds.length
         ? { create: clienteIds.map((clienteId) => ({ clienteId })) }
         : undefined,

@@ -101,7 +101,10 @@ export function linkDaPasta(folderId: string) {
   return `https://drive.google.com/drive/folders/${folderId}`;
 }
 
-function inicioDaSemana(data: Date): Date {
+// Exportada a partir da Etapa 4 (v158) pra lib/capacidade.ts reusar a MESMA
+// definição de semana (segunda a domingo) da pasta do Drive, em vez de duplicar —
+// nada muda pra quem já usava essa função aqui dentro.
+export function inicioDaSemana(data: Date): Date {
   const d = new Date(data);
   const dia = d.getDay(); // 0 = domingo
   const diff = dia === 0 ? -6 : 1 - dia; // volta pra segunda-feira

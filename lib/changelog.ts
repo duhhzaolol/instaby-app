@@ -22,6 +22,43 @@ export type VersaoNovidades = {
 
 export const NOVIDADES: VersaoNovidades[] = [
   {
+    versao: 158,
+    resumo:
+      "Planejamento de capacidade da equipe, dependências entre tarefas e rotinas mensais automáticas por serviço contratado.",
+    itens: [
+      {
+        tipo: "adicionado",
+        texto:
+          'Tarefas ganharam "estimativa de horas". Nova página "Capacidade" compara, semana a semana, o trabalho previsto com as horas disponíveis de cada pessoa e avisa quando a semana passa do limite ou quando um prazo cai num dia de folga. Cada pessoa vê a própria linha; quem gerencia a equipe vê todo mundo.',
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          "Dá pra cadastrar folgas, férias, atestados e compromissos de cada pessoa, e definir as horas por semana de cada uma (no próprio perfil ou em Equipe).",
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          'Uma tarefa pode depender de outra. Antes de mudar um prazo, o painel mostra quais tarefas seguintes seriam afetadas e deixa você confirmar ("Salvar assim mesmo") ou cancelar. Dependências que formariam um círculo são recusadas.',
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          'Templates de tarefas agora podem ser um ciclo completo (planejamento, roteiro, captação, edição, aprovação, publicação, relatório), com o prazo de cada etapa calculado a partir da data de entrega/publicação. Na aba Tarefas do cliente, o botão "Aplicar template" gera o ciclo. Os templates de lista simples continuam funcionando igual.',
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          'Cada serviço do catálogo pode ser ligado a um ciclo: todo mês, clientes ativos com esse serviço ganham as tarefas geradas sozinhas, sem duplicar. Na aba Serviços do cliente dá pra pausar e retomar essa geração.',
+      },
+      {
+        tipo: "corrigido",
+        texto:
+          "Fechadas lacunas de permissão: editar dados de um cliente agora exige acesso àquele cliente (e valores/contrato exigem acesso financeiro), e as rotas de templates passaram a respeitar as permissões.",
+      },
+    ],
+  },
+  {
     versao: 157,
     resumo:
       "Nova aba \"Entregas\" mostra o andamento mensal do que foi contratado, e o cliente ganhou um link próprio pra pedir coisas direto pro sistema.",

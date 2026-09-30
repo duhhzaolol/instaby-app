@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Phone, Plus, Pencil, Building2, MapPin, User, FolderOpen, CalendarClock, CalendarDays } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import NovaTarefaForm from "./NovaTarefaForm";
+import AplicarTemplateForm from "./AplicarTemplateForm";
 import ContratosTab from "./ContratosTab";
 import FinanceiroTab from "./FinanceiroTab";
 import ServicosContratadosTab from "./ServicosContratadosTab";
@@ -531,6 +532,7 @@ export default async function ClienteDetalhePage({
             ))}
           </div>
           <NovaTarefaForm clienteId={cliente.id} />
+          <AplicarTemplateForm clienteId={cliente.id} />
         </div>
       )}
 
@@ -608,6 +610,7 @@ export default async function ClienteDetalhePage({
           prazoContratoMeses={cliente.prazoContratoMeses}
           dataInicioContrato={cliente.dataInicioContrato?.toISOString() || null}
           valorRenovacao={cliente.valorRenovacao ? Number(cliente.valorRenovacao) : null}
+          rotinasPausadas={cliente.rotinasPausadas}
         />
       )}
 

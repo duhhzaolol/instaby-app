@@ -89,9 +89,37 @@ model Usuario {
   // contratados (Etapa 3 v157) — mesmo padrão opcional de historicoTarefaAlteracoes.
   historicoServicosContratados HistoricoServicoContratado[]
 
+  // Capacidade da equipe (Etapa 4 v158) — "disponibilidade" é essa carga horária
+  // semanal padrão (usada como 100% de capacidade em Comparar trabalho previsto x
+  // disponível); "folgas e compromissos" são as linhas em Ausencia, que abatem
+  // dessa base semana a semana. 40h (CLT) é só um chute inicial razoável pra quem
+  // já existe — cada pessoa edita a própria em Configurações pessoais, e
+  // gerenciarEquipe edita qualquer uma.
+  cargaHorariaSemanal Float      @default(40)
+  ausencias           Ausencia[]
+
   createdAt        DateTime  @default(now())
   tentativasFalhas Int       @default(0) // contador de senhas erradas seguidas — zera a cada acerto
   bloqueadoAte     DateTime? // se preenchido e no futuro, login fica bloqueado até essa hora (proteção contra força bruta)
+}
+
+// Folga, férias, atestado ou compromisso da equipe (Etapa 4 v158) — item
+// "cadastrar disponibilidade, folgas e compromissos da equipe". Um período de 1
+// dia só tem inicio=fim. `diaInteiro=true` (folga/férias/atestado, o normal)
+// zera a capacidade daquele dia inteiro; `diaInteiro=false` (compromisso parcial,
+// ex.: "reunião externa de manhã") abate só `horasPorDia` da capacidade daquele
+// dia, sem zerar o resto. Ver lib/capacidade.ts pro cálculo semana a semana.
+model Ausencia {
+  id          String    @id @default(uuid())
+  usuarioId   String
+  usuario     Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  tipo        String    @default("folga") // folga | ferias | atestado | compromisso
+  inicio      DateTime
+  fim         DateTime
+  diaInteiro  Boolean   @default(true)
+  horasPorDia Float? // obrigatório só quando diaInteiro=false
+  descricao   String?
+  createdAt   DateTime  @default(now())
 }
 
 // Links pessoais de contato (Discord, WhatsApp etc.) — mesmo formato de LinkCliente,
@@ -137,6 +165,15 @@ model Cliente {
   exibirLogoPublico  Boolean   @default(false) // aparece na vitrine "empresas que confiam" das propostas
   createdAt          DateTime  @default(now())
 
+  // Etapa 4 (v158) — "permitir suspender a geração [de rotinas mensais] quando o
+  // contrato estiver pausado". Campo PRÓPRIO, separado de `status`, de propósito:
+  // `status` já tem 15+ lugares no código checando "ativo" pra outras coisas
+  // (cobrança, contagem de clientes ativos, filtros de listagem...) — um cliente
+  // pode estar "ativo" (contrato valendo, mensalidade cobrando normal) e ainda
+  // assim ter pedido pra pausar só a produção de conteúdo por um tempo, sem que
+  // isso mude mais nada no resto do app. Default false — nunca afeta quem já existe.
+  rotinasPausadas Boolean @default(false)
+
   // Pastas da automação de pastas do Google Drive (raiz do cliente + 3 fixas dentro
   // dela). Ficam null até a 1ª vez que alguém abre a aba Arquivos desse cliente (ou
   // até a 1ª tarefa de conteúdo com prazo ser criada) — não são criadas em massa pra
@@ -162,6 +199,7 @@ model Cliente {
   links               LinkCliente[]
   onboarding          Onboarding?
   solicitacoes        Solicitacao[]
+  rotinasGeradas      RotinaGerada[]
   usuariosPermitidos  ClienteUsuario[]
   campanhas           Campanha[]
 
@@ -382,11 +420,42 @@ model Solicitacao {
 
 // Checklist reutilizável — aplica de uma vez várias tarefas num cliente/conteúdo
 // (ex: "Captação": preparar pauta, conferir equipamento, captação, backup, seleção, edição)
+//
+// Etapa 4 (v158) — "evoluir os templates para gerar ciclos de planejamento,
+// roteiro, captação, edição, aprovação, publicação e relatório" +
+// "calcular prazos relativos à data de entrega ou publicação": `itens` (modo
+// simples, só título, sem prazo) é MANTIDO 100% como estava — nenhum template já
+// cadastrado muda de comportamento. O modo novo (`etapas`) é opt-in: quando um
+// template tem pelo menos 1 `TemplateEtapa`, "aplicar" passa a pedir 1 data-alvo
+// (entrega/publicação) e gera cada etapa com prazo = data-alvo + diasRelativos,
+// encadeadas por DependenciaTarefa (cada uma depende da anterior). Ver
+// lib/templatesTarefas.ts.
 model TemplateTarefas {
   id        String   @id @default(uuid())
   nome      String
   itens     String[]
   createdAt DateTime @default(now())
+
+  etapas          TemplateEtapa[]
+  servicosLigados Servico[]
+  rotinasGeradas  RotinaGerada[]
+}
+
+// Uma etapa dentro do ciclo completo de um template (Etapa 4 v158) — ver
+// TemplateTarefas. `diasRelativos` é o deslocamento em DIAS a partir da data-alvo
+// do ciclo (negativo = antes; ex.: planejamento -14, roteiro -10, captação -7,
+// edição -4, aprovação -2, publicação 0, relatório +3 — só um ponto de partida
+// sugerido, cada template define os próprios números ao ser criado/editado).
+model TemplateEtapa {
+  id              String          @id @default(uuid())
+  templateId      String
+  template        TemplateTarefas @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  ordem           Int             @default(0)
+  titulo          String
+  categoria       String? // vocabulário de Tarefa.categoria — opcional
+  diasRelativos   Int             @default(0)
+  estimativaHoras Float?
+  createdAt       DateTime        @default(now())
 }
 
 model Tarefa {
@@ -490,6 +559,28 @@ model Tarefa {
   // tarefa" (Etapa 3 v157) — ver Solicitacao.tarefaGeradaId. Null pra qualquer
   // tarefa criada do jeito normal (o padrão até aqui).
   solicitacaoOrigem Solicitacao? @relation("SolicitacaoTarefaGerada")
+
+  // Etapa 4 (v158) — "adicionar estimativa de tempo às tarefas": opcional, alimenta
+  // a comparação de trabalho previsto x capacidade disponível (ver lib/capacidade.ts).
+  // Tarefa sem estimativa simplesmente não entra nessa soma (não conta como 0h nem
+  // trava nada) — ninguém é obrigado a preencher.
+  estimativaHoras Float?
+
+  // Dependências entre tarefas (Etapa 4 v158) — "tarefaId" é ESTA tarefa quando ela
+  // é quem depende de outra (precisa que a outra termine primeiro); "dependeDeId" é
+  // o mesmo registro visto do lado de quem bloqueia. Duas relações nomeadas porque
+  // Tarefa aponta pra Tarefa duas vezes através do mesmo model — ver
+  // DependenciaTarefa e lib/dependenciasTarefa.ts (cálculo de impacto de prazo).
+  dependeDe   DependenciaTarefa[] @relation("TarefaDependente")
+  bloqueiaDe  DependenciaTarefa[] @relation("TarefaPrecedente")
+
+  // Preenchida quando essa tarefa nasceu de uma rotina mensal automática (Etapa 4
+  // v158, item "gerar rotinas mensais conforme os serviços contratados") — nunca
+  // aparece em tarefa criada manualmente ou por "aplicar template" na mão. Só
+  // informativa (mostra "gerada automaticamente" na tela); apagar a tarefa não
+  // afeta a rotina em si.
+  rotinaGeradaId String?
+  rotinaGerada   RotinaGerada? @relation(fields: [rotinaGeradaId], references: [id])
 }
 
 // Sub-passo de dentro de uma tarefa (redesign v144, Parte 2) — ver Tarefa.checklist.
@@ -501,6 +592,24 @@ model ChecklistItemTarefa {
   feito     Boolean  @default(false)
   ordem     Int      @default(0)
   createdAt DateTime @default(now())
+}
+
+// "Criar dependências entre tarefas e mostrar impactos antes de alterar prazos"
+// (Etapa 4 v158). Uma linha = "tarefa" só pode ser concluída/publicada depois que
+// "dependeDe" terminar. `onDelete: Cascade` nas duas pontas — apagar qualquer uma
+// das duas tarefas envolvidas não deveria deixar uma dependência solta apontando
+// pro nada. Não trava nada sozinha (ver lib/dependenciasTarefa.ts): é consultada
+// pra CALCULAR e MOSTRAR impacto antes de confirmar uma mudança de prazo, não pra
+// impedir a mudança — a decisão final continua sendo de quem está usando o app.
+model DependenciaTarefa {
+  id          String   @id @default(uuid())
+  tarefaId    String
+  tarefa      Tarefa   @relation("TarefaDependente", fields: [tarefaId], references: [id], onDelete: Cascade)
+  dependeDeId String
+  dependeDe   Tarefa   @relation("TarefaPrecedente", fields: [dependeDeId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([tarefaId, dependeDeId])
 }
 
 // Comentário interno numa tarefa (Etapa 1 v152) — nunca editado/apagado depois de
@@ -675,6 +784,16 @@ model Servico {
   // não faz sentido obrigar. Editável em Catálogo de Serviços.
   categoriaTarefa String?
 
+  // Etapa 4 (v158) — "gerar rotinas mensais conforme os serviços contratados, sem
+  // duplicações": liga esse serviço a um ciclo completo (TemplateTarefas com
+  // `etapas`). Quando preenchido, todo cliente que tiver esse serviço contratado
+  // (ativo) ganha esse ciclo gerado automaticamente todo mês — ver
+  // garantirRotinasMensaisDoMes em lib/garantirRecorrentes.ts. Opcional e null por
+  // padrão: nem todo serviço é recorrente mensal (ex.: um serviço avulso de
+  // "Criação de identidade visual" não devia gerar nada sozinho todo mês).
+  templateRotinaId String?
+  templateRotina   TemplateTarefas? @relation(fields: [templateRotinaId], references: [id])
+
   itens        ItemOrcamento[]
   pacoteItens  PacoteItem[]
   contratacoes ServicoContratado[]
@@ -735,6 +854,10 @@ model ServicoContratado {
   // editado/apagado depois de criado, mesmo padrão de HistoricoTarefa. Ver
   // PATCH/DELETE de /api/servicos-contratados/[id].
   historico HistoricoServicoContratado[]
+
+  // Rotinas mensais já geradas a partir deste serviço contratado (Etapa 4 v158) —
+  // ver RotinaGerada.
+  rotinasGeradas RotinaGerada[]
 }
 
 model HistoricoServicoContratado {
@@ -747,6 +870,30 @@ model HistoricoServicoContratado {
   valorAntigo         String?
   valorNovo           String?
   createdAt           DateTime          @default(now())
+}
+
+// Controle de deduplicação da geração automática mensal de rotinas (Etapa 4 v158,
+// item "sem duplicações") — mesmo espírito de LoteImportacao/HistoricoTarefa: um
+// registro por (serviço contratado, mês, ano), nunca reaproveitado nem sobrescrito.
+// `tarefas` (relação inversa de Tarefa.rotinaGeradaId) mostra quais tarefas
+// nasceram daquele disparo; apagar uma delas não desfaz o registro nem libera
+// gerar de novo no mesmo mês — ver garantirRotinasMensaisDoMes em
+// lib/garantirRecorrentes.ts.
+model RotinaGerada {
+  id                  String            @id @default(uuid())
+  clienteId           String
+  cliente             Cliente           @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  servicoContratadoId String
+  servicoContratado   ServicoContratado @relation(fields: [servicoContratadoId], references: [id], onDelete: Cascade)
+  templateId          String
+  template            TemplateTarefas   @relation(fields: [templateId], references: [id])
+  mes                 Int // 0-11
+  ano                 Int
+  createdAt           DateTime          @default(now())
+
+  tarefas Tarefa[]
+
+  @@unique([servicoContratadoId, mes, ano])
 }
 
 model Pacote {

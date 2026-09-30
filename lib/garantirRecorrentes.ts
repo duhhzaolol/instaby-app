@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { montarCicloDeTarefas } from "@/lib/templatesTarefas";
 
 // Evita rodar a checagem de recorrentes em toda navegação (isso rodava só na página
 // Financeiro antes, e ficou pesado quando movido pro layout do dashboard). Com esse
@@ -96,6 +97,80 @@ export async function garantirCobrancasMensaisDoMes() {
   }
 }
 
+/**
+ * "Gerar rotinas mensais conforme os serviços contratados, sem duplicações" +
+ * "permitir suspender a geração quando o contrato estiver pausado" (Etapa 4
+ * v158). Mesmo padrão idempotente de garantirCobrancasMensaisDoMes: só cliente
+ * ATIVO e sem rotinasPausadas, só serviço contratado ATIVO cujo Servico tenha um
+ * templateRotina com pelo menos 1 etapa configurada, e nunca gera duas vezes pro
+ * mesmo (serviço contratado, mês, ano) — RotinaGerada é o registro que impede a
+ * duplicata (constraint única no banco, não só uma checagem solta no código).
+ *
+ * Data-alvo do ciclo (entrega/publicação): usa o ÚLTIMO DIA do mês atual — decisão
+ * reversível e documentada, mesmo espírito do "dia 28" já usado em
+ * garantirDespesasRecorrentesDoMes pra evitar mês sem esse dia. Um ciclo
+ * disparado automaticamente não tem como saber a data de publicação real
+ * combinada com o cliente; quem precisar de uma data específica usa "Aplicar
+ * template" na mão, que pede a data.
+ */
+export async function garantirRotinasMensaisDoMes() {
+  const hoje = new Date();
+  const mes = hoje.getMonth();
+  const ano = hoje.getFullYear();
+  const dataAlvo = new Date(ano, mes + 1, 0); // dia 0 do mês seguinte = último dia deste mês
+
+  const clientes = await prisma.cliente.findMany({
+    where: { status: "ativo", rotinasPausadas: false },
+    include: {
+      servicosContratados: {
+        where: { ativo: true, servico: { templateRotinaId: { not: null } } },
+        include: {
+          servico: { include: { templateRotina: { include: { etapas: { orderBy: { ordem: "asc" } } } } } },
+        },
+      },
+    },
+  });
+
+  for (const cliente of clientes) {
+    for (const sc of cliente.servicosContratados) {
+      const template = sc.servico.templateRotina;
+      if (!template || template.etapas.length === 0) continue;
+
+      const jaGerado = await prisma.rotinaGerada.findUnique({
+        where: { servicoContratadoId_mes_ano: { servicoContratadoId: sc.id, mes, ano } },
+      });
+      if (jaGerado) continue;
+
+      const rotina = await prisma.rotinaGerada.create({
+        data: { clienteId: cliente.id, servicoContratadoId: sc.id, templateId: template.id, mes, ano },
+      });
+
+      const ciclo = montarCicloDeTarefas(template.etapas, dataAlvo);
+      let anteriorId: string | null = null;
+      for (const etapa of ciclo) {
+        const tarefa = await prisma.tarefa.create({
+          data: {
+            titulo: etapa.titulo,
+            categoria: etapa.categoria,
+            clienteId: cliente.id,
+            prazo: etapa.prazo,
+            estimativaHoras: etapa.estimativaHoras,
+            rotinaGeradaId: rotina.id,
+          },
+        });
+        if (anteriorId) {
+          await prisma.dependenciaTarefa.create({ data: { tarefaId: tarefa.id, dependeDeId: anteriorId } });
+        }
+        anteriorId = tarefa.id;
+        // Pasta do Drive fica de fora do caminho automático de propósito — criar
+        // pasta sozinho, sem ninguém pedir, pra N tarefas de N clientes todo mês
+        // seria bem mais chamada à API do Drive acontecendo em silêncio. Quem abrir
+        // a tarefa usa o botão "Gerar pasta" (v155) já existente, na hora que quiser.
+      }
+    }
+  }
+}
+
 export async function garantirRecorrentesDoMes() {
   const agora = Date.now();
   if (agora - ultimaChecagem < INTERVALO_MS) return;
@@ -103,4 +178,5 @@ export async function garantirRecorrentesDoMes() {
 
   await garantirDespesasRecorrentesDoMes();
   await garantirCobrancasMensaisDoMes();
+  await garantirRotinasMensaisDoMes();
 }

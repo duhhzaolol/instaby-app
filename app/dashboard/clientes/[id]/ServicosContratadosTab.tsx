@@ -23,6 +23,7 @@ export default function ServicosContratadosTab({
   prazoContratoMeses,
   dataInicioContrato,
   valorRenovacao,
+  rotinasPausadas: rotinasPausadasInicial,
 }: {
   clienteId: string;
   contratados: Contratado[];
@@ -32,6 +33,7 @@ export default function ServicosContratadosTab({
   prazoContratoMeses: number | null;
   dataInicioContrato: string | null;
   valorRenovacao: number | null;
+  rotinasPausadas: boolean;
 }) {
   const router = useRouter();
   const { oculto } = useOcultarValores();
@@ -42,6 +44,8 @@ export default function ServicosContratadosTab({
   const [inicio, setInicio] = useState(dataInicioContrato?.slice(0, 10) || "");
   const [renovacao, setRenovacao] = useState(valorRenovacao || 0);
   const [salvando, setSalvando] = useState(false);
+  const [rotinasPausadas, setRotinasPausadas] = useState(rotinasPausadasInicial);
+  const [salvandoPausa, setSalvandoPausa] = useState(false);
 
   const jaContratadosIds = new Set(contratados.map((c) => c.servicoId));
   const categorias = useMemo(() => Array.from(new Set(catalogo.map((s) => s.categoria))), [catalogo]);
@@ -114,10 +118,49 @@ export default function ServicosContratadosTab({
     router.refresh();
   }
 
+  // Etapa 4 (v158) — pausa só a geração automática de rotinas mensais desse
+  // cliente (Cliente.rotinasPausadas); cobrança e status não mudam.
+  async function alternarPausaRotinas() {
+    const novo = !rotinasPausadas;
+    setSalvandoPausa(true);
+    const res = await fetch(`/api/clientes/${clienteId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rotinasPausadas: novo }),
+    });
+    setSalvandoPausa(false);
+    if (!res.ok) {
+      alert("Não consegui alterar a pausa das rotinas. Tenta de novo.");
+      return;
+    }
+    setRotinasPausadas(novo);
+    router.refresh();
+  }
+
   const mostrarResumo = contratados.length > 0 || descontoMensal > 0 || acrescimoMensal > 0;
 
   return (
     <div>
+      <div
+        className={`mb-4 flex items-center justify-between gap-3 rounded-xl border p-3 ${
+          rotinasPausadas ? "border-amber-500/30 bg-amber-500/5" : "border-border bg-card/60"
+        }`}
+      >
+        <div className="min-w-0">
+          <p className="text-sm text-text">
+            {rotinasPausadas ? "Rotinas mensais pausadas" : "Rotinas mensais ativas"}
+          </p>
+          <p className="text-[11px] leading-relaxed text-muted">
+            {rotinasPausadas
+              ? "Nenhum ciclo novo de tarefas é gerado pra esse cliente enquanto estiver pausado. Cobrança e demais dados continuam normais."
+              : "Serviços ligados a um ciclo no catálogo geram as tarefas do mês sozinhos. Pause se o contrato estiver parado."}
+          </p>
+        </div>
+        <Button size="sm" variant="secondary" onClick={alternarPausaRotinas} disabled={salvandoPausa}>
+          {salvandoPausa ? "..." : rotinasPausadas ? "Retomar" : "Pausar"}
+        </Button>
+      </div>
+
       <p className="mb-2 text-xs uppercase tracking-wide text-muted">Serviços contratados</p>
 
       <div className="mb-4 flex flex-col gap-2">

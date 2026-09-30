@@ -19,6 +19,7 @@ export default async function EditarServicoPage({ params }: { params: { id: stri
           valorUnitario: Number(servico.valorUnitario),
           clausulaContrato: servico.clausulaContrato || "",
           categoriaTarefa: servico.categoriaTarefa || "",
+          templateRotinaId: servico.templateRotinaId || "",
         }}
       />
     </div>

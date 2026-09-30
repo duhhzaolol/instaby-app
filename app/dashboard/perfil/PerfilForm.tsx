@@ -22,12 +22,14 @@ export function PerfilForm({
   nomeInicial,
   emailInicial,
   fotoUrlInicial,
+  cargaHorariaSemanalInicial,
   linksIniciais,
 }: {
   usuarioId: string;
   nomeInicial: string;
   emailInicial: string;
   fotoUrlInicial: string | null;
+  cargaHorariaSemanalInicial: number;
   linksIniciais: LinkUsuarioData[];
 }) {
   const router = useRouter();
@@ -44,6 +46,12 @@ export function PerfilForm({
   const [confirmarSenha, setConfirmarSenha] = useState("");
   const [salvandoSenha, setSalvandoSenha] = useState(false);
   const [okSenha, setOkSenha] = useState(false);
+
+  // "Cadastrar disponibilidade" (Etapa 4 v158) — usada como 100% de capacidade
+  // semanal dessa pessoa em Capacidade da equipe.
+  const [cargaHoraria, setCargaHoraria] = useState(String(cargaHorariaSemanalInicial));
+  const [salvandoCarga, setSalvandoCarga] = useState(false);
+  const [okCarga, setOkCarga] = useState(false);
 
   const [links, setLinks] = useState(linksIniciais);
   const [novoTipo, setNovoTipo] = useState(TIPOS_LINK_USUARIO[0].valor);
@@ -121,6 +129,26 @@ export function PerfilForm({
     setTimeout(() => setOkSenha(false), 2500);
   }
 
+  async function salvarCargaHoraria(e: React.FormEvent) {
+    e.preventDefault();
+    setSalvandoCarga(true);
+    setOkCarga(false);
+    const res = await fetch("/api/perfil", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cargaHorariaSemanal: Number(cargaHoraria) }),
+    });
+    setSalvandoCarga(false);
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      alert(data?.erro || "Não consegui salvar sua disponibilidade.");
+      return;
+    }
+    setOkCarga(true);
+    router.refresh();
+    setTimeout(() => setOkCarga(false), 2500);
+  }
+
   async function adicionarLink(e: React.FormEvent) {
     e.preventDefault();
     if (!novaUrl.trim()) return;
@@ -178,6 +206,35 @@ export function PerfilForm({
               </span>
             )}
           </div>
+        </form>
+      </Card>
+
+      <Card className="p-5">
+        <p className="mb-1 text-sm font-medium text-text">Disponibilidade</p>
+        <p className="mb-4 text-xs text-muted">
+          Sua carga horária semanal — usada em Capacidade da equipe pra comparar com o que está previsto pra você.
+        </p>
+        <form onSubmit={salvarCargaHoraria} className="flex items-end gap-3">
+          <div>
+            <Label>Horas por semana</Label>
+            <Input
+              type="number"
+              min="1"
+              step="1"
+              value={cargaHoraria}
+              onChange={(e) => setCargaHoraria(e.target.value)}
+              className="w-32"
+              required
+            />
+          </div>
+          <Button type="submit" size="sm" disabled={salvandoCarga}>
+            {salvandoCarga ? "Salvando..." : "Salvar"}
+          </Button>
+          {okCarga && (
+            <span className="flex items-center gap-1 text-xs text-emerald-400">
+              <Check size={13} /> Salvo
+            </span>
+          )}
         </form>
       </Card>
 

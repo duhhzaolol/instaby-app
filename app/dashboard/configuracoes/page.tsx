@@ -24,7 +24,10 @@ export default async function ConfiguracoesPage() {
       select: { id: true, nome: true, logoUrl: true, exibirLogoPublico: true },
       orderBy: { nome: "asc" },
     }),
-    prisma.templateTarefas.findMany({ orderBy: { nome: "asc" } }),
+    prisma.templateTarefas.findMany({
+      orderBy: { nome: "asc" },
+      include: { etapas: { orderBy: { ordem: "asc" } } },
+    }),
   ]);
 
   return (
@@ -110,8 +113,10 @@ export default async function ConfiguracoesPage() {
           <div>
             <p className="mb-1 text-sm font-medium text-text">Templates de tarefas</p>
             <p className="mb-4 text-sm text-muted">
-              Checklists reaproveitáveis — ex: "Captação" com preparar pauta, conferir equipamento, captação, backup,
-              seleção, edição. Aplica de uma vez num conteúdo ou cliente, sem digitar tarefa por tarefa.
+              Lista simples: checklist reaproveitável sem prazo, ex: "Captação" com preparar pauta, conferir
+              equipamento, captação, backup. Ciclo completo: planejamento → roteiro → captação → edição → aprovação →
+              publicação → relatório, cada etapa com prazo calculado a partir da data de entrega/publicação — pode
+              ser ligado a um serviço do catálogo pra gerar sozinho todo mês (ver Catálogo de Serviços).
             </p>
             <TemplatesTarefasForm templates={templatesTarefas} />
           </div>

@@ -33,6 +33,8 @@ export const CAMPO_HISTORICO_LABEL: Record<string, string> = {
   statusConteudo: "Status da revisão",
   linkPublicacao: "Link da publicação",
   videoBrutoExcecao: "Exceção de vídeo bruto",
+  // Etapa 4 v158 — capacidade/estimativa.
+  estimativaHoras: "Estimativa de horas",
 };
 
 export function campoHistoricoLabel(campo: string) {

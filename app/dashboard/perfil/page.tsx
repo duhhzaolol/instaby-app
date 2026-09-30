@@ -37,6 +37,7 @@ export default async function PerfilPage() {
           nomeInicial={usuario.nome}
           emailInicial={usuario.email}
           fotoUrlInicial={usuario.fotoUrl}
+          cargaHorariaSemanalInicial={usuario.cargaHorariaSemanal}
           linksIniciais={links.map((l) => ({ id: l.id, tipo: l.tipo, label: l.label, url: l.url }))}
         />
       </div>

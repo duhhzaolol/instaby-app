@@ -1,4 +1,37 @@
-# Instaby App — v157
+# Instaby App — v158
+
+**Etapa 4** ("Capacidade da equipe e rotinas recorrentes"). Tudo aditivo ao
+banco e reaproveitando componentes existentes.
+
+## O que entrou
+- **Estimativa de horas** na tarefa (painel lateral) + histórico da alteração.
+- **Capacidade** (`/dashboard/capacidade`): previsto x disponível por pessoa,
+  4 semanas, verde/âmbar/vermelho, conflito prazo x ausência. Qualquer pessoa
+  vê a própria linha; `gerenciarEquipe` vê a equipe (decisão reversível).
+- **Ausências** (folga/férias/atestado/compromisso): criar e excluir;
+  `cargaHorariaSemanal` editável no perfil e em Equipe.
+- **Dependências** entre tarefas (recusa ciclos) e **prévia de impacto** antes
+  de alterar prazo — mostra, nunca bloqueia.
+- **Templates em ciclo completo** (etapas com dias relativos à data-alvo),
+  editor em Configurações; modo lista simples preservado.
+- **Aplicar template** na aba Tarefas do cliente; lista leve em
+  `GET /api/templates-tarefas/opcoes` (sem valores; só exige login).
+- **Rotinas mensais**: serviço do catálogo -> template (`templateRotinaId`);
+  `garantirRotinasMensaisDoMes` gera 1x por (serviço contratado, mês, ano)
+  (constraint única em `RotinaGerada`); data-alvo = último dia do mês.
+  `Cliente.rotinasPausadas` suspende (toggle na aba Serviços).
+- **Permissões no servidor**: `PATCH /api/clientes/[id]` agora exige acesso ao
+  cliente; campos financeiros exigem `verFinanceiro`; templates exigem
+  `gerenciarConfiguracoes` (aplicar exige só acesso ao cliente).
+
+## Pendências / atenção
+- Rodar `prisma db push`/migração (novas tabelas e colunas, todas aditivas).
+- `DELETE /api/clientes/[id]` segue sem checagem de permissão (pré-existente):
+  falta decidir qual permissão deve valer.
+- Validação feita por tsc (sem novos erros vs. baseline) e leitura de código;
+  não havia banco no ambiente para teste ponta a ponta.
+
+# (anterior) v157
 
 **Etapa 3** do plano de evolução em 11 etapas ("Entregas contratadas e
 solicitações"), a partir da especificação anexada pelo usuário. Reaproveita o

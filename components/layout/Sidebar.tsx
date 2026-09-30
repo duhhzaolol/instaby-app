@@ -19,6 +19,7 @@ import {
   Megaphone,
   LogOut,
   ChevronRight,
+  Gauge,
 } from "lucide-react";
 import { BotaoTema } from "@/components/ui/TemaAlternativo";
 import { IconeEstilizado } from "@/components/ui/IconeEstilizado";
@@ -64,6 +65,9 @@ const menuGeral = [
   { chave: "clientes", label: "Clientes", href: "/dashboard/clientes", icon: Users },
   { chave: "trafego", label: "Tráfego pago", href: "/dashboard/trafego", icon: Megaphone },
   { chave: "horas", label: "Horas", href: "/dashboard/horas", icon: Clock },
+  // Etapa 4 (v158) — visível pra todo mundo (cada um vê ao menos a própria
+  // capacidade; gerenciarEquipe também vê a equipe inteira, ver a própria página).
+  { chave: "capacidade", label: "Capacidade", href: "/dashboard/capacidade", icon: Gauge },
 ] as const;
 
 function ItemMenu({

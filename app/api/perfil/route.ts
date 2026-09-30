@@ -34,6 +34,16 @@ export async function PATCH(request: NextRequest) {
     data.fotoUrl = body.fotoUrl || null;
   }
 
+  // "Cadastrar disponibilidade" da própria pessoa (Etapa 4 v158) — usada como
+  // 100% de capacidade em Capacidade da equipe (lib/capacidade.ts).
+  if (body.cargaHorariaSemanal !== undefined) {
+    const horas = Number(body.cargaHorariaSemanal);
+    if (!(horas > 0)) {
+      return NextResponse.json({ erro: "Carga horária semanal precisa ser maior que zero." }, { status: 400 });
+    }
+    data.cargaHorariaSemanal = horas;
+  }
+
   // Trocar senha exige confirmar a senha atual — diferente da edição de Equipe
   // (onde quem tem gerenciarEquipe pode resetar sem saber a senha de ninguém),
   // porque aqui não tem uma permissão de "gerente" cuidando por trás.

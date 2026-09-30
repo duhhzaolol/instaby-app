@@ -35,6 +35,14 @@ export async function POST(request: NextRequest) {
         // pra alimentar o controle mensal de entregas (ver lib/entregas.ts).
         // Opcional: string vazia vira null (mesmo padrão de clausulaContrato).
         categoriaTarefa: body.categoriaTarefa || null,
+        // Etapa 4 (v158) — liga esse serviço a um ciclo completo de tarefas
+        // (TemplateTarefas com etapas), que passa a ser gerado automaticamente
+        // todo mês pra cliente com esse serviço contratado — ver
+        // garantirRotinasMensaisDoMes em lib/garantirRecorrentes.ts. Sem
+        // validação extra aqui de propósito (mesmo padrão de categoriaTarefa
+        // acima): um id inválido já é recusado pela constraint de chave
+        // estrangeira do banco, capturada pelo catch abaixo.
+        templateRotinaId: body.templateRotinaId || null,
       },
     });
 

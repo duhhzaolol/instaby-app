@@ -17,6 +17,7 @@ type Servico = {
   valorUnitario: number;
   clausulaContrato: string;
   categoriaTarefa: string;
+  templateRotinaId: string;
 };
 
 export default function EditarServicoForm({ servico }: { servico: Servico }) {
@@ -26,12 +27,26 @@ export default function EditarServicoForm({ servico }: { servico: Servico }) {
   const [categoria, setCategoria] = useState(servico.categoria);
   const [categoriasExistentes, setCategoriasExistentes] = useState<string[]>([]);
   const [categoriaTarefa, setCategoriaTarefa] = useState(servico.categoriaTarefa);
+  const [templatesCiclo, setTemplatesCiclo] = useState<{ id: string; nome: string; totalEtapas: number }[]>([]);
+  const [templateRotinaId, setTemplateRotinaId] = useState(servico.templateRotinaId);
 
   useEffect(() => {
     fetch("/api/servicos")
       .then((r) => r.json())
       .then((servicos: { categoria: string }[]) => {
         setCategoriasExistentes(Array.from(new Set(servicos.map((s) => s.categoria))).sort());
+      });
+    // Etapa 4 (v158) — ver comentário equivalente em app/dashboard/servicos/novo/page.tsx.
+    fetch("/api/templates-tarefas/opcoes")
+      .then((r) => r.json())
+      .then((templates: { id: string; nome: string; temCiclo: boolean; totalEtapas: number }[]) => {
+        setTemplatesCiclo(
+          (Array.isArray(templates) ? templates : [])
+            // Sempre inclui o template já ligado (mesmo que tenha perdido as etapas
+            // depois), pra nunca fazer a seleção salva sumir sozinha do <select>.
+            .filter((t) => t.temCiclo || t.id === servico.templateRotinaId)
+            .map((t) => ({ id: t.id, nome: t.nome, totalEtapas: t.totalEtapas }))
+        );
       });
   }, []);
   const [unidade, setUnidade] = useState(servico.unidade);
@@ -54,6 +69,7 @@ export default function EditarServicoForm({ servico }: { servico: Servico }) {
         valorUnitario: valor,
         clausulaContrato,
         categoriaTarefa: categoriaTarefa || null,
+        templateRotinaId: templateRotinaId || null,
       }),
     });
 
@@ -111,6 +127,30 @@ export default function EditarServicoForm({ servico }: { servico: Servico }) {
           Opcional. Só preencha se esse serviço tiver uma quantidade mensal pra acompanhar na aba
           "Entregas" do cliente (ex: "Reels" → Criar Reel).
         </p>
+
+        <Label>Rotina mensal automática</Label>
+        {templatesCiclo.length === 0 ? (
+          <p className="mb-6 text-[11px] leading-relaxed text-muted">
+            Nenhum template em modo "ciclo completo" cadastrado ainda — crie um em Configurações →
+            Templates de tarefas pra poder ligar aqui.
+          </p>
+        ) : (
+          <>
+            <Select value={templateRotinaId} onChange={(e) => setTemplateRotinaId(e.target.value)} className="mb-1.5">
+              <option value="">— Nenhuma —</option>
+              {templatesCiclo.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.nome} ({t.totalEtapas} etapas)
+                </option>
+              ))}
+            </Select>
+            <p className="mb-6 text-[11px] leading-relaxed text-muted">
+              Opcional. Quando marcado, todo cliente com esse serviço contratado (ativo) ganha esse
+              ciclo de tarefas gerado sozinho todo mês — prazo calculado a partir do último dia do mês.
+              Pausa por cliente em Clientes → ficha → Serviços.
+            </p>
+          </>
+        )}
 
         <Button type="submit" disabled={enviando} className="w-full">
           {enviando ? "Salvando..." : "Salvar alterações"}

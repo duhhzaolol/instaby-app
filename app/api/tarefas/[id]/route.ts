@@ -46,6 +46,19 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
           },
         },
       },
+      // Dependências entre tarefas (Etapa 4 v158) — "dependeDe" é de quem ESTA
+      // tarefa depende (precisa que termine antes); "bloqueiaDe" é quem depende
+      // DELA (fica pra trás se essa atrasar). Ver comentário completo em
+      // schema.prisma no model DependenciaTarefa/Tarefa.
+      dependeDe: {
+        include: { dependeDe: { select: { id: true, titulo: true, prazo: true, status: true } } },
+      },
+      bloqueiaDe: {
+        include: { tarefa: { select: { id: true, titulo: true, prazo: true, status: true } } },
+      },
+      // "gerada automaticamente" (Etapa 4 v158) — só pra mostrar de onde essa
+      // tarefa veio; nunca muda o comportamento de editar/excluir.
+      rotinaGerada: { select: { id: true, mes: true, ano: true } },
     },
   });
   if (!tarefa) return NextResponse.json({ erro: "Não encontrada" }, { status: 404 });
@@ -318,6 +331,18 @@ export async function PATCH(
   if (body.link !== undefined && (body.link || null) !== (existente.link || null)) {
     historico.push({ campo: "link", valorAntigo: existente.link || "Nenhum", valorNovo: body.link || "Nenhum" });
   }
+  // Etapa 4 (v158) — "adicionar estimativa de tempo às tarefas", mesmo padrão de
+  // campo simples opcional que os outros acima (ex.: link).
+  if (
+    body.estimativaHoras !== undefined &&
+    (body.estimativaHoras ?? null) !== (existente.estimativaHoras ?? null)
+  ) {
+    historico.push({
+      campo: "estimativaHoras",
+      valorAntigo: existente.estimativaHoras != null ? `${existente.estimativaHoras}h` : "Sem estimativa",
+      valorNovo: body.estimativaHoras != null ? `${body.estimativaHoras}h` : "Sem estimativa",
+    });
+  }
   if (statusMudou) {
     historico.push({ campo: "status", valorAntigo: statusLabel(existente.status), valorNovo: statusLabel(statusFinal) });
   }
@@ -353,6 +378,9 @@ export async function PATCH(
       ...(body.categoria !== undefined && { categoria: body.categoria }),
       ...(body.prazo !== undefined && { prazo: body.prazo ? new Date(body.prazo) : null }),
       ...(body.link !== undefined && { link: body.link || null }),
+      ...(body.estimativaHoras !== undefined && {
+        estimativaHoras: body.estimativaHoras != null ? Number(body.estimativaHoras) : null,
+      }),
       // "sem responsável" é um valor válido — manda null explícito pra tirar o
       // responsável de uma tarefa (não confundir com "undefined" de não mexer).
       ...(body.responsavelId !== undefined && { responsavelId: body.responsavelId || null }),

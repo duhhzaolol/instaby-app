@@ -28,6 +28,9 @@ type MembroEquipe = {
   acessoClienteCompleto: boolean;
   todosClientes: boolean;
   clienteIds: string[];
+  // "Cadastrar disponibilidade... da equipe" (Etapa 4 v158) — usada em
+  // Capacidade da equipe como 100% da capacidade semanal dessa pessoa.
+  cargaHorariaSemanal: number;
 };
 
 const CAPACIDADES: { chave: keyof MembroEquipe; label: string; ajuda: string }[] = [
@@ -127,6 +130,7 @@ function formVazio(): Omit<MembroEquipe, "id" | "master"> & { senha: string } {
     acessoClienteCompleto: true,
     todosClientes: true,
     clienteIds: [],
+    cargaHorariaSemanal: 40,
   };
 }
 
@@ -384,6 +388,16 @@ function FormMembro({
             type="password"
             value={form.senha}
             onChange={(e) => setForm((f: any) => ({ ...f, senha: e.target.value }))}
+          />
+        </div>
+        <div>
+          <Label>Horas por semana (disponibilidade)</Label>
+          <Input
+            type="number"
+            min="1"
+            step="1"
+            value={form.cargaHorariaSemanal}
+            onChange={(e) => setForm((f: any) => ({ ...f, cargaHorariaSemanal: e.target.value }))}
           />
         </div>
       </div>

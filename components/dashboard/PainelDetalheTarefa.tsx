@@ -15,6 +15,10 @@ import {
   AlertCircle,
   Send,
   ChevronDown,
+  GitBranch,
+  Repeat,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import {
   visualDaCategoriaTarefa,
@@ -42,6 +46,11 @@ type HistoricoItem = {
   createdAt: string;
   usuario: { nome: string } | null;
 };
+// Dependências entre tarefas (Etapa 4 v158) — "ligada" é a outra tarefa do
+// vínculo; "id" é o id do VÍNCULO em si (DependenciaTarefa), usado pra remover.
+type TarefaLigada = { id: string; titulo: string; prazo: string | null; status: string };
+type DependenciaLigacao = { id: string; dependeDe: TarefaLigada };
+type BloqueioLigacao = { id: string; tarefa: TarefaLigada };
 type TarefaDetalhe = {
   id: string;
   titulo: string;
@@ -74,6 +83,11 @@ type TarefaDetalhe = {
   videoBrutoExcecaoMotivo: string | null;
   videoBrutoExcecaoPor: Pessoa | null;
   videoBrutoExcecaoEm: string | null;
+  // Capacidade/dependências (Etapa 4 v158).
+  estimativaHoras: number | null;
+  dependeDe: DependenciaLigacao[];
+  bloqueiaDe: BloqueioLigacao[];
+  rotinaGerada: { id: string; mes: number; ano: number } | null;
 };
 
 function horaAtual() {
@@ -90,6 +104,13 @@ function horaDe(iso: string) {
 }
 
 const STATUS_ORDEM = ["a_fazer", "em_andamento", "bloqueada", "feito"];
+
+// Mesma lista usada em app/dashboard/clientes/[id]/EntregasTab.tsx — só pro
+// rótulo do badge "gerada automaticamente" (Etapa 4 v158).
+const NOMES_MESES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
 
 // Painel lateral de detalhes da tarefa (Etapa 1 v152) — ponto único de edição
 // (título, descrição, responsável, prioridade, prazo, checklist, arquivos,
@@ -111,7 +132,15 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
   const [data, setData] = useState("");
   const [hora, setHora] = useState("");
   const [link, setLink] = useState("");
+  const [estimativaHoras, setEstimativaHoras] = useState("");
   const [salvandoDetalhes, setSalvandoDetalhes] = useState(false);
+  const [verificandoImpacto, setVerificandoImpacto] = useState(false);
+  const [confirmandoImpacto, setConfirmandoImpacto] = useState<TarefaLigada[] | null>(null);
+
+  // Dependências entre tarefas (Etapa 4 v158).
+  const [candidatasDependencia, setCandidatasDependencia] = useState<TarefaLigada[]>([]);
+  const [novaDependenciaId, setNovaDependenciaId] = useState("");
+  const [salvandoDependencia, setSalvandoDependencia] = useState(false);
 
   const [statusPendente, setStatusPendente] = useState<string | null>(null);
   const [motivoBloqueio, setMotivoBloqueio] = useState("");
@@ -153,6 +182,7 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
       setData(d.prazo ? d.prazo.slice(0, 10) : "");
       setHora(d.prazo ? d.prazo.slice(11, 16) : "");
       setLink(d.link || "");
+      setEstimativaHoras(d.estimativaHoras != null ? String(d.estimativaHoras) : "");
       setMotivoBloqueio(d.motivoBloqueio || "");
       setBloqueioResponsavelId(d.bloqueioResponsavelId || "");
       setVideoBrutoExcecao(d.videoBrutoExcecao || false);
@@ -163,8 +193,19 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
     }
   }
 
+  // Candidatas a nova dependência (Etapa 4 v158) — função à parte pra poder
+  // recarregar sozinha depois de criar/remover um vínculo, sem precisar refazer
+  // o GET inteiro da tarefa junto.
+  function carregarCandidatasDependencia() {
+    fetch(`/api/tarefas/${tarefaId}/dependencias`)
+      .then((r) => (r.ok ? r.json() : { candidatas: [] }))
+      .then((d) => setCandidatasDependencia(d.candidatas || []))
+      .catch(() => {});
+  }
+
   useEffect(() => {
     carregar();
+    carregarCandidatasDependencia();
     fetch("/api/usuarios")
       .then((r) => (r.ok ? r.json() : []))
       .then(setPessoas)
@@ -274,7 +315,32 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
     setTarefa((t) => (t ? { ...t, ...atualizado } : t));
   }
 
+  // "Mostrar impactos antes de alterar prazos" (Etapa 4 v158) — só verifica
+  // quando o prazo realmente mudou E existe alguma tarefa que depende desta
+  // (tarefa.bloqueiaDe): sem isso não tem impacto nenhum pra calcular, então nem
+  // vale a pena gastar a chamada. NUNCA bloqueia — só pausa pra mostrar o aviso e
+  // pede confirmação (ver lib/dependenciasTarefa.ts).
   async function salvarDetalhes() {
+    if (!tarefa) return;
+    const prazo = data ? `${data}T${hora || "00:00"}:00-03:00` : null;
+    const prazoNovoDate = prazo ? new Date(prazo) : null;
+    const prazoAntigoDate = tarefa.prazo ? new Date(tarefa.prazo) : null;
+    const prazoMudou = (prazoNovoDate?.getTime() ?? null) !== (prazoAntigoDate?.getTime() ?? null);
+
+    if (prazoNovoDate && prazoMudou && tarefa.bloqueiaDe.length > 0) {
+      setVerificandoImpacto(true);
+      const res = await fetch(`/api/tarefas/${tarefa.id}/impacto-prazo?novoPrazo=${encodeURIComponent(prazoNovoDate.toISOString())}`);
+      const d = await res.json().catch(() => null);
+      setVerificandoImpacto(false);
+      if (d?.impactadas?.length > 0) {
+        setConfirmandoImpacto(d.impactadas);
+        return;
+      }
+    }
+    await salvarDetalhesDeVerdade();
+  }
+
+  async function salvarDetalhesDeVerdade() {
     setSalvandoDetalhes(true);
     const prazo = data ? `${data}T${hora || "00:00"}:00-03:00` : null;
     const atualizado = await patch({
@@ -284,9 +350,44 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
       responsavelId: responsavelId || null,
       prazo,
       link: link || null,
+      estimativaHoras: estimativaHoras.trim() !== "" ? Number(estimativaHoras) : null,
     });
     setSalvandoDetalhes(false);
+    setConfirmandoImpacto(null);
     if (atualizado) setTarefa((t) => (t ? { ...t, ...atualizado } : t));
+  }
+
+  // Depende de/bloqueia (Etapa 4 v158) — cada vínculo já salva na hora (mesmo
+  // espírito de ChecklistTarefa: não faz parte do "Salvar alterações" em lote).
+  async function adicionarDependencia() {
+    if (!novaDependenciaId || !tarefa) return;
+    setSalvandoDependencia(true);
+    const res = await fetch(`/api/tarefas/${tarefa.id}/dependencias`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dependeDeId: novaDependenciaId }),
+    });
+    setSalvandoDependencia(false);
+    if (!res.ok) {
+      const d = await res.json().catch(() => null);
+      alert(d?.erro || "Não consegui criar essa dependência.");
+      return;
+    }
+    setNovaDependenciaId("");
+    carregar();
+    carregarCandidatasDependencia();
+  }
+
+  async function removerDependencia(vinculoId: string) {
+    if (!window.confirm("Remover esse vínculo de dependência?")) return;
+    const res = await fetch(`/api/dependencias/${vinculoId}`, { method: "DELETE" });
+    if (!res.ok) {
+      const d = await res.json().catch(() => null);
+      alert(d?.erro || "Não consegui remover esse vínculo.");
+      return;
+    }
+    carregar();
+    carregarCandidatasDependencia();
   }
 
   async function verificarVideoBruto() {
@@ -601,6 +702,17 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
               </div>
             </div>
 
+            <label className="mb-1 block text-xs text-muted">Estimativa (horas)</label>
+            <input
+              type="number"
+              min="0"
+              step="0.5"
+              value={estimativaHoras}
+              onChange={(e) => setEstimativaHoras(e.target.value)}
+              placeholder="Ex.: 2"
+              className="mb-3 h-9 w-full rounded-lg border border-border bg-card/60 px-2 text-xs text-text outline-none focus:border-accent/50"
+            />
+
             <label className="mb-1 block text-xs text-muted">Link / arquivo</label>
             <input
               value={link}
@@ -703,18 +815,122 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
               </div>
             )}
 
+            {/* Impacto no prazo (Etapa 4 v158) — "mostrar impactos antes de
+                alterar prazos". Nunca impede: só avisa e pede confirmação. */}
+            {confirmandoImpacto && (
+              <div className="mb-3 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
+                <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-amber-400">
+                  <AlertCircle size={12} /> Mudar esse prazo deixa {confirmandoImpacto.length === 1 ? "esta tarefa apertada" : "estas tarefas apertadas"}:
+                </p>
+                <ul className="mb-2 flex flex-col gap-0.5">
+                  {confirmandoImpacto.map((t) => (
+                    <li key={t.id} className="text-[11px] text-muted">
+                      • {t.titulo}
+                      {t.prazo ? ` — prazo em ${new Date(t.prazo).toLocaleDateString("pt-BR")}` : ""}
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex gap-2">
+                  <button
+                    onClick={salvarDetalhesDeVerdade}
+                    disabled={salvandoDetalhes}
+                    className="h-8 flex-1 rounded-lg bg-amber-500 text-xs font-medium text-white disabled:opacity-40"
+                  >
+                    {salvandoDetalhes ? "Salvando..." : "Salvar assim mesmo"}
+                  </button>
+                  <button
+                    onClick={() => setConfirmandoImpacto(null)}
+                    className="h-8 rounded-lg border border-border px-2.5 text-xs text-muted hover:text-text"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
+
             <button
               onClick={salvarDetalhes}
-              disabled={salvandoDetalhes}
+              disabled={salvandoDetalhes || verificandoImpacto}
               className="mb-4 h-9 w-full rounded-lg bg-accent text-xs font-medium text-white disabled:opacity-50"
             >
-              {salvandoDetalhes ? "Salvando..." : "Salvar alterações"}
+              {verificandoImpacto ? "Verificando impacto no prazo..." : salvandoDetalhes ? "Salvando..." : "Salvar alterações"}
             </button>
 
             {/* Checklist */}
             <div className="mb-4 border-t border-border pt-3">
               <p className="mb-2 text-xs font-medium text-text">Sub-passos</p>
               <ChecklistTarefa tarefaId={tarefa.id} itens={tarefa.checklist} />
+            </div>
+
+            {/* Dependências entre tarefas (Etapa 4 v158) — cada vínculo salva na
+                hora (não entra no "Salvar alterações" em lote). "Bloqueia" é só
+                leitura + remover; criar um vínculo novo sempre parte do lado
+                "depende de" (decisão reversível — evita duplicar o mesmo
+                formulário dos dois lados). */}
+            <div className="mb-4 border-t border-border pt-3">
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-text">
+                <GitBranch size={12} /> Dependências
+              </p>
+
+              {tarefa.rotinaGerada && (
+                <p className="mb-2 flex items-center gap-1.5 text-[11px] text-muted">
+                  <Repeat size={11} /> Gerada automaticamente ({NOMES_MESES[tarefa.rotinaGerada.mes]}/{tarefa.rotinaGerada.ano})
+                </p>
+              )}
+
+              <p className="mb-1 text-[11px] font-medium text-muted">Esta tarefa depende de</p>
+              {tarefa.dependeDe.length === 0 && <p className="mb-2 text-xs text-muted">Nenhuma.</p>}
+              {tarefa.dependeDe.length > 0 && (
+                <div className="mb-2 flex flex-col gap-1">
+                  {tarefa.dependeDe.map((v) => (
+                    <div key={v.id} className="flex items-center justify-between gap-2 rounded-lg bg-card/60 px-2.5 py-1.5 text-xs">
+                      <span className={v.dependeDe.status === "feito" ? "text-muted line-through" : "text-text"}>
+                        {v.dependeDe.titulo}
+                      </span>
+                      <button onClick={() => removerDependencia(v.id)} className="shrink-0 text-muted hover:text-red-400">
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="mb-3 flex items-center gap-1.5">
+                <select
+                  value={novaDependenciaId}
+                  onChange={(e) => setNovaDependenciaId(e.target.value)}
+                  className="h-8 w-full rounded-lg border border-border bg-card/60 px-2 text-xs text-text"
+                >
+                  <option value="">Adicionar dependência...</option>
+                  {candidatasDependencia.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.titulo}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={adicionarDependencia}
+                  disabled={!novaDependenciaId || salvandoDependencia}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border text-muted hover:text-text disabled:opacity-40"
+                >
+                  <Plus size={13} />
+                </button>
+              </div>
+
+              {tarefa.bloqueiaDe.length > 0 && (
+                <>
+                  <p className="mb-1 text-[11px] font-medium text-muted">Tarefas que dependem desta</p>
+                  <div className="flex flex-col gap-1">
+                    {tarefa.bloqueiaDe.map((v) => (
+                      <div key={v.id} className="flex items-center justify-between gap-2 rounded-lg bg-card/60 px-2.5 py-1.5 text-xs text-text">
+                        <span>{v.tarefa.titulo}</span>
+                        <button onClick={() => removerDependencia(v.id)} className="shrink-0 text-muted hover:text-red-400">
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Revisão/aprovação de conteúdo (Etapa 2 v153) — só reel/arte */}

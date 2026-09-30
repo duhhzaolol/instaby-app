@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getUsuarioAtual, permissoesDe, podeVerCliente } from "@/lib/permissoes";
 
 export async function GET(
   request: NextRequest,
@@ -21,7 +22,36 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  // Permissão no servidor (Etapa 4 v158, achado ao ligar o toggle de pausa de
+  // rotinas): essa rota só exigia sessão (middleware) — qualquer pessoa logada
+  // podia alterar qualquer cliente, inclusive desconto/renovação. Agora: precisa
+  // poder ver ESSE cliente (ou ter gerenciarConfiguracoes, caso de Logos na
+  // proposta); campos de valor/contrato exigem verFinanceiro; pausar rotinas exige
+  // verFinanceiro ou acessoClienteCompleto (quem enxerga a aba Serviços/Tarefas).
+  const usuario = await getUsuarioAtual();
+  if (!usuario) return NextResponse.json({ erro: "Não autenticado" }, { status: 401 });
+  const pode = permissoesDe(usuario);
+  if (!pode.gerenciarConfiguracoes && !(await podeVerCliente(usuario, params.id))) {
+    return NextResponse.json({ erro: "Não autorizado" }, { status: 403 });
+  }
+
   const body = await request.json();
+
+  const camposFinanceiros = [
+    "descontoMensal",
+    "acrescimoMensal",
+    "prazoContratoMeses",
+    "dataInicioContrato",
+    "valorRenovacao",
+    "mensalidade",
+    "proximoVencimento",
+  ];
+  if (!pode.verFinanceiro && camposFinanceiros.some((c) => body[c] !== undefined)) {
+    return NextResponse.json({ erro: "Não autorizado" }, { status: 403 });
+  }
+  if (body.rotinasPausadas !== undefined && !pode.verFinanceiro && !pode.acessoClienteCompleto) {
+    return NextResponse.json({ erro: "Não autorizado" }, { status: 403 });
+  }
 
   const cliente = await prisma.cliente.update({
     where: { id: params.id },
@@ -47,6 +77,7 @@ export async function PATCH(
       }),
       ...(body.exibirLogoPublico !== undefined && { exibirLogoPublico: body.exibirLogoPublico }),
       ...(body.cor !== undefined && { cor: body.cor }),
+      ...(body.rotinasPausadas !== undefined && { rotinasPausadas: !!body.rotinasPausadas }),
       ...(body.redesGerenciadas !== undefined && { redesGerenciadas: body.redesGerenciadas }),
     },
   });
