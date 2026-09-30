@@ -9,7 +9,10 @@ export type TipoNotificacao =
   // Etapa 2 v153 — fluxo de revisão/aprovação de conteúdo (ver VersaoConteudo/
   // ComentarioRevisao em prisma/schema.prisma).
   | "comentario_revisao"
-  | "revisao_aprovada";
+  | "revisao_aprovada"
+  // Etapa 3 v157 — cliente enviou um pedido pelo formulário público
+  // (ver app/solicitar/[clienteId]).
+  | "solicitacao_cliente";
 
 type CriarNotificacaoInput = {
   usuarioId: string; // destinatário

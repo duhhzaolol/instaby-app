@@ -32,6 +32,11 @@ export type ResultadoImportacaoMeta = {
   // arquivo vem com uma única linha de texto "No data available.") — pra dar um aviso
   // específico em vez do genérico "não reconheci esse arquivo" (ver montarPrevia).
   semDadosNoPeriodo: boolean;
+  // Nome da conta de anúncios (spec §1: "mostre cliente, CONTA, período...") — é um
+  // valor por ARQUIVO, não por linha (o export do Meta é sempre de uma conta só), por
+  // isso não mora em LinhaCampanhaMeta. Só vem preenchido quando o arquivo traz essa
+  // coluna reconhecível; senão fica null e a prévia não mostra nada errado, só omite.
+  contaAnuncios: string | null;
 };
 
 // Nomes de coluna variam um pouco conforme o tipo de relatório/idioma exportado do Meta.
@@ -55,6 +60,7 @@ const MAPA_COLUNAS: Record<string, string[]> = {
     "ad set budget type",
   ],
   termino: ["termino", "término", "ended", "end date"],
+  contaAnuncios: ["nome da conta", "conta de anuncios", "conta de anúncios", "account name", "account", "conta"],
 };
 
 export function normalizar(texto: string) {
@@ -174,6 +180,21 @@ export function processarLinhasBrutas(
   const diaADia = linhas.length > 0 && linhas.every((l) => l.inicio === l.fim);
   const temIdExterno = !!colunas.idExterno && linhas.some((l) => !!l.idExterno);
 
+  // Conta de anúncios: um valor só pro arquivo inteiro (não por linha) — pega o primeiro
+  // não vazio. Um export do Meta pode, em tese, misturar contas na mesma planilha; como
+  // isso é só informativo na prévia/histórico (nunca decide nada sozinho), não vale a
+  // pena tratar esse caso raro como erro — só mostramos a primeira que aparecer.
+  let contaAnuncios: string | null = null;
+  if (colunas.contaAnuncios) {
+    for (const linha of linhasBrutas) {
+      const valor = String(linha[colunas.contaAnuncios] || "").trim();
+      if (valor) {
+        contaAnuncios = valor;
+        break;
+      }
+    }
+  }
+
   // O Meta não manda um arquivo vazio quando não há campanhas no período — ele manda uma
   // única linha com o texto "No data available." numa célula só. Detectamos isso aqui (e não
   // só pelo `linhas.length === 0`) pra poder dar um aviso específico em vez do genérico "não
@@ -182,7 +203,15 @@ export function processarLinhasBrutas(
     linhas.length === 0 &&
     linhasBrutas.some((linha) => Object.values(linha).some((v) => String(v || "").toLowerCase().includes("no data available")));
 
-  return { linhas, linhasIgnoradas: ignoradas, colunasReconhecidas: reconhecidas, diaADia, temIdExterno, semDadosNoPeriodo };
+  return {
+    linhas,
+    linhasIgnoradas: ignoradas,
+    colunasReconhecidas: reconhecidas,
+    diaADia,
+    temIdExterno,
+    semDadosNoPeriodo,
+    contaAnuncios,
+  };
 }
 
 // Entrada a partir de texto CSV bruto — funciona no navegador e no servidor (Papa.parse

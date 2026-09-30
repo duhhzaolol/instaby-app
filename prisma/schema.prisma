@@ -39,7 +39,7 @@ model Usuario {
   gerenciarConfiguracoes Boolean @default(false) // resto de Configurações (site, catálogo, automações etc.)
   verArquivos            Boolean @default(false) // vê a aba "Arquivos" (pastas do Drive) dentro do cliente
   // false = dentro de um cliente, só vê Arquivos (se verArquivos) e Horas — as abas gerais
-  // (Visão Geral, Contatos, Onboarding, Solicitações, Tarefas, Serviços, Links) ficam ocultas.
+  // (Visão Geral, Contatos, Onboarding, Solicitações, Tarefas, Entregas, Serviços, Links) ficam ocultas.
   // Default true pra não mudar nada de quem já existe; só fica false quando alguém liga
   // isso de propósito (ex: preset "Editor" em Equipe) pra um acesso bem restrito.
   acessoClienteCompleto  Boolean @default(true)
@@ -84,6 +84,10 @@ model Usuario {
   movimentacoesVerbaCriadas MovimentacaoVerba[]
   campanhasAvaliadas        Campanha[]
   relatoriosTrafegoGerados  RelatorioTrafego[]
+
+  // Linhas de histórico geradas por alterações que essa pessoa fez em serviços
+  // contratados (Etapa 3 v157) — mesmo padrão opcional de historicoTarefaAlteracoes.
+  historicoServicosContratados HistoricoServicoContratado[]
 
   createdAt        DateTime  @default(now())
   tentativasFalhas Int       @default(0) // contador de senhas erradas seguidas — zera a cada acerto
@@ -239,6 +243,10 @@ model Contato {
   // equipe a saber com quem falar.
   aprovacoes         VersaoConteudo[]
   comentariosRevisao ComentarioRevisao[]
+
+  // Pedidos feitos pelo formulário público de solicitação em nome desse contato
+  // (Etapa 3 v157) — ver Solicitacao.solicitanteContatoId.
+  solicitacoes Solicitacao[]
 }
 
 // Links e referências do cliente (Drive, Canva, redes sociais, etc) — Cliente.linkDrive
@@ -324,6 +332,52 @@ model Solicitacao {
   status      String   @default("pendente") // pendente | em_andamento | concluida
   extra       Boolean  @default(false) // true = fora do escopo contratado, pode precisar orçamento extra
   createdAt   DateTime @default(now())
+
+  // ---- Etapa 3 (v157) — formulário de solicitação do cliente --------------
+  // origem distingue o registro rápido interno (equipe anota o que o cliente
+  // pediu por fora — WhatsApp, reunião — comportamento ORIGINAL desse model,
+  // preservado 100%: toda linha de antes da v157 é "interno") do pedido feito
+  // pelo próprio cliente na página pública nova (/solicitar/[clienteId]).
+  origem String @default("interno") // interno | cliente
+
+  // Tipo do que está sendo pedido, no MESMO vocabulário de Tarefa.categoria
+  // (gravacao|arte|reel|fotos|campanha|reuniao|contato|orcamento|ideia|outra) —
+  // de propósito, pra não exigir tradução nenhuma na hora de "transformar em
+  // tarefa" e porque as perguntas dinâmicas do formulário público dependem dela
+  // (ver lib/solicitacoes.ts: PERGUNTAS_POR_CATEGORIA). Opcional — solicitação
+  // interna antiga não tem, e o formulário público exige escolher uma.
+  categoria String?
+
+  // Respostas às perguntas dinâmicas daquela categoria, {chave: resposta}.
+  // Formato: Record<string,string>. JSON pra não precisar de uma tabela nova por
+  // pergunta — sempre null em solicitação interna (só o formulário público usa).
+  respostas Json?
+
+  // Prazo desejado (preenchido pelo cliente no formulário) x confirmado
+  // (preenchido pela agência ao avaliar o pedido) — a Etapa 3 pede
+  // explicitamente que sejam dois campos separados, nunca o mesmo campo.
+  prazoDesejado   DateTime?
+  prazoConfirmado DateTime?
+
+  // Quem pediu, no formulário público — mesmo padrão dual de
+  // VersaoConteudo.aprovadoPorContato/aprovadoPorNomeLivre: um Contato já
+  // cadastrado OU um nome livre digitado na hora, nunca os dois, porque não
+  // existe login de cliente nesse sistema (Etapa 5 é quem resolve isso de vez).
+  solicitanteContatoId String?
+  solicitanteContato   Contato? @relation(fields: [solicitanteContatoId], references: [id])
+  solicitanteNomeLivre String?
+
+  // Arquivos/referências enviados junto (URL do /api/upload-imagem) — mesmo
+  // array simples de Tarefa.anexos, carregado pra lá ao converter em tarefa.
+  anexos String[] @default([])
+
+  // Preenchidos quando alguém "transforma em tarefa" e/ou "prepara orçamento
+  // adicional" — impede converter a mesma solicitação duas vezes por engano
+  // (a tela some com o botão e mostra o link pronto em vez dele).
+  tarefaGeradaId       String?    @unique
+  tarefaGerada         Tarefa?    @relation("SolicitacaoTarefaGerada", fields: [tarefaGeradaId], references: [id])
+  orcamentoPreparadoId String?    @unique
+  orcamentoPreparado   Orcamento? @relation(fields: [orcamentoPreparadoId], references: [id])
 }
 
 // Checklist reutilizável — aplica de uma vez várias tarefas num cliente/conteúdo
@@ -426,6 +480,16 @@ model Tarefa {
   videoBrutoExcecaoPorId  String?
   videoBrutoExcecaoPor    Usuario?  @relation("TarefaVideoBrutoExcecaoPor", fields: [videoBrutoExcecaoPorId], references: [id])
   videoBrutoExcecaoEm     DateTime?
+
+  // Anexos livres (URL) — array simples, mesmo espírito de Tarefa.link mas
+  // permitindo mais de um arquivo (Etapa 3 v157: nasceu pra preservar os anexos de
+  // uma Solicitação ao virar tarefa, mas fica disponível pra qualquer tarefa).
+  anexos String[] @default([])
+
+  // Preenchida sozinha quando essa tarefa nasceu de "transformar solicitação em
+  // tarefa" (Etapa 3 v157) — ver Solicitacao.tarefaGeradaId. Null pra qualquer
+  // tarefa criada do jeito normal (o padrão até aqui).
+  solicitacaoOrigem Solicitacao? @relation("SolicitacaoTarefaGerada")
 }
 
 // Sub-passo de dentro de uma tarefa (redesign v144, Parte 2) — ver Tarefa.checklist.
@@ -565,7 +629,7 @@ model Notificacao {
   // HistoricoTarefa/ComentarioTarefa, que preservam autoria como "opcional").
   usuario Usuario @relation("NotificacaoDestinatario", fields: [usuarioId], references: [id], onDelete: Cascade)
 
-  tipo   String // tarefa_atribuida | tarefa_sem_responsavel | comentario_tarefa | tarefa_bloqueada | comentario_relatorio | comentario_revisao | revisao_aprovada
+  tipo   String // tarefa_atribuida | tarefa_sem_responsavel | comentario_tarefa | tarefa_bloqueada | comentario_relatorio | comentario_revisao | revisao_aprovada | solicitacao_cliente
   titulo String
   corpo  String?
   link   String? // rota interna pra abrir ao clicar, ex: "/dashboard/tarefas?tarefa=ID"
@@ -599,6 +663,17 @@ model Servico {
   categoria       String
   unidade         String? // ex: "mês", "reel"
   valorUnitario   Decimal
+
+  // Etapa 3 (v157) — liga esse item do catálogo comercial ao vocabulário de
+  // Tarefa.categoria (gravacao|arte|reel|fotos|campanha|reuniao|contato|orcamento|
+  // ideia|outra), pra dar pra contar "quantas tarefas dessa categoria nascem por
+  // mês pra esse cliente" e comparar com ServicoContratado.quantidade — ver
+  // lib/entregas.ts. Opcional e null por padrão de propósito: Servico.categoria já
+  // existe (rótulo amplo da seção do catálogo, ex: "🎥 Produção de Conteúdo") e é
+  // uma coisa totalmente diferente disso aqui — nem todo serviço do catálogo
+  // corresponde a um tipo de entrega rastreável (ex: "Consultoria mensal"), então
+  // não faz sentido obrigar. Editável em Catálogo de Serviços.
+  categoriaTarefa String?
 
   itens        ItemOrcamento[]
   pacoteItens  PacoteItem[]
@@ -638,8 +713,40 @@ model ServicoContratado {
   servico    Servico  @relation(fields: [servicoId], references: [id])
   quantidade Int      @default(1)
   valor      Decimal
+  // "Remover" continua chamado assim na tela, mas por dentro (Etapa 3 v157) virou
+  // desativar (ver PATCH/DELETE de /api/servicos-contratados/[id]) em vez de
+  // apagar a linha — é isso que permite manter o histórico de quando o pacote
+  // contratado mudou mesmo depois de um item ser removido. Nunca ficou false por
+  // nenhum caminho da interface antes da v157 (só chegava a existir = true), então
+  // todo cliente com pelo menos 1 serviço contratado continua exatamente igual;
+  // toda leitura no app já filtra ativo:true (auditado na v157: Início, ficha do
+  // cliente, resumo de cobrança, geração de contrato, orçamento novo).
   ativo      Boolean  @default(true)
   createdAt  DateTime @default(now())
+
+  // Etapa 3 (v157) — "definir se pendências acumulam pro próximo mês". Default
+  // false (não acumula) de propósito: é o comportamento mais previsível pra quem
+  // nunca configurou nada, e fica só a um clique de ligar por contrato quando fizer
+  // sentido (ex: um pacote de artes que a Instaby deixa "rolar" de um mês pro
+  // outro). Ver lib/entregas.ts.
+  rolloverPendencias Boolean @default(false)
+
+  // Histórico de alterações de quantidade/valor/ativo (Etapa 3 v157) — nunca
+  // editado/apagado depois de criado, mesmo padrão de HistoricoTarefa. Ver
+  // PATCH/DELETE de /api/servicos-contratados/[id].
+  historico HistoricoServicoContratado[]
+}
+
+model HistoricoServicoContratado {
+  id                  String            @id @default(uuid())
+  servicoContratadoId String
+  servicoContratado   ServicoContratado @relation(fields: [servicoContratadoId], references: [id], onDelete: Cascade)
+  usuarioId           String?
+  usuario             Usuario?          @relation(fields: [usuarioId], references: [id])
+  campo               String // quantidade | valor | ativo
+  valorAntigo         String?
+  valorNovo           String?
+  createdAt           DateTime          @default(now())
 }
 
 model Pacote {
@@ -674,6 +781,13 @@ model Orcamento {
   itens     ItemOrcamento[]
   contratos Contrato[]
   cobrancas Cobranca[]
+
+  // Preenchida sozinha quando esse orçamento nasceu do botão "Preparar orçamento"
+  // de uma Solicitação fora do escopo (Etapa 3 v157) — ver
+  // Solicitacao.orcamentoPreparadoId. Null pra qualquer orçamento feito do jeito
+  // normal (o padrão até aqui). Não muda em nada o ciclo pendente→aceito
+  // existente — continua sem cobrar automaticamente, só nasce com esse vínculo.
+  solicitacaoOrigem Solicitacao?
 }
 
 model ItemOrcamento {

@@ -31,6 +31,10 @@ export async function POST(request: NextRequest) {
         unidade: body.unidade || "mês",
         valorUnitario: body.valorUnitario,
         clausulaContrato: body.clausulaContrato || null,
+        // Etapa 3 (v157) — liga esse serviço ao vocabulário de Tarefa.categoria,
+        // pra alimentar o controle mensal de entregas (ver lib/entregas.ts).
+        // Opcional: string vazia vira null (mesmo padrão de clausulaContrato).
+        categoriaTarefa: body.categoriaTarefa || null,
       },
     });
 

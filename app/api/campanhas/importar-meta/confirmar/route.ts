@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
   if ("erro" in montado) {
     return NextResponse.json({ erro: montado.erro }, { status: 400 });
   }
-  const { previa } = montado;
+  const { previa, resultado: resultadoArquivo } = montado;
 
   if (previa.pendentes > 0) {
     return NextResponse.json(
@@ -123,6 +123,7 @@ export async function POST(request: NextRequest) {
       data: {
         clienteId,
         nomeArquivo,
+        contaAnuncios: resultadoArquivo.contaAnuncios || undefined,
         arquivoUrl: blob.url,
         periodoInicio: new Date(previa.periodoInicio),
         periodoFim: new Date(previa.periodoFim),

@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
-import { Input, Textarea, Label } from "@/components/ui/Input";
+import { Input, Textarea, Label, Select } from "@/components/ui/Input";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { Button } from "@/components/ui/Button";
+import { CATEGORIAS_TAREFA } from "@/lib/categoriaTarefaVisual";
 
 export default function NovoServicoPage() {
   const router = useRouter();
@@ -16,6 +17,7 @@ export default function NovoServicoPage() {
   const [unidade, setUnidade] = useState("mês");
   const [valor, setValor] = useState(0);
   const [clausulaContrato, setClausulaContrato] = useState("");
+  const [categoriaTarefa, setCategoriaTarefa] = useState("");
   const [enviando, setEnviando] = useState(false);
 
   useEffect(() => {
@@ -40,6 +42,7 @@ export default function NovoServicoPage() {
         unidade,
         valorUnitario: valor,
         clausulaContrato,
+        categoriaTarefa: categoriaTarefa || null,
       }),
     });
 
@@ -108,8 +111,23 @@ export default function NovoServicoPage() {
             onChange={(e) => setClausulaContrato(e.target.value)}
             rows={3}
             placeholder="Ex: A Instaby ficará responsável pela gestão de conteúdo do Instagram do cliente, incluindo planejamento e publicação."
-            className="mb-6"
+            className="mb-4"
           />
+
+          <Label>Categoria de entrega (controle mensal de produção)</Label>
+          <Select value={categoriaTarefa} onChange={(e) => setCategoriaTarefa(e.target.value)} className="mb-1.5">
+            <option value="">— Não rastreia entregas —</option>
+            {CATEGORIAS_TAREFA.map((c) => (
+              <option key={c.valor} value={c.valor}>
+                {c.label}
+              </option>
+            ))}
+          </Select>
+          <p className="mb-6 text-[11px] leading-relaxed text-muted">
+            Opcional. Só preencha se esse serviço tiver uma quantidade mensal pra acompanhar na aba
+            "Entregas" do cliente (ex: "Reels" → Criar Reel). Deixe em branco pra serviços sem entrega
+            contável, como consultoria ou gestão de tráfego.
+          </p>
 
           <Button type="submit" disabled={enviando} className="w-full">
             {enviando ? "Salvando..." : "Salvar serviço"}

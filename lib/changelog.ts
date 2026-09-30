@@ -22,6 +22,65 @@ export type VersaoNovidades = {
 
 export const NOVIDADES: VersaoNovidades[] = [
   {
+    versao: 157,
+    resumo:
+      "Nova aba \"Entregas\" mostra o andamento mensal do que foi contratado, e o cliente ganhou um link próprio pra pedir coisas direto pro sistema.",
+    itens: [
+      {
+        tipo: "adicionado",
+        texto:
+          'Nova aba "Entregas" na ficha do cliente: mostra, mês a mês, quanto foi contratado de cada serviço (ex: reels) e quantos já foram publicados, aprovados, estão em edição ou aguardando material — sem contar correção ou reenvio como uma entrega a mais. Dá pra ligar, por serviço, se o que sobrar num mês soma no mês seguinte.',
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          'Cada serviço do catálogo agora pode ser ligado a um "tipo de entrega" (em Catálogo de Serviços) — é isso que alimenta a aba Entregas. Opcional; só vale a pena preencher em serviços com quantidade mensal pra acompanhar.',
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          'Novo link público pra cada cliente pedir o que precisa direto: escolhe o tipo de pedido, responde perguntas rápidas sobre ele, anexa uma imagem de referência e diz o prazo que gostaria — sem precisar de login. O botão "Copiar link pro cliente" fica na aba Solicitações.',
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          'Pedidos do cliente (ou anotados rápido pela equipe) agora viram tarefa com um clique, já com a descrição e os anexos preenchidos — sem digitar tudo de novo. Pedidos fora do que já foi contratado podem virar a base de um orçamento adicional, que só é cobrado se o cliente aceitar (igual todo orçamento).',
+      },
+      {
+        tipo: "melhorado",
+        texto:
+          'Remover um serviço contratado deixou de apagar o registro pra sempre — agora fica guardado um histórico de quando a quantidade, o valor ou o próprio serviço mudou, com data e quem mexeu.',
+      },
+      {
+        tipo: "corrigido",
+        texto:
+          'Duas telas de serviços contratados e duas de solicitações do cliente não conferiam a permissão de quem estava chamando — na prática, alguém sem acesso a valores ou contratos que soubesse o endereço certo conseguia ler ou mudar esses dados por fora da tela normal, mesmo a tela escondendo a opção. Corrigido; ninguém que já usava essas telas normalmente percebe diferença.',
+      },
+      {
+        tipo: "corrigido",
+        texto:
+          'A tela de montar um orçamento novo pra um cliente não conferia nenhuma permissão específica — corrigido, agora exige a mesma permissão de sempre pra ver orçamentos.',
+      },
+    ],
+  },
+  {
+    versao: 156,
+    resumo:
+      "Auditoria do Tráfego Pago contra a lista original: a conta de anúncios agora aparece na importação, e o orçamento do conjunto de anúncios (do próprio Meta) agora aparece em cada campanha.",
+    itens: [
+      {
+        tipo: "adicionado",
+        texto:
+          'A prévia de importação e o histórico de importações agora mostram o nome da conta de anúncios do arquivo, quando o Meta inclui essa coluna na exportação — antes esse dado nem era lido do arquivo.',
+      },
+      {
+        tipo: "adicionado",
+        texto:
+          'O card de cada campanha (em Tráfego Pago e na aba de Tráfego Pago dentro do cliente) agora mostra o orçamento do conjunto de anúncios vindo da última importação do Meta, quando disponível — esse número já era guardado desde antes, só não aparecia em nenhuma tela.',
+      },
+    ],
+  },
+  {
     versao: 155,
     resumo: "Novo botão pra gerar (ou trocar) a pasta do Drive de uma tarefa na hora, sem precisar mexer em nada por fora.",
     itens: [

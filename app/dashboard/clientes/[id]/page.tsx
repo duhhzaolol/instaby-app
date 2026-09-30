@@ -13,6 +13,7 @@ import { MensalidadeChip } from "./MensalidadeChip";
 import LinksClienteTab from "./LinksClienteTab";
 import OnboardingTab from "./OnboardingTab";
 import SolicitacoesTab from "./SolicitacoesTab";
+import { EntregasTab } from "./EntregasTab";
 import ArquivosTab from "./ArquivosTab";
 import { TarefaRow } from "@/components/dashboard/TarefaRow";
 import { OrcamentoRow } from "@/components/dashboard/OrcamentoRow";
@@ -28,7 +29,9 @@ export default async function ClienteDetalhePage({
   searchParams,
 }: {
   params: { id: string };
-  searchParams: { aba?: string };
+  // entregasMes (Etapa 3 v157): "AAAA-MM" do mês visto na aba Entregas — via
+  // link com searchParam (sem estado de cliente nenhum, ver EntregasTab.tsx).
+  searchParams: { aba?: string; entregasMes?: string };
 }) {
   const usuarioAtual = await getUsuarioAtual();
   if (!usuarioAtual) redirect("/login");
@@ -44,13 +47,24 @@ export default async function ClienteDetalhePage({
         contratos: { orderBy: { createdAt: "desc" } },
         cobrancas: { orderBy: { createdAt: "desc" }, include: { pagamentos: true } },
         despesas: { orderBy: { data: "desc" }, include: { pagamentos: true } },
-        servicosContratados: { where: { ativo: true }, include: { servico: true }, orderBy: { createdAt: "asc" } },
+        servicosContratados: {
+          where: { ativo: true },
+          include: {
+            servico: true,
+            // Etapa 3 (v157) — histórico de quando o pacote contratado mudou.
+            historico: { orderBy: { createdAt: "desc" }, include: { usuario: { select: { nome: true } } } },
+          },
+          orderBy: { createdAt: "asc" },
+        },
         registrosTempo: { orderBy: { inicio: "desc" }, take: 60 },
         relatorios: { orderBy: { fim: "desc" } },
         contatos: { orderBy: { createdAt: "asc" } },
         links: { orderBy: { createdAt: "asc" } },
         onboarding: { include: { itens: { orderBy: { ordem: "asc" } } } },
-        solicitacoes: { orderBy: { createdAt: "desc" } },
+        solicitacoes: {
+          orderBy: { createdAt: "desc" },
+          include: { solicitanteContato: { select: { nome: true } } },
+        },
         campanhas: { orderBy: { createdAt: "desc" }, include: { avaliadoPor: { select: { nome: true } } } },
       },
     }),
@@ -67,6 +81,7 @@ export default async function ClienteDetalhePage({
     { valor: "onboarding", label: "Onboarding" },
     { valor: "solicitacoes", label: "Solicitações" },
     { valor: "tarefas", label: "Tarefas" },
+    { valor: "entregas", label: "Entregas" },
     { valor: "servicos", label: "Serviços" },
     { valor: "relatorios", label: "Relatórios" },
     { valor: "financeiro", label: "Financeiro" },
@@ -93,12 +108,16 @@ export default async function ClienteDetalhePage({
     // achado depois de marcada "completa" — tinha ficado de fora do primeiro pente-fino).
     if (a.valor === "servicos") return pode.verFinanceiro;
     // Abas "gerais" do cliente (Visão Geral, Contatos, Onboarding, Solicitações,
-    // Tarefas) — atrás de acessoClienteCompleto pra dar pra restringir alguém (ex: um
-    // Editor, que só deve ver Arquivos e Links) sem esconder as áreas com permissão
-    // própria. Visão Geral tem R$ por dentro (mensalidade, resultado do mês,
-    // faturamento) — esses pedaços específicos ficam atrás de verFinanceiro dentro do
-    // próprio VisaoGeralClienteTab, não a aba inteira, porque o resto dela (horas do
-    // mês, relatório, próxima atividade, linha do tempo) não é financeiro.
+    // Tarefas, Entregas) — atrás de acessoClienteCompleto pra dar pra restringir
+    // alguém (ex: um Editor, que só deve ver Arquivos e Links) sem esconder as
+    // áreas com permissão própria. Visão Geral tem R$ por dentro (mensalidade,
+    // resultado do mês, faturamento) — esses pedaços específicos ficam atrás de
+    // verFinanceiro dentro do próprio VisaoGeralClienteTab, não a aba inteira,
+    // porque o resto dela (horas do mês, relatório, próxima atividade, linha do
+    // tempo) não é financeiro. Entregas (Etapa 3 v157) só mostra QUANTIDADES
+    // (contratado/publicado/aprovado/em edição/aguardando material) — nunca
+    // valor em R$ — de propósito, pra poder ficar nessa mesma trava sem virar
+    // financeiro.
     return pode.acessoClienteCompleto;
   });
   const abaPedida = searchParams.aba || "visao_geral";
@@ -107,6 +126,20 @@ export default async function ClienteDetalhePage({
   // pra ela agora (ex: acessoClienteCompleto=false). "horas" é sempre universal, então
   // abas nunca fica vazio de verdade.
   const aba = abas.some((a) => a.valor === abaPedida) ? abaPedida : abas[0]?.valor || "horas";
+
+  // Mês visto na aba Entregas (Etapa 3 v157) — "AAAA-MM" na URL, mês atual por
+  // padrão ou se vier um valor inválido (nunca deixa a página quebrar por causa
+  // de uma URL digitada errado).
+  const hoje = new Date();
+  let mesEntregas = { ano: hoje.getFullYear(), mes: hoje.getMonth() };
+  if (searchParams.entregasMes) {
+    const m = /^(\d{4})-(\d{2})$/.exec(searchParams.entregasMes);
+    if (m) {
+      const anoParam = Number(m[1]);
+      const mesParam = Number(m[2]) - 1;
+      if (mesParam >= 0 && mesParam <= 11) mesEntregas = { ano: anoParam, mes: mesParam };
+    }
+  }
 
   // Só chama o Drive (rede + possível criação de pasta) quando alguém realmente
   // abre a aba Arquivos — não em toda visita à página do cliente. Best-effort e
@@ -146,6 +179,8 @@ export default async function ClienteDetalhePage({
     dataInicio: string;
     dataFim: string | null;
     observacoes: string | null;
+    orcamentoConjunto: number | null;
+    tipoOrcamento: string | null;
     snapshot: {
       gasto: number;
       impressoes: number | null;
@@ -180,6 +215,8 @@ export default async function ClienteDetalhePage({
           dataInicio: c.dataInicio.toISOString(),
           dataFim: c.dataFim?.toISOString() || null,
           observacoes: c.observacoes,
+          orcamentoConjunto: c.orcamentoConjunto != null ? Number(c.orcamentoConjunto) : null,
+          tipoOrcamento: c.tipoOrcamento,
           snapshot: {
             gasto: snap.gasto,
             impressoes: snap.impressoes,
@@ -441,6 +478,7 @@ export default async function ClienteDetalhePage({
       {aba === "solicitacoes" && (
         <SolicitacoesTab
           clienteId={cliente.id}
+          podeVerOrcamentos={pode.verOrcamentos}
           solicitacoes={cliente.solicitacoes.map((s) => ({
             id: s.id,
             descricao: s.descricao,
@@ -448,6 +486,15 @@ export default async function ClienteDetalhePage({
             status: s.status,
             extra: s.extra,
             createdAt: s.createdAt.toISOString(),
+            origem: s.origem,
+            categoria: s.categoria,
+            respostas: (s.respostas as Record<string, string> | null) || null,
+            prazoDesejado: s.prazoDesejado ? s.prazoDesejado.toISOString() : null,
+            prazoConfirmado: s.prazoConfirmado ? s.prazoConfirmado.toISOString() : null,
+            anexos: s.anexos,
+            solicitanteNome: s.solicitanteContato?.nome || s.solicitanteNomeLivre || null,
+            tarefaGeradaId: s.tarefaGeradaId,
+            orcamentoPreparadoId: s.orcamentoPreparadoId,
           }))}
         />
       )}
@@ -487,6 +534,30 @@ export default async function ClienteDetalhePage({
         </div>
       )}
 
+      {aba === "entregas" && (
+        <EntregasTab
+          servicosContratados={cliente.servicosContratados.map((c) => ({
+            id: c.id,
+            quantidade: c.quantidade,
+            rolloverPendencias: c.rolloverPendencias,
+            servico: { nome: c.servico.nome, categoriaTarefa: c.servico.categoriaTarefa, unidade: c.servico.unidade },
+          }))}
+          tarefas={cliente.tarefas.map((t) => ({
+            id: t.id,
+            titulo: t.titulo,
+            categoria: t.categoria,
+            status: t.status,
+            statusConteudo: t.statusConteudo,
+            motivoBloqueio: t.motivoBloqueio,
+            prazo: t.prazo,
+            createdAt: t.createdAt,
+          }))}
+          ano={mesEntregas.ano}
+          mes={mesEntregas.mes}
+          podeVerCatalogo={pode.verCatalogo}
+        />
+      )}
+
       {aba === "relatorios" && (
         <RelatoriosTab
           clienteId={cliente.id}
@@ -515,7 +586,16 @@ export default async function ClienteDetalhePage({
             servicoId: c.servicoId,
             quantidade: c.quantidade,
             valor: Number(c.valor),
+            rolloverPendencias: c.rolloverPendencias,
             servico: { nome: c.servico.nome, valorUnitario: Number(c.servico.valorUnitario) },
+            historico: c.historico.map((h) => ({
+              id: h.id,
+              campo: h.campo,
+              valorAntigo: h.valorAntigo,
+              valorNovo: h.valorNovo,
+              usuarioNome: h.usuario?.nome || null,
+              createdAt: h.createdAt.toISOString(),
+            })),
           }))}
           catalogo={catalogo.map((s) => ({
             id: s.id,

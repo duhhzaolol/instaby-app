@@ -283,6 +283,7 @@ async function ImportacoesVisao({
   const lotesView = lotes.map((l: any) => ({
     id: l.id,
     nomeArquivo: l.nomeArquivo,
+    contaAnuncios: l.contaAnuncios,
     arquivoUrl: l.arquivoUrl,
     periodoInicio: l.periodoInicio.toISOString(),
     periodoFim: l.periodoFim.toISOString(),
@@ -416,6 +417,8 @@ async function CampanhasOuFinalizadas({
     dataInicio: c.dataInicio.toISOString(),
     dataFim: c.dataFim?.toISOString() || null,
     observacoes: c.observacoes,
+    orcamentoConjunto: c.orcamentoConjunto != null ? Number(c.orcamentoConjunto) : null,
+    tipoOrcamento: c.tipoOrcamento,
     snapshot: serializarSnapshot(snapshots[i]),
   }));
 

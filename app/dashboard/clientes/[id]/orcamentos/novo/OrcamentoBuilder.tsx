@@ -25,12 +25,18 @@ export default function OrcamentoBuilder({
   servicos,
   pacotes,
   selecaoInicial,
+  solicitacaoId,
 }: {
   clienteId: string;
   clienteNome: string;
   servicos: Servico[];
   pacotes: Pacote[];
   selecaoInicial?: { servicoId: string; quantidade: number }[];
+  // Etapa 3 (v157) — presente quando essa tela foi aberta a partir do botão
+  // "Preparar orçamento" de uma solicitação fora do escopo (ver
+  // app/dashboard/clientes/[id]/orcamentos/novo/page.tsx). Só precisa viajar até
+  // o POST — é o que deixa a rota vincular o orçamento de volta na solicitação.
+  solicitacaoId?: string;
 }) {
   const router = useRouter();
   const [selecionados, setSelecionados] = useState<Record<string, Selecionado>>(
@@ -113,7 +119,7 @@ export default function OrcamentoBuilder({
     const resposta = await fetch(`/api/clientes/${clienteId}/orcamentos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ itens }),
+      body: JSON.stringify({ itens, solicitacaoId }),
     });
 
     setEnviando(false);

@@ -1,3 +1,425 @@
+# Instaby App — v157
+
+**Etapa 3** do plano de evolução em 11 etapas ("Entregas contratadas e
+solicitações"), a partir da especificação anexada pelo usuário. Reaproveita o
+painel de serviços contratados (Etapa 0, existente), o padrão de página
+pública sem login já usado em `/revisao/[tarefaId]` e `/relatorio/[id]`, e a
+infraestrutura de notificações/agrupamento da Etapa 1 — nenhuma tela solta
+nova fora do que a própria etapa pede, nenhum módulo duplicado, tudo aditivo
+ao banco. Entregue em modo automático (autorização já dada em turnos
+anteriores); decisões reversíveis tomadas sozinho, sinalizadas abaixo em
+"Decisões tomadas sem perguntar".
+
+## O que é isso, resumindo
+
+Duas frentes, do jeito que a própria especificação separa:
+
+1. **Controle mensal de entregas** — nova aba "Entregas" na ficha do
+   cliente: um card por serviço contratado que tenha uma "categoria de
+   entrega" configurada (ex.: Reels), mostrando contratado, publicado,
+   aprovado, em edição e aguardando material daquele mês — o exemplo exato da
+   especificação ("8 reels contratados, 3 publicados, 2 aprovados, 2 em
+   edição e 1 aguardando material"). Contagem sempre por **tarefa**, nunca
+   por versão de conteúdo, então uma correção ou reenvio de material nunca
+   vira uma entrega a mais. "Pendências acumulam pro mês seguinte" é uma
+   opção por serviço contratado, desligada por padrão.
+2. **Formulário de solicitação do cliente** — nova página pública
+   (`/solicitar/[clienteId]`, sem login, mesmo espírito do link de revisão)
+   onde o cliente escolhe o tipo de pedido, responde perguntas específicas
+   daquele tipo, anexa referência e informa o prazo que gostaria. Por dentro,
+   qualquer solicitação (do cliente ou anotada rápido pela equipe) vira uma
+   tarefa com um clique, preservando o texto e os anexos como briefing, ou —
+   se for algo fora do escopo contratado — vira a base de um orçamento
+   adicional preparado, sem cobrar nada automaticamente.
+
+De passagem: "remover" um serviço contratado deixou de apagar a linha do
+banco (agora desativa, preservando o histórico de quando o pacote mudou) e
+ganhou um registro de quem alterou quantidade/valor e quando. Também foram
+corrigidas 3 rotas/telas que não tinham nenhuma checagem de permissão além de
+"estar logado" (ver "Falhas de segurança corrigidas de passagem").
+
+## Schema novo (`prisma/schema.prisma`) — tudo aditivo
+
+- `Servico`: `categoriaTarefa String?` — liga um item do catálogo comercial
+  ao vocabulário de `Tarefa.categoria` (gravacao/arte/reel/fotos/campanha/
+  reuniao/contato/orcamento/ideia/outra), pra dar pra contar quantas tarefas
+  daquele tipo nascem por mês pra um cliente e comparar com a quantidade
+  contratada. Opcional e `null` por padrão — nem todo serviço do catálogo
+  corresponde a um tipo de entrega rastreável (ex.: "Consultoria mensal").
+  Editável em Catálogo de Serviços.
+- `ServicoContratado`: `rolloverPendencias Boolean @default(false)` (item
+  "definir se pendências acumulam pro próximo mês") e relação `historico`.
+  `ativo` passou a significar "removido = false" em vez de a linha deixar de
+  existir — comentário no schema explica a mudança; toda leitura já filtrava
+  `ativo: true` antes disso (auditado nesta etapa: Início, ficha do cliente,
+  resumo de cobrança, geração de contrato, orçamento novo), então nada mudou
+  visualmente pra ninguém.
+- `HistoricoServicoContratado` (novo): uma linha por alteração de
+  quantidade/valor/ativo, mesmo espírito de `HistoricoTarefa` — nunca editado
+  nem apagado, `onDelete: Cascade` em `servicoContratadoId`.
+- `Tarefa`: `anexos String[] @default([])` (pra preservar os anexos de uma
+  solicitação ao virar tarefa) e relação inversa `solicitacaoOrigem`.
+- `Orcamento`: relação inversa `solicitacaoOrigem` (preenchida sozinha
+  quando o orçamento nasce do botão "Preparar orçamento").
+- `Solicitacao` (existente desde antes — registro rápido interno de pedido
+  do cliente — mantido 100% como era): ganhou `origem` (`interno` — todo
+  registro de antes da v157 — ou `cliente`), `categoria` (mesmo vocabulário
+  de `Tarefa.categoria`), `respostas Json?` (perguntas dinâmicas
+  respondidas), `prazoDesejado`/`prazoConfirmado` (dois campos separados, um
+  pro cliente e um pra agência — pedido explícito da especificação),
+  `solicitanteContatoId`/`solicitanteNomeLivre` (mesmo par dual de
+  `VersaoConteudo.aprovadoPorContato`/`aprovadoPorNomeLivre`, porque não
+  existe login de cliente neste sistema), `anexos String[]`,
+  `tarefaGeradaId`/`orcamentoPreparadoId` (ambos `@unique` — impedem
+  converter a mesma solicitação duas vezes por engano).
+- `Notificacao.tipo`: mais um valor possível, só documentação no comentário
+  (`solicitacao_cliente`) — mesmo esquema sem enum de banco de sempre.
+
+## Controle mensal de entregas (`lib/entregas.ts`, `EntregasTab.tsx`)
+
+- Cada tarefa é classificada em UM dos 4 buckets pedidos
+  (Publicado/Aprovado/Em edição/Aguardando material) olhando só o estado
+  ATUAL dela — nunca o histórico de versões — o que garante sozinho o item
+  "não contar correções ou novas versões como entregas adicionais". Reel e
+  Arte (categorias com fluxo de revisão) usam `statusConteudo`, bem mais
+  granular que os 4 buckets pedidos; o detalhe fino (ex.: "Aguardando
+  aprovação do cliente") continua visível na lista expansível de cada
+  bucket, só a contagem agregada arredonda pra 4. Categorias sem revisão
+  (fotos, campanha, gravação...) usam o `status` geral da tarefa — o bucket
+  "Aprovado" fica sempre em 0 pra elas, esperado, já que hoje só reel/arte
+  têm uma etapa de aprovação do cliente registrada no sistema.
+- Mês de referência de uma tarefa: usa o **prazo** quando existe; cai pra
+  `createdAt` só enquanto a tarefa ainda não tem prazo definido, pra um
+  pedido recém-criado não ficar invisível em todo mês. Reversível.
+- Rollover: `pendência = contratado − tarefas do mês anterior nessa
+  categoria` (nunca negativo), somado à quantidade normal do mês só quando o
+  serviço contratado tem a opção ligada.
+- Cada serviço contratado vira um card PRÓPRIO (não agrupado por categoria)
+  — é literalmente "o pacote contratado" da especificação, e preserva
+  histórico limpo por linha. Limitação assumida: se dois serviços
+  contratados apontarem pra mesma categoria de entrega, uma tarefa pode
+  contar nos dois cards ao mesmo tempo (raro, aceitável nesta v1).
+- Aba nova, atrás da mesma permissão de Tarefas/Visão Geral
+  (`acessoClienteCompleto`) — mostra só QUANTIDADES, nunca R$, de propósito,
+  pra não precisar da trava mais restrita de Financeiro/Serviços.
+
+## Formulário de solicitação do cliente (`/solicitar/[clienteId]`)
+
+Mesmo padrão do link de revisão: URL com o UUID do próprio cliente, sem
+login, porque não existe conta de cliente neste sistema (Etapa 5 é quem
+resolve isso de vez). O cliente escolhe um tipo (mesmos ícones/rótulos já
+usados em "Nova tarefa"), responde as perguntas daquele tipo especificamente
+(`lib/solicitacoes.ts`: `PERGUNTAS_POR_CATEGORIA` — ex.: gravação pergunta
+local/duração/quem precisa estar presente; campanha pergunta objetivo/
+público/orçamento de mídia em mente), escreve a descrição livre, anexa
+imagem de referência (reaproveita `/api/upload-imagem`, mesma rota de
+sempre — por isso só imagem, não PDF/doc, nesta v1) e diz quem está pedindo
+(contato já cadastrado ou nome livre, guardado no navegador do próprio
+cliente só pra não redigitar — nunca usado como autenticação).
+
+Ao enviar (`POST /api/clientes/[id]/solicitacoes/publica`, liberada no
+`middleware.ts` só pra esse caminho+método): cria a `Solicitacao` com
+`origem: "cliente"` e notifica toda a equipe com acesso operacional completo
+àquele cliente — mesmo agrupamento/sino da Etapa 1. Aparece na aba
+"Solicitações" com uma etiqueta "Pedido do cliente", categoria, respostas,
+anexos e prazo desejado — tudo somado ao registro rápido interno que já
+existia (que continua funcionando exatamente como antes, sem nenhuma dessas
+perguntas, pra quem só quer anotar algo rápido do WhatsApp).
+
+## Transformar solicitação em tarefa / preparar orçamento adicional
+
+- **Em tarefa** (`POST /api/solicitacoes/[id]/transformar-tarefa`): monta o
+  título a partir da descrição (ou "Pedido do cliente — [tipo]" se a
+  descrição for muito curta), junta descrição + respostas das perguntas
+  dinâmicas num texto só (`formatarSolicitacaoComoDescricao`) preservando o
+  briefing inteiro, copia os anexos, usa `prazoConfirmado` (ou o desejado, se
+  a agência ainda não confirmou) como prazo da tarefa, e reaproveita a MESMA
+  lógica de pasta do Drive sob demanda de `POST /api/tarefas`. Recusa (409)
+  transformar a mesma solicitação duas vezes — o botão vira "Ver tarefa"
+  assim que a primeira conversão acontece.
+- **Orçamento adicional** (item "para pedidos fora do escopo, permitir
+  preparar orçamento adicional sem cobrar automaticamente"): o botão
+  "Preparar orçamento" leva pro MESMO construtor de orçamento de sempre
+  (`OrcamentoBuilder`), com a categoria da solicitação pré-selecionando um
+  serviço do catálogo (via `Servico.categoriaTarefa`) quando existir um
+  correspondente. Nada de cobrança automática aqui — é o mesmo orçamento de
+  sempre, nasce "pendente" e só vira cobrança se o cliente aceitar e a
+  equipe, à parte, gerar a cobrança — exatamente como já funcionava pra
+  qualquer orçamento. Ao criar, o orçamento é ligado de volta na solicitação
+  de origem, e o botão também passa a mostrar "Orçamento preparado" (link
+  pra aba Orçamentos) em vez de deixar preparar um segundo.
+
+## Falhas de segurança corrigidas de passagem
+
+Encontradas revisando o entorno do que a Etapa 3 pedia pra mexer —
+corrigidas junto, seguindo a regra geral de aplicar permissão no servidor,
+não só esconder na interface:
+
+- `PATCH`/`DELETE /api/servicos-contratados/[id]` e `GET`/
+  `POST /api/clientes/[id]/servicos-contratados` não tinham **nenhuma**
+  checagem própria de permissão — só a exigência genérica de sessão do
+  middleware. Qualquer pessoa logada, mesmo sem `verFinanceiro` (ex.: Editor,
+  Gestor de Tráfego), conseguia ler ou mudar quantidade/valor de um serviço
+  contratado chamando a rota direto, mesmo a aba "Serviços" já escondendo
+  isso da interface pra esses perfis. Agora as quatro rotas exigem
+  `verFinanceiro`, igual a aba já exige.
+- `POST /api/clientes/[id]/solicitacoes` e `PATCH`/
+  `DELETE /api/solicitacoes/[id]` tinham a mesma lacuna — qualquer pessoa
+  logada conseguia criar, editar ou apagar uma solicitação de qualquer
+  cliente. Agora exigem `acessoClienteCompleto` + poder ver aquele cliente
+  específico, igual a aba "Solicitações" já exige na interface.
+- `/dashboard/clientes/[id]/orcamentos/novo` (a tela de montar um orçamento
+  novo) nunca teve NENHUMA checagem de permissão própria — só "estar
+  logado", do layout raiz do painel. Diferente de `/dashboard/orcamentos`
+  (lista geral, protegida por um `layout.tsx` próprio), essa é uma árvore de
+  rotas diferente (`clientes/[id]/orcamentos/novo`) e não herdava aquela
+  proteção — deixava visível pra qualquer pessoa logada, mesmo sem
+  `verOrcamentos`, os serviços contratados do cliente com valor incluso
+  (pré-seleção da tela). Achada revisando esse mesmo arquivo pra somar o
+  vínculo com Solicitação; corrigida com a mesma trava que o `POST` dessa
+  funcionalidade já exige (`verOrcamentos`).
+
+Um quarto ponto, este dentro do próprio código NOVO desta etapa (não chegou
+a ir pro ar, pego na revisão final antes de entregar): a notificação de novo
+pedido do cliente (`solicitacoes/publica`) estava chamando
+`usuariosComAcessoAoCliente()` sem o filtro extra de `acessoClienteCompleto`
+que o mesmo helper já exige em todo outro lugar que notifica (comentário de
+relatório, revisão de conteúdo) — teria avisado também um Gestor de Tráfego
+com acesso só à verba de mídia daquele cliente, vazando o título do pedido
+pra um perfil que nem consegue abrir a aba Solicitações pra ler o resto.
+Corrigido antes de qualquer entrega.
+
+## Permissões
+
+Nada novo inventado — as rotas novas reusam
+`getUsuarioAtual`/`podeVerCliente`/`permissoesDe`/`exigirPermissaoApi` de
+`lib/permissoes.ts` e `usuariosComAcessoAoCliente` da Etapa 1 (agora sempre
+com o filtro `acessoClienteCompleto` de fora pra dentro, ver acima). Resumo
+por área:
+
+- **Entregas**: atrás de `acessoClienteCompleto` (mesmo tier de Tarefas) —
+  só quantidades, nunca R$.
+- **Solicitações** (aba, rotas internas e conversão em tarefa): atrás de
+  `acessoClienteCompleto` — mesma trava de sempre dessa aba.
+- **Preparar orçamento**: o botão só aparece com `verOrcamentos`
+  (`podeVerOrcamentos` repassado pro componente), e a rota que ele chama já
+  exigia isso antes da v157.
+- **Serviços contratados** (quantidade, valor, histórico, rollover): atrás
+  de `verFinanceiro` — nas quatro rotas, não só na aba.
+- **Formulário público** (`/solicitar/[clienteId]`): nunca autentica ninguém
+  (mesmo espírito de `/revisao/[tarefaId]`) — o cliente nunca vê valor,
+  contrato ou financeiro nenhum nessa tela; só nome/tipo/descrição/prazo/
+  anexo do próprio pedido dele.
+- Administrador continua vendo tudo (todo `pode.*` passa por
+  `usuario.master ||`); Gestor de Tráfego não ganhou nem perdeu acesso a
+  nada aqui — Etapa 3 não toca `gerenciarTrafego`/aba Tráfego Pago.
+
+## Decisões tomadas sem perguntar (reversíveis)
+
+- **4 buckets fixos de entrega, mapeados a partir do vocabulário que já
+  existe** (`status`/`statusConteudo`), em vez de criar um status novo só
+  pra isso — evita um terceiro campo de status pra manter sincronizado; o
+  detalhe mais fino continua disponível na lista expansível.
+- **Rollover é opt-in por serviço contratado, desligado por padrão** — é o
+  comportamento mais prático pra quem nunca configurou nada; qualquer
+  contrato que deva "acumular" precisa de um clique consciente.
+- **Mês de uma tarefa sem prazo usa a data de criação** — pra não sumir do
+  painel enquanto aguarda a agência confirmar um prazo.
+- **Cada serviço contratado é um card separado no painel de Entregas**, não
+  agrupado por categoria de entrega — mantém o histórico limpo por linha; o
+  caso raro de dois serviços contratados com a mesma categoria contando a
+  mesma tarefa duas vezes fica como limitação assumida da v1.
+- **Perguntas dinâmicas do formulário público usam o vocabulário de
+  `Tarefa.categoria`**, não o de `Servico.categoria` (rótulo amplo do
+  catálogo) — assim "transformar em tarefa" não precisa traduzir nada.
+- **Anexo do formulário público aceita só imagem** (reaproveita
+  `/api/upload-imagem` como já existe, sem criar rota nova) — PDF/documento
+  fica pra uma etapa que precise, se precisar.
+- **"Transformar em tarefa" e "Preparar orçamento" preservam SÓ a primeira
+  conversão** de cada tipo por solicitação (campos `@unique` no schema) —
+  criar uma segunda tarefa exige texto claro de "já virou tarefa" (409);
+  criar um segundo orçamento pela mesma tela é tecnicamente possível (não
+  travado no servidor, só escondido depois que o primeiro existe), porque
+  pode ser legítimo mandar uma segunda proposta — só o vínculo
+  "solicitação → orçamento de origem" continua apontando pro primeiro.
+- **Solicitação interna antiga (sem categoria) continua convertendo em
+  tarefa numa boa** — vira `categoria: null`, título cai pro fallback
+  "Pedido do cliente — Outra tarefa" se a descrição for curta demais.
+
+## Validação
+
+- Sem acesso a banco nesta sandbox (mesma limitação documentada desde a
+  v151) — verificação por leitura cuidadosa de todas as rotas/telas
+  tocadas, campo por campo contra o schema novo (relação, `onDelete`,
+  `@unique`, obrigatório/opcional), e ponto a ponto contra os três perfis de
+  acesso: Administrador (vê tudo, confirmado pelo `master ||` em toda
+  permissão), Editor sem `acessoClienteCompleto` (não vê Entregas nem
+  Solicitações, nem consegue chamar as rotas direto — 403 confirmado por
+  leitura), Gestor de Tráfego (não ganhou nem perdeu nada — Etapa 3 não
+  encosta em `gerenciarTrafego`); e que o formulário público realmente não
+  passa pelo `middleware.ts` (rota fora de `/dashboard`, só a API de envio
+  precisou de liberação explícita).
+- Casos de borda conferidos por leitura, seguindo o fluxo mentalmente ponta
+  a ponta: transformar a mesma solicitação em tarefa duas vezes é recusado
+  (409); remover um serviço contratado e recontratar o mesmo serviço depois
+  reativa a linha antiga (com histórico de "Removido → Ativo" e qualquer
+  diferença de quantidade/valor), em vez de criar uma segunda linha solta;
+  solicitação sem categoria (registro interno antigo) converte em tarefa
+  normalmente; anexo/resposta mandados com tipo errado no corpo da
+  requisição pública são descartados em vez de quebrar a criação (filtro de
+  tipo em `respostas`/`anexos` na rota `publica`); card de Entregas sem
+  nenhum serviço com categoria configurada mostra estado vazio explicando o
+  que falta (e só oferece o link pro Catálogo pra quem tem `verCatalogo`).
+
+## Verificação
+
+- `tsc --noEmit`: 341 erros — **337 (mesmo baseline da v156) + 4
+  esperados**, todos na mesma categoria já documentada desde a v153
+  (parâmetro de `.map()` sem tipo explícito sobre resultado de consulta
+  Prisma, que tipa como `any` nesta sandbox por falta do Client gerado): 3
+  em `app/dashboard/clientes/[id]/page.tsx` (os novos mapeamentos de
+  `servicosContratados`/`tarefas` pra `EntregasTab` e de `historico` pra
+  `ServicosContratadosTab`) e 1 em
+  `app/dashboard/clientes/[id]/orcamentos/novo/page.tsx` (`servicos.find(...)`
+  na mesma array que já gerava esse erro em `.map(...)` ali do lado). Zero
+  erro novo em qualquer outro arquivo tocado ou criado nesta etapa (schema,
+  `lib/entregas.ts`, `lib/solicitacoes.ts`, `lib/notificacoes.ts`, rotas de
+  solicitações/servicos-contratados/orçamentos, `SolicitacoesTab`,
+  `EntregasTab`, `ServicoContratadoRow`, a página e o componente públicos de
+  `/solicitar/[clienteId]`, `middleware.ts`) — conferido arquivo por arquivo
+  comparando as mensagens de erro (não só a contagem) contra o baseline
+  antes de qualquer edição.
+- `prisma generate`/`prisma validate`: continuam bloqueados nesta sandbox
+  (mesmo teste de rede de sempre — 403 em `binaries.prisma.sh`, inclusive
+  com `PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1` — sem sucesso). A
+  sincronização de schema de verdade só acontece no próximo deploy
+  (`prisma db push --accept-data-loss`).
+
+---
+
+# Instaby App — v156
+
+Auditoria pedida por ele: reencaminhou a especificação original do módulo de
+Tráfego Pago (documento de 8 itens que guiou a v151) e pediu pra conferir
+"quais números faltam" antes de continuar — avisando que já sabia que parte
+da lista tinha sido feita. Resposta completa por item (1 a 8) foi enviada
+separadamente no chat; aqui fica só o registro técnico do que **faltava de
+verdade** e foi implementado agora, seguindo o "vamos seguir com o que
+falta" combinado com ele. As outras 6 seções do documento (1, 3, 4, 5, 7, 8)
+já estavam implementadas; a seção 2 tinha uma lacuna e a seção 6 nenhuma.
+
+## O que é isso, resumindo
+
+Dois pontos que a especificação original pedia e o código guardava no banco
+mas nunca mostrava em lugar nenhum: o **nome da conta de anúncios** do
+arquivo importado (pedido explicitamente na prévia de importação, item 1) e
+o **orçamento do conjunto de anúncios** de cada campanha, vindo do próprio
+Meta (separação pedida no item 2). Os dois já tinham coluna própria no banco
+— só faltava capturar/mostrar um deles e mostrar o outro.
+
+## Lacuna 1: conta de anúncios não aparecia em lugar nenhum
+
+A especificação pede, antes de confirmar uma importação: "mostre cliente,
+**conta**, período, campanhas encontradas...". O campo já existia no banco
+(`LoteImportacao.contaAnuncios`), mas **nunca era preenchido** — nenhum lugar
+do código (nem o reconhecimento de colunas, nem a prévia, nem a confirmação)
+sequer procurava essa coluna no arquivo.
+
+- `lib/parseCampanhasMeta.ts`: nova entrada em `MAPA_COLUNAS` reconhecendo
+  "Nome da conta" / "Conta de anúncios" / "Account name" / "Account" /
+  "Conta". Diferente das outras colunas (que são por linha), conta de
+  anúncios é **um valor só pro arquivo inteiro** — pega o primeiro valor não
+  vazio encontrado, já que um export do Meta é sempre de uma conta só. Novo
+  campo `contaAnuncios: string | null` no retorno de
+  `processarLinhasBrutas`/`ResultadoImportacaoMeta`.
+- `lib/importacaoMeta.ts`: `PreviaImportacao` ganhou `contaAnuncios`,
+  copiado do resultado do parser em `montarPrevia`.
+- `app/api/campanhas/importar-meta/confirmar/route.ts`: passou a gravar
+  `contaAnuncios` no `LoteImportacao` na hora de confirmar (também nunca
+  acontecia antes).
+- Exibição: aparece na prévia de importação (`ImportarCampanhasMeta.tsx`,
+  ao lado do nome do arquivo) e no histórico de importações
+  (`HistoricoImportacoes.tsx`, no resumo de cada lote).
+- Arquivos sem essa coluna continuam funcionando normalmente — o campo só
+  fica de fora quando não identificável, exatamente como o comentário
+  original do schema já previa.
+
+## Lacuna 2: orçamento do conjunto de anúncios nunca era mostrado
+
+A especificação pede, na verba do cliente: "Separe verba de mídia,
+**orçamento diário da campanha** e honorários da agência." O reconhecimento
+desse valor (`orcamentoConjunto`/`tipoOrcamento`, vindo da própria
+importação do Meta) já existia desde a v151 e já era gravado em `Campanha` e
+em cada `ItemImportacao` — mas **nenhuma tela mostrava esse valor**, em
+nenhum dos dois lugares onde campanhas aparecem (aba Tráfego Pago e aba
+Tráfego Pago dentro do cliente).
+
+- `components/dashboard/TrafegoClient.tsx`: card da campanha ganhou uma
+  linha "Orçamento do conjunto (Meta): R$ X · Diário" (ou o texto de tipo de
+  orçamento que vier do Meta), logo abaixo da "Meta de verba" — só aparece
+  quando o valor existir.
+- `app/dashboard/trafego/page.tsx` (`CampanhasOuFinalizadas`) e
+  `app/dashboard/clientes/[id]/page.tsx` (aba Tráfego Pago do cliente):
+  os dois pontos que montam a lista de campanhas pra essa tela passaram a
+  incluir `orcamentoConjunto`/`tipoOrcamento` no objeto repassado ao
+  componente.
+- "Honorários da agência" não ganhou nada novo aqui de propósito — já vive
+  inteiramente fora do módulo de Tráfego Pago (mensalidade/contratos do
+  cliente, no Financeiro), atrás de uma permissão separada
+  (`verFinanceiro`/`gerenciarFinanceiro`, nunca `gerenciarTrafego`) e nunca
+  entra na conta do saldo de verba. Entendo que é isso que a especificação
+  pede com "separe" — manter esse valor fora do controle de verba, não criar
+  um campo novo pra ele dentro do módulo. Se a intenção era outra (por
+  exemplo, mostrar o honorário do cliente também dentro da tela de Tráfego
+  Pago, só que sem valor pro Editor), me avisa que ajusto.
+
+## Decisões tomadas sem perguntar
+
+- Nomes de coluna aceitos pra "conta de anúncios" (item acima) foram um
+  chute educado — não tenho o arquivo real pra confirmar o texto exato do
+  cabeçalho que o Meta usa hoje. Se a próxima importação não reconhecer essa
+  coluna, me manda o nome exato dela que eu ajusto `MAPA_COLUNAS` numa
+  correção pequena.
+- Coloquei o orçamento do conjunto só no card da campanha (Campanhas/
+  Finalizadas/aba do cliente) — não no relatório em PDF, porque a lista de
+  conteúdo do relatório (item 6 da especificação) não menciona esse número;
+  só entra lá se você pedir.
+- O relatório de Tráfego Pago (`/relatorio-trafego/[id]`) continua sendo uma
+  página otimizada pra impressão (igual o relatório de cliente já existente,
+  `/relatorio/[id]`) — "gerar PDF" acontece pelo botão Imprimir/Salvar como
+  PDF do navegador, não por um arquivo .pdf baixado direto. Isso já era
+  assim desde a v151; não mudei nada aqui, só deixo registrado que era uma
+  dúvida possível ao ler a especificação ("gerar PDF") e não tratei como
+  lacuna por já ser o mesmo padrão usado no resto do app.
+
+## Verificação
+
+- `tsc --noEmit`: 337 no total — 334 da v155 + 3 esperados, mesma
+  categoria já documentada desde a v153 (ali foram "+2 esperados"): os 3
+  novos erros são no bloco que monta as campanhas da aba Tráfego Pago dentro
+  da página do cliente (`app/dashboard/clientes/[id]/page.tsx`), onde o tipo
+  gerado do Prisma pra `Campanha` já aparecia incompleto mesmo antes desta
+  versão (`prisma generate` não roda nesta sandbox — ver limitação já
+  documentada) — o mesmo bloco já tinha ~14 erros desse tipo pra campos
+  antigos (`clienteId`, `nome`, `verbaMensal` etc.) que já funcionam
+  normalmente em produção; `orcamentoConjunto`/`tipoOrcamento` só se somaram
+  à mesma lista. Os dois campos foram conferidos direto contra
+  `prisma/schema.prisma` (linhas 810-813), não contra esse tipo incompleto.
+- Os outros 6 arquivos tocados (`parseCampanhasMeta.ts`, `importacaoMeta.ts`,
+  a rota de confirmação, `ImportarCampanhasMeta.tsx`,
+  `HistoricoImportacoes.tsx` e a outra metade de `trafego/page.tsx`) não
+  geraram nenhum erro novo.
+- Sem acesso a banco nesta sandbox (limitação de sempre): não dá pra rodar
+  uma importação de verdade aqui. Revisão foi por leitura de código nos
+  quatro arquivos centrais do módulo de importação, mais conferência
+  cruzada com o schema. Se quiser uma confirmação mais forte, pode reenviar
+  o CSV de validação citado na própria especificação (20 linhas, 3 com
+  gasto, R$ 105,43, 6.621 impressões, 01–28/09/2026) que eu rodo o
+  reconhecimento de colunas contra ele diretamente (é lógica pura, não
+  depende do banco) e confirmo os números batendo.
+
+---
+
 # Instaby App — v155
 
 Ajuste pedido por ele depois de testar a v154 ao vivo: uma tarefa criada antes

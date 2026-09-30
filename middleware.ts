@@ -21,6 +21,11 @@ function apiRotaPublica(pathname: string, method: string) {
   if (method === "GET" && /^\/api\/orcamento\/[^/]+$/.test(pathname)) return true; // cliente abrindo a proposta
   if (method === "POST" && /^\/api\/orcamento\/[^/]+\/aceitar$/.test(pathname)) return true; // cliente aceitando
   if (method === "PATCH" && /^\/api\/relatorios\/[^/]+$/.test(pathname)) return true; // cliente comentando o relatório
+  // Etapa 3 (v157) — cliente enviando o formulário público de solicitação
+  // (/solicitar/[clienteId]), mesmo espírito das 3 linhas acima: rota específica
+  // só pra esse método, tudo mais no mesmo caminho (se algum dia existir) continua
+  // exigindo sessão.
+  if (method === "POST" && /^\/api\/clientes\/[^/]+\/solicitacoes\/publica$/.test(pathname)) return true;
   return false;
 }
 

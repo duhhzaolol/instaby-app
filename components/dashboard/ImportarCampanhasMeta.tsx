@@ -42,6 +42,7 @@ type LinhaResolvida = {
 type Previa = {
   clienteId: string;
   nomeArquivo: string;
+  contaAnuncios: string | null;
   periodoInicio: string;
   periodoFim: string;
   arquivoAntigo: boolean;
@@ -274,6 +275,7 @@ export default function ImportarCampanhasMeta({
             <div className="mb-1.5 flex flex-wrap items-center justify-between gap-1">
               <p className="font-medium text-text">
                 {clientes.find((c) => c.id === clienteId)?.nome || "Cliente"} · {previa.nomeArquivo}
+                {previa.contaAnuncios && <span className="font-normal text-muted"> · Conta: {previa.contaAnuncios}</span>}
               </p>
               <p className="text-muted">
                 {dataBr(previa.periodoInicio)} – {dataBr(previa.periodoFim)}

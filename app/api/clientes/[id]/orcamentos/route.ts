@@ -61,5 +61,30 @@ export async function POST(
     include: { itens: true },
   });
 
+  // Etapa 3 (v157) — "preparar orçamento adicional" a partir de um pedido fora do
+  // escopo: liga esse orçamento de volta na solicitação de origem (pra tela não
+  // deixar preparar dois orçamentos da mesma solicitação por engano) e avança o
+  // status dela, se ainda estava "pendente". O ciclo de cobrança em si não muda
+  // em nada — esse orçamento nasce "pendente" igual qualquer outro, só vira
+  // cobrança se/quando o cliente aceitar (ver Orcamento.status), exatamente como
+  // pedido: "sem cobrar automaticamente". Best-effort: nunca derruba a criação do
+  // orçamento (que já aconteceu) se esse vínculo falhar por algum motivo.
+  if (body.solicitacaoId) {
+    try {
+      const solicitacao = await prisma.solicitacao.findUnique({ where: { id: body.solicitacaoId } });
+      if (solicitacao && solicitacao.clienteId === params.id && !solicitacao.orcamentoPreparadoId) {
+        await prisma.solicitacao.update({
+          where: { id: solicitacao.id },
+          data: {
+            orcamentoPreparadoId: orcamento.id,
+            ...(solicitacao.status === "pendente" && { status: "em_andamento" }),
+          },
+        });
+      }
+    } catch (e) {
+      console.error("Não consegui vincular o orçamento à solicitação de origem:", e);
+    }
+  }
+
   return NextResponse.json(orcamento, { status: 201 });
 }

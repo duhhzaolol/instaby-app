@@ -32,6 +32,7 @@ export type LinhaResolvida = {
 export type PreviaImportacao = {
   clienteId: string;
   nomeArquivo: string;
+  contaAnuncios: string | null;
   periodoInicio: string;
   periodoFim: string;
   arquivoAntigo: boolean;
@@ -265,6 +266,7 @@ export async function montarPrevia(
   const previa: PreviaImportacao = {
     clienteId,
     nomeArquivo,
+    contaAnuncios: resultado.contaAnuncios,
     periodoInicio,
     periodoFim,
     arquivoAntigo,

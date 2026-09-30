@@ -16,6 +16,7 @@ type ItemLote = {
 type Lote = {
   id: string;
   nomeArquivo: string;
+  contaAnuncios: string | null;
   arquivoUrl: string;
   periodoInicio: string;
   periodoFim: string;
@@ -59,6 +60,7 @@ function LoteCard({ lote }: { lote: Lote }) {
           <p className="mt-0.5 text-[11px] text-muted">
             {dataBr(lote.periodoInicio)} – {dataBr(lote.periodoFim)} · {lote.linhasTotal} campanha(s), {lote.linhasComGasto}{" "}
             com gasto · {fmtMoeda(lote.gastoTotalArquivo)} no arquivo
+            {lote.contaAnuncios && ` · Conta: ${lote.contaAnuncios}`}
           </p>
           <p className="mt-0.5 text-[11px] text-muted/70">
             Importado {dataHoraBr(lote.createdAt)}

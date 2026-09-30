@@ -48,6 +48,11 @@ type Campanha = {
   dataInicio: string;
   dataFim: string | null;
   observacoes: string | null;
+  // Orçamento do conjunto de anúncios (spec §2: "separe... orçamento diário da
+  // campanha") — só informativo, vindo da última importação do Meta; não é a
+  // verbaMensal (meta definida pela agência) nem a verba/saldo do cliente.
+  orcamentoConjunto: number | null;
+  tipoOrcamento: string | null;
   snapshot: SnapshotView;
 };
 
@@ -647,6 +652,12 @@ export default function TrafegoClient({
                   {c.verbaMensal > 0 && (
                     <p className="mt-0.5 text-xs text-muted">
                       <span className="text-muted/70">Meta de verba:</span> R$ {fmt(c.verbaMensal)}/mês
+                    </p>
+                  )}
+                  {c.orcamentoConjunto != null && (
+                    <p className="mt-0.5 text-xs text-muted">
+                      <span className="text-muted/70">Orçamento do conjunto (Meta):</span> R$ {fmt2(c.orcamentoConjunto)}
+                      {c.tipoOrcamento && ` · ${c.tipoOrcamento}`}
                     </p>
                   )}
                   {c.avaliacaoMeta && (
