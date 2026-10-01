@@ -10,7 +10,8 @@ import {
   type LinhaCampanhaMeta,
   type ResultadoImportacaoMeta,
 } from "@/lib/parseCampanhasMeta";
-import { gerarChaveCorrespondencia, normalizarTextoChave, ultimoAcumuloDoMes } from "@/lib/trafego";
+import { gerarChaveCorrespondencia, normalizarTextoChave } from "@/lib/trafego";
+import { chaveAcumuloMeta, ultimosAcumulosMeta } from "@/lib/ultimosAcumulosMeta";
 
 export type CandidatoCampanha = { id: string; nome: string; statusInterno: string };
 
@@ -112,6 +113,12 @@ async function resolverLinhas(
     }
     if (escolhaManual) {
       const alvo = existentes.find((c: any) => c.id === escolhaManual);
+      if (!alvo) return {
+        linhaIndex, linha, campanhaId: null, campanhaNomeAtual: null,
+        resolucao: "pendente" as const,
+        motivoAmbiguidade: "A campanha selecionada não está mais disponível para esse cliente. Escolha outra campanha.",
+        candidatos: [],
+      };
       return {
         linhaIndex,
         linha,
@@ -246,6 +253,13 @@ export async function montarPrevia(
 
   const resolvidasBase = await resolverLinhas(clienteId, resultado.linhas, resolucoesManuais);
 
+  const limiteAntesDe = arquivoAntigo ? new Date(periodoFim) : undefined;
+  const alvos = resolvidasBase.filter((l) => l.campanhaId && l.resolucao !== "pendente").map((l) => {
+    const data = new Date(l.linha.inicio);
+    return { campanhaId: l.campanhaId!, ano: data.getUTCFullYear(), mes: data.getUTCMonth() };
+  });
+  const acumulados = await ultimosAcumulosMeta(alvos, limiteAntesDe);
+
   const linhas: LinhaResolvida[] = [];
   for (const base of resolvidasBase) {
     if (base.resolucao === "pendente" || base.resolucao === "nova_campanha") {
@@ -253,8 +267,7 @@ export async function montarPrevia(
       continue;
     }
     const dataInicio = new Date(base.linha.inicio);
-    const limiteAntesDe = arquivoAntigo ? new Date(periodoFim) : undefined;
-    const acumulo = await ultimoAcumuloDoMes(base.campanhaId as string, dataInicio.getUTCFullYear(), dataInicio.getUTCMonth(), limiteAntesDe);
+    const acumulo = acumulados.get(chaveAcumuloMeta({ campanhaId: base.campanhaId!, ano: dataInicio.getUTCFullYear(), mes: dataInicio.getUTCMonth() }))!;
     const gastoIncremental = base.linha.valorGasto - acumulo.valor;
     linhas.push({ ...base, gastoAnterior: acumulo.valor, gastoIncremental, correcaoNegativa: gastoIncremental < 0 });
   }

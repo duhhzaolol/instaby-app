@@ -3,6 +3,8 @@ import { exigirPermissaoApi, podeVerCliente } from "@/lib/permissoes";
 import { montarPrevia } from "@/lib/importacaoMeta";
 import { calcularSaldoCliente } from "@/lib/trafego";
 
+export const maxDuration = 60;
+
 // Nunca grava nada — só mostra cliente, conta, período, campanhas encontradas,
 // conflitos e impacto no saldo antes de confirmar (spec §1). A mesma lógica de
 // conciliação/incremento é reprocessada de novo em /confirmar, com autoridade final.

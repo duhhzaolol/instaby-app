@@ -3,14 +3,16 @@ import { put } from "@vercel/blob";
 import { exigirPermissaoApi, podeVerCliente } from "@/lib/permissoes";
 import { prisma } from "@/lib/prisma";
 import { montarPrevia } from "@/lib/importacaoMeta";
-import { gerarChaveCorrespondencia } from "@/lib/trafego";
+import { gravarImportacaoMeta } from "@/lib/gravarImportacaoMeta";
+
+export const maxDuration = 60;
 
 // Grava tudo de uma vez, numa transação: campanhas novas, atualização das já
 // existentes (aprendizado de nome/ID pra próxima importação), o lote e um item por
 // linha — mais o espelho em ResultadoCampanha (compatibilidade com o Início do gestor
 // de tráfego, que já existia antes desse módulo). Reprocessa o arquivo de novo aqui
 // (nunca confia nos números que a prévia devolveu pro navegador).
-export async function POST(request: NextRequest) {
+async function confirmar(request: NextRequest) {
   const { usuario, erro } = await exigirPermissaoApi("gerenciarTrafego");
   if (erro) return erro;
 
@@ -58,149 +60,31 @@ export async function POST(request: NextRequest) {
   const nomeUnico = `importacoes-trafego/${clienteId}/${Date.now()}-${nomeArquivo.replace(/[^a-zA-Z0-9.]/g, "-")}`;
   const blob = await put(nomeUnico, buffer, { access: "public" });
 
-  const resultado = await prisma.$transaction(async (tx) => {
-    const idsPorLinha = new Map<number, string>();
-
-    // 1) Campanhas novas primeiro, pra já ter o id na hora de gravar os itens.
-    for (const linha of previa.linhas) {
-      if (linha.resolucao !== "nova_campanha") continue;
-      const chave = gerarChaveCorrespondencia(linha.linha.nome, linha.linha.configAtribuicao);
-      const nova = await tx.campanha.create({
-        data: {
-          clienteId,
-          nome: linha.linha.nome,
-          plataforma: "meta_ads",
-          status: "ativa",
-          statusInterno: "em_acompanhamento",
-          dataInicio: new Date(linha.linha.inicio),
-          idExternoMeta: linha.linha.idExterno || undefined,
-          chaveCorrespondencia: chave,
-          nomesOriginaisMeta: [linha.linha.nome],
-          ultimoStatusMeta: linha.linha.status,
-          ultimoStatusMetaEm: new Date(),
-          orcamentoConjunto: linha.linha.orcamentoConjunto ?? undefined,
-          tipoOrcamento: linha.linha.tipoOrcamento ?? undefined,
-          observacoes: "Criada automaticamente por importação do Meta Ads.",
-        },
-      });
-      idsPorLinha.set(linha.linhaIndex, nova.id);
-    }
-
-    // 2) Campanhas já existentes: aprende nome/ID novos e atualiza os "últimos
-    // valores conhecidos" (só informativos, nunca decidem status/saldo sozinhos).
-    for (const linha of previa.linhas) {
-      if (linha.resolucao === "nova_campanha") continue;
-      const campanhaId = linha.campanhaId as string;
-      idsPorLinha.set(linha.linhaIndex, campanhaId);
-
-      const atual = await tx.campanha.findUnique({
-        where: { id: campanhaId },
-        select: { nomesOriginaisMeta: true, chaveCorrespondencia: true, idExternoMeta: true },
-      });
-      if (!atual) continue;
-
-      const nomesAtualizados = atual.nomesOriginaisMeta.includes(linha.linha.nome)
-        ? atual.nomesOriginaisMeta
-        : [...atual.nomesOriginaisMeta, linha.linha.nome];
-
-      await tx.campanha.update({
-        where: { id: campanhaId },
-        data: {
-          nomesOriginaisMeta: nomesAtualizados,
-          chaveCorrespondencia:
-            atual.chaveCorrespondencia || gerarChaveCorrespondencia(linha.linha.nome, linha.linha.configAtribuicao),
-          idExternoMeta: atual.idExternoMeta || linha.linha.idExterno || undefined,
-          ultimoStatusMeta: linha.linha.status,
-          ultimoStatusMetaEm: new Date(),
-          orcamentoConjunto: linha.linha.orcamentoConjunto ?? undefined,
-          tipoOrcamento: linha.linha.tipoOrcamento ?? undefined,
-        },
-      });
-    }
-
-    // 3) O lote em si.
-    const lote = await tx.loteImportacao.create({
-      data: {
-        clienteId,
-        nomeArquivo,
-        contaAnuncios: resultadoArquivo.contaAnuncios || undefined,
-        arquivoUrl: blob.url,
-        periodoInicio: new Date(previa.periodoInicio),
-        periodoFim: new Date(previa.periodoFim),
-        arquivoAntigo: previa.arquivoAntigo,
-        linhasTotal: previa.linhasTotal,
-        linhasComGasto: previa.linhasComGasto,
-        gastoTotalArquivo: previa.gastoTotalArquivo,
-        criadoPorId: usuario.id,
-      },
-    });
-
-    // 4) Um ItemImportacao por linha (o histórico/ledger de verdade) + espelho em
-    // ResultadoCampanha (pro Início do gestor de tráfego e o painel por campanha,
-    // que já existiam antes desse módulo e continuam lendo dali).
-    let campanhasCriadas = 0;
-    let campanhasAtualizadas = 0;
-    for (const linha of previa.linhas) {
-      const campanhaId = idsPorLinha.get(linha.linhaIndex);
-      if (!campanhaId) continue;
-      if (linha.resolucao === "nova_campanha") campanhasCriadas++;
-      else campanhasAtualizadas++;
-
-      await tx.itemImportacao.create({
-        data: {
-          loteId: lote.id,
-          campanhaId,
-          nomeOriginal: linha.linha.nome,
-          idExternoOriginal: linha.linha.idExterno,
-          statusMetaOriginal: linha.linha.status,
-          configAtribuicao: linha.linha.configAtribuicao,
-          gastoAcumuladoArquivo: linha.linha.valorGasto,
-          gastoAnterior: linha.gastoAnterior,
-          gastoIncremental: linha.gastoIncremental,
-          impressoes: linha.linha.impressoes,
-          alcance: linha.linha.alcance,
-          resultados: linha.linha.resultados,
-          indicadorResultado: linha.linha.indicadorResultado,
-          custoPorResultado: linha.linha.custoPorResultado,
-          orcamentoConjunto: linha.linha.orcamentoConjunto,
-          tipoOrcamento: linha.linha.tipoOrcamento,
-          termino: linha.linha.termino ? new Date(linha.linha.termino) : null,
-          resolucao: linha.resolucao,
-        },
-      });
-
-      await tx.resultadoCampanha.upsert({
-        where: {
-          campanhaId_inicio_fim: {
-            campanhaId,
-            inicio: new Date(linha.linha.inicio),
-            fim: new Date(linha.linha.fim),
-          },
-        },
-        update: {
-          verbaInvestida: linha.linha.valorGasto,
-          impressoes: linha.linha.impressoes,
-          alcance: linha.linha.alcance,
-          resultados: linha.linha.resultados,
-          indicadorResultado: linha.linha.indicadorResultado,
-          origem: "meta_import",
-        },
-        create: {
-          campanhaId,
-          inicio: new Date(linha.linha.inicio),
-          fim: new Date(linha.linha.fim),
-          verbaInvestida: linha.linha.valorGasto,
-          impressoes: linha.linha.impressoes,
-          alcance: linha.linha.alcance,
-          resultados: linha.linha.resultados,
-          indicadorResultado: linha.linha.indicadorResultado,
-          origem: "meta_import",
-        },
-      });
-    }
-
-    return { loteId: lote.id, campanhasCriadas, campanhasAtualizadas, itensGravados: previa.linhas.length };
-  });
+  const resultado = await prisma.$transaction(
+    (tx) => gravarImportacaoMeta(tx, {
+      clienteId, nomeArquivo, arquivoUrl: blob.url,
+      contaAnuncios: resultadoArquivo.contaAnuncios || null,
+      criadoPorId: usuario.id, previa,
+    }),
+    { maxWait: 10000, timeout: 45000 }
+  );
 
   return NextResponse.json(resultado, { status: 201 });
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    return await confirmar(request);
+  } catch (erro) {
+    const codigo = erro && typeof erro === "object" && "code" in erro ? String(erro.code) : "desconhecido";
+    console.error("Falha na importação Meta:", codigo);
+    const campanhaInvalida = erro instanceof Error && erro.message === "CAMPANHA_IMPORTACAO_INVALIDA";
+    return NextResponse.json({
+      erro: campanhaInvalida
+        ? "Uma campanha selecionada não está mais disponível para esse cliente. Atualize a prévia antes de confirmar."
+        : codigo === "P2028" || codigo === "P2024"
+        ? "O banco demorou para salvar a importação. Nenhum dado desta tentativa foi gravado. Tente novamente em alguns instantes."
+        : "Não foi possível concluir a importação. Nenhum dado desta tentativa foi gravado. Confira a conexão e tente novamente.",
+    }, { status: campanhaInvalida ? 400 : 503 });
+  }
 }

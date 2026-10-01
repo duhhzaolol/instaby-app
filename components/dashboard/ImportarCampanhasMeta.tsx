@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { UploadCloud, X, Check, AlertTriangle, ArrowRight, Info, History } from "lucide-react";
+import { requisicaoImportacaoMeta } from "@/lib/requisicaoImportacaoMeta";
 
 type Cliente = { id: string; nome: string };
 
@@ -107,31 +108,47 @@ export default function ImportarCampanhasMeta({
   const [confirmarArquivoAntigo, setConfirmarArquivoAntigo] = useState(false);
   const [precisaConfirmarArquivoAntigo, setPrecisaConfirmarArquivoAntigo] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
+  const [segundosImportando, setSegundosImportando] = useState(0);
+  const ultimaPrevia = useRef(0);
   const [erro, setErro] = useState("");
   const [resultado, setResultado] = useState<{ campanhasCriadas: number; campanhasAtualizadas: number; itensGravados: number } | null>(
     null
   );
 
+  useEffect(() => {
+    if (!confirmando) return;
+    const inicio = Date.now();
+    setSegundosImportando(0);
+    const timer = setInterval(() => setSegundosImportando(Math.floor((Date.now() - inicio) / 1000)), 1000);
+    return () => clearInterval(timer);
+  }, [confirmando]);
+
+  useEffect(() => () => { ultimaPrevia.current++; }, []);
+
   async function buscarPrevia(nomeArquivo: string, base64: string, resolucoesAtuais: Record<number, string>) {
+    const id = ++ultimaPrevia.current;
     setCarregandoPrevia(true);
     setErro("");
-    const resp = await fetch("/api/campanhas/importar-meta/preview", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ clienteId, nomeArquivo, conteudoBase64: base64, resolucoesManuais: resolucoesAtuais }),
-    });
-    const json = await resp.json();
-    setCarregandoPrevia(false);
-    if (!resp.ok) {
-      setErro(json.erro || "Não consegui ler esse arquivo.");
+    try {
+      const { resp, json } = await requisicaoImportacaoMeta<{
+        previa: Previa; saldoAtual?: SaldoResumo; saldoProjetado?: number;
+      }>("/api/campanhas/importar-meta/preview", {
+        clienteId, nomeArquivo, conteudoBase64: base64, resolucoesManuais: resolucoesAtuais,
+      });
+      if (id !== ultimaPrevia.current) return;
+      if (!resp.ok || !json.previa) throw new Error(json.erro || "Não consegui ler esse arquivo.");
+      setPrevia(json.previa);
+      setSaldoAtual(json.saldoAtual ?? null);
+      setSaldoProjetado(json.saldoProjetado ?? null);
+    } catch (erro) {
+      if (id !== ultimaPrevia.current) return;
+      setErro(erro instanceof Error ? erro.message : "Não consegui carregar a prévia.");
       setPrevia(null);
       setSaldoAtual(null);
       setSaldoProjetado(null);
-      return;
+    } finally {
+      if (id === ultimaPrevia.current) setCarregandoPrevia(false);
     }
-    setPrevia(json.previa);
-    setSaldoAtual(json.saldoAtual ?? null);
-    setSaldoProjetado(json.saldoProjetado ?? null);
   }
 
   async function selecionarArquivo(e: React.ChangeEvent<HTMLInputElement>) {
@@ -166,37 +183,43 @@ export default function ImportarCampanhasMeta({
   }
 
   async function confirmar(forcar: boolean) {
-    if (!arquivo || !clienteId) return;
+    if (!arquivo || !clienteId || confirmando || carregandoPrevia) return;
     setConfirmando(true);
     setErro("");
-    const resp = await fetch("/api/campanhas/importar-meta/confirmar", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    try {
+      const { resp, json } = await requisicaoImportacaoMeta<{
+        loteId: string; campanhasCriadas: number; campanhasAtualizadas: number;
+        itensGravados: number; precisaConfirmarArquivoAntigo?: boolean;
+      }>("/api/campanhas/importar-meta/confirmar", {
         clienteId,
         nomeArquivo: arquivo.nome,
         conteudoBase64: arquivo.base64,
         resolucoesManuais: resolucoes,
         forcarArquivoAntigo: forcar,
-      }),
-    });
-    const json = await resp.json();
-    setConfirmando(false);
-    if (resp.status === 409 && json.precisaConfirmarArquivoAntigo) {
-      setPrecisaConfirmarArquivoAntigo(true);
-      return;
+      });
+      if (resp.status === 409 && json.precisaConfirmarArquivoAntigo) {
+        setPrecisaConfirmarArquivoAntigo(true);
+        return;
+      }
+      if (!resp.ok) throw new Error(json.erro || "Não consegui importar. Confira o histórico antes de tentar novamente.");
+      if (typeof json.loteId !== "string" || typeof json.itensGravados !== "number") {
+        throw new Error("Não recebi a confirmação da importação. Confira o Histórico de importações antes de tentar novamente.");
+      }
+      setResultado(json);
+      setPrevia(null);
+      setArquivo(null);
+      router.refresh();
+    } catch (erro) {
+      setErro(erro instanceof Error ? erro.message : "Não consegui confirmar a importação. Confira o histórico antes de tentar novamente.");
+    } finally {
+      setConfirmando(false);
     }
-    if (!resp.ok) {
-      setErro(json.erro || "Não consegui importar — tenta de novo em alguns segundos.");
-      return;
-    }
-    setResultado(json);
-    setPrevia(null);
-    setArquivo(null);
-    router.refresh();
   }
 
   function fecharTudo() {
+    if (confirmando) return;
+    ultimaPrevia.current++;
+    setCarregandoPrevia(false);
     setAberto(false);
     setArquivo(null);
     setPrevia(null);
@@ -223,13 +246,14 @@ export default function ImportarCampanhasMeta({
     <div className="mb-4 rounded-2xl border border-border bg-card/60 p-4">
       <div className="mb-3 flex items-center justify-between">
         <p className="text-sm font-medium text-text">Importar campanhas do Meta Ads</p>
-        <button onClick={fecharTudo} className="text-muted hover:text-text">
+        <button disabled={confirmando} onClick={fecharTudo} className="text-muted hover:text-text disabled:opacity-40">
           <X size={16} />
         </button>
       </div>
 
       {!clienteFixo && !previa && (
         <select
+          disabled={lendo || carregandoPrevia || confirmando}
           value={clienteId}
           onChange={(e) => setClienteId(e.target.value)}
           className="mb-3 h-10 w-full rounded-xl border border-border bg-base/60 px-3 text-sm text-text"
@@ -252,7 +276,7 @@ export default function ImportarCampanhasMeta({
           >
             <UploadCloud size={13} />
             {lendo || carregandoPrevia ? "Lendo arquivo..." : "Escolher CSV ou Excel exportado do Gerenciador de Anúncios"}
-            <input type="file" accept=".csv,.xlsx,.xls" onChange={selecionarArquivo} disabled={!clienteId} className="hidden" />
+            <input type="file" accept=".csv,.xlsx,.xls" onChange={selecionarArquivo} disabled={!clienteId || lendo || carregandoPrevia || confirmando} className="hidden" />
           </label>
           <p className="mb-2 flex items-start gap-1.5 text-[11px] text-muted">
             <Info size={12} className="mt-0.5 shrink-0" />
@@ -351,6 +375,7 @@ export default function ImportarCampanhasMeta({
                       )}
                       <p className="mt-0.5 text-[11px] text-muted">{l.motivoAmbiguidade}</p>
                       <select
+                        disabled={confirmando}
                         value={resolucoes[l.linhaIndex] || ""}
                         onChange={(e) => escolherResolucao(l.linhaIndex, e.target.value)}
                         className="mt-1.5 h-9 w-full rounded-lg border border-border bg-base/60 px-2 text-xs text-text"
@@ -429,7 +454,7 @@ export default function ImportarCampanhasMeta({
             className="flex h-10 w-full items-center justify-center gap-1.5 rounded-xl bg-accent text-xs font-semibold text-white disabled:opacity-40"
           >
             {confirmando ? (
-              "Importando..."
+              `Importando... ${segundosImportando}s`
             ) : previa.pendentes > 0 ? (
               "Resolva as linhas pendentes"
             ) : (
