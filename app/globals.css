@@ -150,6 +150,6 @@
   body[data-pdf-trafego="escuro"] .relatorio-trafego [class*="print:text-black"] { color: #f3f4f6 !important; }
   body[data-pdf-trafego="escuro"] .relatorio-trafego [class*="text-muted"] { color: #b0b6c0 !important; }
   body[data-pdf-trafego="escuro"] .relatorio-trafego [class*="border"] { border-color: #383d47 !important; }
-  body[data-pdf-trafego="escuro"] .relatorio-trafego [class*="bg-accent"] { background: #e63946 !important; }
+  body[data-pdf-trafego="escuro"] .relatorio-trafego .bg-accent { background: #e63946 !important; }
   body[data-pdf-trafego="escuro"] .relatorio-trafego .text-accent { color: #e63946 !important; }
 }
