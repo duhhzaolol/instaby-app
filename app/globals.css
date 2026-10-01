@@ -143,6 +143,8 @@
   .relatorio-trafego, .relatorio-trafego * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .relatorio-trafego .grafico-campanha, .relatorio-trafego .rounded-xl { break-inside: avoid; }
   body[data-pdf-trafego="claro"] { background: white !important; }
+  body[data-pdf-trafego="claro"] .relatorio-trafego [class*="bg-card"],
+  body[data-pdf-trafego="claro"] .relatorio-trafego [class*="bg-base"] { background: white !important; }
   body[data-pdf-trafego="escuro"] { background: #15171d !important; color: #f3f4f6 !important; }
   body[data-pdf-trafego="escuro"] .relatorio-trafego { background: #15171d !important; color: #f3f4f6 !important; }
   body[data-pdf-trafego="escuro"] .relatorio-trafego [class*="bg-card"] { background: #1c2028 !important; }
