@@ -12,6 +12,7 @@ import {
 import { STATUS_VALIDOS, statusFechaCronometro, statusLabel } from "@/lib/tarefas";
 import { STATUS_CONTEUDO_VALIDOS, statusConteudoLabel } from "@/lib/revisaoConteudo";
 import { criarNotificacao } from "@/lib/notificacoes";
+import { dataIsoValida, dataIsoParaDate, dataHoraPublicacao } from "@/lib/midiaRevisao";
 
 // Detalhe completo — alimenta o painel lateral (Etapa 1 v152): checklist,
 // comentários internos, histórico de alterações e o cronômetro em aberto (se
@@ -90,9 +91,14 @@ export async function PATCH(
   }
 
   const body = await request.json();
+  for (const [campo, label] of [["prazo", "Prazo de produção"], ["publicacaoSugeridaEm", "Dia planejado de postagem"], ["publicadoEm", "Data de publicação"]]) {
+    if (body[campo] !== undefined && body[campo] !== null && body[campo] !== "" && !dataIsoValida(body[campo])) {
+      return NextResponse.json({ erro: `${label} inválido.` }, { status: 400 });
+    }
+  }
   let publicacaoSugeridaEm: Date | null | undefined;
   if (body.publicacaoSugeridaEm !== undefined) {
-    publicacaoSugeridaEm = body.publicacaoSugeridaEm ? new Date(body.publicacaoSugeridaEm) : null;
+    publicacaoSugeridaEm = body.publicacaoSugeridaEm ? dataIsoParaDate(body.publicacaoSugeridaEm) : null;
     if (publicacaoSugeridaEm && !Number.isFinite(publicacaoSugeridaEm.getTime())) return NextResponse.json({ erro: "Dia e horário de publicação inválidos." }, { status: 400 });
   }
 
@@ -244,7 +250,7 @@ export async function PATCH(
   // de verdade aconteceu antes de alguém atualizar o Instaby.
   let publicadoEmNovo: Date | null | undefined = undefined;
   if (body.publicadoEm !== undefined) {
-    publicadoEmNovo = body.publicadoEm ? new Date(body.publicadoEm) : null;
+    publicadoEmNovo = body.publicadoEm ? dataIsoParaDate(body.publicadoEm) : null;
   } else if (body.statusConteudo === "publicado" && existente.statusConteudo !== "publicado") {
     publicadoEmNovo = new Date();
   } else if (
@@ -318,13 +324,13 @@ export async function PATCH(
     });
   }
   if (body.prazo !== undefined) {
-    const prazoNovoDate = body.prazo ? new Date(body.prazo) : null;
+    const prazoNovoDate = body.prazo ? dataIsoParaDate(body.prazo) : null;
     const mudou = (prazoNovoDate?.getTime() ?? null) !== (existente.prazo?.getTime() ?? null);
     if (mudou) {
       historico.push({
         campo: "prazo",
-        valorAntigo: existente.prazo ? existente.prazo.toLocaleString("pt-BR") : "Sem prazo",
-        valorNovo: prazoNovoDate ? prazoNovoDate.toLocaleString("pt-BR") : "Sem prazo",
+        valorAntigo: dataHoraPublicacao(existente.prazo?.toISOString() || null) || "Sem prazo",
+        valorNovo: dataHoraPublicacao(prazoNovoDate?.toISOString() || null) || "Sem prazo",
       });
     }
   }
@@ -368,7 +374,7 @@ export async function PATCH(
     });
   }
   if (publicacaoSugeridaEm !== undefined && publicacaoSugeridaEm?.getTime() !== existente.publicacaoSugeridaEm?.getTime()) {
-    historico.push({ campo: "publicacaoSugeridaEm", valorAntigo: existente.publicacaoSugeridaEm?.toISOString() || "Não definida", valorNovo: publicacaoSugeridaEm?.toISOString() || "Não definida" });
+    historico.push({ campo: "publicacaoSugeridaEm", valorAntigo: dataHoraPublicacao(existente.publicacaoSugeridaEm?.toISOString() || null) || "Não definida", valorNovo: dataHoraPublicacao(publicacaoSugeridaEm?.toISOString() || null) || "Não definida" });
   }
   if (body.videoBrutoExcecao !== undefined && !!body.videoBrutoExcecao !== !!existente.videoBrutoExcecao) {
     historico.push({
@@ -386,7 +392,7 @@ export async function PATCH(
       ...(body.descricao !== undefined && { descricao: body.descricao }),
       ...(body.prioridade !== undefined && { prioridade: body.prioridade }),
       ...(body.categoria !== undefined && { categoria: body.categoria }),
-      ...(body.prazo !== undefined && { prazo: body.prazo ? new Date(body.prazo) : null }),
+      ...(body.prazo !== undefined && { prazo: body.prazo ? dataIsoParaDate(body.prazo) : null }),
       ...(body.link !== undefined && { link: body.link || null }),
       ...(body.estimativaHoras !== undefined && {
         estimativaHoras: body.estimativaHoras != null ? Number(body.estimativaHoras) : null,

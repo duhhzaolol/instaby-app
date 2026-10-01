@@ -16,6 +16,7 @@ export function NovaTarefaGlobalForm({
   textoBotao,
   clienteInicial = "",
   prazoInicial = "",
+  postagemInicial = "",
   abertoInicial = false,
   aoConcluir,
   aoCancelar,
@@ -28,6 +29,7 @@ export function NovaTarefaGlobalForm({
   textoBotao?: string;
   clienteInicial?: string;
   prazoInicial?: string;
+  postagemInicial?: string;
   abertoInicial?: boolean;
   aoConcluir?: () => void;
   aoCancelar?: () => void;
@@ -39,6 +41,8 @@ export function NovaTarefaGlobalForm({
   const [categoria, setCategoria] = useState(categoriaFixa || "");
   const [prazo, setPrazo] = useState(prazoInicial);
   const [hora, setHora] = useState("");
+  const [postagem, setPostagem] = useState(postagemInicial);
+  const [horaPostagem, setHoraPostagem] = useState("");
   const [observacao, setObservacao] = useState("");
   const [checklistItens, setChecklistItens] = useState<string[]>([]);
   const [novoItemChecklist, setNovoItemChecklist] = useState("");
@@ -51,6 +55,8 @@ export function NovaTarefaGlobalForm({
     setCategoria(categoriaFixa || "");
     setPrazo("");
     setHora("");
+    setPostagem("");
+    setHoraPostagem("");
     setObservacao("");
     setChecklistItens([]);
     setNovoItemChecklist("");
@@ -77,6 +83,9 @@ export function NovaTarefaGlobalForm({
           categoria: categoriaFixa || categoria || null,
           descricao: observacao || null,
           prazo: prazo ? `${prazo}T${hora || "00:00"}:00-03:00` : null,
+          publicacaoSugeridaEm: clienteId && postagem
+            ? `${postagem}T${horaPostagem || "00:00"}:00-03:00`
+            : null,
           checklistItens:
             checklistItens.length > 0 ? checklistItens : undefined,
         }),
@@ -175,16 +184,17 @@ export function NovaTarefaGlobalForm({
         )}
       </div>
 
-      <div className="mb-3 grid grid-cols-2 gap-2">
+      <p className="mb-1 text-xs font-medium text-text">Prazo de produção (opcional)</p>
+      <div className="mb-2 grid grid-cols-2 gap-2">
         <DatePicker
           value={prazo}
           onChange={setPrazo}
-          placeholder="Prazo (opcional)"
+          placeholder="Prazo de produção"
           limpavel
         />
         <input
           type="time"
-          aria-label="Horário opcional da tarefa"
+          aria-label="Horário opcional do prazo de produção"
           value={hora}
           onChange={(e) => setHora(e.target.value)}
           disabled={!prazo}
@@ -192,8 +202,17 @@ export function NovaTarefaGlobalForm({
         />
       </div>
       <p className="mb-3 text-xs text-muted">
-        O horário é opcional. A data organiza o trabalho no cronograma.
+        Dia em que o trabalho precisa estar pronto. O horário é opcional.
       </p>
+
+      {clienteId && <>
+        <p className="mb-1 text-xs font-medium text-text">Dia planejado de postagem (opcional)</p>
+        <div className="mb-2 grid grid-cols-2 gap-2">
+          <DatePicker value={postagem} onChange={setPostagem} placeholder="Dia planejado de postagem" limpavel />
+          <input type="time" aria-label="Horário opcional da postagem" value={horaPostagem} onChange={e => setHoraPostagem(e.target.value)} disabled={!postagem} className="h-10 w-full rounded-xl border border-border bg-base/60 px-3 text-sm text-text disabled:opacity-40" />
+        </div>
+        <p className="mb-3 text-xs text-muted">Use para conteúdos que pretende postar. Pode escolher só o dia; isso não agenda nem publica automaticamente.</p>
+      </>}
 
       <textarea
         value={observacao}

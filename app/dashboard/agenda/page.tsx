@@ -1,22 +1,16 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { headers } from "next/headers";
-import {
-  ChevronLeft,
-  ChevronRight,
-  CalendarPlus,
-  CalendarCheck,
-  Clock,
-  Sun,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarPlus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import {
   AgendaGrid,
   type EventoAgenda,
 } from "@/components/dashboard/AgendaGrid";
 import { FiltroClienteAgenda } from "@/components/dashboard/FiltroClienteAgenda";
+import { AgendaLista } from "@/components/dashboard/AgendaLista";
+import { ResumoMensalAgenda } from "@/components/dashboard/ResumoMensalAgenda";
 import { AjudaContextual } from "@/components/ui/AjudaContextual";
-import { StatTile } from "@/components/ui/StatTile";
 import { formatarDuracao } from "@/lib/formatarDuracao";
 import {
   TIPOS_ATIVIDADE_AGENDA,
@@ -28,6 +22,11 @@ import { getUsuarioAtual, clienteIdsPermitidos } from "@/lib/permissoes";
 import { urgenciaPrazo } from "@/lib/urgenciaPrazo";
 import { chaveDiaSaoPaulo } from "@/lib/dataHora";
 import { linkAgenda, periodoAgenda, type FiltrosAgenda } from "@/lib/agenda";
+import {
+  dataDaAgenda,
+  etapaDaTarefa,
+  type BaseDataAgenda,
+} from "@/lib/cronogramaAgenda";
 
 export const dynamic = "force-dynamic";
 const NOMES_MESES = [
@@ -62,7 +61,13 @@ export default async function AgendaPage({
   const periodo = periodoAgenda(searchParams.mes, hoje);
   const clienteFiltro = searchParams.cliente || "";
   const soTarefas = searchParams.visao === "tarefas";
-  const soPendentes = searchParams.status === "pendentes";
+  const emLista = searchParams.formato === "lista";
+  const baseData: BaseDataAgenda =
+    searchParams.datas === "postagem" || searchParams.datas === "publicado"
+      ? searchParams.datas
+      : "trabalho";
+  const soPendentes =
+    baseData !== "publicado" && searchParams.status === "pendentes";
   const tiposAtivos = new Set(
     searchParams.tipos === undefined
       ? TIPOS_ATIVIDADE_AGENDA.map((t) => t.valor)
@@ -76,6 +81,8 @@ export default async function AgendaPage({
     tipos: Array.from(tiposAtivos).join(","),
     status: soPendentes ? "pendentes" : "todas",
     visao: soTarefas ? "tarefas" : "tudo",
+    formato: emLista ? "lista" : "calendario",
+    datas: baseData,
   };
 
   const usuarioAtual = await getUsuarioAtual();
@@ -90,19 +97,31 @@ export default async function AgendaPage({
   const [tarefas, registrosTempo, clientes] = await Promise.all([
     prisma.tarefa.findMany({
       where: {
-        prazo: datas,
-        ...filtroAcesso,
-        ...filtroCliente,
+        AND: [
+          filtroAcesso,
+          filtroCliente,
+          {
+            OR: [
+              { prazo: datas },
+              { publicacaoSugeridaEm: datas },
+              { statusConteudo: "publicado", publicadoEm: datas },
+            ],
+          },
+        ],
         ...(!usuarioAtual.master && { responsavelId: usuarioAtual.id }),
-        ...(soPendentes && { status: { not: "feito" } }),
       },
       include: {
         cliente: { select: { id: true, nome: true, cor: true } },
         responsavel: { select: { nome: true, fotoUrl: true } },
+        versoes: {
+          orderBy: { numero: "desc" },
+          take: 1,
+          select: { aprovadoEm: true, alteracoesSolicitadasEm: true },
+        },
       },
       orderBy: { prazo: "asc" },
     }),
-    soTarefas
+    soTarefas || baseData !== "trabalho"
       ? Promise.resolve([])
       : prisma.registroTempo.findMany({
           where: {
@@ -129,14 +148,16 @@ export default async function AgendaPage({
   let totalTarefas = 0;
   let totalHoras = 0;
   for (const t of tarefas) {
-    if (!t.prazo) continue;
+    const dataEscolhida = dataDaAgenda(t, baseData);
+    if (!dataEscolhida || (soPendentes && t.status === "feito")) continue;
     const tipoAtividade = tipoDaTarefaAgenda(
       t.categoria,
       t.titulo,
       !!t.cliente,
     );
     if (!tiposAtivos.has(tipoAtividade)) continue;
-    const chave = chaveDiaSaoPaulo(t.prazo);
+    const chave = chaveDiaSaoPaulo(new Date(dataEscolhida));
+    if (!periodo.dias.includes(chave)) continue;
     if (chave.startsWith(periodo.mesChave)) totalTarefas++;
     (eventosPorDia[chave] ||= []).push({
       id: t.id,
@@ -145,14 +166,29 @@ export default async function AgendaPage({
       texto: t.titulo,
       categoriaLabel: visualDaCategoriaTarefa(t.categoria).label,
       status: t.status,
+      etapa: etapaDaTarefa(t),
+      tipoData: baseData,
+      prazo: t.prazo?.toISOString() || null,
+      postagemPlanejada: t.publicacaoSugeridaEm?.toISOString() || null,
+      publicadoEm:
+        t.statusConteudo === "publicado"
+          ? t.publicadoEm?.toISOString() || null
+          : null,
+      linkPublicacao: t.linkPublicacao,
       clienteNome: t.cliente?.nome || null,
       usuarioNome: t.responsavel?.nome || null,
       usuarioFotoUrl: t.responsavel?.fotoUrl || null,
       cor: t.cliente?.cor,
       href: linkAgenda(filtros, { tarefa: t.id }),
       data: chave,
-      hora: horaBR(t.prazo) !== "00:00" ? horaBR(t.prazo) : null,
-      urgencia: t.status !== "feito" ? urgenciaPrazo(t.prazo) : null,
+      hora:
+        horaBR(new Date(dataEscolhida)) !== "00:00"
+          ? horaBR(new Date(dataEscolhida))
+          : null,
+      urgencia:
+        baseData === "trabalho" && t.status !== "feito" && t.prazo
+          ? urgenciaPrazo(t.prazo)
+          : null,
     });
   }
   for (const r of registrosTempo) {
@@ -204,7 +240,7 @@ export default async function AgendaPage({
             />
           </p>
           <p className="text-sm text-muted">
-            Cronograma de tarefas por cliente, com horário opcional
+            Produção, postagens e resultados do mês por cliente
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -230,53 +266,86 @@ export default async function AgendaPage({
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <FiltroClienteAgenda clientes={clientes} clienteAtual={clienteFiltro} />
         <div className="flex flex-wrap items-center gap-1.5 text-xs">
-          {[
-            { visao: "tudo", label: "Tarefas e horas" },
-            { visao: "tarefas", label: "Só tarefas" },
-          ].map((v) => (
+          {baseData === "trabalho" &&
+            [
+              { visao: "tudo", label: "Tarefas e horas" },
+              { visao: "tarefas", label: "Só tarefas" },
+            ].map((v) => (
+              <Link
+                key={v.visao}
+                href={linkAgenda(filtros, { visao: v.visao })}
+                className={`rounded-lg border px-3 py-2 ${filtros.visao === v.visao ? "border-accent/40 bg-accent/10 text-text" : "border-border text-muted hover:text-text"}`}
+              >
+                {v.label}
+              </Link>
+            ))}
+          {baseData !== "publicado" && (
             <Link
-              key={v.visao}
-              href={linkAgenda(filtros, { visao: v.visao })}
-              className={`rounded-lg border px-3 py-2 ${filtros.visao === v.visao ? "border-accent/40 bg-accent/10 text-text" : "border-border text-muted hover:text-text"}`}
+              href={linkAgenda(filtros, {
+                status: soPendentes ? "todas" : "pendentes",
+              })}
+              className="rounded-lg border border-border px-3 py-2 text-muted hover:text-text"
             >
-              {v.label}
+              {soPendentes ? "Só tarefas pendentes" : "Todas as tarefas"}
             </Link>
-          ))}
-          <Link
-            href={linkAgenda(filtros, {
-              status: soPendentes ? "todas" : "pendentes",
-            })}
-            className="rounded-lg border border-border px-3 py-2 text-muted hover:text-text"
-          >
-            {soPendentes ? "Só tarefas pendentes" : "Todas as tarefas"}
-          </Link>
+          )}
         </div>
       </div>
-      <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <StatTile
-          icone={<CalendarCheck size={12} style={{ color: "#3B82F6" }} />}
-          label="Tarefas do mês"
-          valor={totalTarefas}
-          index={0}
-        />
-        <StatTile
-          icone={<Clock size={12} style={{ color: "#0D9488" }} />}
-          label="Horas registradas"
-          valor={formatarDuracao(totalHoras)}
-          index={1}
-        />
-        <StatTile
-          icone={<Sun size={12} style={{ color: "#F59E0B" }} />}
-          label="Hoje"
-          valor={eventosHoje}
-          sub={
-            eventosHoje
-              ? "itens nesta visualização"
-              : "nenhum item nesta visualização"
-          }
-          index={2}
-        />
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div
+          className="flex flex-wrap items-center gap-1.5 text-xs"
+          aria-label="Escolher data do cronograma"
+        >
+          {[
+            { valor: "trabalho", label: "Prazos de produção" },
+            { valor: "postagem", label: "Postagens planejadas" },
+            { valor: "publicado", label: "Publicados" },
+          ].map((d) => (
+            <Link
+              key={d.valor}
+              aria-current={baseData === d.valor ? "page" : undefined}
+              href={linkAgenda(filtros, { datas: d.valor })}
+              className={`rounded-lg border px-3 py-2 ${baseData === d.valor ? "border-accent/40 bg-accent/10 text-text" : "border-border text-muted hover:text-text"}`}
+            >
+              {d.label}
+            </Link>
+          ))}
+        </div>
+        <div className="flex gap-1.5 text-xs" aria-label="Formato da agenda">
+          {[
+            { valor: "calendario", label: "Calendário" },
+            { valor: "lista", label: "Lista do mês" },
+          ].map((f) => (
+            <Link
+              key={f.valor}
+              aria-current={filtros.formato === f.valor ? "page" : undefined}
+              href={linkAgenda(filtros, { formato: f.valor })}
+              className={`rounded-lg border px-3 py-2 ${filtros.formato === f.valor ? "border-accent/40 bg-accent/10 text-text" : "border-border text-muted hover:text-text"}`}
+            >
+              {f.label}
+            </Link>
+          ))}
+        </div>
       </div>
+      <div
+        className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted"
+        aria-label="Totais da visualização"
+      >
+        <span>
+          <strong className="text-text">{totalTarefas}</strong>{" "}
+          {baseData === "trabalho" ? "tarefas" : "conteúdos"} nesta visualização
+        </span>
+        {baseData === "trabalho" && !soTarefas && (
+          <span>{formatarDuracao(totalHoras)} registradas no mês</span>
+        )}
+        <span>{eventosHoje} itens hoje nesta visualização</span>
+      </div>
+      <ResumoMensalAgenda
+        tarefas={tarefas}
+        mesChave={periodo.mesChave}
+        clienteNome={clientes.find((c) => c.id === clienteFiltro)?.nome}
+        filtros={filtros}
+      />
       <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
         {TIPOS_ATIVIDADE_AGENDA.map((tipo) => {
           const ativo = tiposAtivos.has(tipo.valor);
@@ -297,18 +366,31 @@ export default async function AgendaPage({
         })}
       </div>
       <p className="mb-3 text-xs text-muted">
-        As tarefas aparecem na data escolhida para o trabalho. Você pode
-        planejar só o dia; a sugestão de postagem e a publicação ficam nos
-        detalhes do conteúdo.
+        {baseData === "trabalho"
+          ? "Aqui aparece o prazo para terminar o trabalho. O dia de postagem é separado e pode ser definido nos detalhes."
+          : baseData === "postagem"
+            ? "Aqui aparecem somente os dias de postagem que você planejou. O prazo de produção permanece separado; o horário é opcional."
+            : "Aqui aparecem conteúdos marcados como publicados na data registrada de publicação. Concluir a tarefa não significa publicar."}
       </p>
-      <AgendaGrid
-        dias={periodo.dias}
-        eventosPorDia={eventosPorDia}
-        mes={periodo.mes}
-        hojeChave={hojeChave}
-        clientes={clientes}
-        clienteIdAtual={clienteFiltro}
-      />
+      {emLista ? (
+        <AgendaLista
+          eventos={Object.values(eventosPorDia).flat()}
+          mesChave={periodo.mesChave}
+          clientes={clientes}
+          clienteIdAtual={clienteFiltro}
+          baseData={baseData === "trabalho" ? "trabalho" : "postagem"}
+        />
+      ) : (
+        <AgendaGrid
+          dias={periodo.dias}
+          eventosPorDia={eventosPorDia}
+          mes={periodo.mes}
+          hojeChave={hojeChave}
+          clientes={clientes}
+          clienteIdAtual={clienteFiltro}
+          baseData={baseData === "trabalho" ? "trabalho" : "postagem"}
+        />
+      )}
       <section
         aria-label="Calendários externos"
         className="mt-8 border-t border-border pt-5"

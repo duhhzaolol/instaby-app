@@ -22,6 +22,18 @@ export type VersaoNovidades = {
 
 export const NOVIDADES: VersaoNovidades[] = [
   {
+    versao: 161,
+    resumo: "Cronograma em lista, etapas nos cartões e resumo mensal, com produção e postagem em dias separados.",
+    itens: [
+      { tipo: "adicionado", texto: "A Agenda tem uma lista do mês com nomes completos, cliente, formato e etapa de cada tarefa. A troca entre lista e calendário mantém seus filtros." },
+      { tipo: "melhorado", texto: "Os cartões mostram a etapa do conteúdo, incluindo aprovação e pedido de alterações da versão mais recente. Concluir a tarefa continua diferente de publicar." },
+      { tipo: "adicionado", texto: "Prazo de produção e dia planejado de postagem ficam separados na criação e nos detalhes. Você pode escolher apenas os dias; os horários são opcionais." },
+      { tipo: "adicionado", texto: "Veja a Agenda pelos prazos de produção, pelas postagens planejadas ou pelas publicações registradas. O + preenche a data correspondente à visualização." },
+      { tipo: "adicionado", texto: "O resumo mensal por cliente distingue postagens planejadas, conteúdos publicados, pendências de publicação e tarefas concluídas, sem inventar datas para tarefas antigas." },
+      { tipo: "corrigido", texto: "Datas sem horário mantêm o dia de Brasília e aparecem para o cliente sem uma sugestão de postagem à meia-noite." },
+    ],
+  },
+  {
     versao: 160,
     resumo: "Agenda e cronograma reunidos, com filtro por cliente e detalhes maiores para editar as tarefas.",
     itens: [

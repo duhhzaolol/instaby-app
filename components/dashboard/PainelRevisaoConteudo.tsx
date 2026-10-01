@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Video, Image as ImageIcon, Send, CheckCircle2, Copy, Check, CalendarClock, ExternalLink } from "lucide-react";
 import { STATUS_CONTEUDO_VALIDOS, STATUS_CONTEUDO_LABELS } from "@/lib/revisaoConteudo";
-import { publicacaoParaInput, formatarTempoVideo } from "@/lib/midiaRevisao";
+import { dataHoraPublicacao, formatarTempoVideo } from "@/lib/midiaRevisao";
+import { camposPrazo } from "@/lib/agenda";
+import { DatePicker } from "@/components/ui/DatePicker";
 
 export type ComentarioRevisaoData = {
   id: string;
@@ -70,8 +72,6 @@ export function PainelRevisaoConteudo({
 }) {
   const [linkCopiado, setLinkCopiado] = useState(false);
   const [erroLink, setErroLink] = useState("");
-  const [publicacaoSugerida, setPublicacaoSugerida] = useState(publicacaoParaInput(tarefa.publicacaoSugeridaEm));
-  const [salvandoSugestao, setSalvandoSugestao] = useState(false);
 
   const [novoLinkVideo, setNovoLinkVideo] = useState("");
   const [novoLinkImagem, setNovoLinkImagem] = useState("");
@@ -87,7 +87,15 @@ export function PainelRevisaoConteudo({
   const [aprovando, setAprovando] = useState(false);
 
   const [linkPublicacao, setLinkPublicacao] = useState(tarefa.linkPublicacao || "");
+  const [dataPublicacao, setDataPublicacao] = useState(() => camposPrazo(tarefa.publicadoEm).data);
+  const [horaPublicacao, setHoraPublicacao] = useState(() => camposPrazo(tarefa.publicadoEm).hora);
   const [salvandoPublicacao, setSalvandoPublicacao] = useState(false);
+
+  useEffect(() => {
+    const publicada = camposPrazo(tarefa.publicadoEm);
+    setDataPublicacao(publicada.data);
+    setHoraPublicacao(publicada.hora);
+  }, [tarefa.publicadoEm]);
 
   const ultimaVersao = tarefa.versoes[0] || null; // já vem ordenado numero desc (ver GET /api/tarefas/[id])
 
@@ -98,12 +106,6 @@ export function PainelRevisaoConteudo({
       setTimeout(() => setLinkCopiado(false), 2000);
       setErroLink("");
     }).catch(() => setErroLink("Não consegui copiar automaticamente. Abra a página da revisão e copie o endereço."));
-  }
-
-  async function salvarSugestao() {
-    setSalvandoSugestao(true);
-    try { const atualizada = await patch({ publicacaoSugeridaEm: publicacaoSugerida ? new Date(`${publicacaoSugerida}:00-03:00`).toISOString() : null }); if (atualizada) await recarregar(); }
-    finally { setSalvandoSugestao(false); }
   }
 
   async function mudarStatusConteudo(novo: string) {
@@ -184,9 +186,21 @@ export function PainelRevisaoConteudo({
 
   async function salvarPublicacao() {
     setSalvandoPublicacao(true);
-    await patch({ linkPublicacao: linkPublicacao.trim() || null });
-    setSalvandoPublicacao(false);
-    await recarregar();
+    try {
+      const atual = camposPrazo(tarefa.publicadoEm);
+      const dataFoiAlterada = dataPublicacao !== atual.data || horaPublicacao !== atual.hora;
+      const atualizada = await patch({
+        linkPublicacao: linkPublicacao.trim() || null,
+        ...(tarefa.statusConteudo === "publicado" && {
+          publicadoEm: dataPublicacao
+            ? dataFoiAlterada ? `${dataPublicacao}T${horaPublicacao || "00:00"}:00-03:00` : tarefa.publicadoEm
+            : null,
+        }),
+      });
+      if (atualizada) await recarregar();
+    } finally {
+      setSalvandoPublicacao(false);
+    }
   }
 
   return (
@@ -225,10 +239,9 @@ export function PainelRevisaoConteudo({
       <a href={`/revisao/${tarefa.id}`} target="_blank" rel="noreferrer" className="mb-3 inline-flex items-center gap-1 text-xs text-muted hover:text-text"><ExternalLink size={12} /> Abrir página de revisão</a>
       {erroLink && <p role="alert" className="mb-3 text-xs text-red-400">{erroLink}</p>}
       <div className="mb-3 rounded-xl border border-border bg-card/60 p-3">
-        <label htmlFor="publicacao-sugerida" className="mb-2 flex items-center gap-1.5 text-xs font-medium text-text"><CalendarClock size={14} /> Dia e horário sugeridos para postar</label>
-        <input id="publicacao-sugerida" type="datetime-local" value={publicacaoSugerida} onChange={e => setPublicacaoSugerida(e.target.value)} className="mb-2 h-10 w-full rounded-lg border border-border bg-base px-2 text-sm text-text" />
-        <p className="mb-2 text-[11px] text-muted">Horário de Brasília. Aparece para o cliente na revisão; é uma sugestão, sem alterar o prazo da tarefa.</p>
-        <button type="button" onClick={salvarSugestao} disabled={salvandoSugestao} className="min-h-9 rounded-lg border border-border px-3 text-xs text-text disabled:opacity-40">{salvandoSugestao ? "Salvando..." : "Salvar sugestão de publicação"}</button>
+        <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-text"><CalendarClock size={14} /> Dia planejado de postagem</p>
+        <p className="mb-2 text-sm text-text">{dataHoraPublicacao(tarefa.publicacaoSugeridaEm) || "Ainda não definido"}</p>
+        <p className="text-[11px] text-muted">Edite nos detalhes acima e clique em Salvar alterações. Depois de salvo, aparece para o cliente na revisão. O horário é opcional e usa Brasília.</p>
       </div>
 
       {/* Publicação — link e data, registrados mesmo quando feita manualmente fora do sistema */}
@@ -250,9 +263,15 @@ export function PainelRevisaoConteudo({
               Salvar
             </button>
           </div>
-          {tarefa.publicadoEm && (
-            <p className="mt-1.5 text-[11px] text-muted">Publicado em {new Date(tarefa.publicadoEm).toLocaleString("pt-BR")}</p>
-          )}
+          {tarefa.statusConteudo === "publicado" && <>
+            <p className="mb-1 mt-3 block text-xs text-muted">Data real de publicação</p>
+            <div className="mb-2 grid grid-cols-2 gap-2">
+              <DatePicker value={dataPublicacao} onChange={setDataPublicacao} placeholder="Data real de publicação" limpavel />
+              <input type="time" aria-label="Horário opcional da publicação realizada" value={horaPublicacao} onChange={e => setHoraPublicacao(e.target.value)} disabled={!dataPublicacao} className="h-10 w-full rounded-xl border border-border bg-base px-3 text-xs text-text disabled:opacity-40" />
+            </div>
+            <p className="text-[11px] text-muted">Salve junto com o link no botão Salvar. Esta data define o mês no resumo; sem data, o conteúdo não entra na contagem de publicados. Horário opcional, em Brasília.</p>
+            {tarefa.publicadoEm && <p className="mt-1.5 text-[11px] text-muted">Publicado em {dataHoraPublicacao(tarefa.publicadoEm)}</p>}
+          </>}
         </div>
       )}
 

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { X, ExternalLink, Plus, Check } from "lucide-react";
+import { X, ExternalLink, Plus } from "lucide-react";
 import {
   visualDoTipoAtividade,
   type TipoAtividadeAgenda,
@@ -12,6 +12,11 @@ import { DatePicker } from "@/components/ui/DatePicker";
 import { AvatarPessoa } from "@/components/ui/AvatarPessoa";
 import { NovaTarefaGlobalForm } from "@/components/dashboard/NovaTarefaGlobalForm";
 import type { ClienteAgenda } from "@/components/dashboard/FiltroClienteAgenda";
+import {
+  EtapaAgenda,
+  horarioEventoAgenda,
+  rotuloDataAgenda,
+} from "@/components/dashboard/EtapaAgenda";
 
 export type EventoAgenda = {
   id: string;
@@ -20,6 +25,12 @@ export type EventoAgenda = {
   texto: string;
   categoriaLabel?: string;
   status?: string;
+  etapa?: { label: string; cor: string };
+  tipoData?: "trabalho" | "postagem" | "publicado";
+  prazo?: string | null;
+  postagemPlanejada?: string | null;
+  publicadoEm?: string | null;
+  linkPublicacao?: string | null;
   clienteNome?: string | null;
   usuarioNome?: string | null;
   usuarioFotoUrl?: string | null;
@@ -33,13 +44,6 @@ export type EventoAgenda = {
 };
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const dataCurta = (dia: string) => `${dia.slice(8, 10)}/${dia.slice(5, 7)}`;
-function horarioTexto(e: EventoAgenda) {
-  return e.horaInicio
-    ? e.horaFim
-      ? `${e.horaInicio} – ${e.horaFim}`
-      : e.horaInicio
-    : e.hora || null;
-}
 
 export function AgendaGrid({
   dias,
@@ -48,6 +52,7 @@ export function AgendaGrid({
   hojeChave,
   clientes,
   clienteIdAtual,
+  baseData = "trabalho",
 }: {
   dias: string[];
   eventosPorDia: Record<string, EventoAgenda[]>;
@@ -55,6 +60,7 @@ export function AgendaGrid({
   hojeChave: string;
   clientes: ClienteAgenda[];
   clienteIdAtual: string;
+  baseData?: "trabalho" | "postagem";
 }) {
   const router = useRouter();
   const [diaAberto, setDiaAberto] = useState<string | null>(null);
@@ -204,6 +210,10 @@ export function AgendaGrid({
                             e.categoriaLabel,
                             e.clienteNome,
                             e.urgencia?.label,
+                            e.etapa?.label,
+                            e.origem === "tarefa"
+                              ? rotuloDataAgenda(e.tipoData)
+                              : null,
                           ]
                             .filter(Boolean)
                             .join(" — ")}
@@ -213,19 +223,26 @@ export function AgendaGrid({
                             <span className="line-clamp-2 break-words font-medium">
                               {e.texto}
                             </span>
-                            {e.status === "feito" && (
-                              <Check size={10} className="mt-0.5 shrink-0" />
-                            )}
                           </span>
                           <span className="mt-0.5 block truncate text-[10px] opacity-80">
                             {[
-                              horarioTexto(e),
+                              horarioEventoAgenda(e),
                               e.categoriaLabel || "Horas",
                               e.clienteNome,
                             ]
                               .filter(Boolean)
                               .join(" · ")}
                           </span>
+                          {e.origem === "tarefa" && (
+                            <>
+                              <span className="mt-1 block">
+                                <EtapaAgenda etapa={e.etapa} compacto />
+                              </span>
+                              <span className="mt-0.5 block text-[9px] opacity-80">
+                                {rotuloDataAgenda(e.tipoData)}
+                              </span>
+                            </>
+                          )}
                         </button>
                       );
                     })}
@@ -293,13 +310,21 @@ export function AgendaGrid({
                     </p>
                     <p className="mt-1 text-xs text-muted">
                       {[
-                        horarioTexto(e),
+                        horarioEventoAgenda(e),
                         e.categoriaLabel || "Horas registradas",
                         e.clienteNome,
                       ]
                         .filter(Boolean)
                         .join(" · ")}
                     </p>
+                    {e.origem === "tarefa" && (
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <EtapaAgenda etapa={e.etapa} />
+                        <span className="text-xs text-muted">
+                          {rotuloDataAgenda(e.tipoData)}
+                        </span>
+                      </div>
+                    )}
                     {e.urgencia && (
                       <p
                         className="mt-1 text-xs"
@@ -352,7 +377,8 @@ export function AgendaGrid({
               clientes={clientes}
               abertoInicial
               clienteInicial={clienteIdAtual}
-              prazoInicial={novaData}
+              prazoInicial={baseData === "trabalho" ? novaData : ""}
+              postagemInicial={baseData === "postagem" ? novaData : ""}
               aoCancelar={() => setNovaData(null)}
               aoConcluir={() => setNovaData(null)}
             />

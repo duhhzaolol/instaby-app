@@ -135,6 +135,8 @@ export function PainelDetalheTarefa({ tarefaId, onClose, amplo = false }: { tare
   const [responsavelId, setResponsavelId] = useState("");
   const [data, setData] = useState("");
   const [hora, setHora] = useState("");
+  const [dataPostagem, setDataPostagem] = useState("");
+  const [horaPostagem, setHoraPostagem] = useState("");
   const [link, setLink] = useState("");
   const [estimativaHoras, setEstimativaHoras] = useState("");
   const [salvandoDetalhes, setSalvandoDetalhes] = useState(false);
@@ -189,6 +191,9 @@ export function PainelDetalheTarefa({ tarefaId, onClose, amplo = false }: { tare
       const prazo = camposPrazo(d.prazo);
       setData(prazo.data);
       setHora(prazo.hora);
+      const postagem = camposPrazo(d.publicacaoSugeridaEm);
+      setDataPostagem(postagem.data);
+      setHoraPostagem(postagem.hora);
       setLink(d.link || "");
       setEstimativaHoras(d.estimativaHoras != null ? String(d.estimativaHoras) : "");
       setMotivoBloqueio(d.motivoBloqueio || "");
@@ -361,6 +366,7 @@ export function PainelDetalheTarefa({ tarefaId, onClose, amplo = false }: { tare
       prioridade: prioridade || null,
       responsavelId: responsavelId || null,
       prazo,
+      publicacaoSugeridaEm: dataPostagem ? `${dataPostagem}T${horaPostagem || "00:00"}:00-03:00` : null,
       link: link || null,
       estimativaHoras: estimativaHoras.trim() !== "" ? Number(estimativaHoras) : null,
     });
@@ -711,8 +717,8 @@ export function PainelDetalheTarefa({ tarefaId, onClose, amplo = false }: { tare
 
             <div className="mb-3 grid grid-cols-2 gap-2">
               <div>
-                <label className="mb-1 block text-xs text-muted">Prazo</label>
-                <DatePicker value={data} onChange={setData} placeholder="Sem data" limpavel />
+                <label className="mb-1 block text-xs text-muted">Prazo de produção</label>
+                <DatePicker value={data} onChange={setData} placeholder="Prazo de produção" limpavel />
               </div>
               <div>
                 <label className="mb-1 block text-xs text-muted" style={urgenciaCor ? { color: urgenciaCor } : undefined}>
@@ -720,13 +726,29 @@ export function PainelDetalheTarefa({ tarefaId, onClose, amplo = false }: { tare
                 </label>
                 <input
                   type="time"
-                  aria-label="Horário opcional da tarefa"
+                  aria-label="Horário opcional do prazo de produção"
                   value={hora}
                   onChange={(e) => setHora(e.target.value)}
+                  disabled={!data}
                   className="h-9 w-full rounded-lg border border-border bg-card/60 px-2 text-xs text-text"
                 />
               </div>
             </div>
+
+            <p className="mb-3 text-[11px] text-muted">O prazo indica quando o trabalho precisa estar pronto. O horário é opcional.</p>
+            {(tarefa.clienteId || tarefa.publicacaoSugeridaEm) && <>
+              <div className="mb-2 grid grid-cols-2 gap-2">
+                <div>
+                  <label className="mb-1 block text-xs text-muted">Dia planejado de postagem</label>
+                  <DatePicker value={dataPostagem} onChange={setDataPostagem} placeholder="Dia planejado de postagem" limpavel />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-muted">Horário da postagem (opcional)</label>
+                  <input type="time" aria-label="Horário opcional da postagem" value={horaPostagem} onChange={e => setHoraPostagem(e.target.value)} disabled={!dataPostagem} className="h-9 w-full rounded-lg border border-border bg-card/60 px-2 text-xs text-text disabled:opacity-40" />
+                </div>
+              </div>
+              <p className="mb-3 text-[11px] text-muted">Para conteúdos que pretende postar. Salva junto com os detalhes; escolher o dia não agenda nem publica automaticamente.</p>
+            </>}
 
             <label className="mb-1 block text-xs text-muted">Estimativa (horas)</label>
             <input
@@ -969,7 +991,7 @@ export function PainelDetalheTarefa({ tarefaId, onClose, amplo = false }: { tare
 
             {/* Revisão/aprovação de conteúdo (Etapa 2 v153) — só reel/arte */}
             {CATEGORIAS_COM_REVISAO.includes((tarefa.categoria || "") as any) && (
-              <PainelRevisaoConteudo tarefa={tarefa} patch={patch} recarregar={carregar} />
+              <PainelRevisaoConteudo tarefa={tarefa} patch={patch} recarregar={() => carregar(false)} />
             )}
 
             {/* Comentários internos */}

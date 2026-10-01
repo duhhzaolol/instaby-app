@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getUsuarioAtual, clienteIdsPermitidos, podeVerCliente } from "@/lib/permissoes";
 import { garantirPastaTarefa } from "@/lib/google";
 import { CATEGORIAS_COM_PASTA_DRIVE } from "@/lib/categoriaTarefaVisual";
+import { dataIsoValida, dataIsoParaDate } from "@/lib/midiaRevisao";
 
 export async function GET() {
   const usuario = await getUsuarioAtual();
@@ -29,6 +30,11 @@ export async function POST(request: NextRequest) {
   if (body.clienteId && !(await podeVerCliente(usuario, body.clienteId))) {
     return NextResponse.json({ erro: "Não autorizado" }, { status: 403 });
   }
+  for (const [campo, label] of [["prazo", "Prazo de produção"], ["publicacaoSugeridaEm", "Dia planejado de postagem"]]) {
+    if (body[campo] !== undefined && body[campo] !== null && body[campo] !== "" && !dataIsoValida(body[campo])) {
+      return NextResponse.json({ erro: `${label} inválido.` }, { status: 400 });
+    }
+  }
 
   const tarefa = await prisma.tarefa.create({
     data: {
@@ -39,7 +45,8 @@ export async function POST(request: NextRequest) {
       prioridade: body.prioridade || "media",
       clienteId: body.clienteId || null,
       link: body.link || null,
-      prazo: body.prazo ? new Date(body.prazo) : null,
+      prazo: body.prazo ? dataIsoParaDate(body.prazo) : null,
+      publicacaoSugeridaEm: body.publicacaoSugeridaEm ? dataIsoParaDate(body.publicacaoSugeridaEm) : null,
     },
   });
 

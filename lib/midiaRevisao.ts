@@ -66,16 +66,37 @@ export function nomeClientePeloLink() {
 }
 
 export function dataHoraPublicacao(valor: string | null): string {
-  return valor
-    ? new Date(valor).toLocaleString("pt-BR", {
-        timeZone: "America/Sao_Paulo",
-        weekday: "long",
-        day: "2-digit",
-        month: "long",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : "";
+  if (!valor || !Number.isFinite(new Date(valor).getTime())) return "";
+  // Meia-noite de Brasília é a convenção usada para um dia sem horário.
+  // Não sugerimos ao cliente que a postagem deve acontecer à meia-noite.
+  const hora = publicacaoParaInput(valor).slice(11, 16);
+  return new Date(valor).toLocaleString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    ...(hora !== "00:00" && { hour: "2-digit", minute: "2-digit" }),
+  });
+}
+
+// Aceita datas ISO com ou sem horário; rejeita números, datas normalizadas
+// pelo JavaScript (como 31/02) e horários sem fuso. Todos os formulários novos
+// enviam -03:00; a data simples mantém compatibilidade com o atalho existente.
+export function dataIsoValida(valor: unknown): valor is string {
+  if (typeof valor !== "string") return false;
+  const partes = /^(\d{4}-\d{2}-\d{2})(?:T([0-2]\d):([0-5]\d)(?::([0-5]\d)(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2}))?$/.exec(valor);
+  if (!partes || (partes[2] && Number(partes[2]) > 23)) return false;
+  const dia = new Date(`${partes[1]}T00:00:00Z`);
+  return Number.isFinite(dia.getTime()) &&
+    dia.toISOString().slice(0, 10) === partes[1] &&
+    Number.isFinite(new Date(valor).getTime());
+}
+
+export function dataIsoParaDate(valor: string): Date {
+  return new Date(/^\d{4}-\d{2}-\d{2}$/.test(valor)
+    ? `${valor}T00:00:00-03:00`
+    : valor);
 }
 
 export function publicacaoParaInput(valor: string | null): string {

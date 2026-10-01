@@ -7,6 +7,8 @@ export type FiltrosAgenda = {
   tipos?: string;
   status?: string;
   visao?: string;
+  formato?: string;
+  datas?: string;
 };
 
 export function linkAgenda(
