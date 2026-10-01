@@ -225,7 +225,11 @@ function VersaoAtual({
             <video
               aria-label="Vídeo para revisão"
               ref={videoRef}
-              src={videoParaRevisao(versao.linkVideo)}
+              src={
+                driveId
+                  ? `/api/revisao/${tarefaId}/versoes/${versao.id}/video`
+                  : videoParaRevisao(versao.linkVideo)
+              }
               controls
               playsInline
               preload="metadata"

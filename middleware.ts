@@ -25,6 +25,7 @@ function apiRotaPublica(pathname: string, method: string) {
   // decidir a versão são públicos; criar versões e editar tarefas exigem sessão.
   if (method === "POST" && /^\/api\/tarefas\/[^/]+\/versoes\/[^/]+\/comentarios$/.test(pathname)) return true;
   if (method === "PATCH" && /^\/api\/tarefas\/[^/]+\/versoes\/[^/]+$/.test(pathname)) return true;
+  if (method === "GET" && /^\/api\/revisao\/[^/]+\/versoes\/[^/]+\/video$/.test(pathname)) return true;
   // Etapa 3 (v157) — cliente enviando o formulário público de solicitação
   // (/solicitar/[clienteId]), mesmo espírito das 3 linhas acima: rota específica
   // só pra esse método, tudo mais no mesmo caminho (se algum dia existir) continua

@@ -27,6 +27,30 @@ export function videoParaRevisao(link: string): string {
     : link;
 }
 
+// Mantém cada resposta abaixo do limite da hospedagem. O navegador pede os
+// próximos trechos quando precisa deles, inclusive ao buscar outro instante.
+export const TAMANHO_TRECHO_VIDEO = 2 * 1024 * 1024;
+export function faixaVideo(range: string | null): string | null {
+  if (!range) return `bytes=0-${TAMANHO_TRECHO_VIDEO - 1}`;
+  const m = /^bytes=(\d*)-(\d*)$/.exec(range);
+  if (!m || (!m[1] && !m[2])) return null;
+  if (!m[1]) {
+    const tamanho = Number(m[2]);
+    return Number.isSafeInteger(tamanho) && tamanho > 0
+      ? `bytes=-${Math.min(tamanho, TAMANHO_TRECHO_VIDEO)}`
+      : null;
+  }
+  const inicio = Number(m[1]);
+  const fim = m[2] ? Number(m[2]) : inicio + TAMANHO_TRECHO_VIDEO - 1;
+  if (
+    !Number.isSafeInteger(inicio) ||
+    !Number.isSafeInteger(fim) ||
+    fim < inicio
+  )
+    return null;
+  return `bytes=${inicio}-${Math.min(fim, inicio + TAMANHO_TRECHO_VIDEO - 1)}`;
+}
+
 export function formatarTempoVideo(segundos: number): string {
   const total = Math.max(0, Math.floor(segundos));
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
