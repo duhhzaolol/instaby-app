@@ -6,6 +6,7 @@ import { Plus, X, Trash2, ExternalLink } from "lucide-react";
 import { Input, Label } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { TIPOS_LINK, visualDoTipoLink } from "@/lib/linkClienteVisual";
+import PastasClienteDrive from "./PastasClienteDrive";
 
 export type LinkClienteData = { id: string; tipo: string; label: string | null; url: string };
 
@@ -13,10 +14,12 @@ export default function LinksClienteTab({
   clienteId,
   links,
   linkDriveAntigo,
+  pastas,
 }: {
   clienteId: string;
   links: LinkClienteData[];
   linkDriveAntigo: string | null;
+  pastas?: { driveClienteFolderId: string | null; driveLogotiposFolderId: string | null; driveConteudoFolderId: string | null };
 }) {
   const router = useRouter();
   const [aberto, setAberto] = useState(false);
@@ -58,6 +61,7 @@ export default function LinksClienteTab({
 
   return (
     <div>
+      {pastas && <PastasClienteDrive clienteId={clienteId} pastasIniciais={pastas} />}
       {linkDriveAntigo && links.every((l) => l.url !== linkDriveAntigo) && (
         <a
           href={linkDriveAntigo}

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUsuarioAtual, podeVerCliente } from "@/lib/permissoes";
-import { temVideoBruto } from "@/lib/google";
+import { verificarVideoBrutoNoDrive } from "@/lib/google";
 
 // Checagem sob demanda (botão "Verificar" na tarefa) — não roda sozinha em
 // background nem numa lista inteira de tarefas, só quando alguém pede, pra não
@@ -22,6 +22,6 @@ export async function GET(
     return NextResponse.json({ temBruto: false, semPasta: true });
   }
 
-  const temBruto = await temVideoBruto(tarefa.driveFolderId);
-  return NextResponse.json({ temBruto });
+  try { return NextResponse.json(await verificarVideoBrutoNoDrive(tarefa.driveFolderId)); }
+  catch { return NextResponse.json({ erro: "Não consegui consultar a pasta do Drive. Confira a conexão e o acesso à pasta em Configurações." }, { status: 502 }); }
 }

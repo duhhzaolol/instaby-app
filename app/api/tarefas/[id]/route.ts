@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUsuarioAtual, podeVerCliente } from "@/lib/permissoes";
-import { garantirPastaTarefa, temVideoBruto } from "@/lib/google";
+import { garantirPastaTarefa, verificarVideoBrutoNoDrive } from "@/lib/google";
 import {
   CATEGORIAS_COM_PASTA_DRIVE,
   CATEGORIAS_COM_REVISAO,
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   const tarefa = await prisma.tarefa.findUnique({
     where: { id: params.id },
     include: {
-      cliente: { select: { id: true, nome: true, cor: true } },
+      cliente: { select: { id: true, nome: true, cor: true, driveLogotiposFolderId: true } },
       responsavel: { select: { id: true, nome: true, fotoUrl: true } },
       bloqueioResponsavel: { select: { id: true, nome: true, fotoUrl: true } },
       checklist: { orderBy: { ordem: "asc" } },
@@ -90,6 +90,11 @@ export async function PATCH(
   }
 
   const body = await request.json();
+  let publicacaoSugeridaEm: Date | null | undefined;
+  if (body.publicacaoSugeridaEm !== undefined) {
+    publicacaoSugeridaEm = body.publicacaoSugeridaEm ? new Date(body.publicacaoSugeridaEm) : null;
+    if (publicacaoSugeridaEm && !Number.isFinite(publicacaoSugeridaEm.getTime())) return NextResponse.json({ erro: "Dia e horário de publicação inválidos." }, { status: 400 });
+  }
 
   let novoResponsavelNome: string | null = null;
   if (body.responsavelId) {
@@ -210,12 +215,14 @@ export async function PATCH(
     CATEGORIAS_QUE_PRECISAM_VIDEO_BRUTO.includes((existente.categoria || "") as any) &&
     !excecaoVideoBrutoAtiva
   ) {
-    const temBruto = await temVideoBruto(existente.driveFolderId);
-    if (!temBruto) {
+    let bruto;
+    try { bruto = await verificarVideoBrutoNoDrive(existente.driveFolderId); }
+    catch { return NextResponse.json({ erro: "Não consegui verificar o Drive. Confira a conexão e tente novamente." }, { status: 502 }); }
+    if (bruto.temBruto !== true) {
       return NextResponse.json(
         {
           erro:
-            "Essa tarefa ainda não tem o vídeo bruto na pasta do Drive dela — coloca o arquivo lá antes de avançar (ou registre uma exceção justificada).",
+            bruto.mensagem,
         },
         { status: 409 }
       );
@@ -360,6 +367,9 @@ export async function PATCH(
       valorNovo: body.linkPublicacao || "Nenhum",
     });
   }
+  if (publicacaoSugeridaEm !== undefined && publicacaoSugeridaEm?.getTime() !== existente.publicacaoSugeridaEm?.getTime()) {
+    historico.push({ campo: "publicacaoSugeridaEm", valorAntigo: existente.publicacaoSugeridaEm?.toISOString() || "Não definida", valorNovo: publicacaoSugeridaEm?.toISOString() || "Não definida" });
+  }
   if (body.videoBrutoExcecao !== undefined && !!body.videoBrutoExcecao !== !!existente.videoBrutoExcecao) {
     historico.push({
       campo: "videoBrutoExcecao",
@@ -388,6 +398,7 @@ export async function PATCH(
       ...dadosBloqueio,
       ...(body.statusConteudo !== undefined && { statusConteudo: body.statusConteudo || null }),
       ...(body.linkPublicacao !== undefined && { linkPublicacao: body.linkPublicacao || null }),
+      ...(publicacaoSugeridaEm !== undefined && { publicacaoSugeridaEm }),
       ...(publicadoEmNovo !== undefined && { publicadoEm: publicadoEmNovo }),
       ...dadosExcecaoVideoBruto,
     },

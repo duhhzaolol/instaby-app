@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       tipo: body.tipo || "tarefa",
       categoria: body.categoria || null,
       descricao: body.descricao || null,
-      prioridade: body.prioridade || null,
+      prioridade: body.prioridade || "media",
       clienteId: body.clienteId || null,
       link: body.link || null,
       prazo: body.prazo ? new Date(body.prazo) : null,

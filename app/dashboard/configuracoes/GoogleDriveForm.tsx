@@ -10,6 +10,7 @@ const MENSAGENS: Record<string, string> = {
   erro: "Não deu pra conectar. Tenta de novo, e se continuar assim me chama.",
   sem_refresh_token: "O Google não devolveu um acesso permanente — tenta desconectar (se já tiver conectado antes) e conectar de novo.",
   faltam_chaves: "Faltam as chaves do Google configuradas no Vercel (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET).",
+  estado_invalido: "Essa tentativa de conexão expirou. Clique em conectar novamente para autorizar pelo Google.",
 };
 
 export default function GoogleDriveForm({ conectadoEm }: { conectadoEm: string | null }) {
@@ -55,6 +56,10 @@ export default function GoogleDriveForm({ conectadoEm }: { conectadoEm: string |
           </a>
         )}
       </div>
+      {conectadoEm && <div className="rounded-xl border border-border bg-base/60 p-3.5">
+        <p className="mb-2 text-xs text-muted">Para localizar vídeos enviados pelo site do Drive, autorize a leitura dos nomes, tipos e localização dos arquivos. Essa permissão lê os metadados de todos os arquivos da conta, sem acesso adicional ao conteúdo nem permissão para editá-los.</p>
+        <a href="/api/google/conectar?leitura=1" className="inline-flex min-h-10 items-center rounded-lg bg-accent px-3 text-xs font-medium text-white">Reconectar para localizar arquivos</a>
+      </div>}
     </div>
   );
 }

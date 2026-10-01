@@ -35,8 +35,8 @@ export default function ArquivosTab({
           <ImageIcon size={16} />
         </div>
         <div>
-          <p className="text-sm font-medium text-text">Logotipos</p>
-          <p className="text-xs text-muted">Marca do cliente em alta resolução, pra quem for criar arte ou editar.</p>
+          <p className="text-sm font-medium text-text">Identidade do cliente · Logotipos</p>
+          <p className="text-xs text-muted">Logos claros, escuros, com e sem fundo e outros arquivos da marca. Esta pasta também aparece nas tarefas.</p>
         </div>
       </a>
 

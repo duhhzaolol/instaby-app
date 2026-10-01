@@ -2,29 +2,34 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUsuarioAtual, podeVerCliente, usuariosParaNotificarRevisao } from "@/lib/permissoes";
 import { notificarVarios } from "@/lib/notificacoes";
+import { CATEGORIAS_COM_REVISAO } from "@/lib/categoriaTarefaVisual";
+import { nomeClientePeloLink } from "@/lib/midiaRevisao";
 
 const LIMITE_TEXTO = 2000;
-const LIMITE_NOME = 120;
 
 // Comentário numa versão de conteúdo (Etapa 2 v153) — dois jeitos de chegar aqui:
 // 1) equipe, autenticada, no painel interno (pode marcar interno=true, comentário
 //    "só nosso", nunca aparece pro cliente); 2) o próprio cliente, sem login, pela
 //    página pública de revisão (/revisao/[tarefaId]) — sempre nasce interno=false
-//    (cliente não tem "comentar pra si mesmo") e pede um nome digitado na hora,
-//    porque não existe conta de cliente nesse sistema.
+//    (cliente não tem "comentar pra si mesmo"). A origem é registrada como
+//    "Cliente (pelo link de revisão)", sem afirmar a identidade de uma pessoa.
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string; versaoId: string } }
 ) {
   const versao = await prisma.versaoConteudo.findUnique({
     where: { id: params.versaoId },
-    include: { tarefa: { select: { id: true, clienteId: true, titulo: true, responsavelId: true } } },
+    include: { tarefa: { select: { id: true, clienteId: true, titulo: true, categoria: true, responsavelId: true } } },
   });
-  if (!versao || versao.tarefaId !== params.id) {
+  if (!versao || versao.tarefaId !== params.id || !versao.tarefa.clienteId || !CATEGORIAS_COM_REVISAO.includes(versao.tarefa.categoria as any)) {
     return NextResponse.json({ erro: "Versão não encontrada" }, { status: 404 });
   }
 
-  const body = await request.json();
+  const body = await request.json().catch(() => null);
+  if (!body) return NextResponse.json({ erro: "Pedido inválido." }, { status: 400 });
+  const ultima = await prisma.versaoConteudo.findFirst({ where: { tarefaId: params.id }, orderBy: { numero: "desc" } });
+  if (ultima?.id !== versao.id) return NextResponse.json({ erro: "Uma nova versão foi enviada. Atualize a página." }, { status: 409 });
+  if (versao.aprovadoEm) return NextResponse.json({ erro: "Essa versão já está aprovada." }, { status: 409 });
   const texto = body.texto ? String(body.texto).trim().slice(0, LIMITE_TEXTO) : "";
   if (!texto) return NextResponse.json({ erro: "Escreve alguma coisa antes de comentar." }, { status: 400 });
 
@@ -36,7 +41,8 @@ export async function POST(
   let pontoImagemY: number | null = null;
   if (body.momentoVideoSegundos !== undefined && body.momentoVideoSegundos !== null) {
     const seg = Number(body.momentoVideoSegundos);
-    if (!isNaN(seg) && seg >= 0) momentoVideoSegundos = seg;
+    if (Number.isFinite(seg) && seg >= 0 && seg <= 86400) momentoVideoSegundos = Math.floor(seg);
+    else return NextResponse.json({ erro: "Momento do vídeo inválido." }, { status: 400 });
   } else if (
     body.pontoImagemX !== undefined &&
     body.pontoImagemX !== null &&
@@ -52,17 +58,14 @@ export async function POST(
   }
 
   const usuario = await getUsuarioAtual();
+  if (usuario && !(await podeVerCliente(usuario, versao.tarefa.clienteId))) return NextResponse.json({ erro: "Não autorizado" }, { status: 403 });
+  const peloLink = !usuario || body.origem === "pagina_revisao";
 
   let dadosAutor: { usuarioId?: string; autorNomeLivre?: string; interno: boolean };
-  if (usuario) {
-    if (versao.tarefa.clienteId && !(await podeVerCliente(usuario, versao.tarefa.clienteId))) {
-      return NextResponse.json({ erro: "Não autorizado" }, { status: 403 });
-    }
+  if (usuario && !peloLink) {
     dadosAutor = { usuarioId: usuario.id, interno: body.interno === true };
   } else {
-    const nome = body.autorNome ? String(body.autorNome).trim().slice(0, LIMITE_NOME) : "";
-    if (!nome) return NextResponse.json({ erro: "Informe seu nome antes de comentar." }, { status: 400 });
-    dadosAutor = { autorNomeLivre: nome, interno: false };
+    dadosAutor = { autorNomeLivre: nomeClientePeloLink(), interno: false };
   }
 
   const comentario = await prisma.comentarioRevisao.create({
@@ -75,9 +78,9 @@ export async function POST(
 
   // Avisa quem acompanha esse cliente de perto + o responsável pela tarefa — nunca
   // quem acabou de comentar (se foi a própria equipe).
-  if (versao.tarefa.clienteId) {
+  try { if (versao.tarefa.clienteId) {
     const pessoas = (await usuariosParaNotificarRevisao(versao.tarefa.clienteId, versao.tarefa.responsavelId)).filter(
-      (p) => p.id !== usuario?.id
+      (p) => peloLink || p.id !== usuario?.id
     );
     await notificarVarios(
       pessoas.map((p) => p.id),
@@ -91,7 +94,7 @@ export async function POST(
         agrupadorChave: `comentario_revisao:${versao.tarefa.id}`,
       }
     );
-  }
+  } } catch { console.error("Não foi possível notificar o comentário de revisão."); }
 
-  return NextResponse.json(comentario, { status: 201 });
+  return NextResponse.json(peloLink ? { id: comentario.id, texto: comentario.texto, createdAt: comentario.createdAt, autorNome: comentario.autorNomeLivre, momentoVideoSegundos, pontoImagemX, pontoImagemY } : comentario, { status: 201 });
 }

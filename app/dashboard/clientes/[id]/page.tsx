@@ -449,6 +449,7 @@ export default async function ClienteDetalhePage({
         <LinksClienteTab
           clienteId={cliente.id}
           linkDriveAntigo={cliente.linkDrive}
+          pastas={pode.verArquivos ? { driveClienteFolderId: cliente.driveClienteFolderId, driveLogotiposFolderId: cliente.driveLogotiposFolderId, driveConteudoFolderId: cliente.driveConteudoFolderId } : undefined}
           links={cliente.links.map((l) => ({ id: l.id, tipo: l.tipo, label: l.label, url: l.url }))}
         />
       )}

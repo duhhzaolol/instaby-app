@@ -467,7 +467,7 @@ model Tarefa {
   tipo       String    @default("tarefa") // tarefa | ideia
   categoria  String? // gravacao | arte | reel | fotos | campanha | reuniao | contato | orcamento | ideia | outra
   descricao  String?
-  prioridade String? // baixa | media | alta
+  prioridade String? @default("media") // baixa | media | alta
   status     String    @default("a_fazer") // a_fazer | em_andamento | bloqueada | feito
   prazo      DateTime?
   link       String?
@@ -537,6 +537,7 @@ model Tarefa {
   statusConteudo String? // producao | revisao_interna | aprovacao_cliente | agendado | publicado
   linkPublicacao String? // link do post/reel já publicado — preenchido manualmente, não existe API de publicação automática
   publicadoEm    DateTime?
+  publicacaoSugeridaEm DateTime? // proposta à aprovação; não muda o prazo nem agenda automaticamente
 
   versoes VersaoConteudo[]
 
@@ -681,6 +682,7 @@ model VersaoConteudo {
   aprovadoPorContato   Contato?  @relation(fields: [aprovadoPorContatoId], references: [id])
   aprovadoPorNomeLivre String?
   aprovadoEm           DateTime?
+  alteracoesSolicitadasEm DateTime?
 
   createdAt DateTime @default(now())
 

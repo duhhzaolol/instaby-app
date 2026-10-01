@@ -31,12 +31,14 @@ function clienteOAuth(origin: string) {
 // Google a sempre devolver um refresh_token novo, mesmo numa reconexão — sem
 // isso, numa segunda autorização o Google às vezes só devolve o access_token
 // (de curta duração) e omite o refresh_token, achando que você já tem um.
-export function urlDeAutorizacao(origin: string) {
+export function urlDeAutorizacao(origin: string, lerMetadados = false, state?: string) {
   const client = clienteOAuth(origin);
   return client.generateAuthUrl({
     access_type: "offline",
     prompt: "consent",
-    scope: ESCOPOS_GOOGLE,
+    scope: lerMetadados ? [...ESCOPOS_GOOGLE, "https://www.googleapis.com/auth/drive.metadata.readonly"] : ESCOPOS_GOOGLE,
+    include_granted_scopes: true,
+    ...(state ? { state } : {}),
   });
 }
 
@@ -49,7 +51,7 @@ export async function trocarCodigoPorTokens(origin: string, code: string) {
 // Client do Drive pronto pra usar, autenticado com o refresh_token guardado —
 // ou null se a agência ainda não conectou o Drive. O client renova o
 // access_token sozinho (biblioteca do Google cuida disso) a cada chamada.
-export async function getDriveClient() {
+async function getGoogleAuthClient() {
   const config = await prisma.configuracao.findUnique({ where: { id: "config" } });
   if (!config?.googleDriveRefreshToken) return null;
 
@@ -57,7 +59,12 @@ export async function getDriveClient() {
   // de autorização, o que não acontece nesse caminho (só troca token por token).
   const client = clienteOAuth("");
   client.setCredentials({ refresh_token: config.googleDriveRefreshToken });
-  return google.drive({ version: "v3", auth: client });
+  return client;
+}
+
+export async function getDriveClient() {
+  const auth = await getGoogleAuthClient();
+  return auth ? google.drive({ version: "v3", auth }) : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -139,20 +146,26 @@ export async function garantirPastasCliente(clienteId: string): Promise<PastasCl
   let { driveClienteFolderId, driveLogotiposFolderId, driveContratosFolderId, driveConteudoFolderId } = cliente;
 
   if (!driveClienteFolderId) {
-    driveClienteFolderId = await criarPasta(drive, cliente.nome);
+    const raiz = await drive.files.list({ q: "name = 'Clientes' and mimeType = 'application/vnd.google-apps.folder' and 'root' in parents and trashed = false", fields: "files(id)", pageSize: 1 });
+    const raizId = raiz.data.files?.[0]?.id || await criarPasta(drive, "Clientes");
+    driveClienteFolderId = await criarPasta(drive, cliente.nome, raizId);
+    await prisma.cliente.update({ where: { id: clienteId }, data: { driveClienteFolderId } });
   }
   if (!driveLogotiposFolderId) {
     driveLogotiposFolderId = await criarPasta(drive, NOME_PASTA_LOGOTIPOS, driveClienteFolderId);
+    await prisma.cliente.update({ where: { id: clienteId }, data: { driveLogotiposFolderId } });
     await compartilharComQuemTemLink(drive, driveLogotiposFolderId, "reader");
   }
   if (!driveContratosFolderId) {
     driveContratosFolderId = await criarPasta(drive, NOME_PASTA_CONTRATOS, driveClienteFolderId);
+    await prisma.cliente.update({ where: { id: clienteId }, data: { driveContratosFolderId } });
     // De propósito: nenhuma chamada a compartilharComQuemTemLink aqui. Contratos
     // nunca ganha link público — só visível por quem loga direto na conta do
     // Drive da agência.
   }
   if (!driveConteudoFolderId) {
     driveConteudoFolderId = await criarPasta(drive, NOME_PASTA_CONTEUDO, driveClienteFolderId);
+    await prisma.cliente.update({ where: { id: clienteId }, data: { driveConteudoFolderId } });
     await compartilharComQuemTemLink(drive, driveConteudoFolderId, "reader");
   }
 
@@ -236,13 +249,42 @@ export async function garantirPastaTarefa(tarefaId: string): Promise<string | nu
 
 // Existe algum arquivo de vídeo dentro dessa pasta? Usado pra travar tarefas de
 // "Criar Reel" até o vídeo bruto ser colocado lá (pelo admin, direto no Drive).
+export type VerificacaoVideoBruto = { temBruto: boolean | null; mensagem: string; acessoLimitado?: boolean; arquivoNome?: string };
+
+export async function verificarVideoBrutoNoDrive(folderId: string): Promise<VerificacaoVideoBruto> {
+  const auth = await getGoogleAuthClient();
+  if (!auth) return { temBruto: null, mensagem: "Conecte o Google Drive da agência em Configurações para verificar os arquivos." };
+  const drive = google.drive({ version: "v3", auth });
+  const fila = [folderId];
+  const visitadas = new Set<string>();
+  while (fila.length) {
+    const pasta = fila.shift()!;
+    if (visitadas.has(pasta)) continue;
+    if (visitadas.size >= 50) return { temBruto: null, mensagem: "A pasta tem muitas subpastas. Separe o material bruto numa subpasta mais próxima da tarefa e verifique novamente." };
+    visitadas.add(pasta);
+    let pageToken: string | undefined;
+    let paginas = 0;
+    do {
+      if (++paginas > 20) return { temBruto: null, mensagem: "A pasta tem muitos arquivos para uma verificação rápida. Separe o material bruto numa subpasta da tarefa." };
+      const id = pasta.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+      const res = await drive.files.list({ q: `'${id}' in parents and trashed = false`, fields: "nextPageToken,files(id,name,mimeType,shortcutDetails)", pageSize: 100, pageToken, supportsAllDrives: true, includeItemsFromAllDrives: true }, { timeout: 12000 });
+      for (const file of res.data.files || []) {
+        const tipo = file.mimeType || "";
+        const alvo = file.shortcutDetails?.targetMimeType || "";
+        if (tipo.startsWith("video/") || alvo.startsWith("video/") || /\.(mp4|mov|m4v|avi|mkv|webm|mts|m2ts|mpeg|mpg)$/i.test(file.name || "")) return { temBruto: true, arquivoNome: file.name || "Vídeo", mensagem: `Vídeo encontrado: ${file.name || "arquivo de vídeo"}.` };
+        if (tipo === "application/vnd.google-apps.folder" && file.id) fila.push(file.id);
+        if (alvo === "application/vnd.google-apps.folder" && file.shortcutDetails?.targetId) fila.push(file.shortcutDetails.targetId);
+      }
+      pageToken = res.data.nextPageToken || undefined;
+    } while (pageToken);
+  }
+  const token = await auth.getAccessToken();
+  const info = token.token ? await auth.getTokenInfo(token.token) : null;
+  const leMetadados = info?.scopes.some(s => ["https://www.googleapis.com/auth/drive.metadata.readonly", "https://www.googleapis.com/auth/drive.readonly", "https://www.googleapis.com/auth/drive"].includes(s));
+  if (!leMetadados) return { temBruto: null, acessoLimitado: true, mensagem: "A autorização atual do Google não permite confirmar os arquivos enviados diretamente pelo site do Drive. O resultado é inconclusivo; confira a pasta pelo botão Abrir pasta." };
+  return { temBruto: false, mensagem: "Nenhum vídeo encontrado nesta pasta ou nas subpastas verificadas." };
+}
+
 export async function temVideoBruto(folderId: string): Promise<boolean> {
-  const drive = await getDriveClient();
-  if (!drive) return false;
-  const res = await drive.files.list({
-    q: `'${folderId}' in parents and mimeType contains 'video/' and trashed = false`,
-    fields: "files(id)",
-    pageSize: 1,
-  });
-  return (res.data.files?.length || 0) > 0;
+  return (await verificarVideoBrutoNoDrive(folderId)).temBruto === true;
 }

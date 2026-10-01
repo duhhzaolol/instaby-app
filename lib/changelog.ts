@@ -22,6 +22,18 @@ export type VersaoNovidades = {
 
 export const NOVIDADES: VersaoNovidades[] = [
   {
+    versao: 159,
+    resumo: "Revisão do cliente com comentários por tempo, decisão no final e pastas da identidade acessíveis nas tarefas.",
+    itens: [
+      { tipo: "corrigido", texto: "Vídeos do Drive usam o arquivo de mídia na revisão. Se não carregar, a página mantém uma opção para abrir o material." },
+      { tipo: "melhorado", texto: "O cliente pausa o vídeo, comenta naquele instante e pode continuar assistindo para salvar o comentário. No final, aprova ou pede alterações sem precisar digitar o nome." },
+      { tipo: "adicionado", texto: "A tarefa tem um campo de dia e horário sugeridos para postar. A proposta aparece na página enviada ao cliente, em horário de Brasília." },
+      { tipo: "adicionado", texto: "Identidade do cliente aparece em todas as tarefas. Cadastre ou crie a pasta na aba Links do cliente; novos clientes ganham pastas automaticamente com o Drive conectado." },
+      { tipo: "corrigido", texto: "Verificar vídeo procura também nas subpastas e reconhece os formatos comuns. Falhas de conexão ou limitações de acesso deixam uma mensagem em vez de afirmar que não existe arquivo." },
+      { tipo: "melhorado", texto: "Novas tarefas começam com prioridade média. O botão de copiar a revisão ganhou destaque em vermelho." },
+    ],
+  },
+  {
     versao: 158,
     resumo:
       "Planejamento de capacidade da equipe, dependências entre tarefas e rotinas mensais automáticas por serviço contratado.",

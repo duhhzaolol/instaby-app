@@ -14,6 +14,8 @@ export async function GET(request: NextRequest) {
   }
 
   const code = request.nextUrl.searchParams.get("code");
+  const state = request.nextUrl.searchParams.get("state");
+  if (!state || state !== request.cookies.get("instaby_drive_oauth_state")?.value) return NextResponse.redirect(new URL("/dashboard/configuracoes?google=estado_invalido", request.url));
   const erroGoogle = request.nextUrl.searchParams.get("error");
   if (erroGoogle || !code) {
     // "access_denied" acontece quando a pessoa clica em cancelar na tela do Google
@@ -46,7 +48,9 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    return NextResponse.redirect(new URL("/dashboard/configuracoes?google=conectado", request.url));
+    const response = NextResponse.redirect(new URL("/dashboard/configuracoes?google=conectado", request.url));
+    response.cookies.set("instaby_drive_oauth_state", "", { path: "/api/google", maxAge: 0 });
+    return response;
   } catch (e) {
     console.error("Erro ao trocar código do Google por tokens:", e);
     return NextResponse.redirect(new URL("/dashboard/configuracoes?google=erro", request.url));

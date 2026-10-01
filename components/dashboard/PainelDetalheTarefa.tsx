@@ -62,7 +62,7 @@ type TarefaDetalhe = {
   link: string | null;
   driveFolderId: string | null;
   clienteId: string | null;
-  cliente: { id: string; nome: string; cor: string | null } | null;
+  cliente: { id: string; nome: string; cor: string | null; driveLogotiposFolderId: string | null } | null;
   responsavelId: string | null;
   responsavel: Pessoa | null;
   motivoBloqueio: string | null;
@@ -77,6 +77,7 @@ type TarefaDetalhe = {
   statusConteudo: string | null;
   linkPublicacao: string | null;
   publicadoEm: string | null;
+  publicacaoSugeridaEm: string | null;
   versoes: VersaoConteudoData[];
   // Exceção justificada de vídeo bruto (Etapa 2 v153).
   videoBrutoExcecao: boolean;
@@ -127,7 +128,7 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
 
   const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");
-  const [prioridade, setPrioridade] = useState("");
+  const [prioridade, setPrioridade] = useState("media");
   const [responsavelId, setResponsavelId] = useState("");
   const [data, setData] = useState("");
   const [hora, setHora] = useState("");
@@ -157,6 +158,7 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
 
   const [checandoVideo, setChecandoVideo] = useState(false);
   const [temVideoBrutoInfo, setTemVideoBrutoInfo] = useState<boolean | null>(null);
+  const [mensagemVideoBruto, setMensagemVideoBruto] = useState("");
   const [gerandoPasta, setGerandoPasta] = useState(false);
 
   const [videoBrutoExcecao, setVideoBrutoExcecao] = useState(false);
@@ -177,7 +179,7 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
       setTarefa(d);
       setTitulo(d.titulo);
       setDescricao(d.descricao || "");
-      setPrioridade(d.prioridade || "");
+      setPrioridade(d.prioridade || "media");
       setResponsavelId(d.responsavelId || "");
       setData(d.prazo ? d.prazo.slice(0, 10) : "");
       setHora(d.prazo ? d.prazo.slice(11, 16) : "");
@@ -393,10 +395,16 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
   async function verificarVideoBruto() {
     if (!tarefa?.driveFolderId) return;
     setChecandoVideo(true);
-    const res = await fetch(`/api/tarefas/${tarefa.id}/video-bruto`);
-    const d = await res.json().catch(() => null);
-    setTemVideoBrutoInfo(d?.temBruto ?? false);
-    setChecandoVideo(false);
+    setMensagemVideoBruto(""); setTemVideoBrutoInfo(null);
+    const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 45000);
+    try {
+      const res = await fetch(`/api/tarefas/${tarefa.id}/video-bruto`, { signal: controller.signal });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.erro || "Não consegui consultar o Drive.");
+      setTemVideoBrutoInfo(d.temBruto);
+      setMensagemVideoBruto(d.mensagem || "");
+    } catch (e) { setMensagemVideoBruto(e instanceof Error && e.name !== "AbortError" ? e.message : "A consulta demorou demais. Confira a conexão do Drive e tente novamente."); }
+    finally { clearTimeout(timer); setChecandoVideo(false); }
   }
 
   // Gera (ou substitui) a pasta própria da tarefa no Drive — sob demanda, pelo
@@ -745,12 +753,12 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
                     </button>
                     {temVideoBrutoInfo === true && (
                       <span className="flex items-center gap-1 text-xs text-emerald-400">
-                        <CheckCircle2 size={12} /> Pronto pra editar
+                        <CheckCircle2 size={12} /> Vídeo encontrado
                       </span>
                     )}
                     {temVideoBrutoInfo === false && (
                       <span className="flex items-center gap-1 text-xs text-amber-400">
-                        <AlertCircle size={12} /> Ainda sem vídeo bruto
+                        <AlertCircle size={12} /> Nenhum vídeo encontrado
                       </span>
                     )}
                     <button
@@ -776,6 +784,7 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
                   </div>
                 )}
 
+                {mensagemVideoBruto && <div role="status" className="mt-2 text-xs text-muted"><p>{mensagemVideoBruto}</p>{temVideoBrutoInfo === null && <a href="/dashboard/configuracoes#google-drive" className="mt-1 inline-block text-accent">Conferir conexão do Drive</a>}</div>}
                 {/* Exceção justificada (Etapa 2 v153) — pra conteúdo sem gravação
                     própria (ex.: banco de imagens/motion), quando o vídeo bruto de
                     verdade nunca vai existir. */}
@@ -814,6 +823,13 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
                 </div>
               </div>
             )}
+
+            {tarefa.clienteId && <div className="mb-3 rounded-lg border border-border bg-card/60 p-3">
+              <p className="mb-1 flex items-center gap-1.5 text-xs font-medium text-text"><HardDrive size={12} /> Identidade do cliente</p>
+              <p className="mb-2 text-xs text-muted">Logos claros, escuros, com e sem fundo e outros arquivos da marca. A mesma pasta em todas as tarefas deste cliente.</p>
+              {tarefa.cliente?.driveLogotiposFolderId && <a href={`https://drive.google.com/drive/folders/${tarefa.cliente.driveLogotiposFolderId}`} target="_blank" rel="noreferrer" className="mr-3 inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs text-text hover:bg-hover"><ExternalLink size={11} /> Abrir pasta da identidade</a>}
+              <a href={`/dashboard/clientes/${tarefa.clienteId}?aba=links`} className="inline-flex py-1.5 text-xs text-accent">{tarefa.cliente?.driveLogotiposFolderId ? "Configurar pasta no cliente" : "Cadastrar ou criar pasta no cliente"}</a>
+            </div>}
 
             {/* Impacto no prazo (Etapa 4 v158) — "mostrar impactos antes de
                 alterar prazos". Nunca impede: só avisa e pede confirmação. */}

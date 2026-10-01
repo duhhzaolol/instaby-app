@@ -121,11 +121,11 @@ export default async function ConfiguracoesPage() {
             <TemplatesTarefasForm templates={templatesTarefas} />
           </div>
 
-          <div>
+          <div id="google-drive">
             <p className="mb-1 text-sm font-medium text-text">Google Drive</p>
             <p className="mb-4 text-sm text-muted">
               Conexão única com o Drive da agência — usada pra organizar pasta de cliente automaticamente
-              (em construção; por enquanto só a conexão em si).
+              e localizar vídeos nas pastas das tarefas.
             </p>
             <GoogleDriveForm
               conectadoEm={

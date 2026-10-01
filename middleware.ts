@@ -21,6 +21,10 @@ function apiRotaPublica(pathname: string, method: string) {
   if (method === "GET" && /^\/api\/orcamento\/[^/]+$/.test(pathname)) return true; // cliente abrindo a proposta
   if (method === "POST" && /^\/api\/orcamento\/[^/]+\/aceitar$/.test(pathname)) return true; // cliente aceitando
   if (method === "PATCH" && /^\/api\/relatorios\/[^/]+$/.test(pathname)) return true; // cliente comentando o relatório
+  // A página de revisão usa o próprio link da tarefa. Somente comentar e
+  // decidir a versão são públicos; criar versões e editar tarefas exigem sessão.
+  if (method === "POST" && /^\/api\/tarefas\/[^/]+\/versoes\/[^/]+\/comentarios$/.test(pathname)) return true;
+  if (method === "PATCH" && /^\/api\/tarefas\/[^/]+\/versoes\/[^/]+$/.test(pathname)) return true;
   // Etapa 3 (v157) — cliente enviando o formulário público de solicitação
   // (/solicitar/[clienteId]), mesmo espírito das 3 linhas acima: rota específica
   // só pra esse método, tudo mais no mesmo caminho (se algum dia existir) continua

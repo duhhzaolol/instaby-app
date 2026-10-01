@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { CATEGORIAS_COM_REVISAO } from "@/lib/categoriaTarefaVisual";
 import { STATUS_CONTEUDO_VALIDOS, STATUS_CONTEUDO_LABELS } from "@/lib/revisaoConteudo";
 import { RevisaoInterativa } from "./RevisaoInterativa";
+export const dynamic = "force-dynamic";
 
 // Página pública de revisão/aprovação de conteúdo (Etapa 2 v153) — mesmo padrão
 // de app/relatorio/[id]/page.tsx: link direto (UUID da própria tarefa), sem login,
@@ -41,6 +42,7 @@ export default async function RevisaoPublicaPage({ params }: { params: { tarefaI
     linkImagem: v.linkImagem,
     legenda: v.legenda,
     aprovadoEm: v.aprovadoEm ? v.aprovadoEm.toISOString() : null,
+    alteracoesSolicitadasEm: v.alteracoesSolicitadasEm?.toISOString() || null,
     aprovadorNome: v.aprovadoPorContato?.nome || v.aprovadoPorNomeLivre || null,
     comentarios: v.comentarios.map((c) => ({
       id: c.id,
@@ -103,7 +105,7 @@ export default async function RevisaoPublicaPage({ params }: { params: { tarefaI
             Ainda não há material enviado pra revisão aqui.
           </p>
         ) : (
-          <RevisaoInterativa tarefaId={tarefa.id} versoes={versoesPublicas} />
+          <RevisaoInterativa tarefaId={tarefa.id} versoes={versoesPublicas} publicacaoSugeridaEm={tarefa.publicacaoSugeridaEm?.toISOString() || null} />
         )}
       </div>
 

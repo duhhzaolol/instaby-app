@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getUsuarioAtual, permissoesDe } from "@/lib/permissoes";
+import { garantirPastasCliente } from "@/lib/google";
 
 export async function GET(request: NextRequest) {
   const status = request.nextUrl.searchParams.get("status");
@@ -13,13 +15,15 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const usuario = await getUsuarioAtual();
+  if (!usuario) return NextResponse.json({ erro: "Não autenticado." }, { status: 401 });
   const body = await request.json();
 
   if (!body.nome) {
     return NextResponse.json({ erro: "Nome é obrigatório" }, { status: 400 });
   }
 
-  const cliente = await prisma.cliente.create({
+  let cliente = await prisma.cliente.create({
     data: {
       nome: body.nome,
       whatsapp: body.whatsapp || null,
@@ -32,6 +36,13 @@ export async function POST(request: NextRequest) {
       status: body.status || "lead",
     },
   });
+
+  // Falhar no Drive não perde o cadastro. A aba Links permite retomar somente
+  // as pastas que faltaram, preservando os IDs já gravados.
+  if (permissoesDe(usuario).verArquivos) {
+    try { const pastas = await garantirPastasCliente(cliente.id); if (pastas) cliente = { ...cliente, ...pastas }; }
+    catch { console.error("Não foi possível preparar as pastas do novo cliente."); }
+  }
 
   if (body.status === "ativo" && body.mensalidade && body.proximoVencimento) {
     await prisma.cobranca.create({

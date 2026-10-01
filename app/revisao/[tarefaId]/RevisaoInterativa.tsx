@@ -1,7 +1,22 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Video, Image as ImageIcon, Send, CheckCircle2, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  CalendarClock,
+  CheckCircle2,
+  MessageSquare,
+  Play,
+  Send,
+  ExternalLink,
+} from "lucide-react";
+import {
+  dataHoraPublicacao,
+  formatarTempoVideo,
+  idArquivoDrive,
+  segundosDoTempo,
+  videoParaRevisao,
+} from "@/lib/midiaRevisao";
 
 type ComentarioPublico = {
   id: string;
@@ -12,7 +27,6 @@ type ComentarioPublico = {
   pontoImagemX: number | null;
   pontoImagemY: number | null;
 };
-
 type VersaoPublica = {
   id: string;
   numero: number;
@@ -21,274 +35,305 @@ type VersaoPublica = {
   legenda: string | null;
   aprovadoEm: string | null;
   aprovadorNome: string | null;
+  alteracoesSolicitadasEm: string | null;
   comentarios: ComentarioPublico[];
 };
 
-function formatarMomento(seg: number) {
-  const min = Math.floor(seg / 60);
-  const s = Math.floor(seg % 60)
-    .toString()
-    .padStart(2, "0");
-  return `${min}:${s}`;
-}
-
-// Guarda o "seu nome" localmente nesse navegador (não existe conta de cliente
-// nesse sistema) só pra não pedir de novo a cada comentário/aprovação na mesma
-// visita — nunca é enviado a lugar nenhum além das próprias rotas de comentário
-// e aprovação dessa tarefa.
-function nomeSalvo(): string {
-  try {
-    return localStorage.getItem("instaby_revisao_nome") || "";
-  } catch {
-    return "";
-  }
-}
-function salvarNome(nome: string) {
-  try {
-    localStorage.setItem("instaby_revisao_nome", nome);
-  } catch {
-    /* ignora — só é conveniência, funciona sem isso também */
-  }
-}
-
-export function RevisaoInterativa({ tarefaId, versoes }: { tarefaId: string; versoes: VersaoPublica[] }) {
-  const atual = versoes[0];
-  const antigas = versoes.slice(1);
-
+export function RevisaoInterativa({
+  tarefaId,
+  versoes,
+  publicacaoSugeridaEm,
+}: {
+  tarefaId: string;
+  versoes: VersaoPublica[];
+  publicacaoSugeridaEm: string | null;
+}) {
   return (
     <div className="flex flex-col gap-4">
-      <VersaoAtual tarefaId={tarefaId} versao={atual} />
-      {antigas.length > 0 && (
-        <div className="rounded-2xl border border-border bg-card/30 p-4">
-          <p className="mb-2 text-xs uppercase tracking-wide text-muted">Versões anteriores</p>
-          <div className="flex flex-col gap-2">
-            {antigas.map((v) => (
+      <VersaoAtual
+        key={versoes[0].id}
+        tarefaId={tarefaId}
+        versao={versoes[0]}
+        publicacaoSugeridaEm={publicacaoSugeridaEm}
+      />
+      {versoes.length > 1 && (
+        <details className="rounded-2xl border border-border bg-card/30 p-4">
+          <summary className="cursor-pointer text-xs text-muted">
+            Versões anteriores
+          </summary>
+          <div className="mt-3 flex flex-col gap-2">
+            {versoes.slice(1).map((v) => (
               <p key={v.id} className="text-xs text-muted">
-                Versão {v.numero}
-                {v.legenda ? ` — "${v.legenda.slice(0, 80)}${v.legenda.length > 80 ? "…" : ""}"` : ""} — substituída
+                Versão {v.numero} — substituída
+                {v.aprovadoEm ? " · aprovação preservada no histórico" : ""}
               </p>
             ))}
           </div>
-        </div>
+        </details>
       )}
     </div>
   );
 }
 
-function VersaoAtual({ tarefaId, versao }: { tarefaId: string; versao: VersaoPublica }) {
+function VersaoAtual({
+  tarefaId,
+  versao,
+  publicacaoSugeridaEm,
+}: {
+  tarefaId: string;
+  versao: VersaoPublica;
+  publicacaoSugeridaEm: string | null;
+}) {
+  const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
-  const imagemRef = useRef<HTMLImageElement>(null);
-
-  const [videoOk, setVideoOk] = useState(true);
-  const [imagemOk, setImagemOk] = useState(true);
-
+  const comentarioRef = useRef<HTMLTextAreaElement>(null);
+  const enviandoRef = useRef(false);
+  const envioPendente = useRef<Promise<boolean> | null>(null);
+  const [videoErro, setVideoErro] = useState(false);
+  const [imagemErro, setImagemErro] = useState(false);
   const [momento, setMomento] = useState<number | null>(null);
   const [momentoTexto, setMomentoTexto] = useState("");
   const [ponto, setPonto] = useState<{ x: number; y: number } | null>(null);
-
-  const [nome, setNome] = useState(nomeSalvo());
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [comentarios, setComentarios] = useState(versao.comentarios);
-
-  const [nomeAprovacao, setNomeAprovacao] = useState(nomeSalvo());
-  const [aprovando, setAprovando] = useState(false);
-  const [aprovado, setAprovado] = useState(!!versao.aprovadoEm);
-  const [aprovadorNome, setAprovadorNome] = useState(versao.aprovadorNome);
+  const [decidindo, setDecidindo] = useState(false);
   const [aprovadoEm, setAprovadoEm] = useState(versao.aprovadoEm);
+  const [alteracoesEm, setAlteracoesEm] = useState(
+    versao.alteracoesSolicitadasEm,
+  );
+  const [erro, setErro] = useState("");
+  const [aviso, setAviso] = useState("");
+  const driveId = versao.linkVideo ? idArquivoDrive(versao.linkVideo) : null;
 
-  function usarTempoAtual() {
-    const t = videoRef.current?.currentTime;
-    if (t === undefined) return;
+  function capturarPausa() {
+    if (texto.trim() || enviandoRef.current) return; // conserva o instante do comentário já em edição
+    const t = Math.floor(videoRef.current?.currentTime || 0);
     setMomento(t);
-    setMomentoTexto(formatarMomento(t));
+    setMomentoTexto(formatarTempoVideo(t));
   }
-
-  function aplicarMomentoManual(v: string) {
-    setMomentoTexto(v);
-    const partes = v.split(":");
-    if (partes.length === 2) {
-      const min = Number(partes[0]);
-      const seg = Number(partes[1]);
-      if (!isNaN(min) && !isNaN(seg)) {
-        setMomento(min * 60 + seg);
-        return;
-      }
+  function irAoMomento(seg: number) {
+    if (!videoRef.current || videoErro) return;
+    videoRef.current.currentTime = seg;
+    videoRef.current.pause();
+    if (!texto.trim()) {
+      setMomento(seg);
+      setMomentoTexto(formatarTempoVideo(seg));
     }
-    setMomento(null);
   }
-
-  function clicarImagem(e: React.MouseEvent<HTMLImageElement>) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.round(((e.clientX - rect.left) / rect.width) * 1000) / 10;
-    const y = Math.round(((e.clientY - rect.top) / rect.height) * 1000) / 10;
-    setPonto({ x, y });
-  }
-
-  async function enviarComentario(e: React.FormEvent) {
-    e.preventDefault();
-    if (!texto.trim() || !nome.trim()) return;
+  async function salvarComentario(): Promise<boolean> {
+    if (envioPendente.current) return envioPendente.current;
+    if (!texto.trim()) return true;
+    const tempo = momentoTexto ? segundosDoTempo(momentoTexto) : momento;
+    if (momentoTexto && tempo === null) {
+      setErro(
+        "Informe o momento no formato 1:15, ou deixe vazio para um comentário geral.",
+      );
+      return false;
+    }
+    const rascunho = texto.trim();
+    enviandoRef.current = true;
     setEnviando(true);
-    salvarNome(nome.trim());
-    const res = await fetch(`/api/tarefas/${tarefaId}/versoes/${versao.id}/comentarios`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        texto: texto.trim(),
-        autorNome: nome.trim(),
-        momentoVideoSegundos: momento,
-        pontoImagemX: ponto?.x ?? null,
-        pontoImagemY: ponto?.y ?? null,
-      }),
-    });
-    setEnviando(false);
-    if (!res.ok) {
-      const d = await res.json().catch(() => null);
-      alert(d?.erro || "Não consegui enviar esse comentário.");
-      return;
-    }
-    const criado = await res.json();
-    setComentarios((c) => [
-      ...c,
-      {
-        id: criado.id,
-        texto: criado.texto,
-        createdAt: criado.createdAt,
-        autorNome: nome.trim(),
-        momentoVideoSegundos: criado.momentoVideoSegundos,
-        pontoImagemX: criado.pontoImagemX,
-        pontoImagemY: criado.pontoImagemY,
-      },
-    ]);
-    setTexto("");
-    setMomento(null);
-    setMomentoTexto("");
-    setPonto(null);
+    setErro("");
+    setAviso("");
+    const salvar = (async () => {
+      try {
+        const res = await fetch(
+          `/api/tarefas/${tarefaId}/versoes/${versao.id}/comentarios`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              origem: "pagina_revisao",
+              texto: rascunho,
+              momentoVideoSegundos: tempo,
+              pontoImagemX: ponto?.x ?? null,
+              pontoImagemY: ponto?.y ?? null,
+            }),
+          },
+        );
+        const d = await res.json();
+        if (!res.ok)
+          throw new Error(
+            d.erro || "Não consegui salvar o comentário. Tente novamente.",
+          );
+        setComentarios((c) => [
+          ...c,
+          { ...d, autorNome: d.autorNome || "Cliente (pelo link de revisão)" },
+        ]);
+        setTexto("");
+        setPonto(null);
+        // Se já pausou novamente durante o envio, o próximo comentário usa essa pausa.
+        if (videoRef.current?.paused && !videoErro) {
+          const t = Math.floor(videoRef.current.currentTime);
+          setMomento(t);
+          setMomentoTexto(formatarTempoVideo(t));
+        } else {
+          setMomento(null);
+          setMomentoTexto("");
+        }
+        setAviso("Comentário salvo.");
+        return true;
+      } catch (e) {
+        setErro(
+          e instanceof Error ? e.message : "Não consegui salvar o comentário.",
+        );
+        return false;
+      } finally {
+        enviandoRef.current = false;
+        setEnviando(false);
+        envioPendente.current = null;
+      }
+    })();
+    envioPendente.current = salvar;
+    return salvar;
   }
-
-  async function aprovar() {
-    if (!nomeAprovacao.trim()) {
-      alert("Informe seu nome pra aprovar.");
-      return;
+  async function decidir(acao: "aprovar" | "pedir_alteracoes") {
+    setDecidindo(true);
+    setErro("");
+    setAviso("");
+    try {
+      if (!(await salvarComentario())) return;
+      const res = await fetch(`/api/tarefas/${tarefaId}/versoes/${versao.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ origem: "pagina_revisao", acao }),
+      });
+      const d = await res.json();
+      if (!res.ok)
+        throw new Error(d.erro || "Não consegui registrar sua decisão.");
+      setAprovadoEm(d.aprovadoEm);
+      setAlteracoesEm(d.alteracoesSolicitadasEm);
+      router.refresh();
+    } catch (e) {
+      setErro(
+        e instanceof Error ? e.message : "Não consegui registrar sua decisão.",
+      );
+    } finally {
+      setDecidindo(false);
     }
-    setAprovando(true);
-    salvarNome(nomeAprovacao.trim());
-    const res = await fetch(`/api/tarefas/${tarefaId}/versoes/${versao.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ aprovadoPorNomeLivre: nomeAprovacao.trim() }),
-    });
-    setAprovando(false);
-    if (!res.ok) {
-      const d = await res.json().catch(() => null);
-      alert(d?.erro || "Não consegui registrar sua aprovação.");
-      return;
-    }
-    const atualizada = await res.json();
-    setAprovado(true);
-    setAprovadorNome(nomeAprovacao.trim());
-    setAprovadoEm(atualizada.aprovadoEm);
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-card/50 p-5">
-      <p className="mb-3 text-xs uppercase tracking-wide text-muted">Versão {versao.numero}</p>
-
-      {versao.linkVideo && videoOk && (
-        <div className="mb-3">
-          <video ref={videoRef} src={versao.linkVideo} controls onError={() => setVideoOk(false)} className="w-full rounded-xl bg-black" />
+    <div className="rounded-2xl border border-border bg-card/50 p-4 sm:p-5">
+      <p className="mb-3 text-xs uppercase tracking-wide text-muted">
+        Versão {versao.numero}
+      </p>
+      {versao.linkVideo && (
+        <div className="mb-4">
+          {!videoErro ? (
+            <video
+              aria-label="Vídeo para revisão"
+              ref={videoRef}
+              src={videoParaRevisao(versao.linkVideo)}
+              controls
+              playsInline
+              preload="metadata"
+              onPause={capturarPausa}
+              onPlay={() => {
+                if (texto.trim() && !aprovadoEm) void salvarComentario();
+              }}
+              onError={() => setVideoErro(true)}
+              className="max-h-[65vh] w-full rounded-xl bg-black object-contain"
+            />
+          ) : (
+            <div className="rounded-xl border border-border bg-base p-3">
+              {driveId && (
+                <iframe
+                  title="Vídeo no Drive"
+                  src={`https://drive.google.com/file/d/${driveId}/preview`}
+                  allow="autoplay; fullscreen"
+                  allowFullScreen
+                  className="mb-2 h-[55vh] w-full rounded-lg bg-black"
+                />
+              )}
+              <p className="text-xs text-muted">
+                O vídeo não carregou no reprodutor da página. Você pode abrir o
+                arquivo e informar o tempo do comentário abaixo.
+              </p>
+              <a
+                href={versao.linkVideo}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-flex items-center gap-1 text-xs text-accent"
+              >
+                <ExternalLink size={13} /> Abrir vídeo no Drive
+              </a>
+            </div>
+          )}
         </div>
       )}
-      {versao.linkImagem && imagemOk && (
-        <div className="mb-3 relative">
+      {versao.linkImagem && !imagemErro && (
+        <div className="relative mb-4">
           <img
-            ref={imagemRef}
             src={versao.linkImagem}
-            onError={() => setImagemOk(false)}
-            onClick={clicarImagem}
-            className="w-full cursor-crosshair rounded-xl"
+            alt="Imagem para revisão"
+            onError={() => setImagemErro(true)}
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              setPonto({
+                x: ((e.clientX - rect.left) / rect.width) * 100,
+                y: ((e.clientY - rect.top) / rect.height) * 100,
+              });
+              setMomento(null);
+              setMomentoTexto("");
+              comentarioRef.current?.focus();
+            }}
+            className="max-h-[65vh] w-full cursor-crosshair rounded-xl object-contain"
           />
           {ponto && (
             <span
-              className="absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-accent bg-accent/40"
+              className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-accent bg-accent/40"
               style={{ left: `${ponto.x}%`, top: `${ponto.y}%` }}
             />
           )}
         </div>
       )}
-      {((versao.linkVideo && !videoOk) || (versao.linkImagem && !imagemOk)) && (
-        <div className="mb-3 flex flex-wrap gap-2">
-          {versao.linkVideo && !videoOk && (
-            <a href={versao.linkVideo} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs text-text hover:bg-hover">
-              <Video size={12} /> Abrir vídeo
-            </a>
+      {imagemErro && versao.linkImagem && (
+        <a
+          href={versao.linkImagem}
+          target="_blank"
+          rel="noreferrer"
+          className="mb-4 inline-block text-sm text-accent"
+        >
+          Abrir imagem para revisão
+        </a>
+      )}
+
+      {!aprovadoEm && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void salvarComentario();
+          }}
+          className="mb-4 rounded-xl border border-border bg-base p-4"
+        >
+          <p className="mb-1 flex items-center gap-2 text-sm font-medium text-text">
+            <MessageSquare size={15} /> Comente o que deseja ajustar
+          </p>
+          {versao.linkVideo && (
+            <p className="mb-3 text-xs text-muted">
+              Pause o vídeo: o tempo aparece aqui. Escreva e salve o comentário,
+              ou continue o vídeo para salvá-lo automaticamente.
+            </p>
           )}
-          {versao.linkImagem && !imagemOk && (
-            <a href={versao.linkImagem} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs text-text hover:bg-hover">
-              <ImageIcon size={12} /> Abrir imagem
-            </a>
-          )}
-        </div>
-      )}
-      {versao.legenda && (
-        <div className="mb-4 rounded-xl border border-border bg-base px-4 py-3">
-          <p className="mb-1 text-[11px] uppercase tracking-wide text-muted">Legenda proposta</p>
-          <p className="whitespace-pre-wrap text-sm text-text">{versao.legenda}</p>
-        </div>
-      )}
-
-      {/* Aprovação */}
-      {aprovado ? (
-        <div className="mb-4 flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-400">
-          <CheckCircle2 size={16} />
-          Aprovado por {aprovadorNome}
-          {aprovadoEm ? ` em ${new Date(aprovadoEm).toLocaleString("pt-BR")}` : ""}
-        </div>
-      ) : (
-        <div className="mb-4 rounded-xl border border-accent/20 bg-accent/5 p-4">
-          <p className="mb-2 text-sm font-medium text-text">Está tudo certo com essa versão?</p>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <input
-              value={nomeAprovacao}
-              onChange={(e) => setNomeAprovacao(e.target.value)}
-              placeholder="Seu nome"
-              className="h-10 flex-1 rounded-lg border border-border bg-base px-3 text-sm text-text outline-none placeholder:text-muted focus:border-accent/50"
-            />
-            <button
-              onClick={aprovar}
-              disabled={aprovando}
-              className="h-10 shrink-0 rounded-lg bg-accent px-4 text-sm font-medium text-white disabled:opacity-50"
-            >
-              {aprovando ? "Aprovando..." : "Aprovar esta versão"}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Comentários compartilhados */}
-      <div className="border-t border-border pt-4">
-        <p className="mb-2 text-sm font-medium text-text">Comentários</p>
-        <div className="mb-3 flex flex-col gap-2">
-          {comentarios.length === 0 && <p className="text-xs text-muted">Nenhum comentário ainda.</p>}
-          {comentarios.map((c) => (
-            <div key={c.id} className="rounded-lg bg-base px-3 py-2">
-              <p className="mb-0.5 flex items-center justify-between text-[11px] text-muted">
-                <span className="font-medium text-text/80">
-                  {c.autorNome}
-                  {c.momentoVideoSegundos !== null ? ` · aos ${formatarMomento(c.momentoVideoSegundos)}` : ""}
-                  {c.pontoImagemX !== null ? " · num ponto da imagem" : ""}
-                </span>
-                <span>{new Date(c.createdAt).toLocaleString("pt-BR")}</span>
-              </p>
-              <p className="whitespace-pre-wrap text-sm text-text">{c.texto}</p>
-            </div>
-          ))}
-        </div>
-
-        <form onSubmit={enviarComentario} className="flex flex-col gap-2">
-          {(momento !== null || ponto) && (
-            <p className="flex items-center gap-1.5 text-[11px] text-accent">
-              {momento !== null ? `Comentário no momento ${formatarMomento(momento)} do vídeo` : "Comentário num ponto da imagem"}
+          {versao.linkVideo && (
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <label className="text-xs text-muted" htmlFor="momento-revisao">
+                Momento do vídeo
+              </label>
+              <input
+                id="momento-revisao"
+                value={momentoTexto}
+                onChange={(e) => {
+                  setMomentoTexto(e.target.value);
+                  setMomento(segundosDoTempo(e.target.value));
+                  setPonto(null);
+                }}
+                placeholder="Ex.: 1:15"
+                disabled={enviando || decidindo}
+                className="h-9 w-24 rounded-lg border border-border bg-card/60 px-2 text-sm text-text"
+              />
               <button
                 type="button"
                 onClick={() => {
@@ -296,54 +341,153 @@ function VersaoAtual({ tarefaId, versao }: { tarefaId: string; versao: VersaoPub
                   setMomentoTexto("");
                   setPonto(null);
                 }}
-                className="text-muted hover:text-text"
+                disabled={enviando || decidindo}
+                className="text-xs text-muted underline"
               >
-                <X size={11} />
-              </button>
-            </p>
-          )}
-          {versao.linkVideo && videoOk && (
-            <div className="flex items-center gap-1.5">
-              <input
-                value={momentoTexto}
-                onChange={(e) => aplicarMomentoManual(e.target.value)}
-                placeholder="mm:ss (opcional)"
-                className="h-9 w-28 rounded-lg border border-border bg-base px-2 text-xs text-text outline-none focus:border-accent/50"
-              />
-              <button
-                type="button"
-                onClick={usarTempoAtual}
-                className="h-9 rounded-lg border border-border px-2.5 text-xs text-muted hover:text-text"
-              >
-                Usar momento atual do vídeo
+                Comentário geral
               </button>
             </div>
           )}
-          <input
-            value={nome}
-            onChange={(e) => setNome(e.target.value)}
-            placeholder="Seu nome"
-            className="h-10 w-full rounded-lg border border-border bg-base px-3 text-sm text-text outline-none placeholder:text-muted focus:border-accent/50"
-          />
-          <div className="flex gap-1.5">
-            <input
-              value={texto}
-              onChange={(e) => setTexto(e.target.value)}
-              placeholder="Escreva seu comentário..."
-              className="h-10 w-full flex-1 rounded-lg border border-border bg-base px-3 text-sm text-text outline-none placeholder:text-muted focus:border-accent/50"
-            />
-            <button
-              type="submit"
-              disabled={enviando || !texto.trim() || !nome.trim()}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent text-white disabled:opacity-40"
-            >
-              <Send size={14} />
-            </button>
-          </div>
-          {versao.linkImagem && imagemOk && (
-            <p className="text-[11px] text-muted">Dica: clique num ponto da imagem acima pra comentar exatamente ali.</p>
+          {ponto && (
+            <p className="mb-2 text-xs text-accent">
+              Comentário no ponto selecionado da imagem.
+            </p>
           )}
+          <textarea
+            aria-label="Comentário da revisão"
+            ref={comentarioRef}
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            rows={3}
+            maxLength={2000}
+            placeholder="Ex.: Trocar este take ou ajustar a transição..."
+            disabled={enviando || decidindo}
+            className="mb-2 w-full rounded-lg border border-border bg-card/60 px-3 py-2 text-sm text-text placeholder:text-muted"
+          />
+          <button
+            type="submit"
+            disabled={enviando || decidindo || !texto.trim()}
+            className="flex min-h-10 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-medium text-white disabled:opacity-40"
+          >
+            <Send size={14} />
+            {enviando ? "Salvando comentário..." : "Salvar comentário"}
+          </button>
         </form>
+      )}
+      {erro && (
+        <p
+          role="alert"
+          className="mb-3 rounded-lg border border-red-500/20 bg-red-500/5 p-3 text-sm text-red-400"
+        >
+          {erro}
+        </p>
+      )}
+      {aviso && (
+        <p role="status" className="mb-3 text-xs text-emerald-400">
+          {aviso}
+        </p>
+      )}
+
+      {versao.legenda && (
+        <div className="mb-4 rounded-xl border border-border bg-base p-4">
+          <p className="mb-1 text-xs text-muted">Legenda proposta</p>
+          <p className="whitespace-pre-wrap text-sm text-text">
+            {versao.legenda}
+          </p>
+        </div>
+      )}
+      {publicacaoSugeridaEm && (
+        <div className="mb-4 rounded-xl border border-accent/30 bg-accent/5 p-4">
+          <p className="mb-1 flex items-center gap-2 text-xs font-medium text-accent">
+            <CalendarClock size={15} /> Publicação sugerida
+          </p>
+          <p className="text-sm font-medium text-text">
+            {dataHoraPublicacao(publicacaoSugeridaEm)}
+          </p>
+          <p className="mt-1 text-xs text-muted">
+            Horário de Brasília · proposta para publicação após a aprovação.
+          </p>
+        </div>
+      )}
+
+      <div className="mb-4 border-t border-border pt-4">
+        <p className="mb-3 text-sm font-medium text-text">
+          Comentários desta versão ({comentarios.length})
+        </p>
+        <div className="flex flex-col gap-2">
+          {!comentarios.length && (
+            <p className="text-xs text-muted">
+              Os comentários que você salvar aparecem aqui.
+            </p>
+          )}
+          {comentarios.map((c) => (
+            <div
+              key={c.id}
+              className="rounded-xl border border-border bg-base p-3"
+            >
+              <div className="mb-1 flex flex-wrap items-center justify-between gap-1 text-xs text-muted">
+                <span>{c.autorNome}</span>
+                {c.momentoVideoSegundos !== null && (
+                  <button
+                    type="button"
+                    onClick={() => irAoMomento(c.momentoVideoSegundos!)}
+                    className="flex items-center gap-1 rounded-md bg-accent/10 px-2 py-1 text-accent"
+                    aria-label={`Ir para ${formatarTempoVideo(c.momentoVideoSegundos)} do vídeo`}
+                  >
+                    <Play size={11} />
+                    {formatarTempoVideo(c.momentoVideoSegundos)}
+                  </button>
+                )}
+                {c.pontoImagemX !== null && <span>Ponto da imagem</span>}
+              </div>
+              <p className="whitespace-pre-wrap break-words text-sm text-text">
+                {c.texto}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="border-t border-border pt-4">
+        {aprovadoEm ? (
+          <p
+            role="status"
+            className="flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-sm text-emerald-400"
+          >
+            <CheckCircle2 size={18} /> Versão aprovada. A equipe já pode seguir
+            com o agendamento.
+          </p>
+        ) : alteracoesEm ? (
+          <p
+            role="status"
+            className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-sm text-amber-400"
+          >
+            Alterações solicitadas. A equipe recebeu seus comentários e enviará
+            uma nova versão para revisão.
+          </p>
+        ) : (
+          <>
+            <p className="mb-3 text-sm font-medium text-text">
+              Terminou de revisar?
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <button
+                onClick={() => void decidir("pedir_alteracoes")}
+                disabled={enviando || decidindo}
+                className="min-h-12 rounded-xl border border-accent/40 px-4 text-sm font-medium text-accent disabled:opacity-40"
+              >
+                {decidindo ? "Registrando..." : "Pedir alterações"}
+              </button>
+              <button
+                onClick={() => void decidir("aprovar")}
+                disabled={enviando || decidindo}
+                className="min-h-12 rounded-xl bg-accent px-4 text-sm font-medium text-white disabled:opacity-40"
+              >
+                {decidindo ? "Registrando..." : "Aprovar esta versão"}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

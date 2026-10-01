@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Video, Image as ImageIcon, Send, CheckCircle2, Copy, Check } from "lucide-react";
+import { Video, Image as ImageIcon, Send, CheckCircle2, Copy, Check, CalendarClock, ExternalLink } from "lucide-react";
 import { STATUS_CONTEUDO_VALIDOS, STATUS_CONTEUDO_LABELS } from "@/lib/revisaoConteudo";
+import { publicacaoParaInput, formatarTempoVideo } from "@/lib/midiaRevisao";
 
 export type ComentarioRevisaoData = {
   id: string;
@@ -26,6 +27,7 @@ export type VersaoConteudoData = {
   aprovadoPorContato: { id: string; nome: string } | null;
   aprovadoPorNomeLivre: string | null;
   aprovadoEm: string | null;
+  alteracoesSolicitadasEm?: string | null;
   createdAt: string;
   criadoPor: { nome: string; fotoUrl?: string | null } | null;
   comentarios: ComentarioRevisaoData[];
@@ -36,6 +38,7 @@ type TarefaRevisao = {
   statusConteudo: string | null;
   linkPublicacao: string | null;
   publicadoEm: string | null;
+  publicacaoSugeridaEm: string | null;
   versoes: VersaoConteudoData[];
 };
 
@@ -66,6 +69,9 @@ export function PainelRevisaoConteudo({
   recarregar: () => Promise<void>;
 }) {
   const [linkCopiado, setLinkCopiado] = useState(false);
+  const [erroLink, setErroLink] = useState("");
+  const [publicacaoSugerida, setPublicacaoSugerida] = useState(publicacaoParaInput(tarefa.publicacaoSugeridaEm));
+  const [salvandoSugestao, setSalvandoSugestao] = useState(false);
 
   const [novoLinkVideo, setNovoLinkVideo] = useState("");
   const [novoLinkImagem, setNovoLinkImagem] = useState("");
@@ -90,7 +96,14 @@ export function PainelRevisaoConteudo({
     navigator.clipboard.writeText(url).then(() => {
       setLinkCopiado(true);
       setTimeout(() => setLinkCopiado(false), 2000);
-    });
+      setErroLink("");
+    }).catch(() => setErroLink("Não consegui copiar automaticamente. Abra a página da revisão e copie o endereço."));
+  }
+
+  async function salvarSugestao() {
+    setSalvandoSugestao(true);
+    try { const atualizada = await patch({ publicacaoSugeridaEm: publicacaoSugerida ? new Date(`${publicacaoSugerida}:00-03:00`).toISOString() : null }); if (atualizada) await recarregar(); }
+    finally { setSalvandoSugestao(false); }
   }
 
   async function mudarStatusConteudo(novo: string) {
@@ -204,11 +217,19 @@ export function PainelRevisaoConteudo({
       <button
         type="button"
         onClick={copiarLink}
-        className="mb-3 flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs text-muted hover:text-text"
+        className="mb-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-accent px-4 text-sm font-medium text-white hover:opacity-90"
       >
         {linkCopiado ? <Check size={12} /> : <Copy size={12} />}
         {linkCopiado ? "Link copiado" : "Copiar link de revisão pro cliente"}
       </button>
+      <a href={`/revisao/${tarefa.id}`} target="_blank" rel="noreferrer" className="mb-3 inline-flex items-center gap-1 text-xs text-muted hover:text-text"><ExternalLink size={12} /> Abrir página de revisão</a>
+      {erroLink && <p role="alert" className="mb-3 text-xs text-red-400">{erroLink}</p>}
+      <div className="mb-3 rounded-xl border border-border bg-card/60 p-3">
+        <label htmlFor="publicacao-sugerida" className="mb-2 flex items-center gap-1.5 text-xs font-medium text-text"><CalendarClock size={14} /> Dia e horário sugeridos para postar</label>
+        <input id="publicacao-sugerida" type="datetime-local" value={publicacaoSugerida} onChange={e => setPublicacaoSugerida(e.target.value)} className="mb-2 h-10 w-full rounded-lg border border-border bg-base px-2 text-sm text-text" />
+        <p className="mb-2 text-[11px] text-muted">Horário de Brasília. Aparece para o cliente na revisão; é uma sugestão, sem alterar o prazo da tarefa.</p>
+        <button type="button" onClick={salvarSugestao} disabled={salvandoSugestao} className="min-h-9 rounded-lg border border-border px-3 text-xs text-text disabled:opacity-40">{salvandoSugestao ? "Salvando..." : "Salvar sugestão de publicação"}</button>
+      </div>
 
       {/* Publicação — link e data, registrados mesmo quando feita manualmente fora do sistema */}
       {(tarefa.statusConteudo === "agendado" || tarefa.statusConteudo === "publicado") && (
@@ -277,6 +298,8 @@ export function PainelRevisaoConteudo({
               <p className="flex items-center gap-1 text-[11px] text-emerald-400">
                 <CheckCircle2 size={11} /> Aprovado por {nomeAprovador(v)} em {new Date(v.aprovadoEm).toLocaleString("pt-BR")}
               </p>
+            ) : v.alteracoesSolicitadasEm ? (
+              <p className="text-[11px] text-amber-400">Cliente pediu alterações em {new Date(v.alteracoesSolicitadasEm).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}. Envie uma nova versão depois de corrigir.</p>
             ) : i === 0 ? (
               <div className="mt-1.5 flex gap-1.5">
                 <input
@@ -303,7 +326,7 @@ export function PainelRevisaoConteudo({
                   <div key={c.id} className="rounded-lg bg-base px-2 py-1.5">
                     <p className="mb-0.5 flex items-center justify-between text-[10px] text-muted">
                       <span className="font-medium text-text/80">
-                        {nomeAutor(c)} {c.interno && <span className="text-amber-400">· interno</span>}
+                        {nomeAutor(c)} {c.momentoVideoSegundos != null && <span className="text-accent">· {formatarTempoVideo(c.momentoVideoSegundos)}</span>} {c.interno && <span className="text-amber-400">· interno</span>}
                       </span>
                       <span>{new Date(c.createdAt).toLocaleString("pt-BR")}</span>
                     </p>
