@@ -275,51 +275,48 @@ export async function snapshotCampanhaNoPeriodo(
   desde: Date,
   ateData: Date
 ): Promise<SnapshotCampanha> {
-  const itens = await prisma.itemImportacao.findMany({
-    where: { campanhaId, lote: { periodoInicio: { gte: desde }, periodoFim: { lte: ateData } } },
-    include: { lote: { select: { periodoInicio: true, periodoFim: true } } },
-  });
+  return (await snapshotsCampanhasNoPeriodo([campanhaId], desde, ateData)).get(campanhaId)!;
+}
 
-  const porMes = new Map<string, { periodoFim: Date; item: any }>();
-  itens.forEach((item: any) => {
-    const d = item.lote.periodoInicio as Date;
-    const chave = `${d.getUTCFullYear()}-${d.getUTCMonth()}`;
-    const atual = porMes.get(chave);
-    // Mesmo desempate por criado-mais-recente de gastoAcumuladoTotalCampanha (ver lá) —
-    // garante que uma correção reimportada pro mesmo período sempre vence, independente
-    // da ordem em que o findMany devolveu as linhas.
-    const ganha =
-      !atual ||
-      item.lote.periodoFim.getTime() > atual.periodoFim.getTime() ||
-      (item.lote.periodoFim.getTime() === atual.periodoFim.getTime() && item.createdAt.getTime() > atual.item.createdAt.getTime());
-    if (ganha) {
-      porMes.set(chave, { periodoFim: item.lote.periodoFim, item });
-    }
-  });
-
-  const escolhidos = Array.from(porMes.values());
-  if (escolhidos.length === 0) {
-    return { gasto: 0, impressoes: null, alcance: null, resultadosPorIndicador: [], dataAtualizacao: null, temDados: false };
+// Carrega o período em lote, também para filtrar a seleção do relatório antes
+// da prévia. O histórico legado é ponte somente onde ainda não existe ledger.
+export async function snapshotsCampanhasNoPeriodo(ids: string[], desde: Date, ateData: Date): Promise<Map<string, SnapshotCampanha>> {
+  const vazio = (): SnapshotCampanha => ({ gasto: 0, impressoes: null, alcance: null, resultadosPorIndicador: [], dataAtualizacao: null, temDados: false });
+  const mapa = new Map(ids.map((id) => [id, vazio()]));
+  if (!ids.length) return mapa;
+  const [itens, legado] = await Promise.all([
+    prisma.itemImportacao.findMany({ where: { campanhaId: { in: ids }, lote: { periodoInicio: { gte: desde }, periodoFim: { lte: ateData } } }, include: { lote: { select: { periodoInicio: true, periodoFim: true } } } }),
+    prisma.resultadoCampanha.findMany({ where: { campanhaId: { in: ids }, origem: "meta_import", inicio: { gte: desde }, fim: { lte: ateData } } }),
+  ]);
+  const ultimoFimLedger = new Map<string, Date>();
+  for (const i of itens) {
+    const chave = `${i.campanhaId}|${i.lote.periodoInicio.toISOString().slice(0,7)}`;
+    const anterior = ultimoFimLedger.get(chave);
+    if (!anterior || i.lote.periodoFim > anterior) ultimoFimLedger.set(chave, i.lote.periodoFim);
   }
-
-  const gasto = escolhidos.reduce((s, v) => s + Number(v.item.gastoAcumuladoArquivo), 0);
-  const temImpressoes = escolhidos.some((v) => v.item.impressoes != null);
-  const temAlcance = escolhidos.some((v) => v.item.alcance != null);
-  const impressoes = temImpressoes ? escolhidos.reduce((s, v) => s + (v.item.impressoes || 0), 0) : null;
-  const alcance = temAlcance && escolhidos.length === 1 ? escolhidos[0].item.alcance : null;
-  const resultadosPorIndicador = agruparResultadosPorIndicador(escolhidos.map((v) => v.item));
-  const dataAtualizacao = escolhidos.reduce((max: Date, v) => (v.periodoFim > max ? v.periodoFim : max), escolhidos[0].periodoFim);
-
-  return { gasto, impressoes, alcance, resultadosPorIndicador, dataAtualizacao, temDados: true };
+  const linhas = [
+    ...itens.map((i) => ({ campanhaId: i.campanhaId!, inicio: i.lote.periodoInicio, fim: i.lote.periodoFim, createdAt: i.createdAt, verbaInvestida: Number(i.gastoAcumuladoArquivo), impressoes: i.impressoes, alcance: i.alcance, resultados: i.resultados, indicadorResultado: i.indicadorResultado, planosFechados: null, valorRetorno: null })),
+    ...legado.filter((r) => { const ultimo = ultimoFimLedger.get(`${r.campanhaId}|${r.inicio.toISOString().slice(0,7)}`); return !ultimo || r.fim > ultimo; }).map((r) => ({ ...r, verbaInvestida: Number(r.verbaInvestida || 0), valorRetorno: r.valorRetorno == null ? null : Number(r.valorRetorno) })),
+  ];
+  const porCampanha = new Map<string, typeof linhas>();
+  for (const r of agruparPorMes(linhas)) {
+    const grupo = porCampanha.get(r.campanhaId) || [];
+    grupo.push(r); porCampanha.set(r.campanhaId, grupo);
+  }
+  for (const [id, rows] of Array.from(porCampanha)) {
+    mapa.set(id, { gasto: rows.reduce((t,r) => t + r.verbaInvestida,0), impressoes: rows.some((r) => r.impressoes != null) ? rows.reduce((t,r) => t + (r.impressoes || 0),0) : null, alcance: rows.length === 1 ? rows[0].alcance : null,
+      resultadosPorIndicador: agruparResultadosPorIndicador(rows), dataAtualizacao: rows.reduce((d,r) => r.fim > d ? r.fim : d, rows[0].fim), temDados: true });
+  }
+  return mapa;
 }
 
 // Atalho pras telas de estado ATUAL (Visão Geral, Campanhas): mês corrente, sem
 // limite superior de data — a leitura mais recente que existir esse mês.
-export function snapshotCampanhaAtual(campanhaId: string): Promise<SnapshotCampanha> {
-  const hoje = new Date();
-  const inicioMes = new Date(Date.UTC(hoje.getUTCFullYear(), hoje.getUTCMonth(), 1));
-  const daquiUmAno = new Date(Date.UTC(hoje.getUTCFullYear() + 1, hoje.getUTCMonth(), 1));
-  return snapshotCampanhaNoPeriodo(campanhaId, inicioMes, daquiUmAno);
+export async function snapshotCampanhaAtual(campanhaId: string): Promise<SnapshotCampanha> {
+  const ultimo = await prisma.itemImportacao.findFirst({ where: { campanhaId }, orderBy: [{ lote: { periodoFim: "desc" } }, { createdAt: "desc" }], include: { lote: { select: { periodoInicio: true, periodoFim: true } } } });
+  if (!ultimo) return { gasto: 0, impressoes: null, alcance: null, resultadosPorIndicador: [], dataAtualizacao: null, temDados: false };
+  const d = ultimo.lote.periodoFim;
+  return snapshotCampanhaNoPeriodo(campanhaId, new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),1)), new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0)));
 }
 
 // Atalho pra tela de Finalizadas: soma o histórico inteiro da campanha (todos os
@@ -338,6 +335,9 @@ export type ResumoSaldoCliente = {
   totalAjustes: number;
   totalSaldoTransportado: number;
   gastoAcumulado: number;
+  gastosPorMes: { mes: string; gasto: number }[];
+  gastoHistorico: number;
+  inicioControle: string | null;
   saldoRestante: number;
 };
 
@@ -345,18 +345,26 @@ export type ResumoSaldoCliente = {
 // independente de statusInterno — arquivar/finalizar uma campanha nunca tira o gasto
 // dela dessa conta.
 export async function calcularSaldoCliente(clienteId: string): Promise<ResumoSaldoCliente> {
-  const [verba, campanhas] = await Promise.all([
-    prisma.verbaTrafego.findUnique({
-      where: { clienteId },
-      include: { movimentacoes: { orderBy: { dataMovimento: "desc" } } },
-    }),
-    prisma.campanha.findMany({ where: { clienteId }, select: { id: true } }),
+  const [verba, legado, itens] = await Promise.all([
+    prisma.verbaTrafego.findUnique({ where: { clienteId }, include: { movimentacoes: { orderBy: { dataMovimento: "desc" } } } }),
+    prisma.resultadoCampanha.findMany({ where: { campanha: { clienteId }, origem: "meta_import" }, select: { campanhaId: true, inicio: true, fim: true, verbaInvestida: true, createdAt: true } }),
+    prisma.itemImportacao.findMany({ where: { lote: { clienteId }, campanhaId: { not: null } }, include: { lote: { select: { periodoInicio: true, periodoFim: true } } } }),
   ]);
+  const linhas = [
+    ...legado.map((r) => ({ ...r, verbaInvestida: Number(r.verbaInvestida || 0), impressoes: null, alcance: null, resultados: null, planosFechados: null, valorRetorno: null })),
+    ...itens.map((i) => ({ campanhaId: i.campanhaId!, inicio: i.lote.periodoInicio, fim: i.lote.periodoFim, createdAt: i.createdAt, verbaInvestida: Number(i.gastoAcumuladoArquivo), impressoes: null, alcance: null, resultados: null, planosFechados: null, valorRetorno: null })),
+  ];
+  const porMes = new Map<string, number>();
+  for (const r of agruparPorMes(linhas)) {
+    const mes = new Date(r.fim).toISOString().slice(0,7);
+    porMes.set(mes, (porMes.get(mes) || 0) + r.verbaInvestida);
+  }
+  const gastosPorMes = Array.from(porMes, ([mes, gasto]) => ({ mes, gasto: Math.round(gasto * 100) / 100 })).sort((a,b) => b.mes.localeCompare(a.mes));
+  const gastoHistorico = gastosPorMes.reduce((t, r) => t + r.gasto, 0);
+  const inicioControle = verba?.inicioControle?.toISOString().slice(0,10) || null;
+  const gastoAcumulado = gastosPorMes.filter((r) => !inicioControle || r.mes >= inicioControle.slice(0,7)).reduce((t,r) => t+r.gasto,0);
 
-  const gastos = await Promise.all(campanhas.map((c: any) => gastoAcumuladoTotalCampanha(c.id)));
-  const gastoAcumulado = gastos.reduce((s: number, v: number) => s + v, 0);
-
-  const movimentacoes = verba?.movimentacoes || [];
+  const movimentacoes = (verba?.movimentacoes || []).filter((m) => !verba?.inicioControle || m.dataMovimento >= verba.inicioControle);
   const somaPorTipo = (tipo: string) =>
     movimentacoes.filter((m: any) => m.tipo === tipo).reduce((s: number, m: any) => s + Number(m.valor), 0);
 
@@ -370,8 +378,7 @@ export async function calcularSaldoCliente(clienteId: string): Promise<ResumoSal
   // valor sempre positivo (a magnitude) — o TIPO decide se soma ou subtrai aqui,
   // não o sinal que a pessoa digitou. Saldo transportado soma, como um aporte
   // (é o saldo do mês anterior entrando de novo no controle do mês novo).
-  const saldoRestante =
-    saldoInicial + totalAportes + totalSaldoTransportado - totalDevolucoes - totalAjustes - gastoAcumulado;
+  const saldoRestante = Math.round((saldoInicial + totalAportes + totalSaldoTransportado - totalDevolucoes - totalAjustes - gastoAcumulado) * 100) / 100;
 
   return {
     temVerbaCadastrada: !!verba,
@@ -381,6 +388,9 @@ export async function calcularSaldoCliente(clienteId: string): Promise<ResumoSal
     totalAjustes,
     totalSaldoTransportado,
     gastoAcumulado,
+    gastosPorMes,
+    gastoHistorico,
+    inicioControle,
     saldoRestante,
   };
 }
@@ -453,9 +463,10 @@ export async function computarSnapshotRelatorio(
     },
   });
 
+  const snapshots = await snapshotsCampanhasNoPeriodo(campanhas.map((c) => c.id), periodoInicio, periodoFim);
   const porCampanha: CampanhaSnapshotRelatorio[] = await Promise.all(
     campanhas.map(async (c: any) => {
-      const snap = await snapshotCampanhaNoPeriodo(c.id, periodoInicio, periodoFim);
+      const snap = snapshots.get(c.id)!;
       return {
         campanhaId: c.id,
         nome: c.nome,

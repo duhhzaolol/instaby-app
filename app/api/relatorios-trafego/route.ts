@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { exigirPermissaoApi, podeVerCliente } from "@/lib/permissoes";
+import { retornoDoPeriodo } from "@/lib/retornoTrafegoServidor";
 import { computarSnapshotRelatorio } from "@/lib/trafego";
 
 // Lista as versões já geradas de um cliente (spec §6: "preserve versões dos
@@ -43,6 +44,8 @@ export async function POST(request: NextRequest) {
   if (!clienteId || !periodoInicio || !periodoFim || !Array.isArray(campanhaIds) || campanhaIds.length === 0) {
     return NextResponse.json({ erro: "Cliente, período e ao menos uma campanha são obrigatórios" }, { status: 400 });
   }
+  const dataValida = (v: unknown) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) && Number.isFinite(new Date(v).getTime()) && new Date(v).toISOString().slice(0,10) === v;
+  if (!dataValida(periodoInicio) || !dataValida(periodoFim) || periodoInicio > periodoFim || !campanhaIds.every((id: unknown) => typeof id === "string")) return NextResponse.json({ erro: "Informe um período válido" }, { status: 400 });
   if (!(await podeVerCliente(usuario, clienteId))) {
     return NextResponse.json({ erro: "Não autorizado" }, { status: 403 });
   }
@@ -57,6 +60,8 @@ export async function POST(request: NextRequest) {
     fim
   );
 
+  if (!porCampanha.some((c) => c.gasto > 0)) return NextResponse.json({ erro: "Nenhuma campanha com gasto nesse período" }, { status: 400 });
+  const retorno = await retornoDoPeriodo(clienteId, inicio, fim);
   const ultimo = await prisma.relatorioTrafego.findFirst({ where: { clienteId }, orderBy: { versao: "desc" } });
   const versao = (ultimo?.versao || 0) + 1;
 
@@ -67,7 +72,7 @@ export async function POST(request: NextRequest) {
       periodoFim: fim,
       parcial,
       campanhaIds,
-      dadosSnapshot: { investimentoTotal, porCampanha },
+      dadosSnapshot: { investimentoTotal, porCampanha: porCampanha.filter((c) => c.gasto > 0), retorno },
       avaliacaoGeral: avaliacaoGeral || null,
       observacoes: observacoes || null,
       proximosPassos: proximosPassos || null,

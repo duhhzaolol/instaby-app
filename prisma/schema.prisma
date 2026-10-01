@@ -205,6 +205,7 @@ model Cliente {
 
   // Módulo de Tráfego Pago (v151) — verba/saldo é controle interno da agência,
   // sem ligação com Financeiro (ver comentário no model Campanha).
+  retornosTrafego     RetornoMensalTrafego[]
   verbaTrafego        VerbaTrafego?
   lotesImportacao     LoteImportacao[]
   relatoriosTrafego   RelatorioTrafego[]
@@ -1132,6 +1133,7 @@ model VerbaTrafego {
   clienteId    String   @unique
   cliente      Cliente  @relation(fields: [clienteId], references: [id])
   saldoInicial Decimal  @default(0)
+  inicioControle DateTime?
   observacoes  String?
   atualizadoEm DateTime @updatedAt
   createdAt    DateTime @default(now())
@@ -1377,4 +1379,20 @@ model LinkBio {
   ordem     Int      @default(0)
   ativo     Boolean  @default(true)
   createdAt DateTime @default(now())
+}
+
+// Vendas informadas pelo gestor, independentes das importações e preservadas
+// por cliente/mês. apuradoAte evita usar vendas do fechamento em uma prévia antiga.
+model RetornoMensalTrafego {
+  id           String   @id @default(uuid())
+  clienteId    String
+  cliente      Cliente  @relation(fields: [clienteId], references: [id])
+  mes          String
+  apuradoAte   DateTime
+  itens        Json
+  observacoes  String?
+  atualizadoPorId String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  @@unique([clienteId, mes])
 }

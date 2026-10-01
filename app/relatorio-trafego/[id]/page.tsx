@@ -2,13 +2,14 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getUsuarioAtual, podeVerCliente, permissoesDe } from "@/lib/permissoes";
 import { STATUS_INTERNO_LABEL, AVALIACAO_LABEL, formatarNumeroOuNaoInformado } from "@/lib/trafego";
+import type { retornoDoPeriodo } from "@/lib/retornoTrafegoServidor";
 import { BotaoImprimirRelatorioTrafego } from "@/components/dashboard/trafego/BotaoImprimirRelatorioTrafego";
 
 function fmtMoeda(v: number) {
   return `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 function dataBr(iso: string) {
-  return new Date(iso).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+  return new Date(iso).toLocaleDateString("pt-BR", { timeZone: "UTC" });
 }
 
 type CampanhaSnapshot = {
@@ -40,12 +41,12 @@ export default async function RelatorioTrafegoPage({ params }: { params: { id: s
   if (!relatorio) notFound();
   if (!(await podeVerCliente(usuario, relatorio.clienteId))) redirect("/dashboard/trafego");
 
-  const dados = relatorio.dadosSnapshot as unknown as { investimentoTotal: number; porCampanha: CampanhaSnapshot[] };
+  const dados = relatorio.dadosSnapshot as unknown as { investimentoTotal: number; porCampanha: CampanhaSnapshot[]; retorno?: Awaited<ReturnType<typeof retornoDoPeriodo>> };
   const maiorGasto = Math.max(1, ...dados.porCampanha.map((c) => c.gasto));
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8 print:px-0 print:py-0">
-      <BotaoImprimirRelatorioTrafego voltarHref="/dashboard/trafego?visao=relatorios" />
+    <div className="relatorio-trafego mx-auto max-w-3xl px-4 py-8 print:px-0 print:py-0">
+      <BotaoImprimirRelatorioTrafego voltarHref={`/dashboard/trafego?visao=relatorios&clienteId=${relatorio.clienteId}`} />
 
       <div className="rounded-2xl border border-border bg-card/60 p-6 print:border-none print:bg-white print:p-0 print:text-black">
         <div className="mb-5 flex items-start justify-between gap-3 border-b border-border/60 pb-4 print:border-black/20">
@@ -60,7 +61,7 @@ export default async function RelatorioTrafegoPage({ params }: { params: { id: s
           </div>
           <div className="text-right text-xs text-muted print:text-black/60">
             <p>Versão {relatorio.versao}</p>
-            <p>Gerado em {dataBr(relatorio.createdAt.toISOString())}</p>
+            <p>Gerado em {relatorio.createdAt.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}</p>
             {relatorio.geradoPor?.nome && <p>por {relatorio.geradoPor.nome}</p>}
           </div>
         </div>
@@ -89,17 +90,17 @@ export default async function RelatorioTrafegoPage({ params }: { params: { id: s
         <p className="mb-2 text-sm font-medium text-text print:text-black">Investimento por campanha</p>
         <div className="mb-5 flex flex-col gap-1.5">
           {dados.porCampanha.map((c) => (
-            <div key={c.campanhaId} className="flex items-center gap-2">
-              <p className="w-32 shrink-0 truncate text-[11px] text-muted print:text-black/70" title={c.nome}>
+            <div key={c.campanhaId} className="grafico-campanha">
+              <p className="mb-1 break-words text-[11px] text-muted print:text-black/70">
                 {c.nome}
               </p>
-              <div className="h-4 flex-1 overflow-hidden rounded bg-base/60 print:bg-black/5">
+              <div className="flex items-center gap-2"><div className="h-4 flex-1 overflow-hidden rounded bg-base/60 print:bg-black/5">
                 <div
                   className="h-full rounded bg-accent print:bg-black/60"
                   style={{ width: `${Math.max(2, (c.gasto / maiorGasto) * 100)}%` }}
                 />
               </div>
-              <p className="w-20 shrink-0 text-right text-[11px] text-text print:text-black">{fmtMoeda(c.gasto)}</p>
+              <p className="w-20 shrink-0 text-right text-[11px] text-text print:text-black">{fmtMoeda(c.gasto)}</p></div>
             </div>
           ))}
         </div>
@@ -147,7 +148,7 @@ export default async function RelatorioTrafegoPage({ params }: { params: { id: s
               )}
               <p className="mt-2 flex items-center gap-1.5 text-[11px]">
                 <span className="rounded-full bg-accent/10 px-2 py-0.5 font-medium text-accent print:bg-transparent print:text-black">
-                  {AVALIACAO_LABEL[c.avaliacao] || c.avaliacao}
+                  Avaliação da campanha: {AVALIACAO_LABEL[c.avaliacao] || c.avaliacao}
                 </span>
                 {c.avaliacaoMeta && <span className="text-muted print:text-black/60">Meta: {c.avaliacaoMeta}</span>}
               </p>
@@ -157,6 +158,15 @@ export default async function RelatorioTrafegoPage({ params }: { params: { id: s
             </div>
           ))}
         </div>
+
+        {dados.retorno && <div className="mb-5 rounded-xl border border-border bg-base/40 p-4 print:border-black/10">
+          <p className="mb-2 text-sm font-medium text-text print:text-black">Vendas e retorno comercial do cliente no mês</p>
+          <p className="mb-2 text-xs text-muted print:text-black/60">Apuração até {dataBr(dados.retorno.apuradoAte)}. Considera as vendas informadas para o cliente e a mídia de todas as campanhas desse mês.</p>
+          {dados.retorno.itens.map((v) => <p key={v.id} className="mb-1 text-xs text-text print:text-black">{v.descricao} · {v.quantidade} vendas · {v.valorUnitario == null ? "Valores variados" : `${fmtMoeda(v.valorUnitario)} por venda`} · Total {fmtMoeda(v.valorTotal)}</p>)}
+          <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-text print:text-black"><p>Quantidade vendida: {dados.retorno.resumo.quantidade}</p><p>Receita: {fmtMoeda(dados.retorno.resumo.receita)}</p><p>Ticket médio: {dados.retorno.resumo.ticketMedio == null ? "—" : fmtMoeda(dados.retorno.resumo.ticketMedio)}</p><p>Mídia do cliente: {dados.retorno.investimentoConsiderado == null ? "—" : fmtMoeda(dados.retorno.investimentoConsiderado)}</p></div>
+          {dados.retorno.datasIguais ? <div className="mt-2 text-xs text-text print:text-black"><p>Receita por real investido (ROAS): {dados.retorno.resumo.roas?.toFixed(2) || "—"}x</p><p>Receita menos mídia, antes dos demais custos: {fmtMoeda(dados.retorno.resumo.receitaMenosMidia)}</p>{dados.retorno.resumo.lucroEstimado != null && <p>Lucro estimado após custos informados e mídia: {fmtMoeda(dados.retorno.resumo.lucroEstimado)} · margem {dados.retorno.resumo.margemEstimada?.toFixed(1)}%</p>}</div> : <p className="mt-2 text-xs text-muted print:text-black/60">Receita e mídia têm datas de apuração diferentes; a comparação de retorno aguarda dados até a mesma data.</p>}
+          {dados.retorno.observacoes && <p className="mt-2 text-xs text-muted print:text-black/60">{dados.retorno.observacoes}</p>}
+        </div>}
 
         {(relatorio.avaliacaoGeral || relatorio.observacoes || relatorio.proximosPassos) && (
           <div className="mb-2 rounded-xl border border-border bg-base/40 p-3 print:border-black/10">

@@ -24,6 +24,9 @@ type Saldo = {
   totalSaldoTransportado: number;
   gastoAcumulado: number;
   saldoRestante: number;
+  gastoHistorico: number;
+  gastosPorMes: { mes: string; gasto: number }[];
+  inicioControle: string | null;
 };
 
 const TIPO_LABEL: Record<string, string> = {
@@ -41,7 +44,7 @@ function fmtMoeda(v: number) {
   return `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 function dataBr(iso: string) {
-  return new Date(iso).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+  return new Date(iso).toLocaleDateString("pt-BR", { timeZone: "UTC" });
 }
 
 function NovaMovimentacaoForm({ clienteId, onSalvo }: { clienteId: string; onSalvo: () => void }) {
@@ -122,15 +125,18 @@ function EditarSaldoInicialForm({
   clienteId,
   saldoInicial,
   observacoes,
+  inicioControle,
   onFechar,
 }: {
   clienteId: string;
   saldoInicial: number;
   observacoes: string | null;
+  inicioControle: string | null;
   onFechar: () => void;
 }) {
   const router = useRouter();
   const [valor, setValor] = useState(saldoInicial);
+  const [mesInicio, setMesInicio] = useState(inicioControle?.slice(0,7) || "");
   const [obs, setObs] = useState(observacoes || "");
   const [enviando, setEnviando] = useState(false);
 
@@ -139,7 +145,7 @@ function EditarSaldoInicialForm({
     const res = await fetch(`/api/clientes/${clienteId}/verba`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ saldoInicial: valor, observacoes: obs || null }),
+      body: JSON.stringify({ saldoInicial: valor, observacoes: obs || null, inicioControle: mesInicio ? `${mesInicio}-01` : null }),
     });
     setEnviando(false);
     if (!res.ok) {
@@ -162,6 +168,7 @@ function EditarSaldoInicialForm({
         Isso não é um aporte — é o valor de onde esse controle começa a contar (por exemplo, ao migrar de uma
         planilha). Pra dinheiro entrando ou saindo depois disso, use "Nova movimentação".
       </p>
+      <label className="mb-3 block text-xs text-muted">Mês de início do controle<input aria-label="Mês de início do controle" type="month" value={mesInicio} onChange={(e) => setMesInicio(e.target.value)} className="mt-1 h-10 w-full rounded-lg border border-border bg-base px-3 text-sm text-text"/><span className="mt-1 block">Com um mês definido, o saldo inicial começa nesse mês. Gastos e movimentações anteriores ficam no histórico e não entram nesse saldo.</span></label>
       <div className="mb-3">
         <CurrencyInput value={valor} onChange={setValor} placeholder="Saldo inicial" />
       </div>
@@ -187,6 +194,7 @@ export function VerbaMovimentacoes({
   clienteId,
   saldoInicial,
   observacoesVerba,
+  inicioControle,
   movimentacoes,
   saldo,
 }: {
@@ -194,6 +202,7 @@ export function VerbaMovimentacoes({
   clienteNome: string;
   saldoInicial: number;
   observacoesVerba: string | null;
+  inicioControle: string | null;
   movimentacoes: Movimentacao[];
   saldo: Saldo;
 }) {
@@ -202,11 +211,12 @@ export function VerbaMovimentacoes({
 
   return (
     <div>
+      <p className="mb-4 rounded-xl border border-border bg-card/60 p-3 text-xs text-muted">Cadastre aqui o dinheiro destinado aos anúncios do cliente. Essa verba é separada do contrato e da mensalidade da agência. Use “Cadastrar saldo inicial e mês” para começar o controle; depois registre os repasses em “Nova movimentação”.</p>
       <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
         <StatTile icone={<PiggyBank size={12} style={{ color: "#0D9488" }} />} label="Saldo inicial" valor={fmtMoeda(saldo.saldoInicial)} index={0} />
         <StatTile icone={<ArrowUpCircle size={12} style={{ color: "#22C55E" }} />} label="Aportes" valor={fmtMoeda(saldo.totalAportes)} index={1} />
         <StatTile icone={<ArrowDownCircle size={12} style={{ color: "#E63946" }} />} label="Devoluções + ajustes" valor={fmtMoeda(saldo.totalDevolucoes + saldo.totalAjustes)} index={2} />
-        <StatTile icone={<TrendingDown size={12} style={{ color: "#E63946" }} />} label="Gasto acumulado" valor={fmtMoeda(saldo.gastoAcumulado)} index={3} />
+        <StatTile icone={<TrendingDown size={12} style={{ color: "#E63946" }} />} label="Gasto desde o início do controle" valor={fmtMoeda(saldo.gastoAcumulado)} index={3} />
       </div>
 
       <div className="mb-5 rounded-2xl border border-accent/30 bg-accent/5 p-4">
@@ -216,13 +226,15 @@ export function VerbaMovimentacoes({
             <p className="text-sm font-medium text-text">Saldo restante</p>
           </div>
           <p className={`text-xl font-semibold ${saldo.saldoRestante < 0 ? "text-red-400" : "text-text"}`}>
-            {fmtMoeda(saldo.saldoRestante)}
+            {saldo.temVerbaCadastrada ? fmtMoeda(saldo.saldoRestante) : "Cadastre a verba"}
           </p>
         </div>
         <p className="mt-1 text-[11px] text-muted">
           Saldo inicial + aportes + saldo transportado − devoluções − ajustes − gasto acumulado. Esse é o controle
           interno da verba, não uma consulta ao saldo dentro da própria Meta.
         </p>
+        <p className="mt-1 text-xs text-muted">{inicioControle ? `Controle a partir de ${dataBr(inicioControle)}.` : "Sem mês inicial definido: considera todo o histórico registrado."}</p>
+        <details className="mt-2 text-xs text-muted"><summary className="cursor-pointer">Ver origem dos gastos por mês</summary>{saldo.gastosPorMes.map((m) => <p key={m.mes}>{m.mes} · {fmtMoeda(m.gasto)}</p>)}</details>
         {saldo.totalSaldoTransportado > 0 && (
           <p className="mt-1 text-[11px] text-muted">
             Inclui {fmtMoeda(saldo.totalSaldoTransportado)} de saldo transportado de meses anteriores.
@@ -241,7 +253,7 @@ export function VerbaMovimentacoes({
           onClick={() => setEditandoSaldoInicial((v) => !v)}
           className="flex items-center justify-center gap-1.5 rounded-xl border border-border bg-card/60 px-3 py-2.5 text-xs text-muted hover:text-text"
         >
-          <Pencil size={12} /> Ajustar ponto de partida
+          <Pencil size={12} /> Cadastrar saldo inicial e mês
         </button>
       </div>
       {formAberto && <NovaMovimentacaoForm clienteId={clienteId} onSalvo={() => setFormAberto(false)} />}
@@ -250,6 +262,7 @@ export function VerbaMovimentacoes({
           clienteId={clienteId}
           saldoInicial={saldoInicial}
           observacoes={observacoesVerba}
+          inicioControle={inicioControle}
           onFechar={() => setEditandoSaldoInicial(false)}
         />
       )}

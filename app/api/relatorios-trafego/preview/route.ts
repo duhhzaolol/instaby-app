@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { exigirPermissaoApi, podeVerCliente } from "@/lib/permissoes";
+import { retornoDoPeriodo } from "@/lib/retornoTrafegoServidor";
 import { computarSnapshotRelatorio } from "@/lib/trafego";
 
 // Só calcula e devolve — nunca grava uma versão (isso é papel só da rota principal,
@@ -16,10 +17,13 @@ export async function POST(request: NextRequest) {
   if (!clienteId || !periodoInicio || !periodoFim || !Array.isArray(campanhaIds) || campanhaIds.length === 0) {
     return NextResponse.json({ erro: "Cliente, período e ao menos uma campanha são obrigatórios" }, { status: 400 });
   }
+  const dataValida = (v: unknown) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) && Number.isFinite(new Date(v).getTime()) && new Date(v).toISOString().slice(0,10) === v;
+  if (!dataValida(periodoInicio) || !dataValida(periodoFim) || periodoInicio > periodoFim || !campanhaIds.every((id: unknown) => typeof id === "string")) return NextResponse.json({ erro: "Informe um período válido" }, { status: 400 });
   if (!(await podeVerCliente(usuario, clienteId))) {
     return NextResponse.json({ erro: "Não autorizado" }, { status: 403 });
   }
 
   const resultado = await computarSnapshotRelatorio(clienteId, campanhaIds, new Date(periodoInicio), new Date(periodoFim));
-  return NextResponse.json(resultado);
+  const retorno = await retornoDoPeriodo(clienteId, new Date(periodoInicio), new Date(periodoFim));
+  return NextResponse.json({ ...resultado, porCampanha: resultado.porCampanha.filter((c) => c.gasto > 0), retorno });
 }

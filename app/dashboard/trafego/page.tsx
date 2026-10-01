@@ -22,6 +22,8 @@ import { VerbaMovimentacoes } from "@/components/dashboard/trafego/VerbaMoviment
 import { HistoricoImportacoes } from "@/components/dashboard/trafego/HistoricoImportacoes";
 import { ehAcumuladoMensal, marcosAcumuladosMensais } from "@/lib/agregarResultadosCampanha";
 import { formatarDataRelatorio } from "@/lib/dataRelatorio";
+import { RetornoMensalTrafego } from "@/components/dashboard/trafego/RetornoMensalTrafego";
+import type { VendaTrafego } from "@/lib/retornoTrafego";
 import { RelatoriosTrafego } from "@/components/dashboard/trafego/RelatoriosTrafego";
 
 // Views client-agnósticas (uma tabela cruzando todos os clientes autorizados) vs.
@@ -171,7 +173,7 @@ async function VisaoGeralVisao({ clienteId, clienteNome, clientes, visao, mesPar
   mesParam?: string;
 }) {
   const [campanhasCliente, saldo, lotes] = await Promise.all([
-    prisma.campanha.findMany({ where: { clienteId }, select: { id: true, nome: true, status: true, statusInterno: true, ultimoStatusMeta: true, avaliacao: true }, orderBy: { createdAt: "desc" } }),
+    prisma.campanha.findMany({ where: { clienteId }, select: { id: true, nome: true, status: true, statusInterno: true, ultimoStatusMeta: true, avaliacao: true, avaliacaoMeta: true, avaliacaoObservacoes: true, dataInicio: true, dataFim: true }, orderBy: [{ dataInicio: "desc" }, { createdAt: "desc" }] }),
     calcularSaldoCliente(clienteId),
     prisma.loteImportacao.findMany({ where: { clienteId }, include: { itens: { orderBy: { createdAt: "asc" } } }, orderBy: [{ periodoFim: "desc" }, { createdAt: "desc" }] }),
   ]);
@@ -183,7 +185,7 @@ async function VisaoGeralVisao({ clienteId, clienteNome, clientes, visao, mesPar
   const itensPorCampanha = new Map((ultimo?.itens || []).filter((i) => i.campanhaId).map((i) => [i.campanhaId, i]));
   const campanhasView = repararStatusInternoLegado(campanhasCliente).filter((c) => itensPorCampanha.has(c.id)).map((c) => {
     const item = itensPorCampanha.get(c.id)!;
-    return { id: c.id, nome: c.nome, statusInterno: c.statusInterno, ultimoStatusMeta: c.ultimoStatusMeta, avaliacao: c.avaliacao,
+    return { id: c.id, nome: c.nome, statusInterno: c.statusInterno, ultimoStatusMeta: c.ultimoStatusMeta, avaliacao: c.avaliacao, avaliacaoMeta: c.avaliacaoMeta, avaliacaoObservacoes: c.avaliacaoObservacoes, dataInicio: c.dataInicio.toISOString(), dataFim: (item.termino || c.dataFim)?.toISOString() || null,
       snapshot: serializarSnapshot({ gasto: Number(item.gastoAcumuladoArquivo), impressoes: item.impressoes, alcance: item.alcance, resultadosPorIndicador: agruparResultadosPorIndicador([item]), dataAtualizacao: ultimo.fim, temDados: true }) };
   });
   const tiposNoMes = new Set(marcos.flatMap((lote) => lote.itens.filter((i) => i.resultados != null).map((i) => i.indicadorResultado || "(sem indicador)")));
@@ -195,6 +197,7 @@ async function VisaoGeralVisao({ clienteId, clienteNome, clientes, visao, mesPar
   });
   const periodoLabel = ultimo ? `${formatarDataRelatorio(ultimo.inicio)} – ${formatarDataRelatorio(ultimo.fim)}` : "Sem importações mensais";
   const fechado = !!ultimo && ultimo.fim.getUTCDate() === new Date(Date.UTC(ultimo.fim.getUTCFullYear(), ultimo.fim.getUTCMonth() + 1, 0)).getUTCDate();
+  const retorno = mes ? await prisma.retornoMensalTrafego.findUnique({ where: { clienteId_mes: { clienteId, mes } } }) : null;
   return <div>
     <SeletorClienteTrafego clientes={clientes} clienteIdAtual={clienteId} visao={visao} />
     {meses.length > 0 && <form action="/dashboard/trafego" className="mb-4 flex items-center gap-2">
@@ -204,6 +207,7 @@ async function VisaoGeralVisao({ clienteId, clienteNome, clientes, visao, mesPar
       <button className="rounded-lg bg-accent px-3 py-2 text-xs text-white">Consultar</button>
     </form>}
     <VisaoGeralTrafego clienteId={clienteId} clienteNome={clienteNome} saldo={saldo} campanhas={campanhasView} periodoLabel={periodoLabel} ultimaAtualizacao={ultimo?.fim.toISOString() || null} gastoMes={ultimo ? Number(ultimo.gastoTotalArquivo) : null} fechado={fechado} marcos={pontos}/>
+    {mes && ultimo && <RetornoMensalTrafego key={mes} clienteId={clienteId} mes={mes} dataRelatorio={ultimo.fim.toISOString()} gasto={Number(ultimo.gastoTotalArquivo)} inicial={retorno ? { mes, apuradoAte: retorno.apuradoAte.toISOString().slice(0,10), itens: retorno.itens as VendaTrafego[], observacoes: retorno.observacoes } : null}/>}
   </div>;
 }
 
@@ -243,6 +247,7 @@ async function VerbaVisao({
         clienteNome={clienteNome}
         saldoInicial={verba ? Number(verba.saldoInicial) : 0}
         observacoesVerba={verba?.observacoes || null}
+        inicioControle={verba?.inicioControle?.toISOString().slice(0,10) || null}
         movimentacoes={movimentacoesView}
         saldo={saldo}
       />
@@ -315,10 +320,10 @@ async function RelatoriosVisao({
   visao: string;
   campanhaIdsParam?: string;
 }) {
-  const [campanhasCliente, versoes] = await Promise.all([
+  const [campanhasCliente, versoes, ultimoLote] = await Promise.all([
     prisma.campanha.findMany({
       where: { clienteId },
-      select: { id: true, nome: true, status: true, statusInterno: true },
+      select: { id: true, nome: true, status: true, statusInterno: true, avaliacao: true, avaliacaoMeta: true, avaliacaoObservacoes: true },
       orderBy: { createdAt: "desc" },
     }),
     prisma.relatorioTrafego.findMany({
@@ -326,12 +331,14 @@ async function RelatoriosVisao({
       orderBy: { versao: "desc" },
       include: { geradoPor: { select: { nome: true } } },
     }),
+    prisma.loteImportacao.findFirst({ where: { clienteId }, orderBy: [{ periodoFim: "desc" }, { createdAt: "desc" }], select: { periodoInicio: true, periodoFim: true } }),
   ]);
 
   const campanhasOpcoes = repararStatusInternoLegado(campanhasCliente).map((c: any) => ({
     id: c.id,
     nome: c.nome,
     statusInterno: c.statusInterno,
+    avaliacao: c.avaliacao, avaliacaoMeta: c.avaliacaoMeta, avaliacaoObservacoes: c.avaliacaoObservacoes,
   }));
   const versoesView = versoes.map((v: any) => ({
     id: v.id,
@@ -356,8 +363,8 @@ async function RelatoriosVisao({
         clienteNome={clienteNome}
         campanhas={campanhasOpcoes}
         versoes={versoesView}
-        periodoInicioDefault={inicioMesIso}
-        periodoFimDefault={hojeIso}
+        periodoInicioDefault={ultimoLote?.periodoInicio.toISOString().slice(0,10) || inicioMesIso}
+        periodoFimDefault={ultimoLote?.periodoFim.toISOString().slice(0,10) || hojeIso}
         campanhaIdsPreSelecionadas={campanhaIdsPre}
       />
     </div>
@@ -376,7 +383,7 @@ async function CampanhasOuFinalizadas({
   const todasCampanhas = await prisma.campanha.findMany({
     where: idsPermitidos ? { clienteId: { in: idsPermitidos } } : undefined,
     include: { cliente: { select: { id: true, nome: true, cor: true } }, avaliadoPor: { select: { nome: true } } },
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ dataInicio: "desc" }, { createdAt: "desc" }],
   });
 
   const corrigidas = repararStatusInternoLegado(todasCampanhas);

@@ -541,7 +541,7 @@ export default function TrafegoClient({
       ? "Nenhuma campanha em acompanhamento no momento."
       : "Nenhuma campanha cadastrada ainda.";
 
-  const campanhasFiltradas = campanhas.filter((c) => {
+  const campanhasFiltradas = [...campanhas].sort((a,b) => new Date(b.dataInicio).getTime() - new Date(a.dataInicio).getTime()).filter((c) => {
     if (filtroClienteId && c.clienteId !== filtroClienteId) return false;
     if (filtroStatus && c.statusInterno !== filtroStatus) return false;
     if (busca.trim() && !c.nome.toLowerCase().includes(busca.trim().toLowerCase())) return false;
@@ -552,19 +552,7 @@ export default function TrafegoClient({
     <div>
       {mostrarCriacao && <ImportarCampanhasMeta clientes={clientes} clienteFixo={clienteFixo} />}
 
-      {mostrarCriacao && (
-        <div className="mb-4">
-          <button
-            onClick={() => setFormAberto((v) => !v)}
-            className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-accent/30 bg-accent/5 py-3 text-sm font-medium text-accent hover:bg-accent/10"
-          >
-            <Plus size={15} /> Nova campanha
-          </button>
-          {formAberto && (
-            <NovaCampanhaForm clientes={clientes} clienteFixo={clienteFixo} onSalvo={() => setFormAberto(false)} />
-          )}
-        </div>
-      )}
+      {mostrarCriacao && <p className="mb-4 text-xs text-muted">Importe o relatório do Meta para cadastrar campanhas novas e atualizar as existentes.</p>}
 
       {campanhas.length > 0 && (
         <div className="mb-3 flex flex-wrap gap-2">
@@ -624,7 +612,7 @@ export default function TrafegoClient({
                 <div className="min-w-0 flex-1">
                   <div className="mb-1 flex flex-wrap items-center gap-2">
                     <Megaphone size={14} className="shrink-0 text-accent" />
-                    <p className="truncate text-sm font-medium text-text">{c.nome}</p>
+                    <p className="break-words text-sm font-medium text-text">{c.nome}</p>
                     <span
                       className="rounded-full px-2 py-0.5 text-[10px] font-medium"
                       style={{ backgroundColor: `${STATUS_INTERNO_COR[c.statusInterno]}1A`, color: STATUS_INTERNO_COR[c.statusInterno] }}
@@ -672,7 +660,7 @@ export default function TrafegoClient({
                   onClick={() => setEditandoId(c.id)}
                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border text-muted hover:text-text"
                 >
-                  <Pencil size={13} />
+                  <Pencil size={13} /><span className="sr-only">Editar e avaliar campanha</span>
                 </button>
               </div>
 

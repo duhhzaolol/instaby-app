@@ -27,6 +27,7 @@ export async function gravarImportacaoMeta(tx: Prisma.TransactionClient, dados: 
         id, clienteId, nome: linha.nome, plataforma: "meta_ads",
         status: "ativa", statusInterno: "em_acompanhamento",
         dataInicio: new Date(linha.inicio),
+        dataFim: linha.termino ? new Date(linha.termino) : null,
         idExternoMeta: linha.idExterno,
         chaveCorrespondencia: gerarChaveCorrespondencia(linha.nome, linha.configAtribuicao),
         nomesOriginaisMeta: [linha.nome],
@@ -45,7 +46,7 @@ export async function gravarImportacaoMeta(tx: Prisma.TransactionClient, dados: 
     where: { id: { in: idsExistentes }, clienteId, plataforma: "meta_ads" },
     select: {
       id: true, nomesOriginaisMeta: true, chaveCorrespondencia: true, idExternoMeta: true,
-      orcamentoConjunto: true, tipoOrcamento: true, ultimoStatusMeta: true,
+      orcamentoConjunto: true, tipoOrcamento: true, ultimoStatusMeta: true, dataFim: true,
     },
   }) : [];
   if (existentes.length !== idsExistentes.length) throw new Error("CAMPANHA_IMPORTACAO_INVALIDA");
@@ -58,6 +59,7 @@ export async function gravarImportacaoMeta(tx: Prisma.TransactionClient, dados: 
     atual.chaveCorrespondencia ||= gerarChaveCorrespondencia(linha.nome, linha.configAtribuicao);
     atual.idExternoMeta ||= linha.idExterno;
     atual.ultimoStatusMeta = linha.status;
+    if (!atual.dataFim && linha.termino) atual.dataFim = new Date(linha.termino);
     if (linha.orcamentoConjunto !== null) atual.orcamentoConjunto = new Prisma.Decimal(linha.orcamentoConjunto);
     if (linha.tipoOrcamento !== null) atual.tipoOrcamento = linha.tipoOrcamento;
   }
@@ -69,16 +71,24 @@ export async function gravarImportacaoMeta(tx: Prisma.TransactionClient, dados: 
       ${c.id}::text, ARRAY[${Prisma.join(c.nomesOriginaisMeta)}]::text[],
       ${c.chaveCorrespondencia}::text, ${c.idExternoMeta}::text,
       ${c.ultimoStatusMeta}::text, ${agora.toISOString()}::timestamp,
-      ${c.orcamentoConjunto?.toString() ?? null}::numeric, ${c.tipoOrcamento}::text
+      ${c.orcamentoConjunto?.toString() ?? null}::numeric, ${c.tipoOrcamento}::text, ${c.dataFim?.toISOString() ?? null}::timestamp
     )`);
     await tx.$executeRaw(Prisma.sql`
       UPDATE "Campanha" AS c SET
         "nomesOriginaisMeta" = v.nomes, "chaveCorrespondencia" = v.chave,
         "idExternoMeta" = v.id_meta, "ultimoStatusMeta" = v.status,
         "ultimoStatusMetaEm" = v.data, "orcamentoConjunto" = v.orcamento,
-        "tipoOrcamento" = v.tipo
-      FROM (VALUES ${Prisma.join(valores)}) AS v(id, nomes, chave, id_meta, status, data, orcamento, tipo)
+        "tipoOrcamento" = v.tipo, "dataFim" = COALESCE(c."dataFim", v.termino)
+      FROM (VALUES ${Prisma.join(valores)}) AS v(id, nomes, chave, id_meta, status, data, orcamento, tipo, termino)
       WHERE c.id = v.id AND c."clienteId" = ${clienteId}
+        AND NOT EXISTS (
+          SELECT 1 FROM "ItemImportacao" i JOIN "LoteImportacao" l ON l.id = i."loteId"
+          WHERE i."campanhaId" = c.id AND l."periodoFim" > ${new Date(previa.periodoFim).toISOString()}::timestamp
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM "ResultadoCampanha" r
+          WHERE r."campanhaId" = c.id AND r.fim > ${new Date(previa.periodoFim).toISOString()}::timestamp
+        )
     `);
   }
 

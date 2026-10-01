@@ -26,6 +26,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   return NextResponse.json({
     saldoInicial: verba ? Number(verba.saldoInicial) : 0,
     observacoes: verba?.observacoes || null,
+    inicioControle: verba?.inicioControle?.toISOString().slice(0,10) || null,
     movimentacoes: (verba?.movimentacoes || []).map((m: any) => ({
       id: m.id,
       tipo: m.tipo,
@@ -49,15 +50,19 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   }
 
   const body = await request.json();
+  if (body.saldoInicial !== undefined && (typeof body.saldoInicial !== "number" || !Number.isFinite(body.saldoInicial) || body.saldoInicial < 0)) return NextResponse.json({ erro: "Saldo inicial inválido" }, { status: 400 });
+  if (body.inicioControle != null && (typeof body.inicioControle !== "string" || !/^\d{4}-(0[1-9]|1[0-2])-01$/.test(body.inicioControle))) return NextResponse.json({ erro: "O controle deve começar no dia 1 de um mês" }, { status: 400 });
   const verba = await prisma.verbaTrafego.upsert({
     where: { clienteId: params.id },
     update: {
+      ...(body.inicioControle !== undefined && { inicioControle: body.inicioControle ? new Date(body.inicioControle) : null }),
       ...(body.saldoInicial !== undefined && { saldoInicial: body.saldoInicial }),
       ...(body.observacoes !== undefined && { observacoes: body.observacoes || null }),
     },
     create: {
       clienteId: params.id,
       saldoInicial: body.saldoInicial || 0,
+      inicioControle: body.inicioControle ? new Date(body.inicioControle) : null,
       observacoes: body.observacoes || null,
     },
   });

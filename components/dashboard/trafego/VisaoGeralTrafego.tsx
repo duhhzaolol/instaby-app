@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Wallet, TrendingDown, PiggyBank, CalendarClock, RefreshCw, Search, FileBarChart } from "lucide-react";
 import { EvolucaoImportacoes, type MarcoImportacao } from "./EvolucaoImportacoes";
+import { AvaliarCampanha } from "./AvaliarCampanha";
 import { StatTile } from "@/components/ui/StatTile";
 import { STATUS_INTERNO, STATUS_INTERNO_LABEL, AVALIACAO_LABEL, formatarNumeroOuNaoInformado } from "@/lib/trafego";
 
@@ -22,6 +23,10 @@ type CampanhaLinha = {
   statusInterno: string;
   ultimoStatusMeta: string | null;
   avaliacao: string;
+  avaliacaoMeta?: string | null;
+  avaliacaoObservacoes?: string | null;
+  dataInicio: string;
+  dataFim: string | null;
   snapshot: SnapshotView;
 };
 type Saldo = {
@@ -33,6 +38,9 @@ type Saldo = {
   totalSaldoTransportado: number;
   gastoAcumulado: number;
   saldoRestante: number;
+  gastoHistorico: number;
+  gastosPorMes: { mes: string; gasto: number }[];
+  inicioControle: string | null;
 };
 
 function fmtMoeda(v: number) {
@@ -62,6 +70,8 @@ export function VisaoGeralTrafego({
   fechado: boolean;
   marcos: MarcoImportacao[];
 }) {
+  const [ocultarZeros, setOcultarZeros] = useState(true);
+  const [avaliando, setAvaliando] = useState<CampanhaLinha | null>(null);
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("");
   const [selecionadas, setSelecionadas] = useState<Record<string, boolean>>({});
@@ -69,7 +79,8 @@ export function VisaoGeralTrafego({
   const verbaTotal = saldo.saldoInicial + saldo.totalAportes + saldo.totalSaldoTransportado;
   const idsSelecionados = Object.keys(selecionadas).filter((id) => selecionadas[id]);
 
-  const filtradas = campanhas.filter((c) => {
+  const visiveis = campanhas.filter((c) => !ocultarZeros || c.snapshot.gasto > 0).sort((a,b) => new Date(b.dataInicio).getTime() - new Date(a.dataInicio).getTime());
+  const filtradas = visiveis.filter((c) => {
     if (filtroStatus && c.statusInterno !== filtroStatus) return false;
     if (busca.trim() && !c.nome.toLowerCase().includes(busca.trim().toLowerCase())) return false;
     return true;
@@ -99,13 +110,13 @@ export function VisaoGeralTrafego({
         />
         <StatTile
           icone={<TrendingDown size={12} style={{ color: "#E63946" }} />}
-          label="Gasto de todos os meses"
-          valor={fmtMoeda(saldo.gastoAcumulado)}
+          label="Gasto do mês selecionado"
+          valor={gastoMes == null ? "—" : fmtMoeda(gastoMes)}
           index={1}
         />
         <StatTile
           icone={<Wallet size={12} style={{ color: saldo.saldoRestante < 0 ? "#E63946" : "#22C55E" }} />}
-          label="Saldo restante"
+          label="Saldo do controle de verba"
           valor={saldo.temVerbaCadastrada ? fmtMoeda(saldo.saldoRestante) : "—"}
           index={2}
         />
@@ -121,26 +132,31 @@ export function VisaoGeralTrafego({
       {!saldo.temVerbaCadastrada && (
         <p className="mb-4 rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-amber-400">
           Esse cliente ainda não tem verba cadastrada — o gasto acima já é calculado, mas o saldo só aparece depois de
-          registrar a verba disponibilizada em "Verba e movimentações".
+          cadastrar a verba de anúncios. <Link href={`/dashboard/trafego?visao=verba&clienteId=${clienteId}`} className="ml-1 underline">Cadastrar verba de anúncios</Link>
         </p>
       )}
 
-      {campanhas.length > 0 && (
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <label className="flex items-center gap-2 text-xs text-muted"><input type="checkbox" checked={ocultarZeros} onChange={(e) => setOcultarZeros(e.target.checked)}/>Ocultar campanhas sem gasto no mês</label>
+        <Link href={`/dashboard/trafego?visao=verba&clienteId=${clienteId}`} className="text-xs text-accent underline">Configurar verba de anúncios</Link>
+      </div>
+      <details className="mb-4 rounded-xl border border-border p-3 text-xs text-muted"><summary className="cursor-pointer">Ver gastos dos meses anteriores e origem do histórico</summary><p className="mt-2">Histórico registrado: {fmtMoeda(saldo.gastoHistorico)}. O valor do mês selecionado é {gastoMes == null ? "—" : fmtMoeda(gastoMes)}.</p>{saldo.gastosPorMes.map((m) => <p key={m.mes}>{dataBr(`${m.mes}-01`)} · {fmtMoeda(m.gasto)}</p>)}<p className="mt-2">O saldo de verba considera {saldo.inicioControle ? `os registros a partir de ${dataBr(saldo.inicioControle)}` : "todos os meses registrados, até definir um mês de início do controle"}.</p></details>
+      {visiveis.length > 0 && (
         <div className="mb-5 rounded-2xl border border-border bg-card/60 p-4">
           <p className="mb-3 text-sm font-medium text-text">Gasto por campanha no período</p>
           <div className="flex flex-col gap-1.5">
-            {campanhas.map((c) => (
-              <div key={c.id} className="flex items-center gap-2">
-                <p className="w-28 shrink-0 truncate text-[11px] text-muted sm:w-40" title={c.nome}>
+            {visiveis.map((c) => (
+              <div key={c.id}>
+                <p className="mb-1 break-words text-[11px] text-muted">
                   {c.nome}
                 </p>
-                <div className="h-4 flex-1 overflow-hidden rounded bg-base/60">
+                <div className="flex items-center gap-2"><div className="h-4 flex-1 overflow-hidden rounded bg-base/60">
                   <div
                     className="h-full rounded bg-accent transition-all"
                     style={{ width: `${Math.max(2, (c.snapshot.gasto / maiorGasto) * 100)}%` }}
                   />
                 </div>
-                <p className="w-20 shrink-0 text-right text-[11px] text-text">{fmtMoeda(c.snapshot.gasto)}</p>
+                <p className="w-20 shrink-0 text-right text-[11px] text-text">{fmtMoeda(c.snapshot.gasto)}</p></div>
               </div>
             ))}
           </div>
@@ -180,9 +196,11 @@ export function VisaoGeralTrafego({
         )}
       </div>
 
-      {campanhas.length === 0 ? (
+      {avaliando && <AvaliarCampanha campanha={avaliando} onFechar={() => setAvaliando(null)}/>}
+      <p className="mb-2 text-[11px] text-muted">Início cadastrado e fim informado são datas da campanha. O período do relatório não informa o início real da veiculação.</p>
+      {filtradas.length === 0 ? (
         <p className="rounded-2xl border border-border bg-card/60 p-5 text-sm text-muted">
-          Nenhuma campanha disponível no último relatório mensal desse cliente.
+          Nenhuma campanha com gasto para os filtros escolhidos.
         </p>
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-border">
@@ -192,6 +210,8 @@ export function VisaoGeralTrafego({
                 <th className="w-8 p-2.5"></th>
                 <th className="p-2.5 text-left font-medium">Campanha</th>
                 <th className="p-2.5 text-left font-medium">Status</th>
+                <th className="p-2.5 text-left font-medium">Início cadastrado</th>
+                <th className="p-2.5 text-left font-medium">Fim informado</th>
                 <th className="p-2.5 text-right font-medium">Gasto</th>
                 <th className="p-2.5 text-left font-medium">Resultados</th>
                 <th className="p-2.5 text-right font-medium">Custo/resultado</th>
@@ -205,13 +225,16 @@ export function VisaoGeralTrafego({
                   <td className="p-2.5">
                     <input type="checkbox" checked={!!selecionadas[c.id]} onChange={() => alternarSelecao(c.id)} />
                   </td>
-                  <td className="max-w-[180px] truncate p-2.5 text-text" title={c.nome}>
+                  <td className="min-w-[220px] whitespace-normal break-words p-2.5 text-text">
                     {c.nome}
                     {c.avaliacao !== "nao_avaliada" && (
                       <span className="ml-1.5 text-[10px] text-muted">· {AVALIACAO_LABEL[c.avaliacao]}</span>
                     )}
+                    <button onClick={() => setAvaliando(c)} className="mt-1 block text-[11px] text-accent underline">Avaliar campanha</button>
                   </td>
                   <td className="p-2.5 text-muted">{STATUS_INTERNO_LABEL[c.statusInterno] || c.statusInterno}</td>
+                  <td className="whitespace-nowrap p-2.5 text-muted">{dataBr(c.dataInicio)}</td>
+                  <td className="whitespace-nowrap p-2.5 text-muted">{c.dataFim ? dataBr(c.dataFim) : "Não informado"}</td>
                   <td className="p-2.5 text-right text-text">{fmtMoeda(c.snapshot.gasto)}</td>
                   <td className="p-2.5">
                     {!c.snapshot.temDados || c.snapshot.resultadosPorIndicador.length === 0 ? (
