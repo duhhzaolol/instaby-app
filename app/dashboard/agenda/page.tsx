@@ -10,6 +10,7 @@ import { formatarDuracao } from "@/lib/formatarDuracao";
 import { TIPOS_ATIVIDADE_AGENDA, classificarTipoAtividade } from "@/lib/tipoAtividadeAgenda";
 import { getUsuarioAtual, clienteIdsPermitidos } from "@/lib/permissoes";
 import { urgenciaPrazo } from "@/lib/urgenciaPrazo";
+import { chaveDiaSaoPaulo } from "@/lib/dataHora";
 
 const NOMES_MESES = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -23,7 +24,7 @@ function chaveDia(d: Date) {
 // Usado só pra encaixar um horário salvo (tarefa/hora) no dia certo do calendário,
 // já considerando o fuso de Brasília — evita virar o dia seguinte perto da meia-noite.
 function chaveDiaEvento(d: Date) {
-  return d.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+  return chaveDiaSaoPaulo(d);
 }
 
 function horaBR(d: Date) {
@@ -36,7 +37,8 @@ export default async function AgendaPage({
   searchParams: { mes?: string; tipos?: string };
 }) {
   const hoje = new Date();
-  const [anoParam, mesParam] = (searchParams.mes || `${hoje.getFullYear()}-${hoje.getMonth() + 1}`)
+  const mesHoje = chaveDiaSaoPaulo(hoje).slice(0, 7);
+  const [anoParam, mesParam] = (searchParams.mes || mesHoje)
     .split("-")
     .map(Number);
   const ano = anoParam;

@@ -6,6 +6,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { Search, Sparkles, X, Users, FileText } from "lucide-react";
 import { ULTIMA_VERSAO_NOVIDADES } from "@/lib/changelog";
 import { CronometroTopbar } from "@/components/layout/CronometroTopbar";
+import { RelogioTopbar } from "@/components/layout/RelogioTopbar";
 import { NovaTarefaTopbar } from "@/components/layout/NovaTarefaTopbar";
 import { SinoNotificacoes } from "@/components/layout/SinoNotificacoes";
 
@@ -110,7 +111,7 @@ function BuscaGlobal() {
   const mostrarDropdown = aberto && termo.trim().length >= 2;
 
   return (
-    <div className="hidden flex-1 justify-center px-8 lg:flex">
+    <div className="hidden flex-1 justify-center px-8 xl:flex">
       <div ref={containerRef} className="relative w-full max-w-sm">
         <div className="flex h-9 w-full items-center gap-2 rounded-xl border border-border bg-card px-3 text-sm text-muted focus-within:border-accent/40">
           <Search size={15} className="shrink-0" />
@@ -194,7 +195,7 @@ export function Header({ nomePrimeiro, clientes }: { nomePrimeiro: string; clien
   }, []);
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border bg-base pl-16 pr-6 md:pl-6 print:hidden">
+    <header className="sticky top-0 z-20 flex min-h-16 flex-wrap items-center justify-between gap-y-3 border-b border-border bg-base py-3 pl-16 pr-6 md:pl-6 xl:h-16 xl:flex-nowrap xl:py-0 print:hidden">
       <div>
         <p className="text-xs text-muted">
           Dashboard{partes.length > 0 && " / "}
@@ -212,7 +213,8 @@ export function Header({ nomePrimeiro, clientes }: { nomePrimeiro: string; clien
 
       <BuscaGlobal />
 
-      <div className="flex items-center gap-2.5">
+      <div className="flex flex-wrap items-center justify-end gap-2.5">
+        <RelogioTopbar />
         <CronometroTopbar clientes={clientes} />
 
         <Link
