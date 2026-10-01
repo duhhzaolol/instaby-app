@@ -1,10 +1,9 @@
 // Capacidade da equipe (Etapa 4 v158) — "comparar trabalho previsto com
 // capacidade disponível por semana" + "alertar sobre sobrecarga e conflitos".
-// Fica server-safe (sem "use client"), mesmo espírito de lib/entregas.ts. Usa a
-// MESMA definição de semana (segunda a domingo) já usada pra pasta do Drive —
-// ver lib/google.ts: inicioDaSemana.
+// Pode ser importada pelo navegador e pelo servidor. Usa a mesma definição
+// de semana (segunda a domingo) das pastas do Drive, em lib/semana.ts.
 
-import { inicioDaSemana } from "./google";
+import { inicioDaSemana } from "./semana";
 
 // Vocabulário de Ausencia.tipo — mesmo padrão do resto do projeto (sem enum do
 // Postgres/Prisma, só uma constante TS validada nas rotas de API).

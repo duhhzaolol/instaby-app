@@ -1,4 +1,5 @@
 import { google } from "googleapis";
+import { inicioDaSemana } from "./semana";
 import { prisma } from "@/lib/prisma";
 
 // Uma conexão só, pra agência inteira (não é por membro da equipe) — guardada
@@ -101,17 +102,8 @@ export function linkDaPasta(folderId: string) {
   return `https://drive.google.com/drive/folders/${folderId}`;
 }
 
-// Exportada a partir da Etapa 4 (v158) pra lib/capacidade.ts reusar a MESMA
-// definição de semana (segunda a domingo) da pasta do Drive, em vez de duplicar —
-// nada muda pra quem já usava essa função aqui dentro.
-export function inicioDaSemana(data: Date): Date {
-  const d = new Date(data);
-  const dia = d.getDay(); // 0 = domingo
-  const diff = dia === 0 ? -6 : 1 - dia; // volta pra segunda-feira
-  d.setDate(d.getDate() + diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
+// Compartilhada com os cálculos de capacidade, sem carregar a API do Google.
+export { inicioDaSemana } from "./semana";
 
 // Nome de pasta por faixa de dias (semana de segunda a domingo) em vez de "semana
 // N" — evita a ambiguidade de numeração que confunde quando a semana cai no meio
