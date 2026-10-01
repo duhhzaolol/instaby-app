@@ -57,10 +57,10 @@ export default async function TarefasPage() {
           <p className="text-sm text-muted">Todas as tarefas, de todos os clientes, num lugar só</p>
         </div>
         <Link
-          href="/dashboard/tarefas/calendario"
+          href="/dashboard/agenda?visao=tarefas"
           className="flex items-center gap-1.5 rounded-xl border border-border bg-card/60 px-3 py-2 text-sm text-text hover:bg-hover"
         >
-          <CalendarDays size={14} /> Calendário de tarefas
+          <CalendarDays size={14} /> Ver tarefas na Agenda
         </Link>
       </div>
 

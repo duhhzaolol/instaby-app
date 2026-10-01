@@ -14,6 +14,11 @@ export function NovaTarefaGlobalForm({
   categoriaFixa,
   placeholder,
   textoBotao,
+  clienteInicial = "",
+  prazoInicial = "",
+  abertoInicial = false,
+  aoConcluir,
+  aoCancelar,
 }: {
   clientes: Cliente[];
   // Quando informado, trava a categoria (esconde o seletor) — usado no
@@ -21,18 +26,24 @@ export function NovaTarefaGlobalForm({
   categoriaFixa?: string;
   placeholder?: string;
   textoBotao?: string;
+  clienteInicial?: string;
+  prazoInicial?: string;
+  abertoInicial?: boolean;
+  aoConcluir?: () => void;
+  aoCancelar?: () => void;
 }) {
   const router = useRouter();
-  const [aberto, setAberto] = useState(false);
+  const [aberto, setAberto] = useState(abertoInicial);
   const [titulo, setTitulo] = useState("");
-  const [clienteId, setClienteId] = useState("");
+  const [clienteId, setClienteId] = useState(clienteInicial);
   const [categoria, setCategoria] = useState(categoriaFixa || "");
-  const [prazo, setPrazo] = useState("");
+  const [prazo, setPrazo] = useState(prazoInicial);
   const [hora, setHora] = useState("");
   const [observacao, setObservacao] = useState("");
   const [checklistItens, setChecklistItens] = useState<string[]>([]);
   const [novoItemChecklist, setNovoItemChecklist] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const [erro, setErro] = useState("");
 
   function limpar() {
     setTitulo("");
@@ -55,24 +66,40 @@ export function NovaTarefaGlobalForm({
     e.preventDefault();
     if (!titulo.trim()) return;
     setEnviando(true);
+    setErro("");
+    try {
+      const res = await fetch("/api/tarefas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          titulo,
+          clienteId: clienteId || null,
+          categoria: categoriaFixa || categoria || null,
+          descricao: observacao || null,
+          prazo: prazo ? `${prazo}T${hora || "00:00"}:00-03:00` : null,
+          checklistItens:
+            checklistItens.length > 0 ? checklistItens : undefined,
+        }),
+      });
 
-    await fetch("/api/tarefas", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        titulo,
-        clienteId: clienteId || null,
-        categoria: (categoriaFixa || categoria) || null,
-        descricao: observacao || null,
-        prazo: prazo ? `${prazo}T${hora || "00:00"}:00-03:00` : null,
-        checklistItens: checklistItens.length > 0 ? checklistItens : undefined,
-      }),
-    });
-
-    setEnviando(false);
-    limpar();
-    setAberto(false);
-    router.refresh();
+      const resposta = await res.json().catch(() => null);
+      if (!res.ok) {
+        setErro(
+          resposta?.erro || "Não consegui criar a tarefa. Tente novamente.",
+        );
+        return;
+      }
+      limpar();
+      setAberto(false);
+      router.refresh();
+      aoConcluir?.();
+    } catch {
+      setErro(
+        "Não consegui criar a tarefa. Confira a conexão e tente novamente.",
+      );
+    } finally {
+      setEnviando(false);
+    }
   }
 
   if (!aberto) {
@@ -87,10 +114,21 @@ export function NovaTarefaGlobalForm({
   }
 
   return (
-    <form onSubmit={salvar} className="mb-5 rounded-2xl border border-border bg-card/60 p-4">
+    <form
+      onSubmit={salvar}
+      className="mb-5 rounded-2xl border border-border bg-card/60 p-4"
+    >
       <div className="mb-3 flex items-center justify-between">
         <p className="text-sm font-medium text-text">Nova tarefa</p>
-        <button type="button" onClick={() => setAberto(false)} className="text-muted hover:text-text">
+        <button
+          type="button"
+          aria-label="Cancelar nova tarefa"
+          onClick={() => {
+            setAberto(false);
+            aoCancelar?.();
+          }}
+          className="text-muted hover:text-text"
+        >
           <X size={16} />
         </button>
       </div>
@@ -104,9 +142,12 @@ export function NovaTarefaGlobalForm({
         className="mb-3 h-10 w-full rounded-xl border border-border bg-base/60 px-3.5 text-sm text-text outline-none focus:border-accent/50"
       />
 
-      <div className={`mb-3 grid gap-2 ${categoriaFixa ? "grid-cols-1" : "grid-cols-2"}`}>
+      <div
+        className={`mb-3 grid gap-2 ${categoriaFixa ? "grid-cols-1" : "grid-cols-2"}`}
+      >
         <select
           value={clienteId}
+          aria-label="Cliente da nova tarefa"
           onChange={(e) => setClienteId(e.target.value)}
           className="h-10 w-full rounded-xl border border-border bg-base/60 px-3 text-sm text-text"
         >
@@ -120,6 +161,7 @@ export function NovaTarefaGlobalForm({
         {!categoriaFixa && (
           <select
             value={categoria}
+            aria-label="Categoria da nova tarefa"
             onChange={(e) => setCategoria(e.target.value)}
             className="h-10 w-full rounded-xl border border-border bg-base/60 px-3 text-sm text-text"
           >
@@ -134,20 +176,29 @@ export function NovaTarefaGlobalForm({
       </div>
 
       <div className="mb-3 grid grid-cols-2 gap-2">
-        <DatePicker value={prazo} onChange={setPrazo} placeholder="Prazo (opcional)" limpavel />
+        <DatePicker
+          value={prazo}
+          onChange={setPrazo}
+          placeholder="Prazo (opcional)"
+          limpavel
+        />
         <input
           type="time"
+          aria-label="Horário opcional da tarefa"
           value={hora}
           onChange={(e) => setHora(e.target.value)}
           disabled={!prazo}
           className="h-10 w-full rounded-xl border border-border bg-base/60 px-3 text-sm text-text disabled:opacity-40"
         />
       </div>
+      <p className="mb-3 text-xs text-muted">
+        O horário é opcional. A data organiza o trabalho no cronograma.
+      </p>
 
       <textarea
         value={observacao}
         onChange={(e) => setObservacao(e.target.value)}
-        rows={2}
+        rows={4}
         placeholder="Observação (opcional)"
         className="mb-3 w-full rounded-xl border border-border bg-base/60 px-3.5 py-2.5 text-sm text-text outline-none placeholder:text-muted/50 focus:border-accent/50"
       />
@@ -181,11 +232,20 @@ export function NovaTarefaGlobalForm({
         {checklistItens.length > 0 && (
           <div className="mb-2 flex flex-col gap-1">
             {checklistItens.map((item, i) => (
-              <div key={i} className="flex items-center gap-2 rounded-lg bg-card/40 px-2.5 py-1.5">
-                <span className="flex-1 truncate text-xs text-text">{item}</span>
+              <div
+                key={i}
+                className="flex items-center gap-2 rounded-lg bg-card/40 px-2.5 py-1.5"
+              >
+                <span className="flex-1 truncate text-xs text-text">
+                  {item}
+                </span>
                 <button
                   type="button"
-                  onClick={() => setChecklistItens((prev) => prev.filter((_, idx) => idx !== i))}
+                  onClick={() =>
+                    setChecklistItens((prev) =>
+                      prev.filter((_, idx) => idx !== i),
+                    )
+                  }
                   className="shrink-0 text-muted hover:text-red-400"
                 >
                   <X size={11} />
@@ -225,6 +285,11 @@ export function NovaTarefaGlobalForm({
       >
         {enviando ? "Criando..." : "Criar tarefa"}
       </button>
+      {erro && (
+        <p role="alert" className="mt-2 text-sm text-red-400">
+          {erro}
+        </p>
+      )}
     </form>
   );
 }

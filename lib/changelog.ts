@@ -22,6 +22,18 @@ export type VersaoNovidades = {
 
 export const NOVIDADES: VersaoNovidades[] = [
   {
+    versao: 160,
+    resumo: "Agenda e cronograma reunidos, com filtro por cliente e detalhes maiores para editar as tarefas.",
+    itens: [
+      { tipo: "melhorado", texto: "A Agenda mostra todos os clientes por padrão. A lista com busca permite escolher um cliente sem ocupar a tela com centenas de botões." },
+      { tipo: "melhorado", texto: "O calendário de tarefas agora fica na Agenda. O cliente selecionado acompanha a troca de meses; você pode ver todas as tarefas ou só as pendentes." },
+      { tipo: "adicionado", texto: "Clique no + de um dia para criar uma tarefa já com a data e o cliente escolhidos. O horário é opcional." },
+      { tipo: "melhorado", texto: "Clicar numa tarefa da Agenda abre direto uma ficha maior, com descrição, categoria, comentários e demais detalhes para editar ali mesmo." },
+      { tipo: "corrigido", texto: "A data e o horário exibidos na edição seguem Brasília, como no calendário. Enviar um comentário mantém as alterações que você ainda está escrevendo nos outros campos." },
+      { tipo: "melhorado", texto: "O acesso ao Google Agenda e ao Calendário da Apple foi para o final da página." },
+    ],
+  },
+  {
     versao: 159,
     resumo: "Revisão do cliente com comentários por tempo, decisão no final e pastas da identidade acessíveis nas tarefas.",
     itens: [

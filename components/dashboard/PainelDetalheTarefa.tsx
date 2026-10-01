@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import {
   visualDaCategoriaTarefa,
+  CATEGORIAS_TAREFA,
   PRIORIDADES,
   CATEGORIAS_QUE_PRECISAM_VIDEO_BRUTO,
   CATEGORIAS_COM_REVISAO,
@@ -30,6 +31,7 @@ import { STATUS_LABEL, campoHistoricoLabel } from "@/lib/tarefas";
 import { ChecklistTarefa, type ChecklistItemData } from "@/components/dashboard/ChecklistTarefa";
 import { PainelRevisaoConteudo, type VersaoConteudoData } from "@/components/dashboard/PainelRevisaoConteudo";
 import { DatePicker } from "@/components/ui/DatePicker";
+import { camposPrazo } from "@/lib/agenda";
 
 type Pessoa = { id: string; nome: string; fotoUrl?: string | null };
 type Comentario = {
@@ -119,7 +121,7 @@ const NOMES_MESES = [
 // ficha do cliente via query param ?tarefa=ID (ver PainelDetalheTarefaHost). Busca
 // tudo sozinho em GET /api/tarefas/[id] — nenhuma página precisou mudar a própria
 // consulta pra abrir isso.
-export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; onClose: () => void }) {
+export function PainelDetalheTarefa({ tarefaId, onClose, amplo = false }: { tarefaId: string; onClose: () => void; amplo?: boolean }) {
   const router = useRouter();
   const [tarefa, setTarefa] = useState<TarefaDetalhe | null>(null);
   const [carregando, setCarregando] = useState(true);
@@ -128,6 +130,7 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
 
   const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");
+  const [categoria, setCategoria] = useState("");
   const [prioridade, setPrioridade] = useState("media");
   const [responsavelId, setResponsavelId] = useState("");
   const [data, setData] = useState("");
@@ -165,8 +168,8 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
   const [videoBrutoExcecaoMotivo, setVideoBrutoExcecaoMotivo] = useState("");
   const [salvandoExcecao, setSalvandoExcecao] = useState(false);
 
-  async function carregar() {
-    setCarregando(true);
+  async function carregar(sincronizarCampos = true) {
+    if (sincronizarCampos) setCarregando(true);
     setErro(null);
     try {
       const res = await fetch(`/api/tarefas/${tarefaId}`);
@@ -177,12 +180,15 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
       }
       const d: TarefaDetalhe = await res.json();
       setTarefa(d);
+      if (!sincronizarCampos) return;
       setTitulo(d.titulo);
       setDescricao(d.descricao || "");
+      setCategoria(d.categoria || "");
       setPrioridade(d.prioridade || "media");
       setResponsavelId(d.responsavelId || "");
-      setData(d.prazo ? d.prazo.slice(0, 10) : "");
-      setHora(d.prazo ? d.prazo.slice(11, 16) : "");
+      const prazo = camposPrazo(d.prazo);
+      setData(prazo.data);
+      setHora(prazo.hora);
       setLink(d.link || "");
       setEstimativaHoras(d.estimativaHoras != null ? String(d.estimativaHoras) : "");
       setMotivoBloqueio(d.motivoBloqueio || "");
@@ -190,7 +196,8 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
       setVideoBrutoExcecao(d.videoBrutoExcecao || false);
       setVideoBrutoExcecaoMotivo(d.videoBrutoExcecaoMotivo || "");
       setStatusPendente(null);
-    } finally {
+    } catch { setErro("Não consegui abrir a tarefa. Confira a conexão e tente novamente."); }
+    finally {
       setCarregando(false);
     }
   }
@@ -225,6 +232,7 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
   }, []);
 
   async function patch(dados: Record<string, unknown>): Promise<TarefaDetalhe | null> {
+    try {
     const res = await fetch(`/api/tarefas/${tarefaId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -238,6 +246,7 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
     const atualizado = await res.json();
     router.refresh();
     return atualizado;
+    } catch { alert("Não consegui salvar. Seus campos foram mantidos; confira a conexão e tente novamente."); return null; }
   }
 
   function clicarStatus(novo: string) {
@@ -347,6 +356,7 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
     const prazo = data ? `${data}T${hora || "00:00"}:00-03:00` : null;
     const atualizado = await patch({
       titulo,
+      categoria: categoria || null,
       descricao: descricao || null,
       prioridade: prioridade || null,
       responsavelId: responsavelId || null,
@@ -449,31 +459,33 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
     e.preventDefault();
     if (!novoComentario.trim() || !tarefa) return;
     setEnviandoComentario(true);
+    try {
     const res = await fetch(`/api/tarefas/${tarefa.id}/comentarios`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ texto: novoComentario.trim() }),
     });
-    setEnviandoComentario(false);
     if (!res.ok) {
       const d = await res.json().catch(() => null);
       alert(d?.erro || "Não consegui enviar esse comentário.");
       return;
     }
     setNovoComentario("");
-    carregar();
+    await carregar(false);
+    } catch { alert("Não consegui enviar o comentário. Seu texto foi mantido; tente novamente."); }
+    finally { setEnviandoComentario(false); }
   }
 
   const urgenciaCor =
     tarefa?.prazo && tarefa.status !== "feito" && new Date(tarefa.prazo).getTime() < Date.now() ? "#EF4444" : undefined;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
+    <div className={`fixed inset-0 z-50 flex ${amplo ? "items-center justify-center p-2 sm:p-6" : "justify-end"}`}>
       <div className="absolute inset-0 bg-black/70" onClick={onClose} />
-      <div className="relative flex h-full w-full max-w-md flex-col overflow-hidden border-l border-border bg-base shadow-premium-lg sm:w-[26rem]">
+      <div role="dialog" aria-modal="true" aria-label="Detalhes da tarefa" className={`relative flex w-full flex-col overflow-hidden bg-base shadow-premium-lg ${amplo ? "max-h-[92dvh] max-w-4xl rounded-2xl border border-border" : "h-full max-w-xl border-l border-border sm:w-[36rem]"}`}>
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <p className="text-sm font-medium text-text">Detalhes da tarefa</p>
-          <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-hover hover:text-text">
+          <button aria-label="Fechar detalhes da tarefa" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-hover hover:text-text">
             <X size={16} />
           </button>
         </div>
@@ -482,7 +494,7 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
         {!carregando && erro && <div className="flex-1 p-6 text-sm text-red-400">{erro}</div>}
 
         {!carregando && tarefa && (
-          <div className="flex-1 overflow-y-auto px-4 py-4">
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6">
             {tarefa.cliente && (
               <p className="mb-2 flex items-center gap-1.5 text-xs text-muted">
                 <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: tarefa.cliente.cor || "#9CA3AF" }} />
@@ -650,13 +662,18 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
             )}
 
             {/* Campos principais */}
+            <label className="mb-1 block text-xs text-muted" htmlFor="categoria-detalhe">Categoria</label>
+            <select id="categoria-detalhe" value={categoria} onChange={e => setCategoria(e.target.value)} className="mb-3 h-10 w-full rounded-lg border border-border bg-card/60 px-3 text-sm text-text">
+              <option value="">Sem categoria</option>
+              {CATEGORIAS_TAREFA.map(c => <option key={c.valor} value={c.valor}>{c.label}</option>)}
+            </select>
             <label className="mb-1 mt-1 block text-xs text-muted">Descrição</label>
             <textarea
               value={descricao}
               onChange={(e) => setDescricao(e.target.value)}
-              rows={3}
+              rows={5}
               placeholder="Detalhes da tarefa..."
-              className="mb-3 w-full rounded-lg border border-border bg-card/60 px-3 py-2 text-sm text-text outline-none focus:border-accent/50"
+              className="mb-3 min-h-32 w-full resize-y rounded-lg border border-border bg-card/60 px-3 py-2 text-sm text-text outline-none focus:border-accent/50"
             />
 
             <div className="mb-3 grid grid-cols-2 gap-2">
@@ -699,10 +716,11 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
               </div>
               <div>
                 <label className="mb-1 block text-xs text-muted" style={urgenciaCor ? { color: urgenciaCor } : undefined}>
-                  Horário
+                  Horário (opcional)
                 </label>
                 <input
                   type="time"
+                  aria-label="Horário opcional da tarefa"
                   value={hora}
                   onChange={(e) => setHora(e.target.value)}
                   className="h-9 w-full rounded-lg border border-border bg-card/60 px-2 text-xs text-text"
@@ -971,16 +989,19 @@ export function PainelDetalheTarefa({ tarefaId, onClose }: { tarefaId: string; o
                   </div>
                 ))}
               </div>
-              <form onSubmit={enviarComentario} className="flex items-center gap-1.5">
-                <input
+              <form onSubmit={enviarComentario} className="flex items-end gap-2">
+                <textarea
                   value={novoComentario}
                   onChange={(e) => setNovoComentario(e.target.value)}
                   placeholder="Escrever um comentário..."
+                  aria-label="Comentário interno da tarefa"
+                  rows={4}
                   disabled={enviandoComentario}
-                  className="h-9 w-full flex-1 rounded-lg border border-border bg-card/60 px-3 text-xs text-text outline-none focus:border-accent/50"
+                  className="min-h-24 w-full flex-1 resize-y rounded-lg border border-border bg-card/60 px-3 py-2 text-sm text-text outline-none focus:border-accent/50"
                 />
                 <button
                   type="submit"
+                  aria-label="Enviar comentário interno"
                   disabled={enviandoComentario || !novoComentario.trim()}
                   className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent text-white disabled:opacity-40"
                 >

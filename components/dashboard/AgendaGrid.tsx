@@ -1,38 +1,44 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { X, ExternalLink } from "lucide-react";
-import { visualDoTipoAtividade, type TipoAtividadeAgenda } from "@/lib/tipoAtividadeAgenda";
+import { X, ExternalLink, Plus, Check } from "lucide-react";
+import {
+  visualDoTipoAtividade,
+  type TipoAtividadeAgenda,
+} from "@/lib/tipoAtividadeAgenda";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { AvatarPessoa } from "@/components/ui/AvatarPessoa";
+import { NovaTarefaGlobalForm } from "@/components/dashboard/NovaTarefaGlobalForm";
+import type { ClienteAgenda } from "@/components/dashboard/FiltroClienteAgenda";
 
 export type EventoAgenda = {
   id: string;
   origem: "tarefa" | "hora";
   tipoAtividade: TipoAtividadeAgenda;
   texto: string;
+  categoriaLabel?: string;
+  status?: string;
   clienteNome?: string | null;
-  usuarioNome?: string | null; // quem lançou a hora ou é responsável pela tarefa
+  usuarioNome?: string | null;
   usuarioFotoUrl?: string | null;
   cor?: string | null;
   href: string;
-  data: string; // YYYY-MM-DD
-  hora?: string | null; // HH:mm — só tarefa
-  horaInicio?: string | null; // só hora trabalhada
-  horaFim?: string | null; // só hora trabalhada
-  // Só tarefa, só quando ainda não está feita — mesmo cálculo usado em Tarefas/
-  // Kanban (lib/urgenciaPrazo), pra destacar em vermelho o que tá vencendo/vencido.
+  data: string;
+  hora?: string | null;
+  horaInicio?: string | null;
+  horaFim?: string | null;
   urgencia?: { cor: string; label: string } | null;
 };
-
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-
+const dataCurta = (dia: string) => `${dia.slice(8, 10)}/${dia.slice(5, 7)}`;
 function horarioTexto(e: EventoAgenda) {
-  if (e.horaInicio) return e.horaFim ? `${e.horaInicio} – ${e.horaFim}` : e.horaInicio;
-  if (e.hora) return e.hora;
-  return null;
+  return e.horaInicio
+    ? e.horaFim
+      ? `${e.horaInicio} – ${e.horaFim}`
+      : e.horaInicio
+    : e.hora || null;
 }
 
 export function AgendaGrid({
@@ -40,275 +46,402 @@ export function AgendaGrid({
   eventosPorDia,
   mes,
   hojeChave,
+  clientes,
+  clienteIdAtual,
 }: {
   dias: string[];
   eventosPorDia: Record<string, EventoAgenda[]>;
   mes: number;
   hojeChave: string;
+  clientes: ClienteAgenda[];
+  clienteIdAtual: string;
 }) {
   const router = useRouter();
   const [diaAberto, setDiaAberto] = useState<string | null>(null);
-  const [editando, setEditando] = useState<EventoAgenda | null>(null);
+  const [editandoHora, setEditandoHora] = useState<EventoAgenda | null>(null);
+  const [novaData, setNovaData] = useState<string | null>(null);
   const [data, setData] = useState("");
-  const [hora, setHora] = useState("");
   const [horaInicio, setHoraInicio] = useState("");
   const [horaFim, setHoraFim] = useState("");
   const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState("");
+
+  useEffect(() => {
+    function fechar(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setDiaAberto(null);
+        setEditandoHora(null);
+        setNovaData(null);
+      }
+    }
+    document.addEventListener("keydown", fechar);
+    return () => document.removeEventListener("keydown", fechar);
+  }, []);
 
   function abrir(e: EventoAgenda) {
-    setEditando(e);
+    setDiaAberto(null);
+    if (e.origem === "tarefa") {
+      router.push(e.href, { scroll: false });
+      return;
+    }
+    setEditandoHora(e);
     setData(e.data);
-    setHora(e.hora || "");
     setHoraInicio(e.horaInicio || "");
     setHoraFim(e.horaFim || "");
+    setErro("");
+  }
+  function criarNoDia(dia: string) {
+    setDiaAberto(null);
+    setNovaData(dia);
   }
 
-  async function salvar() {
-    if (!editando) return;
-    setSalvando(true);
-
-    const res =
-      editando.origem === "tarefa"
-        ? await fetch(`/api/tarefas/${editando.id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prazo: `${data}T${hora || "00:00"}:00-03:00` }),
-          })
-        : await fetch(`/api/registros-tempo/${editando.id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              inicio: `${data}T${horaInicio}:00-03:00`,
-              fim: horaFim ? `${data}T${horaFim}:00-03:00` : null,
-            }),
-          });
-
-    setSalvando(false);
-    if (!res.ok) {
-      const corpo = await res.json().catch(() => null);
-      alert(corpo?.erro || "Não consegui salvar esse item. Tenta de novo.");
+  async function salvarHora() {
+    if (!editandoHora) return;
+    const inicio = new Date(`${data}T${horaInicio}:00-03:00`);
+    const fim = horaFim ? new Date(`${data}T${horaFim}:00-03:00`) : null;
+    if (
+      !Number.isFinite(inicio.getTime()) ||
+      (fim && (!Number.isFinite(fim.getTime()) || fim <= inicio))
+    ) {
+      setErro(
+        "Informe o início e um fim posterior ao início, ou deixe o fim vazio.",
+      );
       return;
     }
-    setEditando(null);
-    router.refresh();
-  }
-
-  async function excluir() {
-    if (!editando) return;
-    if (!confirm("Excluir esse item?")) return;
     setSalvando(true);
-
-    const rota = editando.origem === "tarefa" ? `/api/tarefas/${editando.id}` : `/api/registros-tempo/${editando.id}`;
-    const res = await fetch(rota, { method: "DELETE" });
-
-    setSalvando(false);
-    if (!res.ok) {
-      alert("Não consegui excluir esse item. Tenta de novo.");
-      return;
+    setErro("");
+    try {
+      const res = await fetch(`/api/registros-tempo/${editandoHora.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          inicio: inicio.toISOString(),
+          fim: fim?.toISOString() || null,
+        }),
+      });
+      const d = await res.json().catch(() => null);
+      if (!res.ok) {
+        setErro(d?.erro || "Não consegui salvar o registro de horas.");
+        return;
+      }
+      setEditandoHora(null);
+      router.refresh();
+    } catch {
+      setErro("Não consegui salvar. Confira a conexão e tente novamente.");
+    } finally {
+      setSalvando(false);
     }
-    setEditando(null);
-    router.refresh();
   }
-
-  const eventosDoDiaAberto = diaAberto ? eventosPorDia[diaAberto] || [] : [];
 
   return (
     <>
-      <div className="overflow-hidden rounded-2xl border border-border">
-        <div className="grid grid-cols-7 border-b border-border bg-card/40">
-          {DIAS_SEMANA.map((d) => (
-            <div key={d} className="px-2 py-2 text-center text-[11px] font-medium text-muted">
-              {d}
-            </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-7">
-          {dias.map((chave) => {
-            const d = new Date(chave + "T12:00:00");
-            const eventos = eventosPorDia[chave] || [];
-            const foraDoMes = d.getMonth() !== mes;
-            const ehHoje = chave === hojeChave;
-
-            return (
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-muted">
+          Clique numa tarefa para editar ou no + de um dia para criar.
+        </p>
+        <button
+          type="button"
+          onClick={() => criarNoDia("")}
+          className="flex min-h-10 items-center gap-1.5 rounded-xl bg-accent px-3 text-sm font-medium text-white"
+        >
+          <Plus size={15} /> Nova tarefa na agenda
+        </button>
+      </div>
+      <div className="overflow-x-auto rounded-2xl border border-border">
+        <div className="min-w-[640px]">
+          <div className="grid grid-cols-7 border-b border-border bg-card/40">
+            {DIAS_SEMANA.map((d) => (
               <div
-                key={chave}
-                className={`min-h-[92px] border-b border-r border-border p-1.5 last:border-r-0 ${
-                  foraDoMes ? "bg-black/20" : ""
-                }`}
+                key={d}
+                className="px-2 py-2 text-center text-[11px] font-medium text-muted"
               >
-                <button
-                  onClick={() => eventos.length > 0 && setDiaAberto(chave)}
-                  disabled={eventos.length === 0}
-                  className={`mb-1 inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] ${
-                    ehHoje ? "bg-accent text-white" : foraDoMes ? "text-muted/40" : "text-muted"
-                  } ${eventos.length > 0 ? "hover:ring-1 hover:ring-accent/40" : ""}`}
-                >
-                  {d.getDate()}
-                </button>
-                <div className="flex flex-col gap-1">
-                  {eventos.slice(0, 3).map((e, i) => {
-                    const visual = visualDoTipoAtividade(e.tipoAtividade);
-                    const Icon = visual.icone;
-                    // Prazo vencido/vencendo manda na cor — mais chamativo que o
-                    // tipo de atividade, de propósito (pedido explícito).
-                    const corPill = e.urgencia?.cor || e.cor || visual.cor;
-                    return (
-                      <button
-                        key={i}
-                        onClick={() => abrir(e)}
-                        className={`flex items-center gap-1 truncate rounded px-1 py-0.5 text-left text-[10px] hover:opacity-80 ${
-                          e.urgencia ? "font-semibold" : ""
-                        }`}
-                        style={{ backgroundColor: `${corPill}1A`, color: corPill }}
-                        title={[e.texto, e.urgencia?.label, e.usuarioNome].filter(Boolean).join(" — ")}
-                      >
-                        <Icon size={9} className="shrink-0" />
-                        <span className="truncate">{e.texto}</span>
-                      </button>
-                    );
-                  })}
-                  {eventos.length > 3 && (
-                    <button
-                      onClick={() => setDiaAberto(chave)}
-                      className="text-left text-[10px] text-muted hover:text-text"
-                    >
-                      +{eventos.length - 3} mais
-                    </button>
-                  )}
-                </div>
+                {d}
               </div>
-            );
-          })}
+            ))}
+          </div>
+          <div className="grid grid-cols-7">
+            {dias.map((chave) => {
+              const eventos = eventosPorDia[chave] || [];
+              const foraDoMes = Number(chave.slice(5, 7)) - 1 !== mes;
+              return (
+                <div
+                  key={chave}
+                  className={`min-h-[120px] border-b border-r border-border p-1.5 ${foraDoMes ? "bg-black/20" : ""}`}
+                >
+                  <div className="mb-1 flex items-center justify-between">
+                    <button
+                      type="button"
+                      aria-label={`Ver dia ${dataCurta(chave)}`}
+                      onClick={() => setDiaAberto(chave)}
+                      className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs hover:ring-1 hover:ring-accent/40 ${chave === hojeChave ? "bg-accent text-white" : foraDoMes ? "text-muted/40" : "text-muted"}`}
+                    >
+                      {Number(chave.slice(8))}
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Criar tarefa em ${dataCurta(chave)}`}
+                      onClick={() => criarNoDia(chave)}
+                      className="flex h-6 w-6 items-center justify-center rounded-lg text-muted hover:bg-hover hover:text-text"
+                    >
+                      <Plus size={12} />
+                    </button>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    {eventos.slice(0, 3).map((e) => {
+                      const visual = visualDoTipoAtividade(e.tipoAtividade);
+                      const Icon = visual.icone;
+                      const cor = e.urgencia?.cor || e.cor || visual.cor;
+                      return (
+                        <button
+                          type="button"
+                          key={`${e.origem}-${e.id}`}
+                          aria-label={`Abrir ${e.origem === "tarefa" ? "tarefa" : "horas"}: ${e.texto}${e.clienteNome ? ` · ${e.clienteNome}` : ""}`}
+                          onClick={() => abrir(e)}
+                          className="rounded-lg px-1.5 py-1 text-left text-[11px] hover:opacity-80"
+                          style={{ backgroundColor: `${cor}1A`, color: cor }}
+                          title={[
+                            e.texto,
+                            e.categoriaLabel,
+                            e.clienteNome,
+                            e.urgencia?.label,
+                          ]
+                            .filter(Boolean)
+                            .join(" — ")}
+                        >
+                          <span className="flex items-start gap-1">
+                            <Icon size={11} className="mt-0.5 shrink-0" />
+                            <span className="line-clamp-2 break-words font-medium">
+                              {e.texto}
+                            </span>
+                            {e.status === "feito" && (
+                              <Check size={10} className="mt-0.5 shrink-0" />
+                            )}
+                          </span>
+                          <span className="mt-0.5 block truncate text-[10px] opacity-80">
+                            {[
+                              horarioTexto(e),
+                              e.categoriaLabel || "Horas",
+                              e.clienteNome,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </span>
+                        </button>
+                      );
+                    })}
+                    {eventos.length > 3 && (
+                      <button
+                        type="button"
+                        onClick={() => setDiaAberto(chave)}
+                        className="text-left text-[11px] text-muted hover:text-text"
+                      >
+                        +{eventos.length - 3} mais
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      {diaAberto && !editando && (
+      {diaAberto && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4"
+          className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-3"
           onClick={() => setDiaAberto(null)}
         >
           <div
-            className="max-h-[80vh] w-full overflow-y-auto rounded-t-2xl border border-border bg-card p-5 sm:max-w-md sm:rounded-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Itens do dia"
+            className="max-h-[85dvh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-card p-5"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex items-center justify-between gap-2">
               <p className="text-sm font-medium text-text">
-                {new Date(diaAberto + "T12:00:00").toLocaleDateString("pt-BR", {
-                  weekday: "long",
-                  day: "2-digit",
-                  month: "long",
-                })}
+                {new Date(`${diaAberto}T12:00:00-03:00`).toLocaleDateString(
+                  "pt-BR",
+                  {
+                    timeZone: "America/Sao_Paulo",
+                    weekday: "long",
+                    day: "2-digit",
+                    month: "long",
+                  },
+                )}
               </p>
-              <button onClick={() => setDiaAberto(null)} className="text-muted hover:text-text">
+              <button
+                type="button"
+                aria-label="Fechar itens do dia"
+                onClick={() => setDiaAberto(null)}
+                className="text-muted hover:text-text"
+              >
                 <X size={16} />
               </button>
             </div>
-            <div className="flex flex-col gap-2">
-              {eventosDoDiaAberto.map((e, i) => {
-                const visual = visualDoTipoAtividade(e.tipoAtividade);
-                const Icon = visual.icone;
-                const horario = horarioTexto(e);
-                const corDestaque = e.urgencia?.cor || e.cor || visual.cor;
-                return (
-                  <button
-                    key={i}
-                    onClick={() => abrir(e)}
-                    className="flex items-center gap-3 rounded-xl border border-border bg-base/60 px-3.5 py-2.5 text-left hover:border-accent/30"
-                  >
-                    {horario && <span className="w-16 shrink-0 text-xs font-medium text-muted">{horario}</span>}
-                    <div
-                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
-                      style={{ backgroundColor: `${corDestaque}1A`, color: corDestaque }}
-                    >
-                      <Icon size={13} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm text-text">{e.texto}</p>
-                      {e.urgencia && (
-                        <p className="truncate text-[11px] font-medium" style={{ color: e.urgencia.cor }}>
-                          {e.urgencia.label}
-                        </p>
-                      )}
-                    </div>
-                    {e.usuarioNome && <AvatarPessoa nome={e.usuarioNome} fotoUrl={e.usuarioFotoUrl} tamanho={22} />}
-                  </button>
-                );
-              })}
+            <div className="mb-4 flex flex-col gap-2">
+              {(eventosPorDia[diaAberto] || []).map((e) => (
+                <button
+                  type="button"
+                  key={`${e.origem}-${e.id}`}
+                  onClick={() => abrir(e)}
+                  className="flex items-start gap-3 rounded-xl border border-border bg-base/60 px-3 py-3 text-left hover:border-accent/30"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="whitespace-pre-wrap break-words text-sm text-text">
+                      {e.texto}
+                    </p>
+                    <p className="mt-1 text-xs text-muted">
+                      {[
+                        horarioTexto(e),
+                        e.categoriaLabel || "Horas registradas",
+                        e.clienteNome,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                    {e.urgencia && (
+                      <p
+                        className="mt-1 text-xs"
+                        style={{ color: e.urgencia.cor }}
+                      >
+                        {e.urgencia.label}
+                      </p>
+                    )}
+                  </div>
+                  {e.usuarioNome && (
+                    <AvatarPessoa
+                      nome={e.usuarioNome}
+                      fotoUrl={e.usuarioFotoUrl}
+                      tamanho={24}
+                    />
+                  )}
+                </button>
+              ))}
+              {!eventosPorDia[diaAberto]?.length && (
+                <p className="text-sm text-muted">
+                  Nenhum item neste dia com os filtros selecionados.
+                </p>
+              )}
             </div>
+            <button
+              type="button"
+              onClick={() => criarNoDia(diaAberto)}
+              className="flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-accent text-sm font-medium text-white"
+            >
+              <Plus size={15} /> Criar tarefa neste dia
+            </button>
           </div>
         </div>
       )}
 
-      {editando && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setEditando(null)}>
-          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm rounded-2xl border border-border bg-card p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <p className="text-sm font-medium text-text">{editando.texto}</p>
-              <button onClick={() => setEditando(null)} className="text-muted hover:text-text">
+      {novaData !== null && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3"
+          onClick={() => setNovaData(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Nova tarefa do cronograma"
+            onClick={(e) => e.stopPropagation()}
+            className="max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-base p-3 sm:p-5"
+          >
+            <NovaTarefaGlobalForm
+              key={`${clienteIdAtual}-${novaData}`}
+              clientes={clientes}
+              abertoInicial
+              clienteInicial={clienteIdAtual}
+              prazoInicial={novaData}
+              aoCancelar={() => setNovaData(null)}
+              aoConcluir={() => setNovaData(null)}
+            />
+          </div>
+        </div>
+      )}
+
+      {editandoHora && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3"
+          onClick={() => setEditandoHora(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Editar registro de horas"
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-lg rounded-2xl border border-border bg-card p-5"
+          >
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-text">
+                  {editandoHora.texto}
+                </p>
+                <p className="text-xs text-muted">
+                  {editandoHora.clienteNome} · Horas registradas
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-label="Fechar registro de horas"
+                onClick={() => setEditandoHora(null)}
+                className="text-muted hover:text-text"
+              >
                 <X size={16} />
               </button>
             </div>
-
             <label className="mb-1 block text-xs text-muted">Data</label>
             <DatePicker value={data} onChange={setData} className="mb-3" />
-
-            {editando.origem === "tarefa" && (
-              <>
-                <label className="mb-1 block text-xs text-muted">Horário (opcional)</label>
+            <div className="mb-3 grid grid-cols-2 gap-2">
+              <div>
+                <label
+                  htmlFor="inicio-hora-agenda"
+                  className="mb-1 block text-xs text-muted"
+                >
+                  Início
+                </label>
                 <input
+                  id="inicio-hora-agenda"
                   type="time"
-                  value={hora}
-                  onChange={(e) => setHora(e.target.value)}
-                  className="mb-3 h-10 w-full rounded-lg border border-border bg-base px-3 text-sm text-text"
+                  value={horaInicio}
+                  onChange={(e) => setHoraInicio(e.target.value)}
+                  className="h-10 w-full rounded-lg border border-border bg-base px-3 text-sm text-text"
                 />
-              </>
-            )}
-
-            {editando.origem === "hora" && (
-              <div className="mb-3 grid grid-cols-2 gap-2">
-                <div>
-                  <label className="mb-1 block text-xs text-muted">Início</label>
-                  <input
-                    type="time"
-                    value={horaInicio}
-                    onChange={(e) => setHoraInicio(e.target.value)}
-                    className="h-10 w-full rounded-lg border border-border bg-base px-2 text-sm text-text"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs text-muted">Fim</label>
-                  <input
-                    type="time"
-                    value={horaFim}
-                    onChange={(e) => setHoraFim(e.target.value)}
-                    className="h-10 w-full rounded-lg border border-border bg-base px-2 text-sm text-text"
-                  />
-                </div>
               </div>
-            )}
-
-            <div className="mb-3 flex gap-2">
-              <button
-                onClick={salvar}
-                disabled={salvando}
-                className="h-10 flex-1 rounded-lg bg-accent text-sm font-medium text-white disabled:opacity-50"
-              >
-                {salvando ? "Salvando..." : "Salvar"}
-              </button>
-              <button
-                onClick={excluir}
-                disabled={salvando}
-                className="h-10 rounded-lg border border-red-500/30 px-3 text-sm text-red-400 hover:bg-red-500/10"
-              >
-                Excluir
-              </button>
+              <div>
+                <label
+                  htmlFor="fim-hora-agenda"
+                  className="mb-1 block text-xs text-muted"
+                >
+                  Fim (opcional)
+                </label>
+                <input
+                  id="fim-hora-agenda"
+                  type="time"
+                  value={horaFim}
+                  onChange={(e) => setHoraFim(e.target.value)}
+                  className="h-10 w-full rounded-lg border border-border bg-base px-3 text-sm text-text"
+                />
+              </div>
             </div>
-
+            {erro && (
+              <p role="alert" className="mb-3 text-sm text-red-400">
+                {erro}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={salvarHora}
+              disabled={salvando}
+              className="mb-3 h-10 w-full rounded-lg bg-accent text-sm font-medium text-white disabled:opacity-40"
+            >
+              {salvando ? "Salvando..." : "Salvar horas"}
+            </button>
             <Link
-              href={editando.href}
+              href={editandoHora.href}
               className="flex items-center justify-center gap-1.5 text-xs text-muted hover:text-text"
             >
-              <ExternalLink size={11} /> Ver detalhes completos
+              <ExternalLink size={12} /> Ver registros completos
             </Link>
           </div>
         </div>

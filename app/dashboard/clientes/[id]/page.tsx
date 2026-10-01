@@ -504,10 +504,10 @@ export default async function ClienteDetalhePage({
       {aba === "tarefas" && (
         <div>
           <Link
-            href={`/dashboard/tarefas/calendario?cliente=${cliente.id}`}
+            href={`/dashboard/agenda?cliente=${cliente.id}&visao=tarefas`}
             className="mb-3 flex items-center justify-center gap-1.5 rounded-xl border border-border bg-card/60 py-2.5 text-sm text-text transition-colors hover:bg-hover"
           >
-            <CalendarDays size={14} /> Ver calendário de conteúdo desse cliente
+            <CalendarDays size={14} /> Ver cronograma desse cliente na Agenda
           </Link>
           <div className="flex flex-col gap-2">
             {cliente.tarefas.length === 0 && (

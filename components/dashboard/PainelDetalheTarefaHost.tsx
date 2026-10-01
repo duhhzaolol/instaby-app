@@ -23,5 +23,5 @@ export function PainelDetalheTarefaHost() {
   }
 
   if (!tarefaId) return null;
-  return <PainelDetalheTarefa key={tarefaId} tarefaId={tarefaId} onClose={fechar} />;
+  return <PainelDetalheTarefa key={tarefaId} tarefaId={tarefaId} onClose={fechar} amplo={pathname === "/dashboard/agenda"} />;
 }

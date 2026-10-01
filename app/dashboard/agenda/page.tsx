@@ -1,143 +1,171 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { ChevronLeft, ChevronRight, CalendarPlus, CalendarCheck, Clock, Sun } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  CalendarPlus,
+  CalendarCheck,
+  Clock,
+  Sun,
+} from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { AgendaGrid, EventoAgenda } from "@/components/dashboard/AgendaGrid";
+import {
+  AgendaGrid,
+  type EventoAgenda,
+} from "@/components/dashboard/AgendaGrid";
+import { FiltroClienteAgenda } from "@/components/dashboard/FiltroClienteAgenda";
 import { AjudaContextual } from "@/components/ui/AjudaContextual";
 import { StatTile } from "@/components/ui/StatTile";
 import { formatarDuracao } from "@/lib/formatarDuracao";
-import { TIPOS_ATIVIDADE_AGENDA, classificarTipoAtividade } from "@/lib/tipoAtividadeAgenda";
+import {
+  TIPOS_ATIVIDADE_AGENDA,
+  classificarTipoAtividade,
+  tipoDaTarefaAgenda,
+} from "@/lib/tipoAtividadeAgenda";
+import { visualDaCategoriaTarefa } from "@/lib/categoriaTarefaVisual";
 import { getUsuarioAtual, clienteIdsPermitidos } from "@/lib/permissoes";
 import { urgenciaPrazo } from "@/lib/urgenciaPrazo";
 import { chaveDiaSaoPaulo } from "@/lib/dataHora";
+import { linkAgenda, periodoAgenda, type FiltrosAgenda } from "@/lib/agenda";
 
+export const dynamic = "force-dynamic";
 const NOMES_MESES = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
 ];
-
-function chaveDia(d: Date) {
-  return d.toISOString().slice(0, 10);
-}
-
-// Usado só pra encaixar um horário salvo (tarefa/hora) no dia certo do calendário,
-// já considerando o fuso de Brasília — evita virar o dia seguinte perto da meia-noite.
-function chaveDiaEvento(d: Date) {
-  return chaveDiaSaoPaulo(d);
-}
-
 function horaBR(d: Date) {
-  return d.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleTimeString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
 }
 
 export default async function AgendaPage({
   searchParams,
 }: {
-  searchParams: { mes?: string; tipos?: string };
+  searchParams: Partial<FiltrosAgenda>;
 }) {
   const hoje = new Date();
-  const mesHoje = chaveDiaSaoPaulo(hoje).slice(0, 7);
-  const [anoParam, mesParam] = (searchParams.mes || mesHoje)
-    .split("-")
-    .map(Number);
-  const ano = anoParam;
-  const mes = mesParam - 1; // 0-indexed
-
-  // Todos os tipos ativos por padrão — compromissos, serviços e horas trabalhadas juntos.
+  const periodo = periodoAgenda(searchParams.mes, hoje);
+  const clienteFiltro = searchParams.cliente || "";
+  const soTarefas = searchParams.visao === "tarefas";
+  const soPendentes = searchParams.status === "pendentes";
   const tiposAtivos = new Set(
-    (searchParams.tipos || TIPOS_ATIVIDADE_AGENDA.map((t) => t.valor).join(",")).split(",")
+    searchParams.tipos === undefined
+      ? TIPOS_ATIVIDADE_AGENDA.map((t) => t.valor)
+      : TIPOS_ATIVIDADE_AGENDA.filter((t) =>
+          searchParams.tipos!.split(",").includes(t.valor),
+        ).map((t) => t.valor),
   );
+  const filtros: FiltrosAgenda = {
+    mes: periodo.mesChave,
+    cliente: clienteFiltro,
+    tipos: Array.from(tiposAtivos).join(","),
+    status: soPendentes ? "pendentes" : "todas",
+    visao: soTarefas ? "tarefas" : "tudo",
+  };
 
-  const inicioMes = new Date(ano, mes, 1);
-  const fimMes = new Date(ano, mes + 1, 0, 23, 59, 59);
-  const inicioGrade = new Date(inicioMes);
-  inicioGrade.setDate(inicioGrade.getDate() - inicioMes.getDay());
-  const fimGrade = new Date(fimMes);
-  fimGrade.setDate(fimGrade.getDate() + (6 - fimMes.getDay()));
-
-  // Sem isso, um cookie de sessão ainda válido de alguém desativado (usuario.ativo=
-  // false — o middleware não reconfere isso, só se o cookie existe) caía aqui com
-  // usuarioAtual=null, e os filtros "só o meu" viravam `{}` (SEM filtro nenhum) em
-  // vez de "nada" — mostraria a agenda inteira da agência, o oposto do pedido.
-  // Auditoria v147: mesma proteção que app/dashboard/layout.tsx ganhou, e que
-  // /dashboard/clientes e /dashboard/horas/[clienteId] já tinham.
   const usuarioAtual = await getUsuarioAtual();
   if (!usuarioAtual) redirect("/login");
-
   const idsPermitidos = await clienteIdsPermitidos(usuarioAtual);
-  // Igual em Tarefas/Horas: quem não tem "todos os clientes" só vê itens sem cliente
-  // (internos) ou dos clientes liberados pra ele — nunca a agenda inteira da agência.
-  const filtroCliente = idsPermitidos
+  // O cliente escolhido é somado às permissões; nunca substitui esse filtro.
+  const filtroAcesso = idsPermitidos
     ? { OR: [{ clienteId: null }, { clienteId: { in: idsPermitidos } }] }
     : {};
-  // Só o dono vê a agenda da agência inteira — editor/tráfego (e qualquer outro
-  // papel não-master) veem só o que é deles: tarefa da qual são responsáveis e
-  // hora que eles mesmos lançaram (pedido explícito: "não a agência inteira").
-  const verTudo = usuarioAtual.master;
-  const filtroPessoalTarefa = verTudo ? {} : { responsavelId: usuarioAtual.id };
-  const filtroPessoalHora = verTudo ? {} : { usuarioId: usuarioAtual.id };
-
-  const [tarefas, registrosTempo] = await Promise.all([
+  const filtroCliente = clienteFiltro ? { clienteId: clienteFiltro } : {};
+  const datas = { gte: periodo.inicioConsulta, lt: periodo.fimConsulta };
+  const [tarefas, registrosTempo, clientes] = await Promise.all([
     prisma.tarefa.findMany({
-      where: { prazo: { gte: inicioGrade, lte: fimGrade }, ...filtroCliente, ...filtroPessoalTarefa },
+      where: {
+        prazo: datas,
+        ...filtroAcesso,
+        ...filtroCliente,
+        ...(!usuarioAtual.master && { responsavelId: usuarioAtual.id }),
+        ...(soPendentes && { status: { not: "feito" } }),
+      },
       include: {
         cliente: { select: { id: true, nome: true, cor: true } },
         responsavel: { select: { nome: true, fotoUrl: true } },
       },
+      orderBy: { prazo: "asc" },
     }),
-    prisma.registroTempo.findMany({
-      where: { inicio: { gte: inicioGrade, lte: fimGrade }, ...filtroCliente, ...filtroPessoalHora },
-      include: {
-        cliente: { select: { id: true, nome: true, cor: true } },
-        usuario: { select: { nome: true, fotoUrl: true } },
-      },
+    soTarefas
+      ? Promise.resolve([])
+      : prisma.registroTempo.findMany({
+          where: {
+            inicio: datas,
+            ...filtroAcesso,
+            ...filtroCliente,
+            ...(!usuarioAtual.master && { usuarioId: usuarioAtual.id }),
+          },
+          include: {
+            cliente: { select: { id: true, nome: true, cor: true } },
+            usuario: { select: { nome: true, fotoUrl: true } },
+          },
+        }),
+    prisma.cliente.findMany({
+      where: idsPermitidos ? { id: { in: idsPermitidos } } : {},
+      select: { id: true, nome: true, cor: true },
+      orderBy: { nome: "asc" },
     }),
   ]);
+  if (clienteFiltro && !clientes.some((c) => c.id === clienteFiltro))
+    notFound();
 
   const eventosPorDia: Record<string, EventoAgenda[]> = {};
-
-  tarefas.forEach((t) => {
-    if (!t.prazo) return;
-    const tipoAtividade =
-      t.categoria === "reuniao"
-        ? "reuniao"
-        : t.categoria === "gravacao"
-        ? "captacao"
-        : classificarTipoAtividade(t.titulo, !!t.cliente);
-    if (!tiposAtivos.has(tipoAtividade)) return;
-    const chave = chaveDiaEvento(t.prazo);
-    // Destaque de prazo vencido/vencendo — mesma régua do resto do app (Tarefas,
-    // Kanban), e só faz sentido pra quem ainda não terminou (tarefa já feita não
-    // precisa de alarme vermelho de atraso).
-    const urgencia = t.status !== "feito" ? urgenciaPrazo(t.prazo) : null;
+  let totalTarefas = 0;
+  let totalHoras = 0;
+  for (const t of tarefas) {
+    if (!t.prazo) continue;
+    const tipoAtividade = tipoDaTarefaAgenda(
+      t.categoria,
+      t.titulo,
+      !!t.cliente,
+    );
+    if (!tiposAtivos.has(tipoAtividade)) continue;
+    const chave = chaveDiaSaoPaulo(t.prazo);
+    if (chave.startsWith(periodo.mesChave)) totalTarefas++;
     (eventosPorDia[chave] ||= []).push({
       id: t.id,
       origem: "tarefa",
       tipoAtividade,
-      texto: t.cliente ? `${t.titulo} · ${t.cliente.nome}` : t.titulo,
+      texto: t.titulo,
+      categoriaLabel: visualDaCategoriaTarefa(t.categoria).label,
+      status: t.status,
       clienteNome: t.cliente?.nome || null,
       usuarioNome: t.responsavel?.nome || null,
       usuarioFotoUrl: t.responsavel?.fotoUrl || null,
       cor: t.cliente?.cor,
-      // Abre o painel lateral de detalhes (Etapa 1 v152) direto na Agenda, sem
-      // navegar pra outra página — preserva mês/filtros atuais na URL.
-      href: `/dashboard/agenda?mes=${ano}-${mes + 1}&tipos=${Array.from(tiposAtivos).join(",")}&tarefa=${t.id}`,
+      href: linkAgenda(filtros, { tarefa: t.id }),
       data: chave,
       hora: horaBR(t.prazo) !== "00:00" ? horaBR(t.prazo) : null,
-      urgencia,
+      urgencia: t.status !== "feito" ? urgenciaPrazo(t.prazo) : null,
     });
-  });
-
-  registrosTempo.forEach((r) => {
+  }
+  for (const r of registrosTempo) {
     const tipoAtividade = classificarTipoAtividade(r.atividade, !!r.cliente);
-    if (!tiposAtivos.has(tipoAtividade)) return;
-    const chave = chaveDiaEvento(r.inicio);
+    if (!tiposAtivos.has(tipoAtividade)) continue;
+    const chave = chaveDiaSaoPaulo(r.inicio);
+    if (chave.startsWith(periodo.mesChave) && r.fim)
+      totalHoras += Math.max(0, r.fim.getTime() - r.inicio.getTime()) / 3600000;
     (eventosPorDia[chave] ||= []).push({
       id: r.id,
       origem: "hora",
       tipoAtividade,
-      texto: r.cliente ? `${r.atividade} · ${r.cliente.nome}` : r.atividade,
+      texto: r.atividade,
       clienteNome: r.cliente?.nome || null,
       usuarioNome: r.usuario?.nome || null,
       usuarioFotoUrl: r.usuario?.fotoUrl || null,
@@ -147,131 +175,170 @@ export default async function AgendaPage({
       horaInicio: horaBR(r.inicio),
       horaFim: r.fim ? horaBR(r.fim) : null,
     });
-  });
-
-  // Ordena cada dia por horário (horaInicio ou hora), pra ficar tipo "09:00 – Edição – Cliente"
-  Object.values(eventosPorDia).forEach((lista) =>
-    lista.sort((a, b) => (a.horaInicio || a.hora || "").localeCompare(b.horaInicio || b.hora || ""))
-  );
-
-  const dias: string[] = [];
-  for (let d = new Date(inicioGrade); d <= fimGrade; d.setDate(d.getDate() + 1)) {
-    dias.push(chaveDia(d));
   }
-
-  const mesAnterior = new Date(ano, mes - 1, 1);
-  const mesSeguinte = new Date(ano, mes + 1, 1);
-  const hojeChave = chaveDiaEvento(hoje);
-
-  // Resumo do período — a partir dos mesmos dados já buscados acima, sem query nova.
-  // Compromissos/horas contam o período inteiro (não só os tipos com filtro ligado),
-  // pra servir de totalizador estável mesmo quando alguém desliga um tipo na grade.
-  const totalCompromissos = tarefas.filter((t) => !!t.prazo).length;
-  const totalHorasPeriodo = registrosTempo.reduce((s, r) => {
-    if (!r.fim) return s;
-    return s + (r.fim.getTime() - r.inicio.getTime()) / 1000 / 60 / 60;
-  }, 0);
+  Object.values(eventosPorDia).forEach((lista) =>
+    lista.sort((a, b) =>
+      (a.horaInicio || a.hora || "").localeCompare(
+        b.horaInicio || b.hora || "",
+      ),
+    ),
+  );
+  const hojeChave = chaveDiaSaoPaulo(hoje);
   const eventosHoje = eventosPorDia[hojeChave]?.length || 0;
-
   const host = headers().get("host");
-  const linkIcs = process.env.AGENDA_SECRET
-    ? `https://${host}/api/agenda.ics?secret=${process.env.AGENDA_SECRET}`
-    : null;
+  const linkIcs =
+    usuarioAtual.master && process.env.AGENDA_SECRET
+      ? `https://${host}/api/agenda.ics?secret=${process.env.AGENDA_SECRET}`
+      : null;
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="flex items-center gap-1.5 text-lg font-medium text-text">
-            Agenda
+            Agenda{" "}
             <AjudaContextual
-              titulo="Agenda"
-              texto="Mostra compromissos, serviços (captação, edição, reunião) e horas trabalhadas — tudo com horário, atividade e cliente. Informações financeiras ficam só no Financeiro."
-              exemplo="Ex.: 09:00 – Edição – Dr. Lauro. Clique no dia pra ver tudo daquele dia, ou num item pra editar."
+              titulo="Agenda e cronograma"
+              texto="Organize as tarefas por dia e cliente. Todos os clientes aparecem por padrão; use a lista para ver um deles. Clique na tarefa para abrir os detalhes, editar e comentar."
+              exemplo="Selecione SKYFIT, escolha um dia e crie um Reel ou uma arte. O horário é opcional."
             />
           </p>
-          <p className="text-sm text-muted">Compromissos, serviços e horas trabalhadas num só lugar</p>
+          <p className="text-sm text-muted">
+            Cronograma de tarefas por cliente, com horário opcional
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Link
-            href={`/dashboard/agenda?mes=${mesAnterior.getFullYear()}-${mesAnterior.getMonth() + 1}&tipos=${Array.from(tiposAtivos).join(",")}`}
+            aria-label="Mês anterior"
+            href={linkAgenda(filtros, { mes: periodo.mesAnterior })}
             className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card/60 text-muted hover:text-text"
           >
             <ChevronLeft size={15} />
           </Link>
           <p className="w-36 text-center text-sm font-medium text-text">
-            {NOMES_MESES[mes]} {ano}
+            {NOMES_MESES[periodo.mes]} {periodo.ano}
           </p>
           <Link
-            href={`/dashboard/agenda?mes=${mesSeguinte.getFullYear()}-${mesSeguinte.getMonth() + 1}&tipos=${Array.from(tiposAtivos).join(",")}`}
+            aria-label="Próximo mês"
+            href={linkAgenda(filtros, { mes: periodo.mesSeguinte })}
             className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card/60 text-muted hover:text-text"
           >
             <ChevronRight size={15} />
           </Link>
         </div>
       </div>
-
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <FiltroClienteAgenda clientes={clientes} clienteAtual={clienteFiltro} />
+        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+          {[
+            { visao: "tudo", label: "Tarefas e horas" },
+            { visao: "tarefas", label: "Só tarefas" },
+          ].map((v) => (
+            <Link
+              key={v.visao}
+              href={linkAgenda(filtros, { visao: v.visao })}
+              className={`rounded-lg border px-3 py-2 ${filtros.visao === v.visao ? "border-accent/40 bg-accent/10 text-text" : "border-border text-muted hover:text-text"}`}
+            >
+              {v.label}
+            </Link>
+          ))}
+          <Link
+            href={linkAgenda(filtros, {
+              status: soPendentes ? "todas" : "pendentes",
+            })}
+            className="rounded-lg border border-border px-3 py-2 text-muted hover:text-text"
+          >
+            {soPendentes ? "Só tarefas pendentes" : "Todas as tarefas"}
+          </Link>
+        </div>
+      </div>
       <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
         <StatTile
           icone={<CalendarCheck size={12} style={{ color: "#3B82F6" }} />}
-          label="Compromissos no período"
-          valor={totalCompromissos}
+          label="Tarefas do mês"
+          valor={totalTarefas}
           index={0}
         />
         <StatTile
           icone={<Clock size={12} style={{ color: "#0D9488" }} />}
-          label="Horas lançadas"
-          valor={formatarDuracao(totalHorasPeriodo)}
+          label="Horas registradas"
+          valor={formatarDuracao(totalHoras)}
           index={1}
         />
         <StatTile
           icone={<Sun size={12} style={{ color: "#F59E0B" }} />}
           label="Hoje"
           valor={eventosHoje}
-          sub={eventosHoje === 0 ? "nada por enquanto" : eventosHoje === 1 ? "1 item na agenda" : "itens na agenda"}
+          sub={
+            eventosHoje
+              ? "itens nesta visualização"
+              : "nenhum item nesta visualização"
+          }
           index={2}
         />
       </div>
-
-      {linkIcs ? (
-        <div className="mb-4 flex items-start gap-3 rounded-xl border border-accent/20 bg-accent/5 p-4">
-          <CalendarPlus size={18} className="mt-0.5 shrink-0 text-accent" />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-text">Ver no Google Agenda ou no Calendário da Apple</p>
-            <p className="mb-2 text-xs text-muted">
-              Copia esse link e cola em "Adicionar calendário → A partir de URL" (Google) ou "Nova assinatura de
-              calendário" (Apple). Atualiza sozinho de tempos em tempos.
-            </p>
-            <code className="block truncate rounded-lg bg-base/60 px-3 py-2 text-[11px] text-muted">{linkIcs}</code>
-          </div>
-        </div>
-      ) : (
-        <p className="mb-4 text-xs text-muted">
-          Pra sincronizar com Google/Apple Calendar, configure a variável <code>AGENDA_SECRET</code> no ambiente.
-        </p>
-      )}
-
       <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
         {TIPOS_ATIVIDADE_AGENDA.map((tipo) => {
           const ativo = tiposAtivos.has(tipo.valor);
-          const novosTipos = new Set(tiposAtivos);
-          ativo ? novosTipos.delete(tipo.valor) : novosTipos.add(tipo.valor);
+          const novos = new Set(tiposAtivos);
+          ativo ? novos.delete(tipo.valor) : novos.add(tipo.valor);
           const Icon = tipo.icone;
           return (
             <Link
               key={tipo.valor}
-              href={`/dashboard/agenda?mes=${ano}-${mes + 1}&tipos=${Array.from(novosTipos).join(",")}`}
-              className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 transition-colors ${
-                ativo ? "border-border bg-card/60 text-text" : "border-border/50 text-muted/50"
-              }`}
+              aria-label={`${ativo ? "Ocultar" : "Mostrar"} ${tipo.label}`}
+              href={linkAgenda(filtros, { tipos: Array.from(novos).join(",") })}
+              className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 ${ativo ? "border-border bg-card/60 text-text" : "border-border/50 text-muted/50"}`}
             >
-              <Icon size={11} style={{ color: ativo ? tipo.cor : undefined }} /> {tipo.label}
+              <Icon size={11} style={{ color: ativo ? tipo.cor : undefined }} />
+              {tipo.label}
             </Link>
           );
         })}
       </div>
-
-      <AgendaGrid dias={dias} eventosPorDia={eventosPorDia} mes={mes} hojeChave={hojeChave} />
+      <p className="mb-3 text-xs text-muted">
+        As tarefas aparecem na data escolhida para o trabalho. Você pode
+        planejar só o dia; a sugestão de postagem e a publicação ficam nos
+        detalhes do conteúdo.
+      </p>
+      <AgendaGrid
+        dias={periodo.dias}
+        eventosPorDia={eventosPorDia}
+        mes={periodo.mes}
+        hojeChave={hojeChave}
+        clientes={clientes}
+        clienteIdAtual={clienteFiltro}
+      />
+      <section
+        aria-label="Calendários externos"
+        className="mt-8 border-t border-border pt-5"
+      >
+        <div className="flex items-start gap-3 rounded-xl border border-border bg-card/40 p-4">
+          <CalendarPlus size={18} className="mt-0.5 shrink-0 text-muted" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-text">
+              Ver no Google Agenda ou no Calendário da Apple
+            </p>
+            {linkIcs ? (
+              <>
+                <p className="mb-2 text-xs text-muted">
+                  Adicione este link como assinatura de calendário. A assinatura
+                  acompanha a agenda geral da agência e é atualizada pelo
+                  serviço de calendário.
+                </p>
+                <code className="block truncate rounded-lg bg-base/60 px-3 py-2 text-[11px] text-muted">
+                  {linkIcs}
+                </code>
+              </>
+            ) : (
+              <p className="text-xs text-muted">
+                A conexão com calendários externos pode ser configurada pela
+                administração da agência.
+              </p>
+            )}
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
