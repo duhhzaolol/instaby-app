@@ -333,12 +333,22 @@ export default async function AgendaPage({
       >
         <span>
           <strong className="text-text">{totalTarefas}</strong>{" "}
-          {baseData === "trabalho" ? "tarefas" : "conteúdos"} nesta visualização
+          {baseData === "trabalho"
+            ? totalTarefas === 1
+              ? "tarefa"
+              : "tarefas"
+            : totalTarefas === 1
+              ? "conteúdo"
+              : "conteúdos"}{" "}
+          nesta visualização
         </span>
         {baseData === "trabalho" && !soTarefas && (
           <span>{formatarDuracao(totalHoras)} registradas no mês</span>
         )}
-        <span>{eventosHoje} itens hoje nesta visualização</span>
+        <span>
+          {eventosHoje} {eventosHoje === 1 ? "item" : "itens"} hoje nesta
+          visualização
+        </span>
       </div>
       <ResumoMensalAgenda
         tarefas={tarefas}
