@@ -4,10 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ChevronDown, ChevronUp, Plus, X, Check, Trash2, Pencil, TrendingUp, DollarSign, Target, Percent, Eye, Trophy, Users, Repeat, Coins } from "lucide-react";
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { EvolucaoImportacoes } from "@/components/dashboard/trafego/EvolucaoImportacoes";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { DatePicker } from "@/components/ui/DatePicker";
-import { totalizarResultados } from "@/lib/agregarResultadosCampanha";
+import { totalizarResultados, agruparPorMes, ehAcumuladoMensal, marcosAcumuladosMensais } from "@/lib/agregarResultadosCampanha";
+import { formatarDataRelatorio } from "@/lib/dataRelatorio";
 
 // Cores da mini-visão de tendência — vermelho da marca pra custo (dinheiro saindo),
 // verde-azulado pra resultado (o que "entra" de retorno). Validadas com o script de
@@ -19,20 +20,14 @@ const COR_RESULTADOS = "#0D9488";
 // módulo, então não é uma cor nova no vocabulário do app; aqui marca "resultado em R$".
 const COR_RETORNO = "#F59E0B";
 
-function compactar(v: number): string {
-  const sinal = v < 0 ? "-" : "";
-  const abs = Math.abs(v);
-  if (abs >= 1_000_000) return `${sinal}${(abs / 1_000_000).toFixed(1).replace(".", ",")}M`;
-  if (abs >= 1_000) return `${sinal}${(abs / 1_000).toFixed(1).replace(".", ",")}K`;
-  if (abs >= 10 || Number.isInteger(abs)) return `${sinal}${Math.round(abs).toLocaleString("pt-BR")}`;
-  return `${sinal}${abs.toFixed(2).replace(".", ",")}`;
-}
 function fmtMoedaCompacta(v: number): string {
-  return `R$ ${compactar(v)}`;
+  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 type Resultado = {
   id: string;
+  campanhaId: string;
+  createdAt: string;
   inicio: string;
   fim: string;
   verbaInvestida: number | null;
@@ -336,11 +331,10 @@ function LinhaResultado({ resultado }: { resultado: Resultado }) {
     <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-base/40 px-3 py-2">
       <div className="min-w-0">
         <p className="text-xs font-medium text-text">
-          {new Date(resultado.inicio).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })} –{" "}
-          {new Date(resultado.fim).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}
+          Período do relatório: {formatarDataRelatorio(resultado.inicio)} – {formatarDataRelatorio(resultado.fim)}
         </p>
         <p className="text-[11px] text-muted">
-          {resultado.verbaInvestida != null && `R$ ${fmt(resultado.verbaInvestida)} investido`}
+          {resultado.verbaInvestida != null && `${fmtMoedaCompacta(resultado.verbaInvestida)} investido`}
           {resultado.impressoes != null && ` · ${fmt(resultado.impressoes)} impressões`}
           {resultado.cliques != null && ` · ${fmt(resultado.cliques)} cliques`}
           {ctr && ` (CTR ${ctr}%)`}
@@ -405,83 +399,25 @@ function Estatistica({
   );
 }
 
-function MiniAreaChart({
-  titulo,
-  dados,
-  dataKey,
-  cor,
-  formatador,
-}: {
-  titulo: string;
-  dados: { data: string; custo: number | null; resultados: number | null }[];
-  dataKey: "custo" | "resultados";
-  cor: string;
-  formatador: (v: number) => string;
-}) {
-  return (
-    <div className="rounded-xl border border-border bg-base/40 p-3">
-      <p className="mb-2 flex items-center gap-1.5 text-[11px] font-medium text-muted">
-        <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: cor }} />
-        {titulo}
-      </p>
-      <ResponsiveContainer width="100%" height={130}>
-        <AreaChart data={dados} margin={{ top: 4, right: 6, left: -18, bottom: 0 }}>
-          <defs>
-            <linearGradient id={`grad-${dataKey}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={cor} stopOpacity={0.25} />
-              <stop offset="100%" stopColor={cor} stopOpacity={0.02} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.06)" />
-          <XAxis dataKey="data" tick={{ fontSize: 9, fill: "#9CA3AF" }} axisLine={false} tickLine={false} minTickGap={20} />
-          <YAxis
-            tick={{ fontSize: 9, fill: "#9CA3AF" }}
-            axisLine={false}
-            tickLine={false}
-            width={36}
-            tickFormatter={(v) => formatador(Number(v))}
-          />
-          <Tooltip
-            cursor={{ stroke: cor, strokeWidth: 1, strokeOpacity: 0.35 }}
-            contentStyle={{
-              fontSize: 11,
-              borderRadius: 10,
-              background: "#1C2028",
-              border: "1px solid rgba(255,255,255,.08)",
-            }}
-            labelStyle={{ color: "#9CA3AF", marginBottom: 2 }}
-            formatter={(valor: any) => [formatador(Number(valor)), titulo]}
-          />
-          <Area
-            type="monotone"
-            dataKey={dataKey}
-            stroke={cor}
-            strokeWidth={2}
-            fill={`url(#grad-${dataKey})`}
-            dot={false}
-            activeDot={{ r: 4, fill: cor, stroke: "#1C2028", strokeWidth: 2 }}
-            connectNulls
-            isAnimationActive
-            animationDuration={700}
-          />
-        </AreaChart>
-      </ResponsiveContainer>
-    </div>
-  );
-}
-
 function PainelResultados({ resultados }: { resultados: Resultado[] }) {
-  const ordenados = [...resultados].sort((a, b) => new Date(a.fim).getTime() - new Date(b.fim).getTime());
-  const dados = ordenados.map((r) => ({
-    data: new Date(r.fim).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "America/Sao_Paulo" }),
-    custo: r.verbaInvestida != null ? Number(r.verbaInvestida) : null,
-    resultados: r.resultados,
+  const meses = Array.from(new Set(resultados.map((r) => r.fim.slice(0, 7)))).sort().reverse();
+  const [mes, setMes] = useState(meses[0] || "");
+  const mesSelecionado = meses.includes(mes) ? mes : meses[0];
+  const doMes = resultados.filter((r) => r.fim.slice(0, 7) === mesSelecionado);
+  const contados = agruparPorMes(doMes);
+  const mensal = contados.find(ehAcumuladoMensal);
+  const ultimoDia = mensal ? new Date(Date.UTC(new Date(mensal.fim).getUTCFullYear(), new Date(mensal.fim).getUTCMonth() + 1, 0)).getUTCDate() : null;
+  const fechado = mensal && new Date(mensal.fim).getUTCDate() === ultimoDia;
+  const evolucao = marcosAcumuladosMensais(doMes);
+  const dados = evolucao.map((r) => ({
+    data: r.fim,
+    gasto: Number(r.verbaInvestida || 0),
+    impressoes: r.impressoes,
+    alcance: r.alcance,
+    resultados: r.indicadorResultado === mensal?.indicadorResultado ? r.resultados : null,
+    resultadosLabel: r.resultados == null ? undefined : `${fmt(r.resultados)}${r.indicadorResultado !== mensal?.indicadorResultado ? ` (${r.indicadorResultado || "sem indicador"})` : ""}`,
   }));
 
-  // Totais usam a lista deduplicada — o gráfico acima continua no `ordenados` bruto,
-  // com todas as entradas, pra manter a curva de progressão do mês funcionando. Conta
-  // compartilhada com o Início do gestor de tráfego (lib/agregarResultadosCampanha) —
-  // mesma regra de dedupe "mês corrido" nos dois lugares, ver o comentário lá.
   const {
     totalInvestido,
     totalResultados,
@@ -491,11 +427,13 @@ function PainelResultados({ resultados }: { resultados: Resultado[] }) {
     totalPlanosFechados,
     totalRetorno,
     roi,
-  } = totalizarResultados(ordenados);
+    alcanceComparavel,
+    resultadosComparaveis,
+  } = totalizarResultados(doMes);
   // Frequência = quantas vezes, em média, a mesma pessoa viu o anúncio — sinal de fadiga
   // de criativo quando fica alta demais (referência de mercado: >2-3 em prospecção,
   // >5-7 em remarketing pede troca de criativo ou pausa).
-  const frequencia = totalAlcance > 0 ? totalImpressoes / totalAlcance : null;
+  const frequencia = alcanceComparavel && totalAlcance > 0 ? totalImpressoes / totalAlcance : null;
   // CPM = custo a cada mil impressões — mostra se o leilão do Meta pra esse público/período
   // está caro ou barato, independente de quantos resultados saíram disso.
   const cpm = totalImpressoes > 0 ? (totalInvestido / totalImpressoes) * 1000 : null;
@@ -511,9 +449,20 @@ function PainelResultados({ resultados }: { resultados: Resultado[] }) {
 
   return (
     <div className="mt-2">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="text-xs text-muted">
+          {mensal ? <>
+            <p className="font-medium text-text">{fechado ? "Fechamento do mês" : "Acumulado do mês"} · {formatarDataRelatorio(mensal.inicio)} – {formatarDataRelatorio(mensal.fim)}</p>
+            <p>O total usa o relatório mais atualizado; os anteriores ficam como marcos no gráfico. O período não indica quantos dias a campanha rodou.</p>
+          </> : <p>Dados disponíveis no mês. Importe um relatório do dia 1 até a data desejada para atualizar o acumulado.</p>}
+        </div>
+        <select aria-label="Mês dos resultados" value={mesSelecionado} onChange={(e) => setMes(e.target.value)} className="rounded-lg border border-border bg-card px-2 py-1.5 text-xs text-text">
+          {meses.map((m) => <option key={m} value={m}>{formatarDataRelatorio(`${m}-01T00:00:00Z`, { month: "long", year: "numeric" })}</option>)}
+        </select>
+      </div>
       <div className="mb-2 grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
         <Estatistica Icon={DollarSign} cor={COR_CUSTO} label="Investido" valor={fmtMoedaCompacta(totalInvestido)} index={0} />
-        <Estatistica Icon={Target} cor={COR_RESULTADOS} label="Resultados" valor={compactar(totalResultados)} index={1} />
+        <Estatistica Icon={Target} cor={COR_RESULTADOS} label="Resultados" valor={resultadosComparaveis ? fmt(totalResultados) : "Tipos diferentes"} index={1} />
         <Estatistica
           Icon={Percent}
           cor="#9CA3AF"
@@ -521,12 +470,12 @@ function PainelResultados({ resultados }: { resultados: Resultado[] }) {
           valor={custoPorResultado != null ? fmtMoedaCompacta(custoPorResultado) : "—"}
           index={2}
         />
-        <Estatistica Icon={Eye} cor="#9CA3AF" label="Impressões" valor={compactar(totalImpressoes)} index={3} />
+        <Estatistica Icon={Eye} cor="#9CA3AF" label="Impressões" valor={fmt(totalImpressoes)} index={3} />
         <Estatistica
           Icon={Users}
           cor="#9CA3AF"
           label="Alcance"
-          valor={totalAlcance > 0 ? compactar(totalAlcance) : "—"}
+          valor={alcanceComparavel && totalAlcance > 0 ? fmt(totalAlcance) : "—"}
           index={4}
         />
         <Estatistica
@@ -553,24 +502,7 @@ function PainelResultados({ resultados }: { resultados: Resultado[] }) {
         />
       </div>
 
-      {dados.length >= 2 && (
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <MiniAreaChart
-            titulo="Custo por período"
-            dados={dados}
-            dataKey="custo"
-            cor={COR_CUSTO}
-            formatador={fmtMoedaCompacta}
-          />
-          <MiniAreaChart
-            titulo="Resultados por período"
-            dados={dados}
-            dataKey="resultados"
-            cor={COR_RESULTADOS}
-            formatador={compactar}
-          />
-        </div>
-      )}
+      <EvolucaoImportacoes marcos={dados} />
     </div>
   );
 }
@@ -623,8 +555,13 @@ export default function ResultadosCampanha({ campanhaId }: { campanhaId: string 
 
           {!carregando && resultados && resultados.length > 0 && <PainelResultados resultados={resultados} />}
 
-          {!carregando &&
-            resultados?.map((r) => <LinhaResultado key={r.id} resultado={r} />)}
+          {!carregando && resultados && resultados.length > 0 && (
+            <details className="mt-3">
+              <summary className="cursor-pointer text-xs text-muted">Ver todo o histórico de importações e lançamentos ({resultados.length})</summary>
+              <p className="mt-2 text-[11px] text-muted">Relatórios de períodos sobrepostos ficam no histórico e não são somados ao acumulado atual.</p>
+              {resultados.map((r) => <LinhaResultado key={r.id} resultado={r} />)}
+            </details>
+          )}
 
           {!carregando && (
             <button

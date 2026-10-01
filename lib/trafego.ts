@@ -2,6 +2,7 @@
 // saldo/verba por cliente e agregação de métricas sem misturar indicadores diferentes.
 // Usado pelas rotas de API e pelas telas novas (Visão Geral, Campanhas, Finalizadas,
 // Verba e Movimentações, Histórico de Importações, Relatórios).
+import { agruparPorMes } from "@/lib/agregarResultadosCampanha";
 import { prisma } from "@/lib/prisma";
 
 // ───────────────────────────── Status interno ─────────────────────────────
@@ -243,48 +244,15 @@ export async function gastoAcumuladoTotalCampanha(campanhaId: string): Promise<n
     where: { campanhaId },
     include: { lote: { select: { periodoInicio: true, periodoFim: true } } },
   });
-  const porMes = new Map<string, { periodoFim: Date; criadoEm: Date; valor: number }>();
-  itens.forEach((item: any) => {
-    const d = item.lote.periodoInicio as Date;
-    const chave = `${d.getUTCFullYear()}-${d.getUTCMonth()}`;
-    const atual = porMes.get(chave);
-    // Em empate de período-fim (ex: reimportação do mesmo período com um valor
-    // corrigido pelo Meta), desempata por criado mais recentemente — mesma regra de
-    // ultimoAcumuloDoMes ("a última correção gravada é a que vale"). Sem isso, a ordem
-    // de retorno do findMany (não garantida) poderia escolher a correção antiga.
-    const ganha =
-      !atual ||
-      item.lote.periodoFim.getTime() > atual.periodoFim.getTime() ||
-      (item.lote.periodoFim.getTime() === atual.periodoFim.getTime() && item.createdAt.getTime() > atual.criadoEm.getTime());
-    if (ganha) {
-      porMes.set(chave, { periodoFim: item.lote.periodoFim, criadoEm: item.createdAt, valor: Number(item.gastoAcumuladoArquivo) });
-    }
-  });
-
   const legado = await prisma.resultadoCampanha.findMany({
     where: { campanhaId, origem: "meta_import" },
-    select: { inicio: true, fim: true, verbaInvestida: true },
+    select: { inicio: true, fim: true, verbaInvestida: true, createdAt: true },
   });
-  const porMesLegado = new Map<string, { fim: Date; valor: number }>();
-  legado.forEach((r: any) => {
-    const chave = `${r.inicio.getUTCFullYear()}-${r.inicio.getUTCMonth()}`;
-    const atual = porMesLegado.get(chave);
-    if (!atual || r.fim > atual.fim) {
-      porMesLegado.set(chave, { fim: r.fim, valor: r.verbaInvestida ? Number(r.verbaInvestida) : 0 });
-    }
-  });
-
-  const todasAsChaves = Array.from(new Set([...Array.from(porMes.keys()), ...Array.from(porMesLegado.keys())]));
-  let total = 0;
-  todasAsChaves.forEach((chave) => {
-    const doNovo = porMes.get(chave);
-    if (doNovo) total += doNovo.valor;
-    else {
-      const doLegado = porMesLegado.get(chave);
-      if (doLegado) total += doLegado.valor;
-    }
-  });
-  return total;
+  const linhas = [
+    ...legado.map((r) => ({ ...r, campanhaId, verbaInvestida: Number(r.verbaInvestida || 0), impressoes: null, alcance: null, resultados: null, planosFechados: null, valorRetorno: null })),
+    ...itens.map((item) => ({ campanhaId, inicio: item.lote.periodoInicio, fim: item.lote.periodoFim, createdAt: item.createdAt, verbaInvestida: Number(item.gastoAcumuladoArquivo), impressoes: null, alcance: null, resultados: null, planosFechados: null, valorRetorno: null })),
+  ];
+  return agruparPorMes(linhas).reduce((total, r) => total + r.verbaInvestida, 0);
 }
 
 export type SnapshotCampanha = {
@@ -338,7 +306,7 @@ export async function snapshotCampanhaNoPeriodo(
   const temImpressoes = escolhidos.some((v) => v.item.impressoes != null);
   const temAlcance = escolhidos.some((v) => v.item.alcance != null);
   const impressoes = temImpressoes ? escolhidos.reduce((s, v) => s + (v.item.impressoes || 0), 0) : null;
-  const alcance = temAlcance ? escolhidos.reduce((s, v) => s + (v.item.alcance || 0), 0) : null;
+  const alcance = temAlcance && escolhidos.length === 1 ? escolhidos[0].item.alcance : null;
   const resultadosPorIndicador = agruparResultadosPorIndicador(escolhidos.map((v) => v.item));
   const dataAtualizacao = escolhidos.reduce((max: Date, v) => (v.periodoFim > max ? v.periodoFim : max), escolhidos[0].periodoFim);
 

@@ -13,35 +13,68 @@ export type ResultadoParaAgregar = {
   resultados: number | null;
   planosFechados: number | null;
   valorRetorno: number | null;
+  campanhaId?: string;
+  origem?: string;
+  createdAt?: Date | string;
+  indicadorResultado?: string | null;
 };
 
-// Soma sem duplicar exportações "mês corrido": o fluxo real é exportar sempre a partir
-// do dia 1 do mês, com data final crescente (1–10, depois 1–20, depois 1–30...) — cada
-// exportação nova já inclui as anteriores, então somar todas infla o total. Agrupa por
-// mês do início; se o grupo inteiro compartilha o mesmo início, é esse caso — conta só a
-// entrada mais recente (maior fim). Se os inícios diferem dentro do mesmo grupo (ex:
-// exportação dia a dia, ou lançamentos manuais de períodos pontuais), são períodos de
-// fato distintos — soma todos normalmente.
+export function ehAcumuladoMensal(r: ResultadoParaAgregar) {
+  const inicio = new Date(r.inicio);
+  const fim = new Date(r.fim);
+  return inicio.getUTCDate() === 1 && inicio.getUTCFullYear() === fim.getUTCFullYear()
+    && inicio.getUTCMonth() === fim.getUTCMonth();
+}
+
+// Cada campanha/mês usa o acumulado mensal com maior data final, e a última
+// correção em empate. Registros diários ou antigos que se sobrepõem a ele ficam
+// apenas no histórico. Períodos sem sobreposição continuam sendo somados.
 export function agruparPorMes<T extends ResultadoParaAgregar>(lista: T[]): T[] {
-  const porMes = new Map<string, T[]>();
+  const porCampanha = new Map<string, T[]>();
   for (const r of lista) {
-    const d = new Date(r.inicio);
-    const chave = `${d.getUTCFullYear()}-${d.getUTCMonth()}`;
-    const grupo = porMes.get(chave);
+    const chave = r.campanhaId || "campanha";
+    const grupo = porCampanha.get(chave);
     if (grupo) grupo.push(r);
-    else porMes.set(chave, [r]);
+    else porCampanha.set(chave, [r]);
   }
 
   const contados: T[] = [];
-  for (const grupo of Array.from(porMes.values())) {
-    const iniciosUnicos = new Set(grupo.map((r) => new Date(r.inicio).getTime()));
-    if (grupo.length > 1 && iniciosUnicos.size === 1) {
-      contados.push(grupo.reduce((a, b) => (new Date(b.fim) > new Date(a.fim) ? b : a)));
-    } else {
-      contados.push(...grupo);
+  for (const grupo of Array.from(porCampanha.values())) {
+    const escolhidos: T[] = [];
+    const ordenados = [...grupo].sort((a, b) => {
+      const prioridade = Number(ehAcumuladoMensal(b)) - Number(ehAcumuladoMensal(a));
+      if (prioridade) return prioridade;
+      const fim = new Date(b.fim).getTime() - new Date(a.fim).getTime();
+      if (fim) return fim;
+      const duracaoA = new Date(a.fim).getTime() - new Date(a.inicio).getTime();
+      const duracaoB = new Date(b.fim).getTime() - new Date(b.inicio).getTime();
+      return duracaoB - duracaoA || new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    });
+    for (const r of ordenados) {
+      const sobreposto = escolhidos.some((e) => {
+        const fim = new Date(e.fim);
+        // Um acumulado mensal já é a fonte daquele mês inteiro. Não juntar
+        // lançamentos diários soltos com um marco de 1–10 ou de 1–20.
+        const limite = ehAcumuladoMensal(e) ? new Date(Date.UTC(fim.getUTCFullYear(), fim.getUTCMonth() + 1, 0, 23, 59, 59, 999)) : fim;
+        return new Date(r.inicio) <= limite && new Date(r.fim) >= new Date(e.inicio);
+      });
+      if (!sobreposto) escolhidos.push(r);
     }
+    contados.push(...escolhidos);
   }
   return contados;
+}
+
+// Um marco por data final. Reimportações corrigem o mesmo marco; importar um
+// relatório mais antigo depois não altera o acumulado mais recente do mês.
+export function marcosAcumuladosMensais<T extends ResultadoParaAgregar>(lista: T[]): T[] {
+  const porData = new Map<string, T>();
+  for (const r of lista.filter(ehAcumuladoMensal)) {
+    const chave = new Date(r.fim).toISOString().slice(0, 10);
+    const anterior = porData.get(chave);
+    if (!anterior || new Date(r.createdAt || 0) >= new Date(anterior.createdAt || 0)) porData.set(chave, r);
+  }
+  return Array.from(porData.values()).sort((a, b) => new Date(a.fim).getTime() - new Date(b.fim).getTime());
 }
 
 export type TotaisResultados = {
@@ -53,6 +86,8 @@ export type TotaisResultados = {
   totalPlanosFechados: number;
   totalRetorno: number;
   roi: number | null; // múltiplo do investido (ex: 5.2 = 5.2x)
+  alcanceComparavel: boolean;
+  resultadosComparaveis: boolean;
 };
 
 // Ritmo de gasto da verba mensal de uma campanha (Início do gestor de tráfego,
@@ -94,9 +129,14 @@ export function totalizarResultados(lista: ResultadoParaAgregar[]): TotaisResult
   const totalResultados = contados.reduce((s, r) => s + (r.resultados || 0), 0);
   const totalImpressoes = contados.reduce((s, r) => s + (r.impressoes || 0), 0);
   const totalAlcance = contados.reduce((s, r) => s + (r.alcance || 0), 0);
-  const custoPorResultado = totalResultados > 0 ? totalInvestido / totalResultados : null;
+  // Alcance é de pessoas únicas no período; somar dias/campanhas não produz um
+  // alcance único. Resultados de tipos diferentes também não têm custo comum.
+  const alcanceComparavel = contados.length === 1 && contados[0].alcance != null;
+  const indicadores = new Set(contados.filter((r) => r.resultados != null).map((r) => r.indicadorResultado || "não informado"));
+  const resultadosComparaveis = indicadores.size <= 1;
+  const custoPorResultado = totalResultados > 0 && resultadosComparaveis ? totalInvestido / totalResultados : null;
   const totalPlanosFechados = contados.reduce((s, r) => s + (r.planosFechados || 0), 0);
   const totalRetorno = contados.reduce((s, r) => s + (r.valorRetorno ? Number(r.valorRetorno) : 0), 0);
   const roi = totalInvestido > 0 && totalRetorno > 0 ? totalRetorno / totalInvestido : null;
-  return { totalInvestido, totalResultados, totalImpressoes, totalAlcance, custoPorResultado, totalPlanosFechados, totalRetorno, roi };
+  return { totalInvestido, totalResultados, totalImpressoes, totalAlcance, custoPorResultado, totalPlanosFechados, totalRetorno, roi, alcanceComparavel, resultadosComparaveis };
 }

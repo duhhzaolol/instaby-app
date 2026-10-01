@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Wallet, TrendingDown, PiggyBank, CalendarClock, RefreshCw, Search, FileBarChart } from "lucide-react";
+import { EvolucaoImportacoes, type MarcoImportacao } from "./EvolucaoImportacoes";
 import { StatTile } from "@/components/ui/StatTile";
 import { STATUS_INTERNO, STATUS_INTERNO_LABEL, AVALIACAO_LABEL, formatarNumeroOuNaoInformado } from "@/lib/trafego";
 
@@ -38,7 +39,7 @@ function fmtMoeda(v: number) {
   return `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 function dataBr(iso: string) {
-  return new Date(iso).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+  return new Date(iso).toLocaleDateString("pt-BR", { timeZone: "UTC" });
 }
 
 export function VisaoGeralTrafego({
@@ -47,6 +48,9 @@ export function VisaoGeralTrafego({
   campanhas,
   periodoLabel,
   ultimaAtualizacao,
+  gastoMes,
+  fechado,
+  marcos,
 }: {
   clienteId: string;
   clienteNome: string;
@@ -54,6 +58,9 @@ export function VisaoGeralTrafego({
   campanhas: CampanhaLinha[];
   periodoLabel: string;
   ultimaAtualizacao: string | null;
+  gastoMes: number | null;
+  fechado: boolean;
+  marcos: MarcoImportacao[];
 }) {
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("");
@@ -76,6 +83,12 @@ export function VisaoGeralTrafego({
 
   return (
     <div>
+      <div className="mb-4 rounded-xl border border-border bg-card/60 p-4">
+        <p className="text-xs text-muted">{fechado ? "Fechamento do mês" : "Acumulado do mês"} · {periodoLabel}</p>
+        <p className="mt-1 text-xl font-semibold text-text">{gastoMes == null ? "—" : fmtMoeda(gastoMes)}</p>
+        <p className="mt-1 text-[11px] text-muted">Total do último arquivo do mês, incluindo todas as campanhas presentes no relatório. As importações anteriores ficam como marcos.</p>
+      </div>
+      <EvolucaoImportacoes marcos={marcos}/>
       <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
         <StatTile
           icone={<PiggyBank size={12} style={{ color: "#0D9488" }} />}
@@ -86,7 +99,7 @@ export function VisaoGeralTrafego({
         />
         <StatTile
           icone={<TrendingDown size={12} style={{ color: "#E63946" }} />}
-          label="Gasto acumulado"
+          label="Gasto de todos os meses"
           valor={fmtMoeda(saldo.gastoAcumulado)}
           index={1}
         />
@@ -169,7 +182,7 @@ export function VisaoGeralTrafego({
 
       {campanhas.length === 0 ? (
         <p className="rounded-2xl border border-border bg-card/60 p-5 text-sm text-muted">
-          Nenhuma campanha em acompanhamento pra esse cliente ainda.
+          Nenhuma campanha disponível no último relatório mensal desse cliente.
         </p>
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-border">

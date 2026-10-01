@@ -12,7 +12,7 @@ function compactar(v: number): string {
   return `${Math.round(abs).toLocaleString("pt-BR")}`;
 }
 function moeda(v: number) {
-  return `R$ ${compactar(v)}`;
+  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 export type CampanhaRitmo = {
@@ -83,7 +83,7 @@ export default function InicioTrafego({
   tarefasQuadro,
 }: {
   usuarioId: string;
-  totais: { investido: number; resultados: number; custoPorResultado: number | null; retorno: number };
+  totais: { investido: number; resultados: number | null; custoPorResultado: number | null; retorno: number };
   campanhas: CampanhaRitmo[];
   alertas: AlertaTrafego[];
   relatorios: RelatorioResumo[];
@@ -94,7 +94,7 @@ export default function InicioTrafego({
     <div>
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile icone={<DollarSign size={12} className="text-accent" />} label="Investido no mês" valor={moeda(totais.investido)} />
-        <StatTile icone={<Target size={12} className="text-accent" />} label="Resultados" valor={compactar(totais.resultados)} />
+        <StatTile icone={<Target size={12} className="text-accent" />} label="Resultados" valor={totais.resultados == null ? "Tipos diferentes" : compactar(totais.resultados)} />
         <StatTile
           icone={<Percent size={12} className="text-accent" />}
           label="Custo/resultado"

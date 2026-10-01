@@ -543,7 +543,7 @@ async function InicioTrafegoPage({ usuario }: { usuario: Usuario }) {
   const [resultadosDoMes, campanhasAtivas, resultadosUltimos7Dias, relatoriosDoMes, criativosPedidosRaw, tarefasPoolRaw, tarefasFeitoRaw] = await Promise.all([
     prisma.resultadoCampanha.findMany({
       where: { campanha: filtroCliente, inicio: { gte: inicioMes() } },
-      select: { inicio: true, fim: true, verbaInvestida: true, impressoes: true, alcance: true, resultados: true, planosFechados: true, valorRetorno: true, campanhaId: true },
+      select: { inicio: true, fim: true, verbaInvestida: true, impressoes: true, alcance: true, resultados: true, planosFechados: true, valorRetorno: true, campanhaId: true, createdAt: true, indicadorResultado: true },
     }),
     prisma.campanha.findMany({
       where: { status: "ativa", ...filtroCliente },
@@ -674,7 +674,7 @@ async function InicioTrafegoPage({ usuario }: { usuario: Usuario }) {
       usuarioId={usuarioId}
       totais={{
         investido: totaisRaw.totalInvestido,
-        resultados: totaisRaw.totalResultados,
+        resultados: totaisRaw.resultadosComparaveis ? totaisRaw.totalResultados : null,
         custoPorResultado: totaisRaw.custoPorResultado,
         retorno: totaisRaw.totalRetorno,
       }}

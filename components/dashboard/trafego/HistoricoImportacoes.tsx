@@ -41,7 +41,7 @@ function fmtMoeda(v: number) {
   return `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 function dataBr(iso: string) {
-  return new Date(iso).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+  return new Date(iso).toLocaleDateString("pt-BR", { timeZone: "UTC" });
 }
 function dataHoraBr(iso: string) {
   return new Date(iso).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" });

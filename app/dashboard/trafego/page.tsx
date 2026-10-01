@@ -15,11 +15,13 @@ import TrafegoClient from "@/components/dashboard/TrafegoClient";
 import { TarefaRow } from "@/components/dashboard/TarefaRow";
 import { NovaTarefaGlobalForm } from "@/components/dashboard/NovaTarefaGlobalForm";
 import { getUsuarioAtual, clienteIdsPermitidos } from "@/lib/permissoes";
-import { repararStatusInternoLegado, snapshotCampanhaAtual, snapshotCampanhaTotal, calcularSaldoCliente } from "@/lib/trafego";
+import { repararStatusInternoLegado, snapshotCampanhaAtual, snapshotCampanhaTotal, calcularSaldoCliente, agruparResultadosPorIndicador } from "@/lib/trafego";
 import { SeletorClienteTrafego } from "@/components/dashboard/trafego/SeletorClienteTrafego";
 import { VisaoGeralTrafego } from "@/components/dashboard/trafego/VisaoGeralTrafego";
 import { VerbaMovimentacoes } from "@/components/dashboard/trafego/VerbaMovimentacoes";
 import { HistoricoImportacoes } from "@/components/dashboard/trafego/HistoricoImportacoes";
+import { ehAcumuladoMensal, marcosAcumuladosMensais } from "@/lib/agregarResultadosCampanha";
+import { formatarDataRelatorio } from "@/lib/dataRelatorio";
 import { RelatoriosTrafego } from "@/components/dashboard/trafego/RelatoriosTrafego";
 
 // Views client-agnósticas (uma tabela cruzando todos os clientes autorizados) vs.
@@ -63,7 +65,7 @@ function serializarSnapshot(snap: {
 export default async function TrafegoPage({
   searchParams,
 }: {
-  searchParams: { visao?: string; clienteId?: string; status?: string; campanhaIds?: string };
+  searchParams: { visao?: string; clienteId?: string; status?: string; campanhaIds?: string; mes?: string };
 }) {
   const visaoInfo = VISOES.find((v) => v.valor === searchParams.visao) || VISOES[0];
   const visao = visaoInfo.valor;
@@ -127,7 +129,7 @@ export default async function TrafegoPage({
       )}
 
       {visaoInfo.clientScoped && clienteSelecionado && visao === "visao-geral" && (
-        <VisaoGeralVisao clienteId={clienteSelecionado.id} clienteNome={clienteSelecionado.nome} clientes={clientes} visao={visao} />
+        <VisaoGeralVisao clienteId={clienteSelecionado.id} clienteNome={clienteSelecionado.nome} clientes={clientes} visao={visao} mesParam={searchParams.mes} />
       )}
 
       {visaoInfo.clientScoped && clienteSelecionado && visao === "verba" && (
@@ -161,60 +163,48 @@ export default async function TrafegoPage({
   );
 }
 
-async function VisaoGeralVisao({
-  clienteId,
-  clienteNome,
-  clientes,
-  visao,
-}: {
+async function VisaoGeralVisao({ clienteId, clienteNome, clientes, visao, mesParam }: {
   clienteId: string;
   clienteNome: string;
   clientes: { id: string; nome: string; cor: string | null }[];
   visao: string;
+  mesParam?: string;
 }) {
-  const [campanhasCliente, saldo, ultimoLote] = await Promise.all([
-    prisma.campanha.findMany({
-      where: { clienteId },
-      select: { id: true, nome: true, status: true, statusInterno: true, ultimoStatusMeta: true, avaliacao: true },
-      orderBy: { createdAt: "desc" },
-    }),
+  const [campanhasCliente, saldo, lotes] = await Promise.all([
+    prisma.campanha.findMany({ where: { clienteId }, select: { id: true, nome: true, status: true, statusInterno: true, ultimoStatusMeta: true, avaliacao: true }, orderBy: { createdAt: "desc" } }),
     calcularSaldoCliente(clienteId),
-    prisma.loteImportacao.findFirst({ where: { clienteId }, orderBy: { periodoFim: "desc" }, select: { periodoFim: true } }),
+    prisma.loteImportacao.findMany({ where: { clienteId }, include: { itens: { orderBy: { createdAt: "asc" } } }, orderBy: [{ periodoFim: "desc" }, { createdAt: "desc" }] }),
   ]);
-
-  const corrigidas = repararStatusInternoLegado(campanhasCliente);
-  const ativas = corrigidas.filter((c) => c.statusInterno === "em_acompanhamento" || c.statusInterno === "pausada");
-  const snapshots = await Promise.all(ativas.map((c) => snapshotCampanhaAtual(c.id)));
-  const campanhasView = ativas.map((c, i) => ({
-    id: c.id,
-    nome: c.nome,
-    statusInterno: c.statusInterno,
-    ultimoStatusMeta: c.ultimoStatusMeta,
-    avaliacao: c.avaliacao,
-    snapshot: serializarSnapshot(snapshots[i]),
-  }));
-
-  const hoje = new Date();
-  const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-  const periodoLabel = `${inicioMes.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} – ${hoje.toLocaleDateString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  })}`;
-
-  return (
-    <div>
-      <SeletorClienteTrafego clientes={clientes} clienteIdAtual={clienteId} visao={visao} />
-      <VisaoGeralTrafego
-        clienteId={clienteId}
-        clienteNome={clienteNome}
-        saldo={saldo}
-        campanhas={campanhasView}
-        periodoLabel={periodoLabel}
-        ultimaAtualizacao={ultimoLote?.periodoFim ? ultimoLote.periodoFim.toISOString() : null}
-      />
-    </div>
-  );
+  const relatorios = lotes.map((lote) => ({ ...lote, inicio: lote.periodoInicio, fim: lote.periodoFim, verbaInvestida: Number(lote.gastoTotalArquivo), impressoes: null, alcance: null, resultados: null, planosFechados: null, valorRetorno: null })).filter(ehAcumuladoMensal);
+  const meses = Array.from(new Set(relatorios.map((l) => l.fim.toISOString().slice(0, 7)))).sort().reverse();
+  const mes = mesParam && meses.includes(mesParam) ? mesParam : meses[0];
+  const marcos = marcosAcumuladosMensais(relatorios.filter((l) => l.fim.toISOString().slice(0, 7) === mes));
+  const ultimo = marcos[marcos.length - 1];
+  const itensPorCampanha = new Map((ultimo?.itens || []).filter((i) => i.campanhaId).map((i) => [i.campanhaId, i]));
+  const campanhasView = repararStatusInternoLegado(campanhasCliente).filter((c) => itensPorCampanha.has(c.id)).map((c) => {
+    const item = itensPorCampanha.get(c.id)!;
+    return { id: c.id, nome: c.nome, statusInterno: c.statusInterno, ultimoStatusMeta: c.ultimoStatusMeta, avaliacao: c.avaliacao,
+      snapshot: serializarSnapshot({ gasto: Number(item.gastoAcumuladoArquivo), impressoes: item.impressoes, alcance: item.alcance, resultadosPorIndicador: agruparResultadosPorIndicador([item]), dataAtualizacao: ultimo.fim, temDados: true }) };
+  });
+  const tiposNoMes = new Set(marcos.flatMap((lote) => lote.itens.filter((i) => i.resultados != null).map((i) => i.indicadorResultado || "(sem indicador)")));
+  const pontos = marcos.map((lote) => {
+    const grupos = agruparResultadosPorIndicador(lote.itens);
+    return { data: lote.fim.toISOString(), gasto: Number(lote.gastoTotalArquivo), impressoes: lote.itens.some((i) => i.impressoes != null) ? lote.itens.reduce((t, i) => t + (i.impressoes || 0), 0) : null,
+      alcance: null, resultados: tiposNoMes.size === 1 && grupos.length === 1 ? grupos[0].total : null,
+      resultadosLabel: grupos.map((g) => `${g.total.toLocaleString("pt-BR")} ${g.label}`).join(" · ") };
+  });
+  const periodoLabel = ultimo ? `${formatarDataRelatorio(ultimo.inicio)} – ${formatarDataRelatorio(ultimo.fim)}` : "Sem importações mensais";
+  const fechado = !!ultimo && ultimo.fim.getUTCDate() === new Date(Date.UTC(ultimo.fim.getUTCFullYear(), ultimo.fim.getUTCMonth() + 1, 0)).getUTCDate();
+  return <div>
+    <SeletorClienteTrafego clientes={clientes} clienteIdAtual={clienteId} visao={visao} />
+    {meses.length > 0 && <form action="/dashboard/trafego" className="mb-4 flex items-center gap-2">
+      <input type="hidden" name="visao" value={visao}/><input type="hidden" name="clienteId" value={clienteId}/>
+      <label htmlFor="mes-trafego" className="text-xs text-muted">Mês do relatório</label>
+      <select id="mes-trafego" name="mes" defaultValue={mes} className="rounded-lg border border-border bg-card px-3 py-2 text-xs text-text">{meses.map((m) => <option key={m} value={m}>{formatarDataRelatorio(`${m}-01T00:00:00Z`, { month: "long", year: "numeric" })}</option>)}</select>
+      <button className="rounded-lg bg-accent px-3 py-2 text-xs text-white">Consultar</button>
+    </form>}
+    <VisaoGeralTrafego clienteId={clienteId} clienteNome={clienteNome} saldo={saldo} campanhas={campanhasView} periodoLabel={periodoLabel} ultimaAtualizacao={ultimo?.fim.toISOString() || null} gastoMes={ultimo ? Number(ultimo.gastoTotalArquivo) : null} fechado={fechado} marcos={pontos}/>
+  </div>;
 }
 
 async function VerbaVisao({

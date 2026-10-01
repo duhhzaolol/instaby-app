@@ -96,7 +96,7 @@ function fmt2(v: number) {
   return v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 function dataBr(iso: string) {
-  return new Date(iso).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+  return new Date(iso).toLocaleDateString("pt-BR", { timeZone: "UTC" });
 }
 
 function MiniStat({ label, valor, sub }: { label: string; valor: string; sub?: string }) {
