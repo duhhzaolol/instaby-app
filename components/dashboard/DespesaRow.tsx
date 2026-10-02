@@ -215,9 +215,9 @@ export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index:
           <button onClick={() => setEditando(true)} className="text-muted hover:text-text">
             <Pencil size={13} />
           </button>
-          <button disabled={salvando} onClick={excluir} className="text-muted hover:text-red-400">
+          {statusEfetivo !== "pago" && totalPago <= 0 && <button disabled={salvando} title="Excluir despesa sem pagamentos" onClick={excluir} className="text-muted hover:text-red-400">
             <Trash2 size={13} />
-          </button>
+          </button>}
         </div>
       </div>
       {lancandoBaixa && (

@@ -625,6 +625,7 @@ export default async function ClienteDetalhePage({
             dataCompetencia: c.dataCompetencia?.toISOString() || null,
             createdAt: c.createdAt.toISOString(),
             recorrenciaChave: c.recorrenciaChave,
+            categoria: c.categoria,
             vencimento: c.vencimento?.toISOString() || null,
             totalPago: c.pagamentos.reduce((s, p) => s + Number(p.valor), 0),
           }))}

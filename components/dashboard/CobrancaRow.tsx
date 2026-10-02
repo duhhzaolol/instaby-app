@@ -27,6 +27,7 @@ export type CobrancaRowData = {
   valor: number;
   status: string;
   tipo: string;
+  categoria?: string | null;
   vencimento: string | null;
   totalPago?: number;
   clienteId?: string;
@@ -147,7 +148,7 @@ export function CobrancaRow({
           <p className="text-xs text-muted">
             {cobranca.tipo === "recorrente" ? "Mensalidade" : "Única"}
             {competencia && ` · ${competencia.split("-").reverse().join("/")}`}
-            {cobranca.tipo === "recorrente" && ` · ${cobranca.recorrenciaChave ? "Automática" : "Manual"}`}
+            {cobranca.tipo === "recorrente" && ` · ${cobranca.recorrenciaChave ? "Automática" : cobranca.categoria?.trim().toLowerCase() === "mensalidade" ? "Recorrente anterior" : "Manual"}`}
             {cobranca.vencimento && ` · vence ${formatarDataFinanceira(cobranca.vencimento)}`}
             {totalPago > 0 && ` · recebido R$ ${dinheiro(totalPago)}`}
             {totalPago > 0 && saldo > 0 && statusEfetivo !== "cancelado" && `, saldo R$ ${dinheiro(saldo)}`}
@@ -178,9 +179,9 @@ export function CobrancaRow({
           <button onClick={() => setEditando(true)} className="text-muted hover:text-text">
             <Pencil size={13} />
           </button>
-          <button disabled={salvando} title={cobranca.recorrenciaChave ? "Cancelar mensalidade automática" : "Excluir cobrança sem pagamentos"} onClick={excluir} className="text-muted hover:text-red-400">
+          {statusEfetivo !== "pago" && totalPago <= 0 && <button disabled={salvando} title={cobranca.recorrenciaChave ? "Cancelar mensalidade automática" : "Excluir cobrança sem pagamentos"} onClick={excluir} className="text-muted hover:text-red-400">
             <Trash2 size={13} />
-          </button>
+          </button>}
         </div>
       </div>
       {lancandoBaixa && (

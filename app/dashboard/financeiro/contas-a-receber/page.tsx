@@ -344,6 +344,7 @@ export default async function ContasAReceberPage({
               createdAt: c.createdAt.toISOString(),
               competencia: mes,
               recorrenciaChave: c.recorrenciaChave,
+              categoria: c.categoria,
             };
             return (
               <CobrancaRow
