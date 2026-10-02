@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { ArrowLeft, TrendingDown, TrendingUp, AlertTriangle } from "lucide-react";
+import { inicioDiaFinanceiro, formatarDataFinanceira } from "@/lib/datasFinanceiro";
 import { prisma } from "@/lib/prisma";
-import { faixaPeriodo, PERIODOS_FINANCEIRO } from "@/lib/periodoFinanceiro";
+import { faixaPeriodo, PERIODOS_FINANCEIRO, dataCompetenciaDaCobranca } from "@/lib/periodoFinanceiro";
 
 function fmt(v: number) {
-  return v.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  return v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function pct(v: number) {
@@ -19,25 +20,24 @@ export default async function DrePage({
   const periodo = searchParams.periodo || "mes_atual";
   const { desde, ate } = faixaPeriodo(periodo, { desde: searchParams.desde, ate: searchParams.ate });
 
-  const [cobrancas, despesas] = await Promise.all([
-    prisma.cobranca.findMany({
-      where: {
-        status: { not: "cancelado" },
-        OR: [
-          { dataCompetencia: { gte: desde, lte: ate } },
-          { AND: [{ dataCompetencia: null }, { createdAt: { gte: desde, lte: ate } }] },
-        ],
-      },
-    }),
+  const inicioConsultaCivil = new Date(desde.getTime() - 3 * 60 * 60 * 1000);
+  const [cobrancasConsulta, despesasConsulta] = await Promise.all([
+    prisma.cobranca.findMany({ where: { status: { not: "cancelado" } } }),
     prisma.despesa.findMany({
-      where: { data: { gte: desde, lte: ate }, status: { not: "cancelado" } },
+      where: { data: { gte: inicioConsultaCivil, lte: ate }, status: { not: "cancelado" } },
     }),
   ]);
 
-  const receitaBruta = cobrancas.reduce((s, c) => s + Number(c.valor), 0);
+  const cobrancas = cobrancasConsulta.filter(c => {
+    const competencia = dataCompetenciaDaCobranca(c);
+    return competencia >= desde && competencia <= ate;
+  });
+  const despesas = despesasConsulta.filter(d => inicioDiaFinanceiro(d.data) >= desde && inicioDiaFinanceiro(d.data) <= ate);
+  const soma = (valores: number[]) => valores.reduce((total, valor) => total + Math.round(valor * 100), 0) / 100;
+  const receitaBruta = soma(cobrancas.map(c => Number(c.valor)));
 
   const somaPor = (cat: string) =>
-    despesas.filter((d) => d.categoriaFinanceira === cat).reduce((s, d) => s + Number(d.valor), 0);
+    soma(despesas.filter((d) => d.categoriaFinanceira === cat).map(d => Number(d.valor)));
 
   const impostos = somaPor("imposto");
   const custos = somaPor("custo");
@@ -82,8 +82,8 @@ export default async function DrePage({
         <div>
           <p className="text-lg font-medium text-text">DRE</p>
           <p className="text-sm text-muted">
-            Demonstrativo de Resultado — por competência, {new Date(desde).toLocaleDateString("pt-BR")} a{" "}
-            {new Date(ate).toLocaleDateString("pt-BR")}
+            Demonstrativo de Resultado — por competência, {formatarDataFinanceira(desde)} a{" "}
+            {formatarDataFinanceira(ate)}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -100,6 +100,8 @@ export default async function DrePage({
           ))}
         </div>
       </div>
+
+      <p className="mb-4 text-xs text-muted">A competência da receita usa o dia informado na cobrança. Quando ele não foi definido, usa o vencimento e, se também não houver vencimento, a criação. Os recebimentos e pagamentos efetivos ficam no Fluxo de Caixa.</p>
 
       {semClassificacao > 0 && (
         <Link
@@ -161,22 +163,21 @@ export default async function DrePage({
       {investimentos > 0 && (
         <div className="mt-5 rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-4">
           <p className="mb-3 text-xs text-cyan-200">
-            Investimentos/Ativos do período: <strong>R$ {fmt(investimentos)}</strong> — reduziram seu caixa, mas
-            não entram nessa DRE (não são despesa operacional). Veja quanto isso muda no caixa de verdade:
+            Investimentos/Ativos lançados no período: <strong>R$ {fmt(investimentos)}</strong>. Esses valores não entram no resultado operacional. Os pagamentos realizados aparecem no Fluxo de Caixa; este quadro usa a competência dos lançamentos.
           </p>
           <div className="flex flex-col gap-1 text-sm">
             <div className="flex items-center justify-between">
-              <span className="text-muted">Lucro operacional</span>
-              <span className="text-text">R$ {fmt(lucroOperacional)}</span>
+              <span className="text-muted">Lucro líquido por competência</span>
+              <span className="text-text">R$ {fmt(lucroLiquido)}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-muted">Investimentos realizados</span>
+              <span className="text-muted">Investimentos lançados</span>
               <span className="text-red-400">− R$ {fmt(investimentos)}</span>
             </div>
             <div className="flex items-center justify-between border-t border-cyan-500/20 pt-1.5 font-medium">
-              <span className="text-cyan-200">Geração de caixa após investimentos</span>
-              <span className={lucroOperacional - investimentos >= 0 ? "text-emerald-400" : "text-red-400"}>
-                R$ {fmt(lucroOperacional - investimentos)}
+              <span className="text-cyan-200">Resultado considerando investimentos</span>
+              <span className={lucroLiquido - investimentos >= 0 ? "text-emerald-400" : "text-red-400"}>
+                R$ {fmt(lucroLiquido - investimentos)}
               </span>
             </div>
           </div>

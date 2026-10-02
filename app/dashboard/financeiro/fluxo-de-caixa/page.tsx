@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowDownCircle, ArrowUpCircle, Wallet } from "lucide-react";
+import { movimentosFinanceiros, saldoEmPeriodo } from "@/lib/movimentosFinanceiros";
+import { diaFinanceiro, formatarDataFinanceira } from "@/lib/datasFinanceiro";
 import { prisma } from "@/lib/prisma";
 import { faixaPeriodo, PERIODOS_FINANCEIRO } from "@/lib/periodoFinanceiro";
 import { AjudaContextual } from "@/components/ui/AjudaContextual";
 
 function fmt(v: number) {
-  return v.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  return v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 export default async function FluxoDeCaixaPage({
@@ -16,46 +18,15 @@ export default async function FluxoDeCaixaPage({
   const periodo = searchParams.periodo || "mes_atual";
   const { desde, ate } = faixaPeriodo(periodo, { desde: searchParams.desde, ate: searchParams.ate });
 
-  const [entradasPeriodo, saidasPeriodo, entradasAntes, saidasAntes] = await Promise.all([
-    prisma.cobranca.findMany({
-      where: { status: "pago", createdAt: { gte: desde, lte: ate } },
-      include: { cliente: true },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.despesa.findMany({
-      where: { status: "pago", data: { gte: desde, lte: ate } },
-      include: { cliente: true },
-      orderBy: { data: "desc" },
-    }),
-    // Tudo que aconteceu antes do início do período — pra calcular o saldo inicial
-    prisma.cobranca.aggregate({ where: { status: "pago", createdAt: { lt: desde } }, _sum: { valor: true } }),
-    prisma.despesa.aggregate({ where: { status: "pago", data: { lt: desde } }, _sum: { valor: true } }),
+  const [cobrancas, despesas] = await Promise.all([
+    prisma.cobranca.findMany({ include: { cliente: true, pagamentos: true } }),
+    prisma.despesa.findMany({ include: { cliente: true, pagamentos: true } }),
   ]);
-
-  const saldoInicial = Number(entradasAntes._sum.valor || 0) - Number(saidasAntes._sum.valor || 0);
-  const totalEntradas = entradasPeriodo.reduce((s, c) => s + Number(c.valor), 0);
-  const totalSaidas = saidasPeriodo.reduce((s, d) => s + Number(d.valor), 0);
-  const saldoFinal = saldoInicial + totalEntradas - totalSaidas;
-
-  // Junta entradas e saídas numa linha do tempo só, mais recente primeiro
-  type Movimento = { data: Date; tipo: "entrada" | "saida"; descricao: string; cliente: string | null; valor: number; categoria?: string | null };
-  const movimentos: Movimento[] = [
-    ...entradasPeriodo.map((c) => ({
-      data: c.createdAt,
-      tipo: "entrada" as const,
-      descricao: c.categoria || "Recebimento",
-      cliente: c.cliente.nome,
-      valor: Number(c.valor),
-    })),
-    ...saidasPeriodo.map((d) => ({
-      data: d.data,
-      tipo: "saida" as const,
-      descricao: d.descricao,
-      cliente: d.cliente?.nome || null,
-      valor: Number(d.valor),
-      categoria: d.categoriaFinanceira,
-    })),
-  ].sort((a, b) => b.data.getTime() - a.data.getTime());
+  const todosMovimentos = movimentosFinanceiros(cobrancas, despesas);
+  const { saldoInicial, totalEntradas, totalSaidas, saldoFinal } = saldoEmPeriodo(todosMovimentos, desde, ate);
+  const movimentos = todosMovimentos.filter(m => m.data >= desde && m.data <= ate)
+    .map(m => ({ ...m, cliente: m.clienteNome || null, categoria: m.categoriaFinanceira }))
+    .sort((a, b) => b.data.getTime() - a.data.getTime());
 
   return (
     <div>
@@ -74,8 +45,8 @@ export default async function FluxoDeCaixaPage({
             />
           </p>
           <p className="text-sm text-muted">
-            Entradas e saídas efetivamente pagas/recebidas, {new Date(desde).toLocaleDateString("pt-BR")} a{" "}
-            {new Date(ate).toLocaleDateString("pt-BR")}
+            Entradas e saídas efetivamente pagas/recebidas, {formatarDataFinanceira(desde)} a{" "}
+            {formatarDataFinanceira(ate)}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -137,7 +108,7 @@ export default async function FluxoDeCaixaPage({
                 <div>
                   <p className="text-sm text-text">{m.descricao}</p>
                   <p className="text-xs text-muted">
-                    {m.data.toLocaleDateString("pt-BR")}
+                    {formatarDataFinanceira(diaFinanceiro(m.data, false))}
                     {m.cliente ? ` · ${m.cliente}` : ""}
                     {m.tipo === "saida" && m.categoria === "investimento" ? " · investimento" : ""}
                   </p>

@@ -6,6 +6,8 @@ import { Plus, X, Pencil, Check, Gem } from "lucide-react";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { Card } from "@/components/ui/Card";
+import { chaveDiaSaoPaulo } from "@/lib/dataHora";
+import { formatarDataFinanceira } from "@/lib/datasFinanceiro";
 
 type Bem = {
   id: string;
@@ -27,7 +29,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 function fmt(v: number) {
-  return v.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  return v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function NovoBemForm({ onSalvo }: { onSalvo: () => void }) {
@@ -37,19 +39,20 @@ function NovoBemForm({ onSalvo }: { onSalvo: () => void }) {
   const [valorAquisicao, setValorAquisicao] = useState(0);
   // Data local do navegador (não UTC) — depois das 21h (horário de Brasília),
   // toISOString() já cai no dia seguinte e o formulário abria com a data errada.
-  const [data, setData] = useState(new Date().toLocaleDateString("en-CA"));
+  const [data, setData] = useState(chaveDiaSaoPaulo(new Date()));
   const [enviando, setEnviando] = useState(false);
 
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
     if (!nome.trim() || valorAquisicao <= 0) return;
     setEnviando(true);
-    await fetch("/api/patrimonio", {
+    const resposta = await fetch("/api/patrimonio", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ nome, categoria, valorAquisicao, data }),
     });
     setEnviando(false);
+    if (!resposta.ok) { const body = await resposta.json().catch(() => ({})); alert(body.erro || "Não foi possível salvar o bem."); return; }
     onSalvo();
     router.refresh();
   }
@@ -106,12 +109,13 @@ function EditarBemForm({ bem, index, onFechar }: { bem: Bem; index: number; onFe
 
   async function salvar() {
     setEnviando(true);
-    await fetch(`/api/patrimonio/${bem.id}`, {
+    const resposta = await fetch(`/api/patrimonio/${bem.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ valorAtual, status }),
     });
     setEnviando(false);
+    if (!resposta.ok) { const body = await resposta.json().catch(() => ({})); alert(body.erro || "Não foi possível salvar a alteração."); return; }
     onFechar();
     router.refresh();
   }
@@ -211,7 +215,7 @@ export default function PatrimonioClient({
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-text">{b.nome}</p>
                   <p className="text-xs text-muted">
-                    {b.categoria || "Sem categoria"} · adquirido em {new Date(b.data).toLocaleDateString("pt-BR")}
+                    {b.categoria || "Sem categoria"} · adquirido em {formatarDataFinanceira(b.data)}
                     {b.origem ? ` · via despesa "${b.origem}"` : ""}
                   </p>
                 </div>

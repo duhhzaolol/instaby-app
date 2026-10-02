@@ -1,3 +1,5 @@
+import { diaFinanceiro } from "@/lib/datasFinanceiro";
+
 export type StatusFinanceiroEfetivo = "pendente" | "parcial" | "pago" | "atrasado" | "cancelado";
 
 export function calcularStatusEfetivo({
@@ -10,14 +12,15 @@ export function calcularStatusEfetivo({
   valor: number;
   totalPago: number;
   vencimento: Date | null;
-}): StatusFinanceiroEfetivo {
+}, hoje = new Date()): StatusFinanceiroEfetivo {
   if (status === "cancelado") return "cancelado";
   if (status === "pago" && totalPago <= 0) return "pago"; // marcado como pago sem baixa parcial lançada (jeito antigo)
 
   const saldo = Math.max(0, valor - totalPago);
   if (saldo <= 0) return "pago";
 
-  const vencido = vencimento ? vencimento.getTime() < Date.now() : false;
+  const diaVencimento = vencimento ? diaFinanceiro(vencimento) : "";
+  const vencido = !!diaVencimento && diaVencimento < diaFinanceiro(hoje, false);
   if (vencido) return "atrasado";
   if (totalPago > 0) return "parcial";
   return "pendente";

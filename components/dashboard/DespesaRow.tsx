@@ -9,7 +9,10 @@ import { DatePicker } from "@/components/ui/DatePicker";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { CATEGORIAS_FINANCEIRAS, STATUS_DESPESA, visualDaCategoriaFinanceira } from "@/lib/categoriasFinanceiras";
+import { diaFinanceiro, formatarDataFinanceira } from "@/lib/datasFinanceiro";
 import { calcularStatusEfetivo, LABEL_STATUS_EFETIVO, COR_STATUS_EFETIVO } from "@/lib/statusFinanceiro";
+
+function dinheiro(valor: number) { return valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 
 export type DespesaRowData = {
   id: string;
@@ -23,6 +26,7 @@ export type DespesaRowData = {
   status?: string | null;
   vencimento?: string | null;
   totalPago?: number;
+  dataPagamento?: string | null;
 };
 
 const STATUS_EDITAVEL = STATUS_DESPESA.filter((s) => s.valor !== "atrasado");
@@ -34,11 +38,12 @@ export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index:
   const [valorBaixa, setValorBaixa] = useState(0);
   const [descricao, setDescricao] = useState(despesa.descricao);
   const [valor, setValor] = useState(despesa.valor);
-  const [data, setData] = useState(despesa.data.slice(0, 10));
+  const [data, setData] = useState(diaFinanceiro(despesa.data));
   const [categoriaFinanceira, setCategoriaFinanceira] = useState(despesa.categoriaFinanceira || "");
   const [categoria, setCategoria] = useState(despesa.categoria || "");
   const [status, setStatus] = useState(despesa.status || "pago");
-  const [vencimento, setVencimento] = useState(despesa.vencimento?.slice(0, 10) || "");
+  const [vencimento, setVencimento] = useState(despesa.vencimento ? diaFinanceiro(despesa.vencimento) : "");
+  const [dataPagamento, setDataPagamento] = useState(diaFinanceiro(new Date(), false));
   const [salvando, setSalvando] = useState(false);
 
   const infoCategoria = visualDaCategoriaFinanceira(despesa.categoriaFinanceira);
@@ -54,55 +59,35 @@ export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index:
   });
   const corStatus = COR_STATUS_EFETIVO[statusEfetivo];
 
-  async function salvar() {
+  async function enviar(dados: Record<string, unknown>, caminho = `/api/despesas/${despesa.id}`, method = "PATCH") {
     setSalvando(true);
-    const res = await fetch(`/api/despesas/${despesa.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        descricao,
-        valor,
-        data,
-        categoriaFinanceira: categoriaFinanceira || null,
-        categoria: categoria || null,
-        status,
-        vencimento: status === "pendente" ? vencimento || null : null,
-        dataPagamento: status === "pago" ? data : null,
-      }),
-    });
-    setSalvando(false);
-    if (!res.ok) {
-      alert("Não consegui salvar essa despesa. Tenta de novo.");
-      return;
-    }
-    setEditando(false);
-    router.refresh();
+    try {
+      const res = await fetch(caminho, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(dados) });
+      if (!res.ok) { const resposta = await res.json().catch(() => null); alert(resposta?.erro || "Não consegui salvar. O lançamento foi mantido."); return false; }
+      router.refresh(); return true;
+    } catch { alert("Não consegui salvar. Confira a conexão e tente novamente."); return false; }
+    finally { setSalvando(false); }
   }
+
+  async function salvar() {
+    if (await enviar({ descricao, valor, data, categoriaFinanceira: categoriaFinanceira || null, categoria: categoria || null, status,
+      vencimento: vencimento || null,
+      ...(status === "pago" && despesa.status !== "pago" && { dataPagamento: dataPagamento || null }),
+    })) setEditando(false);
+  }
+
+  async function marcarPago() { await enviar({ status: "pago" }); }
 
   async function lancarBaixa() {
     if (valorBaixa <= 0) return;
-    const res = await fetch(`/api/despesas/${despesa.id}/pagamentos`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ valor: valorBaixa }),
-    });
-    if (!res.ok) {
-      alert("Não consegui lançar essa baixa. Tenta de novo.");
-      return;
+    if (await enviar({ valor: valorBaixa }, `/api/despesas/${despesa.id}/pagamentos`, "POST")) {
+      setValorBaixa(0); setLancandoBaixa(false);
     }
-    setValorBaixa(0);
-    setLancandoBaixa(false);
-    router.refresh();
   }
 
   async function excluir() {
-    if (!confirm("Excluir essa despesa?")) return;
-    const res = await fetch(`/api/despesas/${despesa.id}`, { method: "DELETE" });
-    if (!res.ok) {
-      alert("Não consegui excluir essa despesa. Tenta de novo.");
-      return;
-    }
-    router.refresh();
+    if (!confirm("Excluir essa despesa? Lançamentos com pagamentos registrados serão preservados.")) return;
+    await enviar({}, `/api/despesas/${despesa.id}`, "DELETE");
   }
 
   if (editando) {
@@ -165,6 +150,10 @@ export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index:
             <DatePicker value={data} onChange={setData} />
           </div>
         </div>
+        {status === "pago" && despesa.status !== "pago" && <div className="mb-3">
+          <label className="mb-1 block text-[10px] text-muted">Data do pagamento do saldo</label>
+          <DatePicker value={dataPagamento} onChange={setDataPagamento} placeholder="Hoje se não informado" limpavel />
+        </div>}
         <div className="flex gap-2">
           <Button size="sm" onClick={salvar} disabled={salvando} className="flex-1">
             {salvando ? "Salvando..." : "Salvar"}
@@ -191,7 +180,7 @@ export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index:
           </p>
           <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
             {despesa.cliente && `${despesa.cliente} · `}
-            {new Date(despesa.data).toLocaleDateString("pt-BR")}
+            {formatarDataFinanceira(despesa.data)}
             {despesa.categoria ? (
               <span
                 className="rounded-full px-1.5 py-0.5 text-[10px]"
@@ -208,23 +197,25 @@ export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index:
                 style={{ backgroundColor: `${corStatus}1A`, color: corStatus }}
               >
                 {LABEL_STATUS_EFETIVO[statusEfetivo]}
-                {despesa.vencimento && ` · vence ${new Date(despesa.vencimento).toLocaleDateString("pt-BR")}`}
-                {totalPago > 0 && saldo > 0 && ` · pago R$ ${totalPago.toFixed(0)}, saldo R$ ${saldo.toFixed(0)}`}
+                {despesa.vencimento && ` · vence ${formatarDataFinanceira(despesa.vencimento)}`}
+                {totalPago > 0 && ` · pago R$ ${dinheiro(totalPago)}`}
+                {totalPago > 0 && saldo > 0 && statusEfetivo !== "cancelado" && `, saldo R$ ${dinheiro(saldo)}`}
               </span>
             )}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-3">
-          <span className="text-sm text-text">R$ {despesa.valor.toFixed(0)}</span>
+          <span className="text-sm text-text">R$ {dinheiro(despesa.valor)}</span>
           {statusEfetivo !== "pago" && statusEfetivo !== "cancelado" && (
             <button onClick={() => setLancandoBaixa((v) => !v)} className="flex items-center gap-1 text-xs font-medium text-accent hover:underline">
               <Plus size={11} /> Baixa
             </button>
           )}
+          {statusEfetivo !== "pago" && statusEfetivo !== "cancelado" && <button disabled={salvando} title="Pagar o saldo restante hoje" onClick={marcarPago} className="text-xs font-medium text-accent hover:underline">Tudo pago</button>}
           <button onClick={() => setEditando(true)} className="text-muted hover:text-text">
             <Pencil size={13} />
           </button>
-          <button onClick={excluir} className="text-muted hover:text-red-400">
+          <button disabled={salvando} onClick={excluir} className="text-muted hover:text-red-400">
             <Trash2 size={13} />
           </button>
         </div>
@@ -232,7 +223,7 @@ export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index:
       {lancandoBaixa && (
         <div className="flex items-center gap-2 border-t border-border p-3">
           <CurrencyInput value={valorBaixa} onChange={setValorBaixa} className="flex-1" />
-          <Button size="sm" onClick={lancarBaixa} disabled={valorBaixa <= 0}>
+          <Button size="sm" onClick={lancarBaixa} disabled={salvando || valorBaixa <= 0 || valorBaixa > saldo}>
             Lançar baixa
           </Button>
         </div>

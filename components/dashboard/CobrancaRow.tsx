@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/Badge";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { Button } from "@/components/ui/Button";
+import { diaFinanceiro, formatarDataFinanceira, mesFinanceiro } from "@/lib/datasFinanceiro";
 import { calcularStatusEfetivo, LABEL_STATUS_EFETIVO } from "@/lib/statusFinanceiro";
 
 const toneEfetivo: Record<string, "green" | "red" | "yellow" | "gray" | "blue"> = {
@@ -19,6 +20,8 @@ const toneEfetivo: Record<string, "green" | "red" | "yellow" | "gray" | "blue"> 
   cancelado: "gray",
 };
 
+function dinheiro(valor: number) { return valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
 export type CobrancaRowData = {
   id: string;
   valor: number;
@@ -26,16 +29,23 @@ export type CobrancaRowData = {
   tipo: string;
   vencimento: string | null;
   totalPago?: number;
+  clienteId?: string;
+  dataCompetencia?: string | null;
+  createdAt?: string;
+  competencia?: string;
+  recorrenciaChave?: string | null;
 };
 
 export function CobrancaRow({
   cobranca,
   index,
   clienteNome,
+  clienteId = cobranca.clienteId,
 }: {
   cobranca: CobrancaRowData;
   index: number;
   clienteNome?: string;
+  clienteId?: string;
 }) {
   const router = useRouter();
   const [editando, setEditando] = useState(false);
@@ -44,7 +54,7 @@ export function CobrancaRow({
   const [valor, setValor] = useState(cobranca.valor);
   const [tipo, setTipo] = useState(cobranca.tipo);
   const [status, setStatus] = useState(cobranca.status);
-  const [vencimento, setVencimento] = useState(cobranca.vencimento?.slice(0, 10) || "");
+  const [vencimento, setVencimento] = useState(cobranca.vencimento ? diaFinanceiro(cobranca.vencimento) : "");
   const [salvando, setSalvando] = useState(false);
 
   const totalPago = cobranca.totalPago || 0;
@@ -56,48 +66,37 @@ export function CobrancaRow({
     vencimento: cobranca.vencimento ? new Date(cobranca.vencimento) : null,
   });
 
-  async function salvar() {
+  async function enviar(dados: Record<string, unknown>, caminho = `/api/cobrancas/${cobranca.id}`, method = "PATCH") {
     setSalvando(true);
-    await fetch(`/api/cobrancas/${cobranca.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ valor, tipo, status, vencimento: vencimento || null }),
-    });
-    setSalvando(false);
-    setEditando(false);
-    router.refresh();
+    try {
+      const res = await fetch(caminho, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(dados) });
+      if (!res.ok) { const resposta = await res.json().catch(() => null); alert(resposta?.erro || "Não consegui salvar. Seu lançamento foi mantido."); return false; }
+      router.refresh(); return true;
+    } catch { alert("Não consegui salvar. Confira a conexão e tente novamente."); return false; }
+    finally { setSalvando(false); }
+  }
+
+  async function salvar() {
+    if (await enviar({ valor, tipo, status, vencimento: vencimento || null })) setEditando(false);
   }
 
   async function marcarPago() {
-    await fetch(`/api/cobrancas/${cobranca.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "pago" }),
-    });
-    router.refresh();
+    await enviar({ status: "pago" });
   }
 
   async function lancarBaixa() {
     if (valorBaixa <= 0) return;
-    const res = await fetch(`/api/cobrancas/${cobranca.id}/pagamentos`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ valor: valorBaixa }),
-    });
-    if (!res.ok) {
-      alert("Não consegui lançar essa baixa. Tenta de novo.");
-      return;
+    if (await enviar({ valor: valorBaixa }, `/api/cobrancas/${cobranca.id}/pagamentos`, "POST")) {
+      setValorBaixa(0); setLancandoBaixa(false);
     }
-    setValorBaixa(0);
-    setLancandoBaixa(false);
-    router.refresh();
   }
 
   async function excluir() {
-    if (!confirm("Excluir essa cobrança?")) return;
-    await fetch(`/api/cobrancas/${cobranca.id}`, { method: "DELETE" });
-    router.refresh();
+    if (!confirm(cobranca.recorrenciaChave ? "Cancelar essa mensalidade automática? O histórico será preservado." : "Excluir essa cobrança? Lançamentos com pagamentos registrados serão preservados.")) return;
+    await enviar({}, `/api/cobrancas/${cobranca.id}`, "DELETE");
   }
+
+  const competencia = cobranca.competencia || (cobranca.dataCompetencia || cobranca.vencimento || cobranca.createdAt ? mesFinanceiro(cobranca.dataCompetencia || cobranca.vencimento || cobranca.createdAt!) : "");
 
   if (editando) {
     return (
@@ -111,7 +110,7 @@ export function CobrancaRow({
           onChange={(e) => setTipo(e.target.value)}
           className="mb-2 h-10 w-full rounded-xl border border-border bg-card/60 px-3 text-sm text-text"
         >
-          <option value="recorrente">Recorrente</option>
+          <option value="recorrente">Mensalidade deste mês</option>
           <option value="unica">Única</option>
         </select>
         <select
@@ -143,12 +142,15 @@ export function CobrancaRow({
       <div className="flex items-center justify-between px-4 py-3">
         <div>
           <p className="text-sm text-text">
-            {clienteNome && `${clienteNome} · `}R$ {cobranca.valor.toFixed(0)}
+            {clienteNome && <>{clienteId ? <Link href={`/dashboard/clientes/${clienteId}?aba=financeiro`} className="hover:underline">{clienteNome}</Link> : clienteNome} · </>}R$ {dinheiro(cobranca.valor)}
           </p>
           <p className="text-xs text-muted">
-            {cobranca.tipo === "recorrente" ? "Recorrente" : "Única"}
-            {cobranca.vencimento && ` · vence ${new Date(cobranca.vencimento).toLocaleDateString("pt-BR")}`}
-            {totalPago > 0 && saldo > 0 && ` · recebido R$ ${totalPago.toFixed(0)}, saldo R$ ${saldo.toFixed(0)}`}
+            {cobranca.tipo === "recorrente" ? "Mensalidade" : "Única"}
+            {competencia && ` · ${competencia.split("-").reverse().join("/")}`}
+            {cobranca.tipo === "recorrente" && ` · ${cobranca.recorrenciaChave ? "Automática" : "Manual"}`}
+            {cobranca.vencimento && ` · vence ${formatarDataFinanceira(cobranca.vencimento)}`}
+            {totalPago > 0 && ` · recebido R$ ${dinheiro(totalPago)}`}
+            {totalPago > 0 && saldo > 0 && statusEfetivo !== "cancelado" && `, saldo R$ ${dinheiro(saldo)}`}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -168,15 +170,15 @@ export function CobrancaRow({
               <Plus size={11} /> Baixa
             </button>
           )}
-          {statusEfetivo !== "pago" && (
-            <button onClick={marcarPago} className="text-xs font-medium text-accent hover:underline">
+          {statusEfetivo !== "pago" && statusEfetivo !== "cancelado" && (
+            <button disabled={salvando} title="Receber o saldo restante hoje" onClick={marcarPago} className="text-xs font-medium text-accent hover:underline">
               Tudo pago
             </button>
           )}
           <button onClick={() => setEditando(true)} className="text-muted hover:text-text">
             <Pencil size={13} />
           </button>
-          <button onClick={excluir} className="text-muted hover:text-red-400">
+          <button disabled={salvando} title={cobranca.recorrenciaChave ? "Cancelar mensalidade automática" : "Excluir cobrança sem pagamentos"} onClick={excluir} className="text-muted hover:text-red-400">
             <Trash2 size={13} />
           </button>
         </div>
@@ -184,7 +186,7 @@ export function CobrancaRow({
       {lancandoBaixa && (
         <div className="flex items-center gap-2 border-t border-border p-3">
           <CurrencyInput value={valorBaixa} onChange={setValorBaixa} className="flex-1" />
-          <Button size="sm" onClick={lancarBaixa} disabled={valorBaixa <= 0}>
+          <Button size="sm" onClick={lancarBaixa} disabled={salvando || valorBaixa <= 0 || valorBaixa > saldo}>
             Lançar baixa
           </Button>
         </div>

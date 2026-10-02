@@ -6,6 +6,7 @@ import { PainelDetalheTarefaHost } from "@/components/dashboard/PainelDetalheTar
 import { garantirRecorrentesDoMes } from "@/lib/garantirRecorrentes";
 import { getUsuarioAtual, permissoesDe, clienteIdsPermitidos } from "@/lib/permissoes";
 import { prisma } from "@/lib/prisma";
+import { calcularStatusEfetivo } from "@/lib/statusFinanceiro";
 import { manrope, jetbrainsMono } from "@/lib/fonts";
 
 export default async function DashboardLayout({
@@ -13,11 +14,6 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Garante despesas e mensalidades recorrentes do mês antes de renderizar
-  // qualquer página do painel (evita cobrança/despesa "sumida" dependendo
-  // de qual página é aberta primeiro).
-  await garantirRecorrentesDoMes();
-
   // Trava aqui em cima protege TODA a árvore de /dashboard de uma vez: sem isso,
   // alguém com um cookie de sessão ainda válido mas desativado nas Configurações
   // (usuario.ativo=false) — o middleware só confere se o cookie existe, não se a
@@ -27,6 +23,9 @@ export default async function DashboardLayout({
   // oposto do que devia acontecer (auditoria v147, achado revisando o resto).
   const usuarioAtual = await getUsuarioAtual();
   if (!usuarioAtual) redirect("/login");
+
+  // A compilação e visitas sem sessão não podem lançar valores no banco.
+  await garantirRecorrentesDoMes();
 
   const nome = usuarioAtual.nome;
   const primeiroNome = nome.split(" ")[0];
@@ -50,7 +49,7 @@ export default async function DashboardLayout({
     }),
     prisma.cliente.count({ where: { status: "ativo", ...filtroClienteId } }),
     pode.verFinanceiro
-      ? prisma.cobranca.count({ where: { status: "atrasado", ...filtroClienteId } })
+      ? prisma.cobranca.findMany({ where: { status: { notIn: ["pago", "cancelado"] }, ...(idsPermitidos ? { clienteId: { in: idsPermitidos } } : {}) }, include: { pagamentos: true } }).then(cobrancas => cobrancas.filter(c => calcularStatusEfetivo({ status: c.status, valor: Number(c.valor), totalPago: c.pagamentos.reduce((s, p) => s + Number(p.valor), 0), vencimento: c.vencimento }) === "atrasado").length)
       : Promise.resolve(0),
     prisma.cliente.findMany({
       where: { status: { not: "inativo" }, ...filtroClienteId },

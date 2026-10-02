@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { sincronizarMensalidadeCliente } from "@/lib/mensalidades";
 import { exigirPermissaoApi } from "@/lib/permissoes";
 
 // Etapa 3 (v157) — antes dessas duas rotas não tinham NENHUMA checagem de
@@ -23,6 +24,7 @@ export async function PATCH(
   if (!existente) return NextResponse.json({ erro: "Não encontrado" }, { status: 404 });
 
   const body = await request.json();
+  if ((body.valor !== undefined && (!Number.isFinite(Number(body.valor)) || Number(body.valor) < 0)) || (body.quantidade !== undefined && (!Number.isInteger(body.quantidade) || body.quantidade < 1))) return NextResponse.json({ erro: "Valor ou quantidade inválidos." }, { status: 400 });
 
   // Histórico (Etapa 3 v157) — uma linha por campo que realmente mudou, mesmo
   // padrão de HistoricoTarefa em PATCH /api/tarefas/[id]: calculado ANTES do
@@ -56,6 +58,7 @@ export async function PATCH(
     });
   }
 
+  await sincronizarMensalidadeCliente(existente.clienteId, undefined, true);
   return NextResponse.json(contratado);
 }
 
@@ -83,5 +86,6 @@ export async function DELETE(
   }
   await prisma.servicoContratado.update({ where: { id: params.id }, data: { ativo: false } });
 
+  await sincronizarMensalidadeCliente(existente.clienteId, undefined, true);
   return NextResponse.json({ ok: true });
 }

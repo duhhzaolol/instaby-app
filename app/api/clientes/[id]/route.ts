@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUsuarioAtual, permissoesDe, podeVerCliente } from "@/lib/permissoes";
+import { comTravaMensalidade, sincronizarMensalidadeCliente } from "@/lib/mensalidades";
+import { dataIsoValida, dataIsoParaDate } from "@/lib/midiaRevisao";
 
 export async function GET(
   request: NextRequest,
@@ -45,15 +47,40 @@ export async function PATCH(
     "valorRenovacao",
     "mensalidade",
     "proximoVencimento",
+    "cobrancaRecorrenteAtiva", "cobrancaRecorrenteInicio", "cobrancaDiaVencimento",
   ];
   if (!pode.verFinanceiro && camposFinanceiros.some((c) => body[c] !== undefined)) {
     return NextResponse.json({ erro: "Não autorizado" }, { status: 403 });
+  }
+  if (Number(body.mensalidade) > 0 && !pode.gerenciarFinanceiro) return NextResponse.json({ erro: "Não autorizado" }, { status: 403 });
+  const camposRecorrencia = ["cobrancaRecorrenteAtiva", "cobrancaRecorrenteInicio", "cobrancaDiaVencimento"];
+  if (!pode.gerenciarFinanceiro && camposRecorrencia.some(c => body[c] !== undefined)) {
+    return NextResponse.json({ erro: "Não autorizado" }, { status: 403 });
+  }
+  if ((body.cobrancaRecorrenteAtiva !== undefined && typeof body.cobrancaRecorrenteAtiva !== "boolean") ||
+      (body.cobrancaRecorrenteInicio !== undefined && body.cobrancaRecorrenteInicio !== null && !/^(19|20|21)\d{2}-(0[1-9]|1[0-2])$/.test(body.cobrancaRecorrenteInicio)) ||
+      (body.cobrancaDiaVencimento !== undefined && (!Number.isInteger(body.cobrancaDiaVencimento) || body.cobrancaDiaVencimento < 1 || body.cobrancaDiaVencimento > 31))) {
+    return NextResponse.json({ erro: "Confira o mês inicial e o dia de vencimento." }, { status: 400 });
+  }
+  for (const campo of ["descontoMensal", "acrescimoMensal", "mensalidade"]) {
+    if (body[campo] !== undefined && (!Number.isFinite(Number(body[campo])) || Number(body[campo]) < 0)) {
+      return NextResponse.json({ erro: "Informe um valor válido." }, { status: 400 });
+    }
+  }
+  if (body.proximoVencimento && !dataIsoValida(body.proximoVencimento)) {
+    return NextResponse.json({ erro: "Informe um vencimento válido." }, { status: 400 });
   }
   if (body.rotinasPausadas !== undefined && !pode.verFinanceiro && !pode.acessoClienteCompleto) {
     return NextResponse.json({ erro: "Não autorizado" }, { status: 403 });
   }
 
-  const cliente = await prisma.cliente.update({
+  const cliente = await comTravaMensalidade(params.id, async tx => {
+    const anterior = await tx.cliente.findUnique({ where: { id: params.id } });
+    if (!anterior) return null;
+    const ativa = body.cobrancaRecorrenteAtiva ?? anterior.cobrancaRecorrenteAtiva;
+    const inicio = body.cobrancaRecorrenteInicio !== undefined ? body.cobrancaRecorrenteInicio : anterior.cobrancaRecorrenteInicio;
+    if (ativa && !inicio) throw new Error("MES_INICIAL_OBRIGATORIO");
+    const atualizado = await tx.cliente.update({
     where: { id: params.id },
     data: {
       ...(body.nome !== undefined && { nome: body.nome }),
@@ -78,21 +105,32 @@ export async function PATCH(
       ...(body.exibirLogoPublico !== undefined && { exibirLogoPublico: body.exibirLogoPublico }),
       ...(body.cor !== undefined && { cor: body.cor }),
       ...(body.rotinasPausadas !== undefined && { rotinasPausadas: !!body.rotinasPausadas }),
+      ...(body.cobrancaRecorrenteAtiva !== undefined && { cobrancaRecorrenteAtiva: body.cobrancaRecorrenteAtiva }),
+      ...(body.cobrancaRecorrenteInicio !== undefined && { cobrancaRecorrenteInicio: body.cobrancaRecorrenteInicio }),
+      ...(body.cobrancaDiaVencimento !== undefined && { cobrancaDiaVencimento: body.cobrancaDiaVencimento }),
       ...(body.redesGerenciadas !== undefined && { redesGerenciadas: body.redesGerenciadas }),
     },
-  });
-
-  if (body.status === "ativo" && body.mensalidade && body.proximoVencimento) {
-    await prisma.cobranca.create({
+    });
+  if (!ativa && anterior.status !== "ativo" && body.status === "ativo" && Number(body.mensalidade) > 0 && body.proximoVencimento) {
+    await tx.cobranca.create({
       data: {
-        clienteId: cliente.id,
+        clienteId: atualizado.id,
         valor: parseFloat(body.mensalidade),
-        tipo: "recorrente",
+        tipo: "unica",
+        categoria: "Primeira cobrança",
         status: "pendente",
-        vencimento: new Date(body.proximoVencimento),
+        vencimento: dataIsoParaDate(body.proximoVencimento),
       },
     });
   }
+    return atualizado;
+  }).catch(error => {
+    if (error instanceof Error && error.message === "MES_INICIAL_OBRIGATORIO") return "MES_INICIAL_OBRIGATORIO" as const;
+    throw error;
+  });
+  if (cliente === "MES_INICIAL_OBRIGATORIO") return NextResponse.json({ erro: "Escolha o mês inicial da recorrência." }, { status: 400 });
+  if (!cliente) return NextResponse.json({ erro: "Cliente não encontrado" }, { status: 404 });
+  if (camposFinanceiros.some(c => body[c] !== undefined) || body.status !== undefined) await sincronizarMensalidadeCliente(cliente.id, undefined, true);
 
   return NextResponse.json(cliente);
 }

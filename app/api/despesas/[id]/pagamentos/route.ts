@@ -1,38 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { exigirPermissaoApi } from "@/lib/permissoes";
+import { centavosFinanceiros, dataFinanceira, dataFinanceiraValida } from "@/lib/datasFinanceiro";
+import { ErroFinanceiro, registrarPagamentoFinanceiro } from "@/lib/lancamentosFinanceiros";
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   const { erro } = await exigirPermissaoApi("gerenciarFinanceiro");
   if (erro) return erro;
-
-  const body = await request.json();
-  const valor = Number(body.valor);
-  if (!valor || valor <= 0) {
-    return NextResponse.json({ erro: "Informe um valor válido" }, { status: 400 });
+  const body = await request.json().catch(() => null);
+  if (!body || typeof body !== "object" || Array.isArray(body)) return NextResponse.json({ erro: "Dados inválidos." }, { status: 400 });
+  const centavos = centavosFinanceiros(body.valor, true);
+  if (centavos === null) return NextResponse.json({ erro: "Informe um valor positivo e com até duas casas decimais." }, { status: 400 });
+  if (!dataFinanceiraValida(body.data)) return NextResponse.json({ erro: "Data inválida." }, { status: 400 });
+  try {
+    const pagamento = await registrarPagamentoFinanceiro("despesa", params.id, centavos / 100, dataFinanceira(body.data) || new Date());
+    return NextResponse.json(pagamento, { status: 201 });
+  } catch (erro) {
+    return NextResponse.json({ erro: erro instanceof ErroFinanceiro ? erro.message : "Não consegui registrar o pagamento. Tente novamente." }, { status: erro instanceof ErroFinanceiro ? erro.status : 500 });
   }
-
-  const pagamento = await prisma.pagamento.create({
-    data: {
-      despesaId: params.id,
-      valor,
-      data: body.data ? new Date(body.data) : new Date(),
-    },
-  });
-
-  const despesa = await prisma.despesa.findUnique({
-    where: { id: params.id },
-    include: { pagamentos: true },
-  });
-  if (despesa) {
-    const totalPago = despesa.pagamentos.reduce((s, p) => s + Number(p.valor), 0);
-    if (totalPago >= Number(despesa.valor) && despesa.status !== "pago") {
-      await prisma.despesa.update({ where: { id: params.id }, data: { status: "pago" } });
-    }
-  }
-
-  return NextResponse.json(pagamento, { status: 201 });
 }

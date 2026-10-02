@@ -1,11 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import { montarCicloDeTarefas } from "@/lib/templatesTarefas";
+import { sincronizarMensalidadeCliente, vencimentoMensal } from "@/lib/mensalidades";
+import { chaveDiaSaoPaulo } from "@/lib/dataHora";
+import { diaFinanceiro } from "@/lib/datasFinanceiro";
 
 // Evita rodar a checagem de recorrentes em toda navegação (isso rodava só na página
 // Financeiro antes, e ficou pesado quando movido pro layout do dashboard). Com esse
 // cache em memória, a checagem de verdade só roda de novo a cada 10 minutos por
 // instância do servidor — nas outras requisições, é só um "if" e segue o jogo.
 let ultimaChecagem = 0;
+let checagemEmAndamento: Promise<void> | null = null;
 const INTERVALO_MS = 10 * 60 * 1000;
 
 /**
@@ -13,88 +17,41 @@ const INTERVALO_MS = 10 * 60 * 1000;
  * no mês atual (nasce sempre "pendente" — só vira "pago" quando for baixada de verdade).
  */
 export async function garantirDespesasRecorrentesDoMes() {
-  const hoje = new Date();
-  const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-
-  const modelos = await prisma.despesa.findMany({ where: { recorrente: true } });
-
-  for (const modelo of modelos) {
-    const jaExisteEsseMes = await prisma.despesa.findFirst({
-      where: {
-        data: { gte: inicioMes },
-        OR: [{ id: modelo.id }, { origemRecorrenteId: modelo.id }],
-      },
-    });
-
-    if (!jaExisteEsseMes) {
-      const diaVencimento = modelo.data.getDate();
-      const vencimento = new Date(hoje.getFullYear(), hoje.getMonth(), Math.min(diaVencimento, 28));
-
-      await prisma.despesa.create({
-        data: {
-          descricao: modelo.descricao,
-          valor: modelo.valor,
-          tipo: modelo.tipo,
-          categoriaFinanceira: modelo.categoriaFinanceira,
-          categoria: modelo.categoria,
-          subcategoria: modelo.subcategoria,
-          clienteId: modelo.clienteId,
-          recorrente: false,
-          origemRecorrenteId: modelo.id,
-          status: "pendente",
-          vencimento,
-          data: inicioMes,
-        },
-      });
-    }
+  const mes = chaveDiaSaoPaulo(new Date()).slice(0, 7);
+  const modelos = await prisma.despesa.findMany({ where: { recorrente: true }, select: { id: true } });
+  for (const item of modelos) {
+    await prisma.$transaction(async tx => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`despesa-recorrente:${item.id}`}))`;
+      const modelo = await tx.despesa.findUnique({ where: { id: item.id } });
+      if (!modelo || !modelo.recorrente || modelo.status === "cancelado") return;
+      const chaveMes = (data: Date) => data.getUTCHours() === 0 && data.getUTCMinutes() === 0 && data.getUTCSeconds() === 0 && data.getUTCMilliseconds() === 0
+        ? data.toISOString().slice(0, 7) : chaveDiaSaoPaulo(data).slice(0, 7);
+      if (chaveMes(modelo.data) > mes) return;
+      const lancamentos = await tx.despesa.findMany({ where: { OR: [{ id: modelo.id }, { origemRecorrenteId: modelo.id }] } });
+      if (lancamentos.some(d => chaveMes(d.data) === mes)) return;
+      const dataBase = modelo.vencimento || modelo.data;
+      const dia = Number(diaFinanceiro(dataBase).slice(8));
+      await tx.despesa.create({ data: {
+        descricao: modelo.descricao, valor: modelo.valor, tipo: modelo.tipo,
+        categoriaFinanceira: modelo.categoriaFinanceira, categoria: modelo.categoria,
+        subcategoria: modelo.subcategoria, clienteId: modelo.clienteId,
+        recorrente: false, origemRecorrenteId: modelo.id, status: "pendente",
+        vencimento: vencimentoMensal(mes, dia), data: new Date(`${mes}-01T00:00:00-03:00`),
+      } });
+    }, { maxWait: 15000, timeout: 20000 });
   }
 }
 
 /**
- * Garante que todo cliente ativo com mensalidade configurada (via serviços contratados)
- * tenha uma Cobrança lançada no mês atual. Sem isso, a mensalidade fica só "configurada"
- * mas nunca vira uma cobrança de verdade — e por isso "Próxima cobrança" ficava vazio
- * mesmo em clientes com mensalidade.
+ * Gera uma mensalidade por cliente e competência, apenas quando a recorrência
+ * foi ativada. A chave única e a trava no banco protegem acessos simultâneos e
+ * servidores distintos. Criar serviços ou uma cobrança avulsa não ativa isso.
  */
 export async function garantirCobrancasMensaisDoMes() {
-  const hoje = new Date();
-  const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-  const diaVencimentoPadrao = 5;
-  const vencimento = new Date(hoje.getFullYear(), hoje.getMonth(), diaVencimentoPadrao);
-
-  const clientesAtivos = await prisma.cliente.findMany({
-    where: { status: "ativo" },
-    include: { servicosContratados: { where: { ativo: true } } },
+  const clientes = await prisma.cliente.findMany({
+    where: { status: "ativo", cobrancaRecorrenteAtiva: true }, select: { id: true },
   });
-
-  for (const cliente of clientesAtivos) {
-    const somaServicos = cliente.servicosContratados.reduce((soma, sc) => soma + Number(sc.valor), 0);
-    const mensalidade = Math.max(0, somaServicos - Number(cliente.descontoMensal) + Number(cliente.acrescimoMensal));
-
-    if (mensalidade <= 0) continue;
-
-    const jaExisteEsseMes = await prisma.cobranca.findFirst({
-      where: {
-        clienteId: cliente.id,
-        tipo: "recorrente",
-        createdAt: { gte: inicioMes },
-      },
-    });
-
-    if (!jaExisteEsseMes) {
-      await prisma.cobranca.create({
-        data: {
-          clienteId: cliente.id,
-          valor: mensalidade,
-          tipo: "recorrente",
-          categoria: "Mensalidade",
-          dataCompetencia: inicioMes,
-          vencimento,
-          status: "pendente",
-        },
-      });
-    }
-  }
+  for (const cliente of clientes) await sincronizarMensalidadeCliente(cliente.id);
 }
 
 /**
@@ -173,10 +130,13 @@ export async function garantirRotinasMensaisDoMes() {
 
 export async function garantirRecorrentesDoMes() {
   const agora = Date.now();
+  if (checagemEmAndamento) return checagemEmAndamento;
   if (agora - ultimaChecagem < INTERVALO_MS) return;
-  ultimaChecagem = agora;
-
-  await garantirDespesasRecorrentesDoMes();
-  await garantirCobrancasMensaisDoMes();
-  await garantirRotinasMensaisDoMes();
+  checagemEmAndamento = (async () => {
+    await garantirDespesasRecorrentesDoMes();
+    await garantirCobrancasMensaisDoMes();
+    await garantirRotinasMensaisDoMes();
+    ultimaChecagem = Date.now();
+  })();
+  try { await checagemEmAndamento; } finally { checagemEmAndamento = null; }
 }

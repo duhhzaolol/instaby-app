@@ -17,29 +17,22 @@ export function NovaContaReceberForm({ clientes }: { clientes: Cliente[] }) {
   const [vencimento, setVencimento] = useState("");
   const [categoria, setCategoria] = useState("Serviços");
   const [tipo, setTipo] = useState("unica");
+  const [erro, setErro] = useState("");
   const [enviando, setEnviando] = useState(false);
 
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
     if (!clienteId || valor <= 0) return;
-    setEnviando(true);
-    await fetch(`/api/clientes/${clienteId}/cobrancas`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        valor,
-        tipo,
-        categoria,
-        status: "pendente",
-        vencimento: vencimento || null,
-      }),
-    });
-    setEnviando(false);
-    setClienteId("");
-    setValor(0);
-    setVencimento("");
-    setAberto(false);
-    router.refresh();
+    setEnviando(true); setErro("");
+    try {
+      const res = await fetch(`/api/clientes/${clienteId}/cobrancas`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ valor, tipo, categoria, status: "pendente", vencimento: vencimento || null }),
+      });
+      if (!res.ok) { const resposta = await res.json().catch(() => null); setErro(resposta?.erro || "Não consegui criar a cobrança. Tente novamente."); return; }
+      setClienteId(""); setValor(0); setVencimento(""); setAberto(false); router.refresh();
+    } catch { setErro("Não consegui criar a cobrança. Confira a conexão e tente novamente."); }
+    finally { setEnviando(false); }
   }
 
   if (!aberto) {
@@ -99,10 +92,12 @@ export function NovaContaReceberForm({ clientes }: { clientes: Cliente[] }) {
           className="h-10 w-full rounded-xl border border-border bg-base/60 px-3 text-sm text-text"
         >
           <option value="unica">Única</option>
-          <option value="recorrente">Recorrente</option>
+          <option value="recorrente">Mensalidade deste mês</option>
         </select>
       </div>
 
+      <p className="mb-3 text-xs text-muted">Este lançamento vale só para a data escolhida. A cobrança automática é configurada no Financeiro do cliente.</p>
+      {erro && <p role="alert" className="mb-3 text-xs text-red-400">{erro}</p>}
       <button
         type="submit"
         disabled={enviando || !clienteId || valor <= 0}

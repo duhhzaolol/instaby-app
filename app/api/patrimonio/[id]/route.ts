@@ -7,6 +7,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   if (erro) return erro;
 
   const body = await request.json();
+  if ((body.valorAtual !== undefined && (!Number.isFinite(Number(body.valorAtual)) || Number(body.valorAtual) < 0)) ||
+      (body.status !== undefined && !["em_uso", "vendido", "baixado"].includes(body.status))) return NextResponse.json({ erro: "Confira o valor e a situação do bem." }, { status: 400 });
 
   const data: Record<string, unknown> = {};
   if (body.nome !== undefined) data.nome = body.nome;

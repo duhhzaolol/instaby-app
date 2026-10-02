@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUsuarioAtual, permissoesDe } from "@/lib/permissoes";
 import { garantirPastasCliente } from "@/lib/google";
+import { dataIsoValida, dataIsoParaDate } from "@/lib/midiaRevisao";
 
 export async function GET(request: NextRequest) {
   const status = request.nextUrl.searchParams.get("status");
@@ -22,6 +23,9 @@ export async function POST(request: NextRequest) {
   if (!body.nome) {
     return NextResponse.json({ erro: "Nome é obrigatório" }, { status: 400 });
   }
+  if (body.mensalidade !== undefined && (!Number.isFinite(Number(body.mensalidade)) || Number(body.mensalidade) < 0)) return NextResponse.json({ erro: "Informe um valor válido." }, { status: 400 });
+  if (body.proximoVencimento && !dataIsoValida(body.proximoVencimento)) return NextResponse.json({ erro: "Informe um vencimento válido." }, { status: 400 });
+  if (Number(body.mensalidade) > 0 && !permissoesDe(usuario).gerenciarFinanceiro) return NextResponse.json({ erro: "Não autorizado" }, { status: 403 });
 
   let cliente = await prisma.cliente.create({
     data: {
@@ -49,9 +53,10 @@ export async function POST(request: NextRequest) {
       data: {
         clienteId: cliente.id,
         valor: parseFloat(body.mensalidade),
-        tipo: "recorrente",
+        tipo: "unica",
+        categoria: "Primeira cobrança",
         status: "pendente",
-        vencimento: new Date(body.proximoVencimento),
+        vencimento: dataIsoParaDate(body.proximoVencimento),
       },
     });
   }

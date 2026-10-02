@@ -1,4 +1,8 @@
 import { prisma } from "@/lib/prisma";
+import { movimentosDeCobranca } from "@/lib/movimentosFinanceiros";
+import { faixaPeriodo } from "@/lib/periodoFinanceiro";
+import { calcularStatusEfetivo } from "@/lib/statusFinanceiro";
+import { diaFinanceiro, inicioDiaFinanceiro, hojeFinanceiro } from "@/lib/datasFinanceiro";
 import DashboardClient from "@/components/dashboard/DashboardClient";
 import InicioEditor, { type TarefaEditor } from "@/components/dashboard/InicioEditor";
 import { type TarefaPessoal } from "@/components/dashboard/QuadroTarefasPessoal";
@@ -24,8 +28,8 @@ function inicioMesAnterior() {
 }
 
 function inicioMesesAtras(n: number) {
-  const d = new Date();
-  return new Date(d.getFullYear(), d.getMonth() - n, 1);
+  const [ano, mes] = diaFinanceiro(new Date(), false).slice(0, 7).split("-").map(Number);
+  return new Date(Date.UTC(ano, mes - 1 - n, 1, 12));
 }
 
 function inicioHoje() {
@@ -81,6 +85,21 @@ export default async function DashboardPage() {
 // existia com Equipe agora, Tarefas por status, mais 2 alertas e Caixa 7 dias)
 // ─────────────────────────────────────────────────────────────────────────
 async function InicioDono() {
+  const [obrigacoes, contasPagar] = await Promise.all([
+    prisma.cobranca.findMany({ include: { pagamentos: true, cliente: { select: { nome: true, cor: true } } } }),
+    prisma.despesa.findMany({ include: { pagamentos: true } }),
+  ]);
+  const recebimentos = obrigacoes.flatMap(movimentosDeCobranca).map(m => ({ id: m.id, valor: m.valor, createdAt: m.data, cliente: { nome: m.clienteNome || "Cliente", cor: m.clienteCor || null } }));
+  const periodoMes = faixaPeriodo("mes_atual"), periodoAnterior = faixaPeriodo("mes_anterior");
+  const entradasMes = recebimentos.filter(c => c.createdAt >= periodoMes.desde && c.createdAt <= periodoMes.ate);
+  const saldoDe = (c: { valor: unknown; status: string; vencimento: Date | null; pagamentos: { valor: unknown }[] }) => {
+    const totalPago = c.pagamentos.reduce((s, p) => s + Number(p.valor), 0);
+    const status = calcularStatusEfetivo({ status: c.status, valor: Number(c.valor), totalPago, vencimento: c.vencimento });
+    return ["pago", "cancelado"].includes(status) ? 0 : Math.max(0, Number(c.valor) - totalPago);
+  };
+  const contasAbertas = obrigacoes.filter(c => saldoDe(c) > 0);
+  const hojeCaixa = hojeFinanceiro();
+  const fimCaixa = new Date(hojeCaixa.getTime() + 7 * 86400000);
   const [
     clientesAtivos,
     leadsPendentes,
@@ -119,15 +138,8 @@ async function InicioDono() {
   ] = await Promise.all([
     prisma.cliente.count({ where: { status: "ativo" } }),
     prisma.cliente.count({ where: { status: "lead" } }),
-    prisma.cobranca.aggregate({
-      _sum: { valor: true },
-      where: { status: "pago", createdAt: { gte: inicioMes() } },
-    }),
-    prisma.cobranca.aggregate({
-      _sum: { valor: true },
-      _count: true,
-      where: { status: { in: ["pendente", "atrasado"] } },
-    }),
+    Promise.resolve({ _sum: { valor: entradasMes.reduce((s, c) => s + c.valor, 0) } }),
+    Promise.resolve({ _sum: { valor: contasAbertas.reduce((s, c) => s + saldoDe(c), 0) }, _count: contasAbertas.length }),
     prisma.tarefa.count({ where: { status: { in: ["a_fazer", "em_andamento"] } } }),
     prisma.tarefa.findMany({
       include: { cliente: { select: { nome: true, cor: true } } },
@@ -162,16 +174,8 @@ async function InicioDono() {
       orderBy: { prazo: "asc" },
     }),
     prisma.configuracao.findUnique({ where: { id: "config" } }),
-    prisma.cobranca.findMany({
-      where: { status: "pago", createdAt: { gte: inicioMes() } },
-      include: { cliente: { select: { nome: true, cor: true } } },
-    }),
-    prisma.cobranca.findMany({
-      where: { status: "pago" },
-      include: { cliente: { select: { nome: true } } },
-      orderBy: { createdAt: "desc" },
-      take: 5,
-    }),
+    Promise.resolve(entradasMes),
+    Promise.resolve([...recebimentos].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 5)),
     prisma.cliente.findMany({ orderBy: { createdAt: "desc" }, take: 3 }),
     prisma.contrato.findMany({
       include: { cliente: { select: { nome: true } } },
@@ -184,12 +188,9 @@ async function InicioDono() {
       orderBy: { createdAt: "desc" },
       take: 3,
     }),
-    prisma.cobranca.aggregate({
-      _sum: { valor: true },
-      where: { status: "pago", createdAt: { gte: inicioMesAnterior(), lt: inicioMes() } },
-    }),
+    Promise.resolve({ _sum: { valor: recebimentos.filter(c => c.createdAt >= periodoAnterior.desde && c.createdAt <= periodoAnterior.ate).reduce((s, c) => s + c.valor, 0) } }),
     prisma.tarefa.count({ where: { status: { not: "feito" }, prazo: { lt: new Date() } } }),
-    prisma.cobranca.count({ where: { status: { in: ["pendente", "atrasado"] }, vencimento: { lt: new Date() } } }),
+    Promise.resolve(contasAbertas.filter(c => c.vencimento && diaFinanceiro(c.vencimento) < diaFinanceiro(new Date(), false)).length),
     prisma.contrato.findMany({
       where: { status: "assinado" },
       include: { cliente: { select: { nome: true, prazoContratoMeses: true } } },
@@ -199,10 +200,7 @@ async function InicioDono() {
     prisma.oportunidade.findMany({ where: { status: { notIn: ["ganho", "perdido"] } } }),
     // Pra montar o gráfico de faturamento do Dashboard — agrupado por mês em JS logo
     // abaixo, porque "group by mês" não tem um jeito direto no Prisma sem SQL cru.
-    prisma.cobranca.findMany({
-      where: { status: "pago", createdAt: { gte: inicioMesesAtras(5) } },
-      select: { valor: true, createdAt: true },
-    }),
+    Promise.resolve(recebimentos),
     prisma.usuario.findMany({
       where: { ativo: true },
       select: { id: true, nome: true, cargo: true, master: true, gerenciarTrafego: true },
@@ -221,14 +219,8 @@ async function InicioDono() {
     prisma.tarefa.count({ where: { status: "feito", concluidaEm: { gte: inicioSemana() } } }),
     prisma.orcamento.count({ where: { status: "pendente", enviadoEm: { not: null } } }),
     prisma.tarefa.count({ where: { status: { not: "feito" }, responsavelId: null } }),
-    prisma.cobranca.findMany({
-      where: { status: { in: ["pendente", "atrasado"] }, vencimento: { gte: inicioHoje(), lt: diasNoFuturo(7) } },
-      select: { valor: true, vencimento: true },
-    }),
-    prisma.despesa.findMany({
-      where: { status: { in: ["pendente", "atrasado"] }, vencimento: { gte: inicioHoje(), lt: diasNoFuturo(7) } },
-      select: { valor: true, vencimento: true },
-    }),
+    Promise.resolve(contasAbertas.filter(c => c.vencimento && inicioDiaFinanceiro(c.vencimento) >= hojeCaixa && inicioDiaFinanceiro(c.vencimento) < fimCaixa).map(c => ({ valor: saldoDe(c), vencimento: inicioDiaFinanceiro(c.vencimento!) }))),
+    Promise.resolve(contasPagar.filter(c => saldoDe(c) > 0 && c.vencimento && inicioDiaFinanceiro(c.vencimento) >= hojeCaixa && inicioDiaFinanceiro(c.vencimento) < fimCaixa).map(c => ({ valor: saldoDe(c), vencimento: inicioDiaFinanceiro(c.vencimento!) }))),
   ]);
 
   const metaFaturamento = config?.metaFaturamentoMensal ? Number(config.metaFaturamentoMensal) : 0;
@@ -276,13 +268,13 @@ async function InicioDono() {
   for (let i = 5; i >= 0; i--) {
     const d = inicioMesesAtras(i);
     baldes.push({
-      chave: `${d.getFullYear()}-${d.getMonth()}`,
+      chave: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
       mes: d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", ""),
       valor: 0,
     });
   }
   cobrancasPagasUltimosMeses.forEach((c) => {
-    const chave = `${c.createdAt.getFullYear()}-${c.createdAt.getMonth()}`;
+    const chave = diaFinanceiro(c.createdAt, false).slice(0, 7);
     const balde = baldes.find((b) => b.chave === chave);
     if (balde) balde.valor += Number(c.valor);
   });
@@ -310,13 +302,13 @@ async function InicioDono() {
 
   // Caixa dos próximos 7 dias — a receber/a pagar por dia (sem "saldo bancário"
   // acumulado, que exigiria um saldo inicial que o app não guarda ainda).
-  const chaveDia = (d: Date) => d.toISOString().slice(0, 10);
+  const chaveDia = (d: Date) => diaFinanceiro(d);
   const diasCaixa: { chave: string; dia: string; aReceber: number; aPagar: number }[] = [];
   for (let i = 0; i < 7; i++) {
-    const d = diasNoFuturo(i);
+    const d = new Date(hojeCaixa.getTime() + i * 86400000);
     diasCaixa.push({
       chave: chaveDia(d),
-      dia: d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" }).replace(".", ""),
+      dia: d.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo", weekday: "short", day: "2-digit", month: "2-digit" }).replace(".", ""),
       aReceber: 0,
       aPagar: 0,
     });

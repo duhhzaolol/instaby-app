@@ -11,6 +11,9 @@ import RelatoriosTab from "./RelatoriosTab";
 import VisaoGeralClienteTab from "./VisaoGeralClienteTab";
 import ContatosTab from "./ContatosTab";
 import { MensalidadeChip } from "./MensalidadeChip";
+import { RecorrenciaClienteFinanceiro } from "@/components/dashboard/RecorrenciaClienteFinanceiro";
+import { movimentosFinanceiros, saldoEmPeriodo } from "@/lib/movimentosFinanceiros";
+import { faixaPeriodo } from "@/lib/periodoFinanceiro";
 import LinksClienteTab from "./LinksClienteTab";
 import OnboardingTab from "./OnboardingTab";
 import SolicitacoesTab from "./SolicitacoesTab";
@@ -254,19 +257,10 @@ export default async function ClienteDetalhePage({
   const inicioMesEscopo = new Date(hojeEscopo.getFullYear(), hojeEscopo.getMonth(), 1);
   const fimMesEscopo = new Date(hojeEscopo.getFullYear(), hojeEscopo.getMonth() + 1, 0, 23, 59, 59);
 
-  const receitaMes = cliente.cobrancas
-    .filter((c) => c.status === "pago" && c.createdAt >= inicioMesEscopo && c.createdAt <= fimMesEscopo)
-    .reduce((s, c) => s + Number(c.valor), 0);
-
-  const despesasMes = cliente.despesas
-    .filter(
-      (d) =>
-        d.categoriaFinanceira !== "transferencia" &&
-        d.status !== "cancelado" &&
-        d.data >= inicioMesEscopo &&
-        d.data <= fimMesEscopo
-    )
-    .reduce((s, d) => s + Number(d.valor), 0);
+  const periodoCaixaCliente = faixaPeriodo("mes_atual");
+  const caixaCliente = saldoEmPeriodo(movimentosFinanceiros(cliente.cobrancas, cliente.despesas.filter(d => d.categoriaFinanceira !== "transferencia")), periodoCaixaCliente.desde, periodoCaixaCliente.ate);
+  const receitaMes = caixaCliente.totalEntradas;
+  const despesasMes = caixaCliente.totalSaidas;
 
   const horasMes = cliente.registrosTempo
     .filter((r) => r.fim && r.inicio >= inicioMesEscopo && r.inicio <= fimMesEscopo)
@@ -616,6 +610,10 @@ export default async function ClienteDetalhePage({
       )}
 
       {aba === "financeiro" && (
+        <div>
+        <RecorrenciaClienteFinanceiro clienteId={cliente.id} nome={cliente.nome} mensalidade={mensalidade}
+          ativa={cliente.cobrancaRecorrenteAtiva} inicio={cliente.cobrancaRecorrenteInicio}
+          diaVencimento={cliente.cobrancaDiaVencimento} podeEditar={pode.gerenciarFinanceiro} />
         <FinanceiroTab
           clienteId={cliente.id}
           cobrancas={cliente.cobrancas.map((c) => ({
@@ -623,6 +621,10 @@ export default async function ClienteDetalhePage({
             valor: Number(c.valor),
             status: c.status,
             tipo: c.tipo,
+            clienteId: cliente.id,
+            dataCompetencia: c.dataCompetencia?.toISOString() || null,
+            createdAt: c.createdAt.toISOString(),
+            recorrenciaChave: c.recorrenciaChave,
             vencimento: c.vencimento?.toISOString() || null,
             totalPago: c.pagamentos.reduce((s, p) => s + Number(p.valor), 0),
           }))}
@@ -634,10 +636,12 @@ export default async function ClienteDetalhePage({
             categoriaFinanceira: d.categoriaFinanceira,
             categoria: d.categoria,
             status: d.status,
+            dataPagamento: d.dataPagamento?.toISOString() || null,
             vencimento: d.vencimento?.toISOString() || null,
             totalPago: d.pagamentos.reduce((s, p) => s + Number(p.valor), 0),
           }))}
         />
+        </div>
       )}
 
       {aba === "orcamentos" && (

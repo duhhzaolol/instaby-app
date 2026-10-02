@@ -162,6 +162,9 @@ model Cliente {
   prazoContratoMeses Int?
   dataInicioContrato DateTime? // marcado manualmente na aba Serviços — usado pra calcular a renovação
   valorRenovacao     Decimal?
+  cobrancaRecorrenteAtiva Boolean @default(false)
+  cobrancaRecorrenteInicio String? // AAAA-MM, definido ao ativar a mensalidade
+  cobrancaDiaVencimento Int @default(5)
   exibirLogoPublico  Boolean   @default(false) // aparece na vitrine "empresas que confiam" das propostas
   createdAt          DateTime  @default(now())
 
@@ -981,6 +984,7 @@ model Cobranca {
   vencimento  DateTime?
   status      String     @default("pendente") // pendente | pago | atrasado | cancelado
   createdAt   DateTime   @default(now())
+  recorrenciaChave String? @unique // cliente:AAAA-MM, apenas mensalidades automáticas
   pagamentos  Pagamento[]
 }
 

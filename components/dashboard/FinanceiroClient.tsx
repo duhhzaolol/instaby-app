@@ -27,13 +27,11 @@ type CobrancaPendente = {
 };
 
 import { PERIODOS_FINANCEIRO } from "@/lib/periodoFinanceiro";
+import { chaveDiaSaoPaulo } from "@/lib/dataHora";
+import { hojeFinanceiro, inicioDiaFinanceiro } from "@/lib/datasFinanceiro";
 
 function diasParaVencer(vencimento: string) {
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-  const venc = new Date(vencimento);
-  venc.setHours(0, 0, 0, 0);
-  return Math.round((venc.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+  return Math.round((inicioDiaFinanceiro(vencimento).getTime() - hojeFinanceiro().getTime()) / 86400000);
 }
 
 export default function FinanceiroClient({
@@ -69,11 +67,10 @@ export default function FinanceiroClient({
   const searchParams = useSearchParams();
   const [formAberto, setFormAberto] = useState<"fixa" | "flexivel" | null>(null);
   const [formRapidoAberto, setFormRapidoAberto] = useState(searchParams.get("nova") === "despesa");
-  const [personDesde, setPersonDesde] = useState("");
-  const [personAte, setPersonAte] = useState("");
+  const [personDesde, setPersonDesde] = useState(searchParams.get("desde") || `${chaveDiaSaoPaulo(new Date()).slice(0, 7)}-01`);
+  const [personAte, setPersonAte] = useState(searchParams.get("ate") || chaveDiaSaoPaulo(new Date()));
 
   function mudarPeriodo(novo: string) {
-    if (novo === "personalizado") return; // espera preencher as datas
     router.push(`/dashboard/financeiro?periodo=${novo}`);
   }
 
@@ -169,9 +166,9 @@ export default function FinanceiroClient({
                 </div>
               </div>
               <p className="text-2xl font-medium text-text">
-                <CountUp value={caixa.saldoAtual} prefix="R$ " />
+                <CountUp decimals={2} value={caixa.saldoAtual} prefix="R$ " />
               </p>
-              <p className="mt-1 text-[11px] text-muted">Quanto existe disponível nas contas da empresa.</p>
+              <p className="mt-1 text-[11px] text-muted">Saldo calculado pelos recebimentos e pagamentos cadastrados.</p>
             </Card>
             <Card index={1} className="p-4">
               <div className="mb-3 flex items-center justify-between">
@@ -181,7 +178,7 @@ export default function FinanceiroClient({
                 </div>
               </div>
               <p className={`text-2xl font-medium ${caixa.resultadoDoMes >= 0 ? "text-text" : "text-red-400"}`}>
-                <CountUp
+                <CountUp decimals={2}
                   value={Math.abs(caixa.resultadoDoMes)}
                   prefix={caixa.resultadoDoMes >= 0 ? "+R$ " : "−R$ "}
                 />
@@ -196,7 +193,7 @@ export default function FinanceiroClient({
                 </div>
               </div>
               <p className={`text-2xl font-medium ${caixa.variacaoCaixaMes >= 0 ? "text-text" : "text-red-400"}`}>
-                <CountUp
+                <CountUp decimals={2}
                   value={Math.abs(caixa.variacaoCaixaMes)}
                   prefix={caixa.variacaoCaixaMes >= 0 ? "+R$ " : "−R$ "}
                 />
@@ -211,7 +208,7 @@ export default function FinanceiroClient({
                 </div>
               </div>
               <p className="text-2xl font-medium text-text">
-                <CountUp value={caixa.patrimonioTotal} prefix="R$ " />
+                <CountUp decimals={2} value={caixa.patrimonioTotal} prefix="R$ " />
               </p>
               <Link href="/dashboard/financeiro/patrimonio" className="mt-1 block text-[11px] text-accent hover:underline">
                 Valor estimado dos ativos cadastrados →
@@ -234,7 +231,7 @@ export default function FinanceiroClient({
             </div>
           </div>
           <p className="text-2xl font-medium text-text">
-            <CountUp value={resumo.entradas} prefix="R$ " />
+            <CountUp decimals={2} value={resumo.entradas} prefix="R$ " />
           </p>
         </Card>
         <Card index={1} className="p-4">
@@ -245,7 +242,7 @@ export default function FinanceiroClient({
             </div>
           </div>
           <p className="text-2xl font-medium text-text">
-            <CountUp value={resumo.despesasFixas} prefix="R$ " />
+            <CountUp decimals={2} value={resumo.despesasFixas} prefix="R$ " />
           </p>
         </Card>
         <Card index={2} className="p-4">
@@ -256,7 +253,7 @@ export default function FinanceiroClient({
             </div>
           </div>
           <p className="text-2xl font-medium text-text">
-            <CountUp value={resumo.despesasFlexiveis} prefix="R$ " />
+            <CountUp decimals={2} value={resumo.despesasFlexiveis} prefix="R$ " />
           </p>
         </Card>
         <Card index={3} className="p-4">
@@ -267,7 +264,7 @@ export default function FinanceiroClient({
             </div>
           </div>
           <p className="text-2xl font-medium text-text">
-            <CountUp value={resumo.lucro} prefix="R$ " />
+            <CountUp decimals={2} value={resumo.lucro} prefix="R$ " />
           </p>
         </Card>
       </div>
@@ -286,12 +283,12 @@ export default function FinanceiroClient({
                   {c.nome}
                 </span>
                 <div className="flex items-center gap-4 text-xs">
-                  <span className="text-emerald-400">+R$ {c.entradas.toFixed(0)}</span>
-                  {c.despesas > 0 && <span className="text-red-400">−R$ {c.despesas.toFixed(0)}</span>}
+                  <span className="text-emerald-400">+R$ {c.entradas.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  {c.despesas > 0 && <span className="text-red-400">−R$ {c.despesas.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>}
                   <span
                     className={`min-w-[70px] text-right font-medium ${c.lucro >= 0 ? "text-accent" : "text-red-400"}`}
                   >
-                    R$ {c.lucro.toFixed(0)}
+                    R$ {c.lucro.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
@@ -335,7 +332,7 @@ export default function FinanceiroClient({
               >
                 <div>
                   <p className="text-sm text-text">
-                    {c.cliente} · R$ {c.valor.toFixed(0)}
+                    {c.cliente} · R$ {c.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                   <p className={`text-xs ${vencido || venceHoje ? "text-red-400" : "text-muted"}`}>
                     {dias === null
@@ -435,7 +432,7 @@ function NovaDespesaForm({
   const [clienteId, setClienteId] = useState("");
   // Data local do navegador (não UTC) — depois das 21h (horário de Brasília),
   // toISOString() já cai no dia seguinte e o formulário abria com a data errada.
-  const [data, setData] = useState(new Date().toLocaleDateString("en-CA"));
+  const [data, setData] = useState(chaveDiaSaoPaulo(new Date()));
   const [recorrente, setRecorrente] = useState(tipo === "fixa");
   const [categoriaFinanceira, setCategoriaFinanceira] = useState(
     tipo === "fixa" ? "despesa_fixa" : "despesa_variavel"
@@ -454,7 +451,7 @@ function NovaDespesaForm({
     e.preventDefault();
     setEnviando(true);
 
-    await fetch("/api/despesas", {
+    const resposta = await fetch("/api/despesas", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -474,6 +471,7 @@ function NovaDespesaForm({
     });
 
     setEnviando(false);
+    if (!resposta.ok) { const body = await resposta.json().catch(() => ({})); alert(body.erro || "Não foi possível salvar a despesa."); return; }
     onSalvo();
     router.refresh();
   }

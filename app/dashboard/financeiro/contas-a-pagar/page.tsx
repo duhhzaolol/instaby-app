@@ -1,112 +1,171 @@
 import Link from "next/link";
-import { ArrowLeft, AlertTriangle, CalendarClock, Clock3, Wallet } from "lucide-react";
+import {
+  ArrowLeft,
+  AlertTriangle,
+  CalendarClock,
+  Clock3,
+  Wallet,
+} from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { DespesaRow, DespesaRowData } from "@/components/dashboard/DespesaRow";
+import {
+  DespesaRow,
+  type DespesaRowData,
+} from "@/components/dashboard/DespesaRow";
 import { NovaContaPagarForm } from "@/components/dashboard/NovaContaPagarForm";
 import { FiltrosContasAPagar } from "@/components/dashboard/FiltrosContasAPagar";
-import { faixaPeriodo } from "@/lib/periodoFinanceiro";
+import { calcularStatusEfetivo } from "@/lib/statusFinanceiro";
+import {
+  diaFinanceiro,
+  hojeFinanceiro,
+  mesFinanceiro,
+} from "@/lib/datasFinanceiro";
 
+export const dynamic = "force-dynamic";
 const ABAS = [
-  { valor: "abertas", label: "Pendentes + Atrasadas" },
-  { valor: "pendente", label: "Pendentes" },
+  { valor: "abertas", label: "Em aberto" },
+  { valor: "pendente", label: "Pendentes e parciais" },
   { valor: "atrasado", label: "Atrasadas" },
   { valor: "proximos", label: "Próximos 7 dias" },
   { valor: "pago", label: "Pagas" },
   { valor: "todas", label: "Todas" },
 ];
-
-function fmt(v: number) {
-  return v.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-}
+const ABERTOS = ["pendente", "parcial", "atrasado"];
+const fmt = (valor: number) =>
+  valor.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 
 export default async function ContasAPagarPage({
   searchParams,
 }: {
   searchParams: { aba?: string; categoria?: string; periodo?: string };
 }) {
-  const aba = searchParams.aba || "abertas";
+  const aba = ABAS.some((a) => a.valor === searchParams.aba)
+    ? searchParams.aba!
+    : "abertas";
   const filtroCategoria = searchParams.categoria || "";
-  const filtroPeriodo = searchParams.periodo || "";
-
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-  const em7dias = new Date(hoje);
-  em7dias.setDate(em7dias.getDate() + 7);
-  const seisMesesAtras = new Date(hoje);
-  seisMesesAtras.setMonth(seisMesesAtras.getMonth() - 6);
-
-  const baseWhere: Record<string, unknown> =
-    aba === "todas"
-      ? { data: { gte: seisMesesAtras } }
-      : aba === "pago"
-      ? { status: "pago", data: { gte: seisMesesAtras } }
-      : aba === "pendente"
-      ? { status: "pendente" }
-      : aba === "atrasado"
-      ? { status: { in: ["pendente", "atrasado"] }, vencimento: { lt: hoje } }
-      : aba === "proximos"
-      ? { status: { in: ["pendente", "atrasado"] }, vencimento: { gte: hoje, lte: em7dias } }
-      : { status: { in: ["pendente", "atrasado"] } };
-
-  if (filtroCategoria === "sem_classificacao") {
-    // Só o que realmente falta classificar — retirada/transferência já é uma
-    // classificação válida (aparece com seu próprio filtro na lista de categorias).
-    baseWhere.categoriaFinanceira = null;
-  } else if (filtroCategoria) {
-    baseWhere.categoriaFinanceira = filtroCategoria;
-  }
-
-  if (filtroPeriodo === "mes_atual" || filtroPeriodo === "mes_anterior") {
-    const { desde, ate } = faixaPeriodo(filtroPeriodo);
-    baseWhere.data = { gte: desde, lte: ate };
-  }
-
-  const [abertas, todasRelevantes, clientes] = await Promise.all([
+  const filtroPeriodo = ["mes_atual", "mes_anterior"].includes(
+    searchParams.periodo || "",
+  )
+    ? searchParams.periodo!
+    : "";
+  const hoje = hojeFinanceiro();
+  const hojeChave = diaFinanceiro(hoje);
+  const limite7 = diaFinanceiro(new Date(hoje.getTime() + 7 * 86400000));
+  const mesAtual = mesFinanceiro(hoje);
+  const [ano, mes] = mesAtual.split("-").map(Number);
+  const mesAnterior = mesFinanceiro(new Date(Date.UTC(ano, mes - 2, 15, 12)));
+  const [despesas, clientes] = await Promise.all([
     prisma.despesa.findMany({
-      where: { status: { in: ["pendente", "atrasado"] } },
       include: { cliente: true, pagamentos: true },
-      orderBy: { vencimento: "asc" },
+      orderBy: [{ vencimento: "asc" }, { data: "desc" }],
     }),
-    prisma.despesa.findMany({
-      where: baseWhere,
-      include: { cliente: true, pagamentos: true },
-      orderBy: aba === "pago" ? { data: "desc" } : { vencimento: "asc" },
+    prisma.cliente.findMany({
+      where: { status: { not: "inativo" } },
+      select: { id: true, nome: true },
+      orderBy: { nome: "asc" },
     }),
-    prisma.cliente.findMany({ where: { status: { not: "inativo" } }, select: { id: true, nome: true }, orderBy: { nome: "asc" } }),
   ]);
-
-  const saldoDe = (d: (typeof abertas)[number]) =>
-    Math.max(0, Number(d.valor) - d.pagamentos.reduce((s, p) => s + Number(p.valor), 0));
-
-  const vencendoHoje = abertas.filter((d) => d.vencimento && new Date(d.vencimento).toDateString() === hoje.toDateString());
+  const registros = despesas.map((d) => {
+    const totalPago =
+      d.pagamentos.reduce((s, p) => s + Math.round(Number(p.valor) * 100), 0) /
+      100;
+    const statusEfetivo = calcularStatusEfetivo({
+      status: d.status,
+      valor: Number(d.valor),
+      totalPago,
+      vencimento: d.vencimento,
+    });
+    const saldo = ABERTOS.includes(statusEfetivo)
+      ? Math.max(
+          0,
+          Math.round(Number(d.valor) * 100) - Math.round(totalPago * 100),
+        ) / 100
+      : 0;
+    return {
+      d,
+      totalPago,
+      statusEfetivo,
+      saldo,
+      mes: mesFinanceiro(d.data),
+      vencimento: d.vencimento ? diaFinanceiro(d.vencimento) : null,
+    };
+  });
+  const base = registros.filter((r) => {
+    if (filtroCategoria === "sem_classificacao" && r.d.categoriaFinanceira)
+      return false;
+    if (
+      filtroCategoria &&
+      filtroCategoria !== "sem_classificacao" &&
+      r.d.categoriaFinanceira !== filtroCategoria
+    )
+      return false;
+    if (filtroPeriodo === "mes_atual" && r.mes !== mesAtual) return false;
+    if (filtroPeriodo === "mes_anterior" && r.mes !== mesAnterior) return false;
+    return true;
+  });
+  const todasRelevantes = base.filter((r) => {
+    if (aba === "todas") return true;
+    if (aba === "pago") return r.statusEfetivo === "pago";
+    if (aba === "pendente")
+      return ["pendente", "parcial"].includes(r.statusEfetivo);
+    if (aba === "atrasado") return r.statusEfetivo === "atrasado";
+    if (aba === "proximos")
+      return (
+        r.saldo > 0 &&
+        !!r.vencimento &&
+        r.vencimento > hojeChave &&
+        r.vencimento <= limite7
+      );
+    return r.saldo > 0;
+  });
+  if (aba === "pago") {
+    todasRelevantes.sort((a, b) => b.d.data.getTime() - a.d.data.getTime());
+  }
+  const abertas = todasRelevantes.filter((r) => r.saldo > 0);
+  const vencendoHoje = abertas.filter((r) => r.vencimento === hojeChave);
   const vencendo7dias = abertas.filter(
-    (d) => d.vencimento && new Date(d.vencimento) > hoje && new Date(d.vencimento) <= em7dias
+    (r) =>
+      !!r.vencimento && r.vencimento > hojeChave && r.vencimento <= limite7,
   );
-  const emAtraso = abertas.filter((d) => d.vencimento && new Date(d.vencimento) < hoje && saldoDe(d) > 0);
-  const totalAPagar = abertas.reduce((s, d) => s + saldoDe(d), 0);
+  const emAtraso = abertas.filter((r) => r.statusEfetivo === "atrasado");
+  const soma = (itens: typeof abertas) =>
+    itens.reduce((total, r) => total + Math.round(r.saldo * 100), 0) / 100;
+  function link(outraAba: string) {
+    const params = new URLSearchParams({ aba: outraAba });
+    if (filtroCategoria) params.set("categoria", filtroCategoria);
+    if (filtroPeriodo) params.set("periodo", filtroPeriodo);
+    return `/dashboard/financeiro/contas-a-pagar?${params.toString()}`;
+  }
 
   return (
     <div>
-      <Link href="/dashboard/financeiro" className="mb-4 inline-flex items-center gap-1.5 text-xs text-muted hover:text-text">
+      <Link
+        href="/dashboard/financeiro"
+        className="mb-4 inline-flex items-center gap-1.5 text-xs text-muted hover:text-text"
+      >
         <ArrowLeft size={13} /> Financeiro
       </Link>
-
       <p className="mb-1 text-lg font-medium text-text">Contas a Pagar</p>
-      <p className="mb-6 text-sm text-muted">Despesas pendentes e atrasadas, num lugar só</p>
-
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <p className="mb-6 text-sm text-muted">
+        Acompanhe o saldo das despesas, incluindo pagamentos parciais.
+      </p>
+      <div className="mb-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-xl border border-border bg-card/60 p-3.5">
           <p className="mb-1 flex items-center gap-1.5 text-xs text-muted">
             <Wallet size={12} /> Total a pagar
           </p>
-          <p className="text-lg font-medium text-text">R$ {fmt(totalAPagar)}</p>
+          <p className="text-lg font-medium text-text">
+            R$ {fmt(soma(abertas))}
+          </p>
         </div>
         <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3.5">
           <p className="mb-1 flex items-center gap-1.5 text-xs text-amber-300">
             <Clock3 size={12} /> Vencendo hoje
           </p>
           <p className="text-lg font-medium text-amber-300">
-            {vencendoHoje.length} · R$ {fmt(vencendoHoje.reduce((s, d) => s + Number(d.valor), 0))}
+            {vencendoHoje.length} · R$ {fmt(soma(vencendoHoje))}
           </p>
         </div>
         <div className="rounded-xl border border-sky-500/20 bg-sky-500/5 p-3.5">
@@ -114,7 +173,7 @@ export default async function ContasAPagarPage({
             <CalendarClock size={12} /> Próx. 7 dias
           </p>
           <p className="text-lg font-medium text-sky-300">
-            {vencendo7dias.length} · R$ {fmt(vencendo7dias.reduce((s, d) => s + Number(d.valor), 0))}
+            {vencendo7dias.length} · R$ {fmt(soma(vencendo7dias))}
           </p>
         </div>
         <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3.5">
@@ -122,34 +181,36 @@ export default async function ContasAPagarPage({
             <AlertTriangle size={12} /> Em atraso
           </p>
           <p className="text-lg font-medium text-red-300">
-            {emAtraso.length} · R$ {fmt(emAtraso.reduce((s, d) => s + Number(d.valor), 0))}
+            {emAtraso.length} · R$ {fmt(soma(emAtraso))}
           </p>
         </div>
       </div>
-
+      <p className="mb-5 text-[11px] text-muted">
+        Os totais seguem a categoria, o período e a situação selecionados.
+        Mostram somente o saldo que ainda falta pagar.
+      </p>
       <div className="mb-3 flex flex-wrap gap-2">
         {ABAS.map((a) => (
           <Link
             key={a.valor}
-            href={`/dashboard/financeiro/contas-a-pagar?aba=${a.valor}${filtroCategoria ? `&categoria=${filtroCategoria}` : ""}${filtroPeriodo ? `&periodo=${filtroPeriodo}` : ""}`}
-            className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-              aba === a.valor ? "bg-accent text-white" : "border border-border bg-card/60 text-muted hover:text-text"
-            }`}
+            href={link(a.valor)}
+            className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${aba === a.valor ? "bg-accent text-white" : "border border-border bg-card/60 text-muted hover:text-text"}`}
           >
             {a.label}
           </Link>
         ))}
       </div>
-
-      <FiltrosContasAPagar aba={aba} categoria={filtroCategoria} periodo={filtroPeriodo} />
-
+      <FiltrosContasAPagar
+        aba={aba}
+        categoria={filtroCategoria}
+        periodo={filtroPeriodo}
+      />
       <NovaContaPagarForm clientes={clientes} />
-
-      {todasRelevantes.length === 0 ? (
-        <p className="text-sm text-muted">Nada por aqui.</p>
+      {!todasRelevantes.length ? (
+        <p className="text-sm text-muted">Nenhuma despesa com estes filtros.</p>
       ) : (
         <div className="flex flex-col gap-2">
-          {todasRelevantes.map((d, i) => {
+          {todasRelevantes.map(({ d, totalPago }, i) => {
             const item: DespesaRowData = {
               id: d.id,
               descricao: d.descricao,
@@ -161,7 +222,7 @@ export default async function ContasAPagarPage({
               categoria: d.categoria,
               status: d.status,
               vencimento: d.vencimento?.toISOString() || null,
-              totalPago: d.pagamentos.reduce((s, p) => s + Number(p.valor), 0),
+              totalPago,
             };
             return <DespesaRow key={d.id} despesa={item} index={i} />;
           })}

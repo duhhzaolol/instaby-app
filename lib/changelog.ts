@@ -22,6 +22,20 @@ export type VersaoNovidades = {
 
 export const NOVIDADES: VersaoNovidades[] = [
   {
+    versao: 162,
+    resumo: "Financeiro com mensalidades sem repetição, recorrência por cliente e caixa pelas baixas reais.",
+    itens: [
+      { tipo: "corrigido", texto: "A mensalidade automática é gerada uma vez por cliente e mês, mesmo com acessos simultâneos. Preparar uma atualização do aplicativo não lança cobranças." },
+      { tipo: "adicionado", texto: "No Financeiro do cliente, configure a cobrança mensal automática, o mês inicial e o dia de vencimento. O valor acompanha os serviços ativos, com desconto e acréscimo." },
+      { tipo: "melhorado", texto: "A receber tem filtros por cliente e mês. Os cartões mostram o saldo que falta receber; Todos os meses mantém o acesso ao histórico." },
+      { tipo: "corrigido", texto: "Datas de cobrança mantêm o dia informado em Brasília. Uma cobrança que vence hoje só fica atrasada depois desse dia." },
+      { tipo: "corrigido", texto: "Visão geral e Fluxo de Caixa contam cada parcela na data em que foi recebida ou paga. Quitar o restante registra apenas o saldo, sem somar tudo novamente." },
+      { tipo: "melhorado", texto: "Recebimentos e pagamentos anteriores são preservados ao editar ou cancelar um lançamento. Cobranças automáticas canceladas não reaparecem no mesmo mês." },
+      { tipo: "corrigido", texto: "O resumo da cobrança usa o valor total combinado de cada serviço, sem multiplicar novamente pela quantidade. As telas financeiras mostram os centavos." },
+      { tipo: "melhorado", texto: "DRE usa a competência do lançamento; caixa usa as baixas realizadas. Períodos personalizados, contas a pagar e patrimônio tiveram valores e datas revisados." },
+    ],
+  },
+  {
     versao: 161,
     resumo: "Cronograma em lista, etapas nos cartões e resumo mensal, com produção e postagem em dias separados.",
     itens: [

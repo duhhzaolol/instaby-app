@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { sincronizarMensalidadeCliente } from "@/lib/mensalidades";
 import { exigirPermissaoApi } from "@/lib/permissoes";
 
 // Etapa 3 (v157) — mesma lacuna e mesma correção de app/api/servicos-contratados/
@@ -29,7 +30,7 @@ export async function POST(
 
   const body = await request.json();
 
-  if (!body.servicoId || typeof body.valor !== "number" || isNaN(body.valor)) {
+  if (!body.servicoId || typeof body.valor !== "number" || !Number.isFinite(body.valor) || body.valor < 0 || (body.quantidade !== undefined && (!Number.isInteger(body.quantidade) || body.quantidade < 1))) {
     return NextResponse.json({ erro: "Serviço e um valor numérico válido são obrigatórios" }, { status: 400 });
   }
 
@@ -65,6 +66,7 @@ export async function POST(
       await prisma.historicoServicoContratado.createMany({
         data: historico.map((h) => ({ servicoContratadoId: reativado.id, usuarioId: usuario!.id, ...h })),
       });
+      await sincronizarMensalidadeCliente(params.id, undefined, true);
       return NextResponse.json(reativado, { status: 201 });
     }
 
@@ -78,6 +80,7 @@ export async function POST(
       include: { servico: true },
     });
 
+    await sincronizarMensalidadeCliente(params.id, undefined, true);
     return NextResponse.json(contratado, { status: 201 });
   } catch {
     return NextResponse.json(

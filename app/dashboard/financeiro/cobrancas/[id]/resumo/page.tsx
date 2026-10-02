@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { formatarDataFinanceira, hojeFinanceiro, inicioDiaFinanceiro } from "@/lib/datasFinanceiro";
 import { prisma } from "@/lib/prisma";
 import { getUsuarioAtual, podeVerCliente } from "@/lib/permissoes";
 import { calcularStatusEfetivo, LABEL_STATUS_EFETIVO } from "@/lib/statusFinanceiro";
@@ -27,23 +28,22 @@ export default async function ResumoCobrancaPage({ params }: { params: { id: str
   const config = await prisma.configuracao.findUnique({ where: { id: "config" } });
 
   const totalPago = cobranca.pagamentos.reduce((s, p) => s + Number(p.valor), 0);
-  const saldo = Math.max(0, Number(cobranca.valor) - totalPago);
   const statusEfetivo = calcularStatusEfetivo({
     status: cobranca.status,
     valor: Number(cobranca.valor),
     totalPago,
     vencimento: cobranca.vencimento,
   });
+  const saldo = statusEfetivo === "cancelado" || statusEfetivo === "pago" ? 0 : Math.max(0, Number(cobranca.valor) - totalPago);
 
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
+  const hoje = hojeFinanceiro();
   const diasAtraso =
     statusEfetivo === "atrasado" && cobranca.vencimento
-      ? Math.round((hoje.getTime() - new Date(cobranca.vencimento).setHours(0, 0, 0, 0)) / (1000 * 60 * 60 * 24))
+      ? Math.round((hoje.getTime() - inicioDiaFinanceiro(cobranca.vencimento).getTime()) / (1000 * 60 * 60 * 24))
       : null;
 
   const servicos = cobranca.cliente.servicosContratados;
-  const totalServicos = servicos.reduce((s, sc) => s + Number(sc.valor) * sc.quantidade, 0);
+  const totalServicos = servicos.reduce((s, sc) => s + Number(sc.valor), 0);
   const emitidoEm = new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 
   return (
@@ -82,7 +82,7 @@ export default async function ResumoCobrancaPage({ params }: { params: { id: str
           <div>
             <p className="text-[11px] text-muted print:text-black/50">Vencimento</p>
             <p className="text-base font-medium text-text print:text-black">
-              {cobranca.vencimento ? new Date(cobranca.vencimento).toLocaleDateString("pt-BR") : "—"}
+              {cobranca.vencimento ? formatarDataFinanceira(cobranca.vencimento) : "—"}
             </p>
           </div>
           <div>
@@ -114,7 +114,7 @@ export default async function ResumoCobrancaPage({ params }: { params: { id: str
                     {sc.servico.nome}
                     {sc.quantidade > 1 && ` (${sc.quantidade}x)`}
                   </span>
-                  <span className="text-muted print:text-black/70">R$ {fmt(Number(sc.valor) * sc.quantidade)}</span>
+                  <span className="text-muted print:text-black/70">R$ {fmt(Number(sc.valor))}</span>
                 </div>
               ))}
             </div>

@@ -9,6 +9,7 @@ import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { Input, Label } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { DatePicker } from "@/components/ui/DatePicker";
+import { calcularStatusEfetivo } from "@/lib/statusFinanceiro";
 import { CATEGORIAS_RECEITA } from "@/lib/categoriasFinanceiras";
 
 export default function FinanceiroTab({
@@ -21,9 +22,16 @@ export default function FinanceiroTab({
   despesas: DespesaRowData[];
 }) {
   const [formAberto, setFormAberto] = useState(false);
+  const [filtro, setFiltro] = useState("abertas");
+  function aparece(status: string) { return filtro === "todas" || (filtro === "recebidas" ? status === "pago" : filtro === "canceladas" ? status === "cancelado" : !["pago", "cancelado"].includes(status)); }
+  const cobrancasVisiveis = cobrancas.filter(c => aparece(calcularStatusEfetivo({ status: c.status, valor: c.valor, totalPago: c.totalPago || 0, vencimento: c.vencimento ? new Date(c.vencimento) : null })));
+  const despesasVisiveis = despesas.filter(d => aparece(calcularStatusEfetivo({ status: d.status || "pago", valor: d.valor, totalPago: d.totalPago || 0, vencimento: d.vencimento ? new Date(d.vencimento) : null })));
 
   return (
     <div>
+      <select aria-label="Filtrar lançamentos financeiros do cliente" value={filtro} onChange={e => setFiltro(e.target.value)} className="mb-4 h-10 rounded-xl border border-border bg-card px-3 text-sm text-text">
+        <option value="abertas">Em aberto</option><option value="recebidas">Recebidos e pagos</option><option value="canceladas">Cancelados</option><option value="todas">Todos os lançamentos</option>
+      </select>
       <div className="mb-2 flex items-center justify-between">
         <p className="text-xs uppercase tracking-wide text-muted">Cobranças</p>
         <button
@@ -34,19 +42,19 @@ export default function FinanceiroTab({
         </button>
       </div>
 
-      {formAberto && <NovaCobrancaForm clienteId={clienteId} onSalvo={() => setFormAberto(false)} />}
+      {formAberto && <NovaCobrancaForm clienteId={clienteId} onSalvo={(status) => { setFormAberto(false); setFiltro(status === "pago" ? "recebidas" : "abertas"); }} />}
 
       <div className="mb-6 flex flex-col gap-2">
-        {cobrancas.length === 0 && <p className="text-sm text-muted">Nenhuma cobrança ainda.</p>}
-        {cobrancas.map((c, i) => (
+        {cobrancasVisiveis.length === 0 && <p className="text-sm text-muted">Nenhuma cobrança nesse filtro.</p>}
+        {cobrancasVisiveis.map((c, i) => (
           <CobrancaRow key={c.id} cobranca={c} index={i} />
         ))}
       </div>
 
       <p className="mb-2 text-xs uppercase tracking-wide text-muted">Despesas</p>
       <div className="flex flex-col gap-2">
-        {despesas.length === 0 && <p className="text-sm text-muted">Nenhuma despesa ainda.</p>}
-        {despesas.map((d, i) => (
+        {despesasVisiveis.length === 0 && <p className="text-sm text-muted">Nenhuma despesa nesse filtro.</p>}
+        {despesasVisiveis.map((d, i) => (
           <DespesaRow key={d.id} despesa={d} index={i} />
         ))}
       </div>
@@ -54,13 +62,14 @@ export default function FinanceiroTab({
   );
 }
 
-function NovaCobrancaForm({ clienteId, onSalvo }: { clienteId: string; onSalvo: () => void }) {
+function NovaCobrancaForm({ clienteId, onSalvo }: { clienteId: string; onSalvo: (status: string) => void }) {
   const router = useRouter();
   const [valor, setValor] = useState(0);
-  const [tipo, setTipo] = useState("recorrente");
+  const [tipo, setTipo] = useState("unica");
   const [categoria, setCategoria] = useState("Serviços");
   const [status, setStatus] = useState("pago");
   const [data, setData] = useState("");
+  const [erro, setErro] = useState("");
   const [enviando, setEnviando] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -71,24 +80,16 @@ function NovaCobrancaForm({ clienteId, onSalvo }: { clienteId: string; onSalvo: 
       alert("Escolhe uma data.");
       return;
     }
-    setEnviando(true);
-
-    await fetch(`/api/clientes/${clienteId}/cobrancas`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        valor,
-        tipo,
-        categoria,
-        status,
-        vencimento: data || undefined,
-        data: status === "pago" ? data || undefined : undefined,
-      }),
-    });
-
-    setEnviando(false);
-    onSalvo();
-    router.refresh();
+    setEnviando(true); setErro("");
+    try {
+      const res = await fetch(`/api/clientes/${clienteId}/cobrancas`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ valor, tipo, categoria, status, vencimento: data, dataCompetencia: data, data: status === "pago" ? data : undefined }),
+      });
+      if (!res.ok) { const resposta = await res.json().catch(() => null); setErro(resposta?.erro || "Não consegui criar a cobrança. Tente novamente."); return; }
+      onSalvo(status); router.refresh();
+    } catch { setErro("Não consegui criar a cobrança. Confira a conexão e tente novamente."); }
+    finally { setEnviando(false); }
   }
 
   return (
@@ -114,7 +115,7 @@ function NovaCobrancaForm({ clienteId, onSalvo }: { clienteId: string; onSalvo: 
             onChange={(e) => setTipo(e.target.value)}
             className="h-10 w-full rounded-xl border border-border bg-card/60 px-3 text-sm text-text"
           >
-            <option value="recorrente">Recorrente</option>
+            <option value="recorrente">Mensalidade deste mês</option>
             <option value="unica">Única</option>
           </select>
         </div>
@@ -144,6 +145,8 @@ function NovaCobrancaForm({ clienteId, onSalvo }: { clienteId: string; onSalvo: 
           ))}
         </select>
       </div>
+      <p className="mb-3 text-[11px] text-muted">Este lançamento vale só para a data escolhida. A cobrança automática é configurada no Financeiro do cliente.</p>
+      {erro && <p role="alert" className="mb-3 text-xs text-red-400">{erro}</p>}
       <Button type="submit" size="sm" disabled={enviando || valor <= 0} className="w-full">
         {enviando ? "Salvando..." : "Lançar cobrança"}
       </Button>

@@ -120,7 +120,7 @@ export function CalendarioFinanceiro({
                     }`}
                   >
                     <ValorSensivel oculto={oculto}>
-                      {m.tipo === "entrada" ? "+" : "−"}R$ {m.valor.toFixed(0)}
+                      {m.tipo === "entrada" ? "+" : "−"}R$ {m.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </ValorSensivel>
                   </span>
                 </div>
