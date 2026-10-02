@@ -184,6 +184,7 @@ export default async function ContasAReceberPage({
       </p>
 
       <form
+        key={`${filtroMes}:${filtroCliente}:${aba}`}
         action="/dashboard/financeiro/contas-a-receber"
         method="get"
         className="mb-3 flex flex-wrap items-end gap-2"
