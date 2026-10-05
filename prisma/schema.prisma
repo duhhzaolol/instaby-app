@@ -216,6 +216,7 @@ model Cliente {
   // Notificações internas vinculadas a esse cliente (Etapa 1 v152) — ex.:
   // comentário de relatório, tarefa bloqueada de um conteúdo dele etc.
   notificacoes Notificacao[]
+  cronogramas CronogramaCliente[]
 }
 
 // Relatório de performance por rede e por período — dado lançado manualmente (Fase 1).
@@ -543,6 +544,7 @@ model Tarefa {
   publicacaoSugeridaEm DateTime? // proposta à aprovação; não muda o prazo nem agenda automaticamente
 
   versoes VersaoConteudo[]
+  pautasCronograma PautaCronograma[]
 
   // Exceção justificada pra tarefa "reel" sem vídeo bruto (Etapa 2 v153) — ex.: reel
   // feito 100% de banco de imagens/motion, sem captação própria. Só relevante pra
@@ -1401,4 +1403,51 @@ model RetornoMensalTrafego {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   @@unique([clienteId, mes])
+}
+
+// Proposta compartilhada: snapshots explícitos, independentes da produção e
+// da aprovação de conteúdo final. Comentários não mudam estados de tarefa.
+model CronogramaCliente {
+  id        String @id @default(uuid())
+  clienteId String
+  cliente   Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  mes       String
+  token     String @unique
+  ativo     Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  pautas    PautaCronograma[]
+
+  @@unique([clienteId, mes])
+}
+
+model PautaCronograma {
+  id           String @id @default(uuid())
+  cronogramaId String
+  cronograma   CronogramaCliente @relation(fields: [cronogramaId], references: [id], onDelete: Cascade)
+  tarefaId     String?
+  tarefa       Tarefa? @relation(fields: [tarefaId], references: [id], onDelete: SetNull)
+  titulo       String
+  formato      String
+  dataPrevista String // AAAA-MM-DD; data proposta, sem horário
+  textoCliente String // somente texto revisado explicitamente para compartilhar
+  visivel      Boolean @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  comentarios  ComentarioPauta[]
+
+  @@unique([cronogramaId, tarefaId])
+  @@index([cronogramaId, visivel])
+}
+
+model ComentarioPauta {
+  id        String @id @default(uuid())
+  pautaId   String
+  pauta     PautaCronograma @relation(fields: [pautaId], references: [id], onDelete: Cascade)
+  autor     String
+  texto     String
+  origem    String // cliente | agencia; nome informado não comprova identidade
+  createdAt DateTime @default(now())
+
+  @@index([pautaId, createdAt])
 }

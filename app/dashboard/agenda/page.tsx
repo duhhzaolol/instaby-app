@@ -18,7 +18,7 @@ import {
   tipoDaTarefaAgenda,
 } from "@/lib/tipoAtividadeAgenda";
 import { visualDaCategoriaTarefa } from "@/lib/categoriaTarefaVisual";
-import { getUsuarioAtual, clienteIdsPermitidos } from "@/lib/permissoes";
+import { getUsuarioAtual, clienteIdsPermitidos, permissoesDe } from "@/lib/permissoes";
 import { urgenciaPrazo } from "@/lib/urgenciaPrazo";
 import { chaveDiaSaoPaulo } from "@/lib/dataHora";
 import { linkAgenda, periodoAgenda, type FiltrosAgenda } from "@/lib/agenda";
@@ -265,6 +265,11 @@ export default async function AgendaPage({
       </div>
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <FiltroClienteAgenda clientes={clientes} clienteAtual={clienteFiltro} />
+        {clienteFiltro && permissoesDe(usuarioAtual).acessoClienteCompleto && (
+          <Link href={`/dashboard/clientes/${clienteFiltro}?aba=cronograma&cronogramaMes=${periodo.mesChave}`} className="rounded-xl border border-accent/40 bg-accent/10 px-4 py-2.5 text-sm text-text hover:bg-accent/20">
+            Compartilhar cronograma
+          </Link>
+        )}
         <div className="flex flex-wrap items-center gap-1.5 text-xs">
           {baseData === "trabalho" &&
             [

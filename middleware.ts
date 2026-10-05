@@ -31,6 +31,8 @@ function apiRotaPublica(pathname: string, method: string) {
   // só pra esse método, tudo mais no mesmo caminho (se algum dia existir) continua
   // exigindo sessão.
   if (method === "POST" && /^\/api\/clientes\/[^/]+\/solicitacoes\/publica$/.test(pathname)) return true;
+  // Link restrito ao cronograma: só comentários públicos neste caminho.
+  if (method === "POST" && /^\/api\/cronograma\/[a-f0-9]{64}\/pautas\/[^/]+\/comentarios$/.test(pathname)) return true;
   return false;
 }
 

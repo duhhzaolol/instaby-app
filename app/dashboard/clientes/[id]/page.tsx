@@ -18,6 +18,8 @@ import LinksClienteTab from "./LinksClienteTab";
 import OnboardingTab from "./OnboardingTab";
 import SolicitacoesTab from "./SolicitacoesTab";
 import { EntregasTab } from "./EntregasTab";
+import { CronogramaCliente } from "@/components/dashboard/CronogramaCliente";
+import { periodoAgenda } from "@/lib/agenda";
 import ArquivosTab from "./ArquivosTab";
 import { TarefaRow } from "@/components/dashboard/TarefaRow";
 import { OrcamentoRow } from "@/components/dashboard/OrcamentoRow";
@@ -35,7 +37,7 @@ export default async function ClienteDetalhePage({
   params: { id: string };
   // entregasMes (Etapa 3 v157): "AAAA-MM" do mês visto na aba Entregas — via
   // link com searchParam (sem estado de cliente nenhum, ver EntregasTab.tsx).
-  searchParams: { aba?: string; entregasMes?: string };
+  searchParams: { aba?: string; entregasMes?: string; cronogramaMes?: string };
 }) {
   const usuarioAtual = await getUsuarioAtual();
   if (!usuarioAtual) redirect("/login");
@@ -85,6 +87,7 @@ export default async function ClienteDetalhePage({
     { valor: "onboarding", label: "Onboarding" },
     { valor: "solicitacoes", label: "Solicitações" },
     { valor: "tarefas", label: "Tarefas" },
+    { valor: "cronograma", label: "Cronograma" },
     { valor: "entregas", label: "Entregas" },
     { valor: "servicos", label: "Serviços" },
     { valor: "relatorios", label: "Relatórios" },
@@ -493,6 +496,10 @@ export default async function ClienteDetalhePage({
             orcamentoPreparadoId: s.orcamentoPreparadoId,
           }))}
         />
+      )}
+
+      {aba === "cronograma" && (
+        <CronogramaCliente clienteId={cliente.id} clienteNome={cliente.nome} mesInicial={periodoAgenda(searchParams.cronogramaMes).mesChave} />
       )}
 
       {aba === "tarefas" && (
