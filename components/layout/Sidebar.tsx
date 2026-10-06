@@ -403,6 +403,11 @@ export function Sidebar({
   contadores: ContadoresMenu;
 }) {
   const [aberto, setAberto] = useState(false);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    setAberto(false);
+  }, [pathname]);
 
   return (
     <>
@@ -413,31 +418,41 @@ export function Sidebar({
 
       {/* Botão mobile */}
       <button
+        type="button"
+        aria-label="Abrir menu"
+        aria-expanded={aberto}
+        aria-controls="menu-mobile"
         onClick={() => setAberto(true)}
         className="fixed left-4 top-4 z-30 flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-text md:hidden print:hidden"
       >
         <Menu size={16} />
       </button>
 
-      {/* Drawer mobile */}
-      <AnimatePresence>
-        {aberto && (
+      {/* Remove o fundo junto com o menu, sem aguardar uma animação de saída.
+          A presença do fragmento mantinha uma camada invisível capturando
+          todos os toques mesmo depois de a nova página carregar. */}
+      {aberto && (
           <>
-            <motion.div
+            <motion.button
+              type="button"
+              aria-label="Fechar menu"
+              data-testid="fundo-menu-mobile"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
               onClick={() => setAberto(false)}
-              className="fixed inset-0 z-40 bg-black/60 md:hidden"
+              className="fixed inset-0 z-40 h-full w-full bg-black/60 md:hidden"
             />
             <motion.aside
+              id="menu-mobile"
+              aria-label="Menu de navegação"
               initial={{ x: -248 }}
               animate={{ x: 0 }}
-              exit={{ x: -248 }}
               transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
               className="fixed inset-y-0 left-0 z-50 flex w-[248px] flex-col border-r border-border bg-sidebar px-4 py-6 md:hidden"
             >
               <button
+                type="button"
+                aria-label="Fechar menu"
                 onClick={() => setAberto(false)}
                 className="absolute right-4 top-4 text-muted hover:text-text"
               >
@@ -453,8 +468,7 @@ export function Sidebar({
               />
             </motion.aside>
           </>
-        )}
-      </AnimatePresence>
+      )}
     </>
   );
 }
