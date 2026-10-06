@@ -29,7 +29,7 @@ export const NOVIDADES: VersaoNovidades[] = [
       { tipo: "corrigido", texto: "Um marco zerado sem indicador não esconde mais os resultados seguintes. Resultados de tipos diferentes aparecem em séries separadas, com nomes como Adições ao carrinho." },
       { tipo: "adicionado", texto: "Veja CPM, alcance e frequência por campanha, além de atribuição, orçamento do conjunto e custo por resultado informados no arquivo." },
       { tipo: "corrigido", texto: "Nas próximas importações, métricas vazias ficam como não informadas. Impressões incompletas são identificadas como parciais, sem calcular um CPM enganoso." },
-      { tipo: "corrigido", texto: "A saudação do cabeçalho usa o horário de Brasília e carrega sem conflito entre o servidor e o navegador." },
+      { tipo: "corrigido", texto: "A saudação do cabeçalho usa o horário de Brasília. O cabeçalho e a ajuda do tráfego carregam sem conflito entre o servidor e o navegador." },
     ],
   },
   {

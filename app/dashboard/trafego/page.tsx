@@ -95,14 +95,14 @@ export default async function TrafegoPage({
   return (
     <div>
       <div className="mb-6">
-        <p className="flex items-center gap-1.5 text-lg font-medium text-text">
+        <div className="flex items-center gap-1.5 text-lg font-medium text-text">
           Tráfego Pago
           <AjudaContextual
             titulo="Tráfego Pago"
             texto="Organize campanhas por cliente, importe relatórios do Meta Ads semanalmente, controle a verba de mídia disponibilizada por cada cliente e gere relatórios em PDF. O saldo aqui é o controle interno da verba de mídia — separado do Financeiro da agência (contratos, mensalidades, cobranças), que fica em outro módulo."
             exemplo="Ex.: importa o CSV acumulado do mês toda segunda-feira — o sistema calcula sozinho quanto cada campanha gastou a mais desde a última importação e atualiza o saldo restante do cliente."
           />
-        </p>
+        </div>
         <p className="text-sm text-muted">Campanhas, verba, importações e relatórios de tráfego pago.</p>
       </div>
 
