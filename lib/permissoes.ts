@@ -9,8 +9,10 @@ import { prisma } from "@/lib/prisma";
 // próxima página que essa pessoa abrir, sem precisar esperar a sessão expirar.
 export async function getUsuarioAtual() {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.email) return null;
-  const usuario = await prisma.usuario.findUnique({ where: { email: session.user.email } });
+  if (!session?.user?.id) return null;
+  // O ID vem do token assinado. Trocar ou reutilizar um e-mail nunca faz uma
+  // sessão antiga apontar para outra conta.
+  const usuario = await prisma.usuario.findUnique({ where: { id: session.user.id } });
   if (!usuario || !usuario.ativo) return null;
   return usuario;
 }

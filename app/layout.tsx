@@ -5,6 +5,12 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Instaby App",
   description: "Painel interno da Instaby Agência",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "Instaby",
+    statusBarStyle: "default",
+  },
 };
 
 // Roda antes da página pintar na tela, pra já aplicar o tema "cinza" salvo

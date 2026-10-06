@@ -22,6 +22,16 @@ export type VersaoNovidades = {
 
 export const NOVIDADES: VersaoNovidades[] = [
   {
+    versao: 166,
+    resumo: "Perfil funcionando e acesso mais prático no iPhone.",
+    itens: [
+      { tipo: "corrigido", texto: "Configurações pessoais abre sem travar e permite trocar a própria senha, confirmando a senha atual." },
+      { tipo: "melhorado", texto: "Quem já está conectado vai direto ao painel ao abrir a tela de entrada. O aplicativo instalado tem o painel como tela inicial." },
+      { tipo: "melhorado", texto: "E-mail e senha são identificados para o preenchimento pelo app Senhas do iPhone, com orientações para usar o Face ID." },
+      { tipo: "corrigido", texto: "O login aceita e-mail com maiúsculas ou espaços nas pontas. Falhas de conexão são informadas separadamente de senha incorreta." },
+    ],
+  },
+  {
     versao: 165,
     resumo: "Cadastro rápido de gastos no débito e lembrete por aproximação com Apple Pay.",
     itens: [

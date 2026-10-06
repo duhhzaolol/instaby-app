@@ -32,12 +32,18 @@ export const authOptions: AuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.senha) return null;
 
-        const usuario = await prisma.usuario.findUnique({
-          where: { email: credentials.email },
+        const email = credentials.email.trim().toLowerCase();
+        if (!email) return null;
+        // Não escolhe uma conta arbitrária se dois cadastros antigos diferirem
+        // só por maiúsculas. A senha continua sendo comparada sem alterações.
+        const usuarios = await prisma.usuario.findMany({
+          where: { email: { equals: email, mode: "insensitive" } },
+          take: 2,
         });
         // Mesmo se o e-mail não existir, não revela isso pra quem tenta —
         // sempre "e-mail ou senha incorretos", nunca "esse e-mail não existe".
-        if (!usuario) return null;
+        if (usuarios.length !== 1 || !usuarios[0].ativo) return null;
+        const usuario = usuarios[0];
 
         // Proteção contra força bruta: depois de 5 senhas erradas seguidas,
         // bloqueia esse login por 15 minutos, mesmo que a senha certa venha
@@ -78,18 +84,22 @@ export const authOptions: AuthOptions = {
     }),
   ],
   callbacks: {
-    // Configurações pessoais (redesign v144, Parte 3): quando a própria pessoa
-    // muda nome ou e-mail, o formulário chama `useSession().update({...})` do
-    // next-auth logo depois de salvar — isso dispara esse callback com
-    // trigger="update", e sem isso o token (e portanto nome/e-mail mostrados no
-    // resto do app) ficaria com o valor antigo até a pessoa sair e entrar de
-    // novo. getUsuarioAtual() busca no banco pelo e-mail da sessão, então
-    // atualizar o e-mail aqui junto é o que evita a pessoa "sumir" (sessão
-    // apontando pro e-mail antigo, que não existe mais) logo depois de trocar.
-    async jwt({ token, trigger, session }) {
-      if (trigger === "update" && session) {
-        if (session.name) token.name = session.name;
-        if (session.email) token.email = session.email;
+    async session({ session, token }) {
+      if (session.user) session.user.id = token.sub;
+      return session;
+    },
+    // Depois de salvar o perfil, relê somente a conta identificada pelo token
+    // assinado. Nome/e-mail enviados pelo navegador não definem a identidade.
+    async jwt({ token, trigger }) {
+      if (trigger === "update") {
+        if (!token.sub) throw new Error("Sessão inválida");
+        const usuario = await prisma.usuario.findUnique({
+          where: { id: token.sub },
+          select: { nome: true, email: true, ativo: true },
+        });
+        if (!usuario?.ativo) throw new Error("Sessão inválida");
+        token.name = usuario.nome;
+        token.email = usuario.email;
       }
       return token;
     },

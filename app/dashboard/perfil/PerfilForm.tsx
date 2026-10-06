@@ -40,12 +40,16 @@ export function PerfilForm({
   const [fotoUrl, setFotoUrl] = useState<string | null>(fotoUrlInicial);
   const [salvandoPerfil, setSalvandoPerfil] = useState(false);
   const [okPerfil, setOkPerfil] = useState(false);
+  const [erroPerfil, setErroPerfil] = useState<string | null>(null);
+  const [avisoPerfil, setAvisoPerfil] = useState<string | null>(null);
 
   const [senhaAtual, setSenhaAtual] = useState("");
   const [novaSenha, setNovaSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
   const [salvandoSenha, setSalvandoSenha] = useState(false);
   const [okSenha, setOkSenha] = useState(false);
+  const [erroSenha, setErroSenha] = useState<string | null>(null);
+  const campoId = `perfil-${usuarioId}`;
 
   // "Cadastrar disponibilidade" (Etapa 4 v158) — usada como 100% de capacidade
   // semanal dessa pessoa em Capacidade da equipe.
@@ -71,62 +75,90 @@ export function PerfilForm({
 
   async function salvarPerfil(e: React.FormEvent) {
     e.preventDefault();
+    if (salvandoPerfil) return;
     setSalvandoPerfil(true);
     setOkPerfil(false);
-
-    const emailMudou = email.trim().toLowerCase() !== emailInicial.toLowerCase();
-    const res = await fetch("/api/perfil", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nome, email }),
-    });
-    setSalvandoPerfil(false);
-
-    if (!res.ok) {
+    setErroPerfil(null);
+    setAvisoPerfil(null);
+    let dadosSalvos = false;
+    try {
+      const res = await fetch("/api/perfil", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nome, email }),
+      });
       const data = await res.json().catch(() => null);
-      alert(data?.erro || "Não consegui salvar seu perfil.");
-      return;
+      if (!res.ok) {
+        setErroPerfil(typeof data?.erro === "string" ? data.erro : "Não consegui salvar seu perfil.");
+        return;
+      }
+      if (typeof data?.nome !== "string" || !data.nome.trim() || typeof data?.email !== "string" || !data.email.trim()) {
+        setErroPerfil("Não consegui confirmar a atualização. Atualize a página para conferir seus dados.");
+        return;
+      }
+
+      dadosSalvos = true;
+      setNome(data.nome);
+      setEmail(data.email);
+      // Usa os valores confirmados pela API, incluindo a normalização do e-mail.
+      await update({ name: data.nome, email: data.email });
+      const emailMudou = data.email.trim().toLowerCase() !== emailInicial.trim().toLowerCase();
+      if (emailMudou) {
+        setAvisoPerfil("E-mail atualizado. Entre novamente com o novo e-mail.");
+        await signOut({ callbackUrl: "/login" });
+        return;
+      }
+      setOkPerfil(true);
+      router.refresh();
+      setTimeout(() => setOkPerfil(false), 2500);
+    } catch {
+      setErroPerfil(dadosSalvos
+        ? "Seus dados foram salvos, mas não consegui atualizar a sessão. Atualize a página antes de continuar."
+        : "Não consegui confirmar o salvamento. Confira sua conexão e atualize a página antes de tentar novamente.");
+    } finally {
+      setSalvandoPerfil(false);
     }
-
-    // Atualiza a sessão (nome/e-mail) sem precisar sair e entrar de novo — ver
-    // o callback jwt em lib/auth.ts, que existe justamente pra isso.
-    await update({ name: nome, email });
-
-    if (emailMudou) {
-      alert("E-mail atualizado. Por segurança, você vai precisar entrar de novo com o novo e-mail.");
-      signOut({ callbackUrl: "/login" });
-      return;
-    }
-
-    setOkPerfil(true);
-    router.refresh();
-    setTimeout(() => setOkPerfil(false), 2500);
   }
 
   async function salvarSenha(e: React.FormEvent) {
     e.preventDefault();
+    if (salvandoSenha) return;
+    setOkSenha(false);
+    setErroSenha(null);
     if (novaSenha !== confirmarSenha) {
-      alert("A confirmação não bate com a nova senha.");
+      setErroSenha("A confirmação não bate com a nova senha.");
+      return;
+    }
+    if (!senhaAtual || novaSenha.length < 6) {
+      setErroSenha("Preencha a senha atual e uma nova senha com pelo menos 6 caracteres.");
       return;
     }
     setSalvandoSenha(true);
-    setOkSenha(false);
-    const res = await fetch("/api/perfil", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ senhaAtual, novaSenha }),
-    });
-    setSalvandoSenha(false);
-    if (!res.ok) {
+    try {
+      const res = await fetch("/api/perfil", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ senhaAtual, novaSenha }),
+      });
       const data = await res.json().catch(() => null);
-      alert(data?.erro || "Não consegui trocar sua senha.");
-      return;
+      if (!res.ok) {
+        setErroSenha(typeof data?.erro === "string" ? data.erro : "Não consegui trocar sua senha.");
+        return;
+      }
+      if (data?.id !== usuarioId) {
+        setErroSenha("Não consegui confirmar a troca de senha. Atualize a página e confira o acesso antes de tentar novamente.");
+        return;
+      }
+      setSenhaAtual("");
+      setNovaSenha("");
+      setConfirmarSenha("");
+      setOkSenha(true);
+      setTimeout(() => setOkSenha(false), 2500);
+    } catch {
+      setErroSenha("Não consegui confirmar a troca de senha. Confira sua conexão e teste o acesso antes de tentar novamente.");
+    } finally {
+      setSalvandoSenha(false);
     }
-    setSenhaAtual("");
-    setNovaSenha("");
-    setConfirmarSenha("");
-    setOkSenha(true);
-    setTimeout(() => setOkSenha(false), 2500);
   }
 
   async function salvarCargaHoraria(e: React.FormEvent) {
@@ -189,23 +221,25 @@ export function PerfilForm({
         <p className="mb-4 text-sm font-medium text-text">Seus dados</p>
         <form onSubmit={salvarPerfil} className="flex flex-col gap-3">
           <div>
-            <Label>Nome</Label>
-            <Input value={nome} onChange={(e) => setNome(e.target.value)} required />
+            <Label htmlFor={`${campoId}-nome`}>Nome</Label>
+            <Input id={`${campoId}-nome`} name="nome" autoComplete="name" value={nome} onChange={(e) => setNome(e.target.value)} required />
           </div>
           <div>
-            <Label>E-mail (usado pra entrar)</Label>
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            <Label htmlFor={`${campoId}-email`}>E-mail (usado pra entrar)</Label>
+            <Input id={`${campoId}-email`} name="email" autoComplete="username" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
           </div>
           <div className="flex items-center gap-3">
             <Button type="submit" size="sm" disabled={salvandoPerfil}>
               {salvandoPerfil ? "Salvando..." : "Salvar"}
             </Button>
             {okPerfil && (
-              <span className="flex items-center gap-1 text-xs text-emerald-400">
+              <span role="status" className="flex items-center gap-1 text-xs text-emerald-400">
                 <Check size={13} /> Salvo
               </span>
             )}
           </div>
+          {erroPerfil && <p role="alert" className="text-sm text-red-400">{erroPerfil}</p>}
+          {avisoPerfil && <p role="status" className="text-sm text-muted">{avisoPerfil}</p>}
         </form>
       </Card>
 
@@ -242,18 +276,19 @@ export function PerfilForm({
         <p className="mb-1 text-sm font-medium text-text">Trocar senha</p>
         <p className="mb-4 text-xs text-muted">Deixe em branco se não quiser trocar agora.</p>
         <form onSubmit={salvarSenha} className="flex flex-col gap-3">
+          <input type="hidden" name="username" value={emailInicial} autoComplete="username" readOnly />
           <div>
-            <Label>Senha atual</Label>
-            <Input type="password" value={senhaAtual} onChange={(e) => setSenhaAtual(e.target.value)} autoComplete="current-password" />
+            <Label htmlFor={`${campoId}-senha-atual`}>Senha atual</Label>
+            <Input id={`${campoId}-senha-atual`} name="senhaAtual" type="password" value={senhaAtual} onChange={(e) => setSenhaAtual(e.target.value)} autoComplete="current-password" required />
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <Label>Nova senha</Label>
-              <Input type="password" value={novaSenha} onChange={(e) => setNovaSenha(e.target.value)} autoComplete="new-password" />
+              <Label htmlFor={`${campoId}-nova-senha`}>Nova senha</Label>
+              <Input id={`${campoId}-nova-senha`} name="novaSenha" type="password" value={novaSenha} onChange={(e) => setNovaSenha(e.target.value)} autoComplete="new-password" minLength={6} required />
             </div>
             <div>
-              <Label>Confirmar nova senha</Label>
-              <Input type="password" value={confirmarSenha} onChange={(e) => setConfirmarSenha(e.target.value)} autoComplete="new-password" />
+              <Label htmlFor={`${campoId}-confirmar-senha`}>Confirmar nova senha</Label>
+              <Input id={`${campoId}-confirmar-senha`} name="confirmarSenha" type="password" value={confirmarSenha} onChange={(e) => setConfirmarSenha(e.target.value)} autoComplete="new-password" minLength={6} required />
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -261,11 +296,12 @@ export function PerfilForm({
               {salvandoSenha ? "Salvando..." : "Trocar senha"}
             </Button>
             {okSenha && (
-              <span className="flex items-center gap-1 text-xs text-emerald-400">
+              <span role="status" className="flex items-center gap-1 text-xs text-emerald-400">
                 <Check size={13} /> Senha atualizada
               </span>
             )}
           </div>
+          {erroSenha && <p role="alert" className="text-sm text-red-400">{erroSenha}</p>}
         </form>
       </Card>
 

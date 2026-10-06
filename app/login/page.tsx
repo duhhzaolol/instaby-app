@@ -1,103 +1,23 @@
-"use client";
+import { Suspense } from "react";
+import { redirect } from "next/navigation";
+import { getUsuarioAtual } from "@/lib/permissoes";
+import { destinoLogin } from "@/lib/destinoLogin";
+import { LoginForm } from "./LoginForm";
 
-import { Suspense, useState } from "react";
-import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { motion } from "framer-motion";
-import { Card } from "@/components/ui/Card";
-import { Input, Label } from "@/components/ui/Input";
-import { Button } from "@/components/ui/Button";
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams?: { callbackUrl?: string | string[] };
+}) {
+  const usuario = await getUsuarioAtual();
+  if (usuario) {
+    const callbackUrl = typeof searchParams?.callbackUrl === "string" ? searchParams.callbackUrl : null;
+    redirect(destinoLogin(callbackUrl));
+  }
 
-// useSearchParams precisa estar dentro de um Suspense no App Router, senão a
-// Vercel quebra o build ("useSearchParams() should be wrapped in a suspense
-// boundary") — mesma classe de erro que já travou um deploy antes neste projeto.
-export default function LoginPage() {
   return (
     <Suspense fallback={null}>
       <LoginForm />
     </Suspense>
-  );
-}
-
-function LoginForm() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [email, setEmail] = useState("");
-  const [senha, setSenha] = useState("");
-  const [erro, setErro] = useState("");
-  const [carregando, setCarregando] = useState(false);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setErro("");
-    setCarregando(true);
-
-    const resultado = await signIn("credentials", {
-      email,
-      senha,
-      redirect: false,
-    });
-
-    setCarregando(false);
-
-    if (resultado?.error) {
-      setErro("E-mail ou senha incorretos.");
-      return;
-    }
-
-    // Volta pra página que a pessoa tentava acessar antes de cair no login (o
-    // middleware manda isso em ?callbackUrl=...) — só aceita um caminho interno
-    // do próprio painel, nunca um endereço externo, pra não abrir brecha de
-    // redirecionamento pra outro site.
-    const callbackUrl = searchParams.get("callbackUrl");
-    const destino = callbackUrl && callbackUrl.startsWith("/dashboard") ? callbackUrl : "/dashboard";
-    router.push(destino);
-  }
-
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-base px-4">
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-sm"
-      >
-        <div className="mb-8 text-center">
-          <img src="/logo.png" alt="Instaby" className="mx-auto h-8 w-auto" />
-          <p className="mt-5 text-lg font-medium text-text">Bem-vindo de volta</p>
-          <p className="mt-1 text-sm text-muted">Entre para acessar o painel</p>
-        </div>
-
-        <Card hoverable={false} className="p-6">
-          <form onSubmit={handleSubmit}>
-            <Label>E-mail</Label>
-            <Input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="seu@email.com"
-              className="mb-4"
-            />
-
-            <Label>Senha</Label>
-            <Input
-              type="password"
-              required
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-              placeholder="••••••••"
-              className="mb-6"
-            />
-
-            {erro && <p className="mb-4 text-xs text-red-400">{erro}</p>}
-
-            <Button type="submit" disabled={carregando} className="w-full">
-              {carregando ? "Entrando..." : "Entrar"}
-            </Button>
-          </form>
-        </Card>
-      </motion.div>
-    </div>
   );
 }

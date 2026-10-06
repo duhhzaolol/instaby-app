@@ -1,4 +1,4 @@
-import { InputHTMLAttributes, TextareaHTMLAttributes } from "react";
+import { InputHTMLAttributes, LabelHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { cn } from "@/lib/cn";
 
 export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
@@ -25,8 +25,8 @@ export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTex
   );
 }
 
-export function Label({ children }: { children: React.ReactNode }) {
-  return <label className="mb-1.5 block text-xs font-medium text-muted">{children}</label>;
+export function Label({ children, className, ...props }: LabelHTMLAttributes<HTMLLabelElement>) {
+  return <label className={cn("mb-1.5 block text-xs font-medium text-muted", className)} {...props}>{children}</label>;
 }
 
 export function Select({ className, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
