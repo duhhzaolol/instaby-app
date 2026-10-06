@@ -22,6 +22,7 @@ import { VerbaMovimentacoes } from "@/components/dashboard/trafego/VerbaMoviment
 import { HistoricoImportacoes } from "@/components/dashboard/trafego/HistoricoImportacoes";
 import { ehAcumuladoMensal, marcosAcumuladosMensais } from "@/lib/agregarResultadosCampanha";
 import { formatarDataRelatorio } from "@/lib/dataRelatorio";
+import { resumirImpressoes } from "@/lib/metricasTrafego";
 import { RetornoMensalTrafego } from "@/components/dashboard/trafego/RetornoMensalTrafego";
 import type { VendaTrafego } from "@/lib/retornoTrafego";
 import { RelatoriosTrafego } from "@/components/dashboard/trafego/RelatoriosTrafego";
@@ -186,14 +187,16 @@ async function VisaoGeralVisao({ clienteId, clienteNome, clientes, visao, mesPar
   const campanhasView = repararStatusInternoLegado(campanhasCliente).filter((c) => itensPorCampanha.has(c.id)).map((c) => {
     const item = itensPorCampanha.get(c.id)!;
     return { id: c.id, nome: c.nome, statusInterno: c.statusInterno, ultimoStatusMeta: c.ultimoStatusMeta, avaliacao: c.avaliacao, avaliacaoMeta: c.avaliacaoMeta, avaliacaoObservacoes: c.avaliacaoObservacoes, dataInicio: c.dataInicio.toISOString(), dataFim: (item.termino || c.dataFim)?.toISOString() || null,
+      detalhesMeta: { configAtribuicao: item.configAtribuicao, custoPorResultado: item.custoPorResultado == null ? null : Number(item.custoPorResultado), orcamentoConjunto: item.orcamentoConjunto == null ? null : Number(item.orcamentoConjunto), tipoOrcamento: item.tipoOrcamento },
       snapshot: serializarSnapshot({ gasto: Number(item.gastoAcumuladoArquivo), impressoes: item.impressoes, alcance: item.alcance, resultadosPorIndicador: agruparResultadosPorIndicador([item]), dataAtualizacao: ultimo.fim, temDados: true }) };
   });
-  const tiposNoMes = new Set(marcos.flatMap((lote) => lote.itens.filter((i) => i.resultados != null).map((i) => i.indicadorResultado || "(sem indicador)")));
   const pontos = marcos.map((lote) => {
     const grupos = agruparResultadosPorIndicador(lote.itens);
-    return { data: lote.fim.toISOString(), gasto: Number(lote.gastoTotalArquivo), impressoes: lote.itens.some((i) => i.impressoes != null) ? lote.itens.reduce((t, i) => t + (i.impressoes || 0), 0) : null,
-      alcance: null, resultados: tiposNoMes.size === 1 && grupos.length === 1 ? grupos[0].total : null,
-      resultadosLabel: grupos.map((g) => `${g.total.toLocaleString("pt-BR")} ${g.label}`).join(" · ") };
+    const conhecidos = grupos.filter((g) => g.indicador !== "(sem indicador)" || g.total !== 0);
+    return { data: lote.fim.toISOString(), gasto: Number(lote.gastoTotalArquivo), ...resumirImpressoes(lote.itens),
+      alcance: null, resultados: conhecidos.length === 1 ? conhecidos[0].total : null,
+      resultadosPorIndicador: conhecidos,
+      resultadosLabel: conhecidos.map((g) => `${g.total.toLocaleString("pt-BR")} ${g.label}`).join(" · ") || "Indicador não informado" };
   });
   const periodoLabel = ultimo ? `${formatarDataRelatorio(ultimo.inicio)} – ${formatarDataRelatorio(ultimo.fim)}` : "Sem importações mensais";
   const fechado = !!ultimo && ultimo.fim.getUTCDate() === new Date(Date.UTC(ultimo.fim.getUTCFullYear(), ultimo.fim.getUTCMonth() + 1, 0)).getUTCDate();

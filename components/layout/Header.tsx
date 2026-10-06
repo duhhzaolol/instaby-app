@@ -9,6 +9,7 @@ import { CronometroTopbar } from "@/components/layout/CronometroTopbar";
 import { RelogioTopbar } from "@/components/layout/RelogioTopbar";
 import { NovaTarefaTopbar } from "@/components/layout/NovaTarefaTopbar";
 import { SinoNotificacoes } from "@/components/layout/SinoNotificacoes";
+import { FUSO_HORARIO } from "@/lib/dataHora";
 
 // Mesma chave usada em components/dashboard/MarcarNovidadesVistas.tsx.
 const CHAVE_NOVIDADES_VISTAS = "instaby:novidades-vista";
@@ -16,7 +17,11 @@ const CHAVE_NOVIDADES_VISTAS = "instaby:novidades-vista";
 type Cliente = { id: string; nome: string; cor: string | null };
 
 function saudacao() {
-  const hora = new Date().getHours();
+  const hora = Number(new Intl.DateTimeFormat("en-US", {
+    timeZone: FUSO_HORARIO,
+    hour: "2-digit",
+    hourCycle: "h23",
+  }).format(new Date()));
   if (hora < 12) return "Bom dia";
   if (hora < 18) return "Boa tarde";
   return "Boa noite";
@@ -184,6 +189,20 @@ export function Header({ nomePrimeiro, clientes }: { nomePrimeiro: string; clien
   const pathname = usePathname() || "";
   const partes = pathname.split("/").filter(Boolean).filter((p) => p !== "dashboard");
   const [temNovidadeNaoVista, setTemNovidadeNaoVista] = useState(false);
+  // A saudação depende do horário atual. O primeiro texto é igual no servidor
+  // e no navegador; depois da montagem, usamos sempre o horário de Brasília.
+  const [textoSaudacao, setTextoSaudacao] = useState("Olá");
+
+  useEffect(() => {
+    const atualizar = () => setTextoSaudacao(saudacao());
+    atualizar();
+    const intervalo = setInterval(atualizar, 60_000);
+    document.addEventListener("visibilitychange", atualizar);
+    return () => {
+      clearInterval(intervalo);
+      document.removeEventListener("visibilitychange", atualizar);
+    };
+  }, []);
 
   useEffect(() => {
     try {
@@ -207,7 +226,7 @@ export function Header({ nomePrimeiro, clientes }: { nomePrimeiro: string; clien
           ))}
         </p>
         <p className="text-sm font-medium text-text">
-          {saudacao()}, {nomePrimeiro} 👋
+          {textoSaudacao}, {nomePrimeiro} 👋
         </p>
       </div>
 

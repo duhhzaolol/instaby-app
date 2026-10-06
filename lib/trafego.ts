@@ -4,6 +4,7 @@
 // Verba e Movimentações, Histórico de Importações, Relatórios).
 import { agruparPorMes } from "@/lib/agregarResultadosCampanha";
 import { prisma } from "@/lib/prisma";
+import { labelIndicador } from "@/lib/indicadoresMeta";
 
 // ───────────────────────────── Status interno ─────────────────────────────
 // `Campanha.statusInterno` é o controle de verdade a partir daqui. `Campanha.status`
@@ -126,22 +127,7 @@ export function avaliacaoValida(v: string): v is Avaliacao {
 // Nomes técnicos que o Meta usa em "Indicador de resultados" — traduzidos só pra leitura;
 // o valor original continua guardado e é o que decide se dois números podem ser somados
 // (nunca somamos `resultados` de indicadores diferentes entre si).
-export const INDICADOR_LABEL: Record<string, string> = {
-  "actions:onsite_conversion.messaging_conversation_started_7d": "Conversas iniciadas por mensagem",
-  "actions:onsite_conversion.total_messaging_connection": "Conexões de mensagem",
-  "actions:post_engagement": "Engajamentos com a publicação",
-  "actions:link_click": "Cliques no link",
-  "actions:landing_page_view": "Visualizações da página de destino",
-  "actions:offsite_conversion.fb_pixel_purchase": "Compras (pixel)",
-  video_thruplay_watched_actions: "Visualizações do vídeo (ThruPlay)",
-  reach: "Contas alcançadas",
-  impressions: "Impressões",
-};
-
-export function labelIndicador(indicador: string | null | undefined): string {
-  if (!indicador) return "não informado";
-  return INDICADOR_LABEL[indicador] || indicador;
-}
+export { INDICADOR_LABEL, labelIndicador } from "@/lib/indicadoresMeta";
 
 export function formatarNumeroOuNaoInformado(v: number | null | undefined): string {
   if (v === null || v === undefined) return "não informado";

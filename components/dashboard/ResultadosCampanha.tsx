@@ -9,6 +9,7 @@ import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { totalizarResultados, agruparPorMes, ehAcumuladoMensal, marcosAcumuladosMensais } from "@/lib/agregarResultadosCampanha";
 import { formatarDataRelatorio } from "@/lib/dataRelatorio";
+import { labelIndicador } from "@/lib/indicadoresMeta";
 
 // Cores da mini-visão de tendência — vermelho da marca pra custo (dinheiro saindo),
 // verde-azulado pra resultado (o que "entra" de retorno). Validadas com o script de
@@ -344,7 +345,7 @@ function LinhaResultado({ resultado }: { resultado: Resultado }) {
           {resultado.origem === "meta_import" && " · importado do Meta"}
         </p>
         {resultado.indicadorResultado && (
-          <p className="mt-0.5 text-[11px] text-muted/70">Resultado = {resultado.indicadorResultado}</p>
+          <p className="mt-0.5 text-[11px] text-muted/70">Resultado: {labelIndicador(resultado.indicadorResultado)}</p>
         )}
         {resultado.observacoes && <p className="mt-0.5 text-[11px] text-muted/70">{resultado.observacoes}</p>}
         {(resultado.planosFechados != null || resultado.valorRetorno != null) && (
@@ -414,8 +415,8 @@ function PainelResultados({ resultados }: { resultados: Resultado[] }) {
     gasto: Number(r.verbaInvestida || 0),
     impressoes: r.impressoes,
     alcance: r.alcance,
-    resultados: r.indicadorResultado === mensal?.indicadorResultado ? r.resultados : null,
-    resultadosLabel: r.resultados == null ? undefined : `${fmt(r.resultados)}${r.indicadorResultado !== mensal?.indicadorResultado ? ` (${r.indicadorResultado || "sem indicador"})` : ""}`,
+    resultados: r.resultados,
+    resultadosPorIndicador: r.resultados == null ? [] : [{ indicador: r.indicadorResultado || "(sem indicador)", label: labelIndicador(r.indicadorResultado), total: r.resultados }],
   }));
 
   const {

@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Wallet, TrendingDown, PiggyBank, CalendarClock, RefreshCw, Search, FileBarChart } from "lucide-react";
+import { Wallet, TrendingDown, PiggyBank, CalendarClock, RefreshCw, Search, FileBarChart, Eye, Megaphone, Repeat, BarChart3 } from "lucide-react";
 import { EvolucaoImportacoes, type MarcoImportacao } from "./EvolucaoImportacoes";
 import { AvaliarCampanha } from "./AvaliarCampanha";
 import { StatTile } from "@/components/ui/StatTile";
 import { STATUS_INTERNO, STATUS_INTERNO_LABEL, AVALIACAO_LABEL, formatarNumeroOuNaoInformado } from "@/lib/trafego";
+import { custoPorMilImpressoes, frequenciaCampanha } from "@/lib/metricasTrafego";
 
 type GrupoResultado = { indicador: string; label: string; total: number; qtdCampanhas: number };
 type SnapshotView = {
@@ -27,6 +28,12 @@ type CampanhaLinha = {
   avaliacaoObservacoes?: string | null;
   dataInicio: string;
   dataFim: string | null;
+  detalhesMeta?: {
+    configAtribuicao: string | null;
+    custoPorResultado: number | null;
+    orcamentoConjunto: number | null;
+    tipoOrcamento: string | null;
+  };
   snapshot: SnapshotView;
 };
 type Saldo = {
@@ -87,6 +94,11 @@ export function VisaoGeralTrafego({
   });
 
   const maiorGasto = Math.max(1, ...campanhas.map((c) => c.snapshot.gasto));
+  const ultimoMarco = marcos[marcos.length - 1];
+  const campanhasComGasto = campanhas.filter((c) => c.snapshot.gasto > 0);
+  const campanhaUnica = campanhasComGasto.length === 1 ? campanhasComGasto[0] : null;
+  const cpm = ultimoMarco && !ultimoMarco.impressoesParciais ? custoPorMilImpressoes(ultimoMarco.gasto, ultimoMarco.impressoes) : null;
+  const frequencia = campanhaUnica ? frequenciaCampanha(campanhaUnica.snapshot.impressoes, campanhaUnica.snapshot.alcance) : null;
 
   function alternarSelecao(id: string) {
     setSelecionadas((s) => ({ ...s, [id]: !s[id] }));
@@ -100,6 +112,12 @@ export function VisaoGeralTrafego({
         <p className="mt-1 text-[11px] text-muted">Total do último arquivo do mês, incluindo todas as campanhas presentes no relatório. As importações anteriores ficam como marcos.</p>
       </div>
       <EvolucaoImportacoes marcos={marcos}/>
+      {ultimoMarco && <div className="mb-5 grid grid-cols-2 gap-2 lg:grid-cols-4">
+        <StatTile icone={<Megaphone size={12} className="text-accent" />} label="Campanhas com gasto" valor={campanhasComGasto.length.toLocaleString("pt-BR")} sub="No último relatório do mês" index={0}/>
+        <StatTile icone={<BarChart3 size={12} style={{ color: "#38BDF8" }}/>} label="CPM do mês" valor={cpm == null ? "—" : fmtMoeda(cpm)} sub={ultimoMarco.impressoesParciais ? "Faltam impressões em parte das campanhas" : "Custo por mil impressões"} index={1}/>
+        <StatTile icone={<Eye size={12} style={{ color: "#A78BFA" }}/>} label={campanhaUnica ? "Alcance da campanha" : "Alcance por campanha"} valor={campanhaUnica ? formatarNumeroOuNaoInformado(campanhaUnica.snapshot.alcance) : "Na tabela"} sub={campanhaUnica ? "Contas alcançadas no período" : "Pessoas podem se repetir entre campanhas"} index={2}/>
+        <StatTile icone={<Repeat size={12} style={{ color: "#0D9488" }}/>} label={campanhaUnica ? "Frequência da campanha" : "Frequência por campanha"} valor={campanhaUnica ? (frequencia == null ? "—" : `${frequencia.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}×`) : "Na tabela"} sub="Média de impressões por conta alcançada" index={3}/>
+      </div>}
       <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
         <StatTile
           icone={<PiggyBank size={12} style={{ color: "#0D9488" }} />}
@@ -217,6 +235,8 @@ export function VisaoGeralTrafego({
                 <th className="p-2.5 text-right font-medium">Custo/resultado</th>
                 <th className="p-2.5 text-right font-medium">Impressões</th>
                 <th className="p-2.5 text-right font-medium">Alcance</th>
+                <th className="p-2.5 text-right font-medium">CPM</th>
+                <th className="p-2.5 text-right font-medium">Frequência</th>
               </tr>
             </thead>
             <tbody>
@@ -231,6 +251,14 @@ export function VisaoGeralTrafego({
                       <span className="ml-1.5 text-[10px] text-muted">· {AVALIACAO_LABEL[c.avaliacao]}</span>
                     )}
                     <button onClick={() => setAvaliando(c)} className="mt-1 block text-[11px] text-accent underline">Avaliar campanha</button>
+                    {c.detalhesMeta && <details className="mt-2 text-[11px] text-muted">
+                      <summary className="cursor-pointer text-accent">Detalhes do arquivo</summary>
+                      <dl className="mt-2 space-y-1">
+                        <div><dt className="inline font-medium">Atribuição: </dt><dd className="inline">{c.detalhesMeta.configAtribuicao || "Não informada"}</dd></div>
+                        <div><dt className="inline font-medium">Orçamento do conjunto: </dt><dd className="inline">{c.detalhesMeta.orcamentoConjunto == null ? "Não informado" : fmtMoeda(c.detalhesMeta.orcamentoConjunto)}{c.detalhesMeta.tipoOrcamento ? ` · ${c.detalhesMeta.tipoOrcamento}` : ""}</dd></div>
+                        <div><dt className="inline font-medium">Custo/resultado informado: </dt><dd className="inline">{c.detalhesMeta.custoPorResultado == null ? "Não informado" : fmtMoeda(c.detalhesMeta.custoPorResultado)}</dd></div>
+                      </dl>
+                    </details>}
                   </td>
                   <td className="p-2.5 text-muted">{STATUS_INTERNO_LABEL[c.statusInterno] || c.statusInterno}</td>
                   <td className="whitespace-nowrap p-2.5 text-muted">{dataBr(c.dataInicio)}</td>
@@ -256,7 +284,7 @@ export function VisaoGeralTrafego({
                       <div className="flex flex-col gap-0.5">
                         {c.snapshot.resultadosPorIndicador.map((r) => (
                           <span key={r.indicador} className="text-text">
-                            {r.total > 0 ? `R$ ${(c.snapshot.gasto / r.total).toFixed(2)}` : "—"}
+                            {r.total > 0 && r.indicador !== "(sem indicador)" ? fmtMoeda(c.snapshot.gasto / r.total) : "—"}
                           </span>
                         ))}
                       </div>
@@ -264,6 +292,8 @@ export function VisaoGeralTrafego({
                   </td>
                   <td className="p-2.5 text-right text-text">{formatarNumeroOuNaoInformado(c.snapshot.impressoes)}</td>
                   <td className="p-2.5 text-right text-text">{formatarNumeroOuNaoInformado(c.snapshot.alcance)}</td>
+                  <td className="whitespace-nowrap p-2.5 text-right text-text">{custoPorMilImpressoes(c.snapshot.gasto, c.snapshot.impressoes) == null ? "—" : fmtMoeda(custoPorMilImpressoes(c.snapshot.gasto, c.snapshot.impressoes)!)}</td>
+                  <td className="p-2.5 text-right text-text">{frequenciaCampanha(c.snapshot.impressoes, c.snapshot.alcance) == null ? "—" : `${frequenciaCampanha(c.snapshot.impressoes, c.snapshot.alcance)!.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}×`}</td>
                 </tr>
               ))}
             </tbody>

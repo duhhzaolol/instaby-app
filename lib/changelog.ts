@@ -22,6 +22,17 @@ export type VersaoNovidades = {
 
 export const NOVIDADES: VersaoNovidades[] = [
   {
+    versao: 163,
+    resumo: "Tráfego com três gráficos simultâneos, indicadores legíveis e mais detalhes do relatório.",
+    itens: [
+      { tipo: "melhorado", texto: "Gasto acumulado, impressões e resultados aparecem juntos na visão geral. Cada importação continua sendo um marco; o último arquivo define o total do mês." },
+      { tipo: "corrigido", texto: "Um marco zerado sem indicador não esconde mais os resultados seguintes. Resultados de tipos diferentes aparecem em séries separadas, com nomes como Adições ao carrinho." },
+      { tipo: "adicionado", texto: "Veja CPM, alcance e frequência por campanha, além de atribuição, orçamento do conjunto e custo por resultado informados no arquivo." },
+      { tipo: "corrigido", texto: "Nas próximas importações, métricas vazias ficam como não informadas. Impressões incompletas são identificadas como parciais, sem calcular um CPM enganoso." },
+      { tipo: "corrigido", texto: "A saudação do cabeçalho usa o horário de Brasília e carrega sem conflito entre o servidor e o navegador." },
+    ],
+  },
+  {
     versao: 162,
     resumo: "Financeiro com mensalidades sem repetição, recorrência por cliente e caixa pelas baixas reais.",
     itens: [

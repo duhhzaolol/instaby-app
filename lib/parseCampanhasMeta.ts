@@ -97,6 +97,26 @@ export function numeroSeguro(valor: any): number {
   return isNaN(n) ? 0 : n;
 }
 
+// Uma métrica vazia no export não significa zero. Aceita os mesmos formatos
+// numéricos do relatório (decimal com ponto ou vírgula e milhar BR), preservando
+// o zero explícito e deixando ausências ou textos inválidos como não informados.
+export function numeroOpcionalSeguro(valor: unknown): number | null {
+  if (typeof valor === "number") return Number.isFinite(valor) ? valor : null;
+  if (typeof valor !== "string") return null;
+  const texto = valor.trim();
+  const formatoValido = texto.includes(",")
+    ? /^[+-]?(?:\d+|\d{1,3}(?:\.\d{3})+),\d+$/.test(texto)
+    : /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(texto);
+  if (!formatoValido) return null;
+  const numero = numeroSeguro(texto);
+  return Number.isFinite(numero) ? numero : null;
+}
+
+function inteiroOpcionalSeguro(valor: unknown): number | null {
+  const numero = numeroOpcionalSeguro(valor);
+  return numero === null ? null : Math.round(numero);
+}
+
 export function dataSegura(valor: any): string | null {
   if (!valor) return null;
   const texto = String(valor).trim();
@@ -163,11 +183,11 @@ export function processarLinhasBrutas(
       status,
       inicio,
       fim,
-      resultados: colunas.resultados ? Math.round(numeroSeguro(linha[colunas.resultados])) : null,
+      resultados: colunas.resultados ? inteiroOpcionalSeguro(linha[colunas.resultados]) : null,
       indicadorResultado: colunas.indicadorResultado ? String(linha[colunas.indicadorResultado] || "").trim() || null : null,
       valorGasto: colunas.valorGasto ? numeroSeguro(linha[colunas.valorGasto]) : 0,
-      impressoes: colunas.impressoes ? Math.round(numeroSeguro(linha[colunas.impressoes])) : null,
-      alcance: colunas.alcance ? Math.round(numeroSeguro(linha[colunas.alcance])) : null,
+      impressoes: colunas.impressoes ? inteiroOpcionalSeguro(linha[colunas.impressoes]) : null,
+      alcance: colunas.alcance ? inteiroOpcionalSeguro(linha[colunas.alcance]) : null,
       idExterno: idExternoBruto || null,
       configAtribuicao: colunas.configAtribuicao ? String(linha[colunas.configAtribuicao] || "").trim() || null : null,
       custoPorResultado: custoPorResultado && custoPorResultado > 0 ? custoPorResultado : null,
