@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { exigirPermissaoApi, podeVerCliente } from "@/lib/permissoes";
 
-const TIPOS_VALIDOS = ["aporte", "devolucao", "ajuste", "saldo_transportado"];
+const TIPOS_VALIDOS = ["aporte", "devolucao", "ajuste"];
 
-// Registra um aporte, devolução, ajuste ou saldo transportado — nunca editado/apagado
+// Registra um aporte, devolução ou ajuste — nunca editado/apagado
 // depois (é o extrato). "valor" é sempre a magnitude positiva; o tipo decide se soma
 // ou subtrai do saldo (ver calcularSaldoCliente em lib/trafego.ts).
+// Transportes antigos permanecem no histórico; o saldo atual já continua entre meses.
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   const { usuario, erro } = await exigirPermissaoApi("gerenciarTrafego");
   if (erro) return erro;
@@ -15,6 +16,9 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   }
 
   const body = await request.json();
+  if (body.tipo === "saldo_transportado") {
+    return NextResponse.json({ erro: "O saldo já continua entre os meses. Registre apenas um novo crédito confirmado ou ajuste o saldo inicial." }, { status: 400 });
+  }
   if (!TIPOS_VALIDOS.includes(body.tipo)) {
     return NextResponse.json({ erro: "Tipo de movimentação inválido" }, { status: 400 });
   }

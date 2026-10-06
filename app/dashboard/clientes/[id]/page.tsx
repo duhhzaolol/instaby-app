@@ -24,6 +24,7 @@ import ArquivosTab from "./ArquivosTab";
 import { TarefaRow } from "@/components/dashboard/TarefaRow";
 import { OrcamentoRow } from "@/components/dashboard/OrcamentoRow";
 import TrafegoClient from "@/components/dashboard/TrafegoClient";
+import { PagamentoMidiaCliente } from "@/components/dashboard/trafego/PagamentoMidiaCliente";
 import { Clock } from "lucide-react";
 import { getUsuarioAtual, permissoesDe, podeVerCliente } from "@/lib/permissoes";
 import { garantirPastasCliente, linkDaPasta } from "@/lib/google";
@@ -731,12 +732,16 @@ export default async function ClienteDetalhePage({
         </div>
       )}
       {aba === "trafego" && pode.gerenciarTrafego && (
-        <TrafegoClient
-          campanhas={campanhasTrafego}
-          clientes={[{ id: cliente.id, nome: cliente.nome, cor: cliente.cor }]}
-          clienteFixo={cliente.id}
-          contexto="tudo"
-        />
+        <div>
+          <PagamentoMidiaCliente key={cliente.id} clienteId={cliente.id} formaPagamento={cliente.formaPagamentoTrafego}/>
+          <Link href={`/dashboard/trafego?visao=visao-geral&clienteId=${cliente.id}`} className="mb-4 inline-block text-xs text-accent underline">Abrir visão geral do tráfego deste cliente</Link>
+          <TrafegoClient
+            campanhas={campanhasTrafego}
+            clientes={[{ id: cliente.id, nome: cliente.nome, cor: cliente.cor }]}
+            clienteFixo={cliente.id}
+            contexto="tudo"
+          />
+        </div>
       )}
 
       {aba === "arquivos" && (

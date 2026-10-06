@@ -246,6 +246,7 @@ async function VerbaVisao({
     <div>
       <SeletorClienteTrafego clientes={clientes} clienteIdAtual={clienteId} visao={visao} />
       <VerbaMovimentacoes
+        key={clienteId}
         clienteId={clienteId}
         clienteNome={clienteNome}
         saldoInicial={verba ? Number(verba.saldoInicial) : 0}

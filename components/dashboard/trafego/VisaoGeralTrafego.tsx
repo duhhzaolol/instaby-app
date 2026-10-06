@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Wallet, TrendingDown, PiggyBank, CalendarClock, RefreshCw, Search, FileBarChart, Eye, Megaphone, Repeat, BarChart3 } from "lucide-react";
+import { Wallet, TrendingDown, PiggyBank, CalendarClock, RefreshCw, Search, FileBarChart, Eye, Megaphone, Repeat, BarChart3, CreditCard } from "lucide-react";
 import { EvolucaoImportacoes, type MarcoImportacao } from "./EvolucaoImportacoes";
 import { AvaliarCampanha } from "./AvaliarCampanha";
 import { StatTile } from "@/components/ui/StatTile";
 import { STATUS_INTERNO, STATUS_INTERNO_LABEL, AVALIACAO_LABEL, formatarNumeroOuNaoInformado } from "@/lib/trafego";
 import { custoPorMilImpressoes, frequenciaCampanha } from "@/lib/metricasTrafego";
+import { labelFormaPagamentoTrafego } from "@/lib/pagamentoTrafego";
 
 type GrupoResultado = { indicador: string; label: string; total: number; qtdCampanhas: number };
 type SnapshotView = {
@@ -37,6 +38,8 @@ type CampanhaLinha = {
   snapshot: SnapshotView;
 };
 type Saldo = {
+  formaPagamento?: string | null;
+  controlaSaldo?: boolean;
   temVerbaCadastrada: boolean;
   saldoInicial: number;
   totalAportes: number;
@@ -84,6 +87,7 @@ export function VisaoGeralTrafego({
   const [selecionadas, setSelecionadas] = useState<Record<string, boolean>>({});
 
   const verbaTotal = saldo.saldoInicial + saldo.totalAportes + saldo.totalSaldoTransportado;
+  const controlaSaldo = saldo.controlaSaldo !== false && saldo.formaPagamento !== "cartao_credito";
   const idsSelecionados = Object.keys(selecionadas).filter((id) => selecionadas[id]);
 
   const visiveis = campanhas.filter((c) => !ocultarZeros || c.snapshot.gasto > 0).sort((a,b) => new Date(b.dataInicio).getTime() - new Date(a.dataInicio).getTime());
@@ -118,14 +122,15 @@ export function VisaoGeralTrafego({
         <StatTile icone={<Eye size={12} style={{ color: "#A78BFA" }}/>} label={campanhaUnica ? "Alcance da campanha" : "Alcance por campanha"} valor={campanhaUnica ? formatarNumeroOuNaoInformado(campanhaUnica.snapshot.alcance) : "Na tabela"} sub={campanhaUnica ? "Contas alcançadas no período" : "Pessoas podem se repetir entre campanhas"} index={2}/>
         <StatTile icone={<Repeat size={12} style={{ color: "#0D9488" }}/>} label={campanhaUnica ? "Frequência da campanha" : "Frequência por campanha"} valor={campanhaUnica ? (frequencia == null ? "—" : `${frequencia.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}×`) : "Na tabela"} sub="Média de impressões por conta alcançada" index={3}/>
       </div>}
-      <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-        <StatTile
+      <div className={`mb-5 grid grid-cols-2 gap-2 sm:grid-cols-3 ${controlaSaldo ? "lg:grid-cols-6" : "lg:grid-cols-5"}`}>
+        <StatTile icone={<CreditCard size={12} className="text-accent"/>} label="Pagamento da mídia" valor={labelFormaPagamentoTrafego(saldo.formaPagamento)} sub={controlaSaldo ? "Controle de saldo pré-pago" : "Cobrança direta na plataforma"} index={0}/>
+        {controlaSaldo && <StatTile
           icone={<PiggyBank size={12} style={{ color: "#0D9488" }} />}
           label="Verba disponibilizada"
           valor={saldo.temVerbaCadastrada ? fmtMoeda(verbaTotal) : "—"}
           sub={!saldo.temVerbaCadastrada ? "Nenhuma verba cadastrada" : undefined}
           index={0}
-        />
+        />}
         <StatTile
           icone={<TrendingDown size={12} style={{ color: "#E63946" }} />}
           label="Gasto do mês selecionado"
@@ -133,9 +138,10 @@ export function VisaoGeralTrafego({
           index={1}
         />
         <StatTile
-          icone={<Wallet size={12} style={{ color: saldo.saldoRestante < 0 ? "#E63946" : "#22C55E" }} />}
-          label="Saldo do controle de verba"
-          valor={saldo.temVerbaCadastrada ? fmtMoeda(saldo.saldoRestante) : "—"}
+          icone={<Wallet size={12} style={{ color: controlaSaldo && saldo.saldoRestante < 0 ? "#E63946" : "#22C55E" }} />}
+          label={controlaSaldo ? "Saldo do controle de verba" : "Cobrança na plataforma"}
+          valor={controlaSaldo ? (saldo.temVerbaCadastrada ? fmtMoeda(saldo.saldoRestante) : "—") : "No cartão"}
+          sub={controlaSaldo ? undefined : "Gasto do relatório; sem saldo pré-pago"}
           index={2}
         />
         <StatTile icone={<CalendarClock size={12} className="text-muted" />} label="Período" valor={periodoLabel} index={3} />
@@ -147,7 +153,7 @@ export function VisaoGeralTrafego({
         />
       </div>
 
-      {!saldo.temVerbaCadastrada && (
+      {controlaSaldo && !saldo.temVerbaCadastrada && (
         <p className="mb-4 rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-amber-400">
           Esse cliente ainda não tem verba cadastrada — o gasto acima já é calculado, mas o saldo só aparece depois de
           cadastrar a verba de anúncios. <Link href={`/dashboard/trafego?visao=verba&clienteId=${clienteId}`} className="ml-1 underline">Cadastrar verba de anúncios</Link>
@@ -156,9 +162,9 @@ export function VisaoGeralTrafego({
 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <label className="flex items-center gap-2 text-xs text-muted"><input type="checkbox" checked={ocultarZeros} onChange={(e) => setOcultarZeros(e.target.checked)}/>Ocultar campanhas sem gasto no mês</label>
-        <Link href={`/dashboard/trafego?visao=verba&clienteId=${clienteId}`} className="text-xs text-accent underline">Configurar verba de anúncios</Link>
+        <Link href={`/dashboard/trafego?visao=verba&clienteId=${clienteId}`} className="text-xs text-accent underline">Configurar pagamento e verba</Link>
       </div>
-      <details className="mb-4 rounded-xl border border-border p-3 text-xs text-muted"><summary className="cursor-pointer">Ver gastos dos meses anteriores e origem do histórico</summary><p className="mt-2">Histórico registrado: {fmtMoeda(saldo.gastoHistorico)}. O valor do mês selecionado é {gastoMes == null ? "—" : fmtMoeda(gastoMes)}.</p>{saldo.gastosPorMes.map((m) => <p key={m.mes}>{dataBr(`${m.mes}-01`)} · {fmtMoeda(m.gasto)}</p>)}<p className="mt-2">O saldo de verba considera {saldo.inicioControle ? `os registros a partir de ${dataBr(saldo.inicioControle)}` : "todos os meses registrados, até definir um mês de início do controle"}.</p></details>
+      <details className="mb-4 rounded-xl border border-border p-3 text-xs text-muted"><summary className="cursor-pointer">Ver gastos dos meses anteriores e origem do histórico</summary><p className="mt-2">Histórico registrado: {fmtMoeda(saldo.gastoHistorico)}. O valor do mês selecionado é {gastoMes == null ? "—" : fmtMoeda(gastoMes)}.</p>{saldo.gastosPorMes.map((m) => <p key={m.mes}>{dataBr(`${m.mes}-01`)} · {fmtMoeda(m.gasto)}</p>)}<p className="mt-2">{controlaSaldo ? `O saldo de verba considera ${saldo.inicioControle ? `os registros a partir de ${dataBr(saldo.inicioControle)}` : "todos os meses registrados, até definir um mês de início do controle"}. O saldo continua entre meses sem precisar de um novo lançamento de transporte.` : "Acompanhe aqui o gasto informado nos relatórios. Pagamentos e valores cobrados no cartão são conferidos na plataforma; o gasto não confirma a quitação."}</p></details>
       {visiveis.length > 0 && (
         <div className="mb-5 rounded-2xl border border-border bg-card/60 p-4">
           <p className="mb-3 text-sm font-medium text-text">Gasto por campanha no período</p>

@@ -38,6 +38,10 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     previa: resultado.previa,
     saldoAtual: saldo,
-    saldoProjetado: saldo.temVerbaCadastrada ? saldo.saldoRestante - incrementoResolvidas : null,
+    formaPagamento: saldo.formaPagamento,
+    controlaSaldo: saldo.controlaSaldo,
+    saldoProjetado: saldo.controlaSaldo !== false && saldo.temVerbaCadastrada
+      ? saldo.saldoRestante - incrementoResolvidas
+      : null,
   });
 }

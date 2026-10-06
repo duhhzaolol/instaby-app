@@ -5,6 +5,7 @@
 import { agruparPorMes } from "@/lib/agregarResultadosCampanha";
 import { prisma } from "@/lib/prisma";
 import { labelIndicador } from "@/lib/indicadoresMeta";
+import { controlaSaldoTrafego } from "@/lib/pagamentoTrafego";
 
 // ───────────────────────────── Status interno ─────────────────────────────
 // `Campanha.statusInterno` é o controle de verdade a partir daqui. `Campanha.status`
@@ -314,6 +315,8 @@ export function snapshotCampanhaTotal(campanhaId: string): Promise<SnapshotCampa
 
 // ───────────────────────────── Verba e saldo do cliente ─────────────────────────────
 export type ResumoSaldoCliente = {
+  formaPagamento: string | null;
+  controlaSaldo: boolean;
   temVerbaCadastrada: boolean;
   saldoInicial: number;
   totalAportes: number;
@@ -331,10 +334,11 @@ export type ResumoSaldoCliente = {
 // independente de statusInterno — arquivar/finalizar uma campanha nunca tira o gasto
 // dela dessa conta.
 export async function calcularSaldoCliente(clienteId: string): Promise<ResumoSaldoCliente> {
-  const [verba, legado, itens] = await Promise.all([
+  const [verba, legado, itens, cliente] = await Promise.all([
     prisma.verbaTrafego.findUnique({ where: { clienteId }, include: { movimentacoes: { orderBy: { dataMovimento: "desc" } } } }),
     prisma.resultadoCampanha.findMany({ where: { campanha: { clienteId }, origem: "meta_import" }, select: { campanhaId: true, inicio: true, fim: true, verbaInvestida: true, createdAt: true } }),
     prisma.itemImportacao.findMany({ where: { lote: { clienteId }, campanhaId: { not: null } }, include: { lote: { select: { periodoInicio: true, periodoFim: true } } } }),
+    prisma.cliente.findUnique({ where: { id: clienteId }, select: { formaPagamentoTrafego: true } }),
   ]);
   const linhas = [
     ...legado.map((r) => ({ ...r, verbaInvestida: Number(r.verbaInvestida || 0), impressoes: null, alcance: null, resultados: null, planosFechados: null, valorRetorno: null })),
@@ -367,6 +371,8 @@ export async function calcularSaldoCliente(clienteId: string): Promise<ResumoSal
   const saldoRestante = Math.round((saldoInicial + totalAportes + totalSaldoTransportado - totalDevolucoes - totalAjustes - gastoAcumulado) * 100) / 100;
 
   return {
+    formaPagamento: cliente?.formaPagamentoTrafego || null,
+    controlaSaldo: controlaSaldoTrafego(cliente?.formaPagamentoTrafego),
     temVerbaCadastrada: !!verba,
     saldoInicial,
     totalAportes,

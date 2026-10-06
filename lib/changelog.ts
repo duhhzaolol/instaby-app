@@ -22,6 +22,16 @@ export type VersaoNovidades = {
 
 export const NOVIDADES: VersaoNovidades[] = [
   {
+    versao: 164,
+    resumo: "Forma de pagamento dos anúncios por cliente, com cartão ou controle de saldo pré-pago.",
+    itens: [
+      { tipo: "adicionado", texto: "Na aba Tráfego Pago do cliente ou em Verba e movimentações, escolha cartão de crédito, Pix ou boleto. Essa configuração é separada da mensalidade da agência." },
+      { tipo: "melhorado", texto: "Clientes com cartão acompanham o gasto dos relatórios sem aviso de falta de verba ou projeção de saldo negativo. O gasto não confirma o pagamento da fatura." },
+      { tipo: "melhorado", texto: "Pix e boleto usam o controle de créditos confirmados. O saldo disponível continua entre os meses; escolher uma forma de pagamento não lança um aporte." },
+      { tipo: "melhorado", texto: "Trocar a forma de pagamento preserva os gastos, os valores e o extrato anteriores. A visão geral mostra como a mídia é paga." },
+    ],
+  },
+  {
     versao: 163,
     resumo: "Tráfego com três gráficos simultâneos, indicadores legíveis e mais detalhes do relatório.",
     itens: [

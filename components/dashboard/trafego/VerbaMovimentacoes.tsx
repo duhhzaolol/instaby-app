@@ -6,6 +6,7 @@ import { Plus, X, Pencil, Check, PiggyBank, TrendingDown, Wallet, ArrowUpCircle,
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { StatTile } from "@/components/ui/StatTile";
+import { PagamentoMidiaCliente } from "./PagamentoMidiaCliente";
 
 type Movimentacao = {
   id: string;
@@ -16,6 +17,8 @@ type Movimentacao = {
   criadoPorNome: string | null;
 };
 type Saldo = {
+  formaPagamento?: string | null;
+  controlaSaldo?: boolean;
   temVerbaCadastrada: boolean;
   saldoInicial: number;
   totalAportes: number;
@@ -45,6 +48,28 @@ function fmtMoeda(v: number) {
 }
 function dataBr(iso: string) {
   return new Date(iso).toLocaleDateString("pt-BR", { timeZone: "UTC" });
+}
+
+function ExtratoMovimentacoes({ movimentacoes }: { movimentacoes: Movimentacao[] }) {
+  if (movimentacoes.length === 0) {
+    return <p className="rounded-2xl border border-border bg-card/60 p-5 text-sm text-muted">Nenhuma movimentação registrada ainda para esse cliente.</p>;
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      {movimentacoes.map((m) => (
+        <div key={m.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-card/60 px-3.5 py-2.5">
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-text">{TIPO_LABEL[m.tipo] || m.tipo} · {dataBr(m.dataMovimento)}</p>
+            {m.descricao && <p className="text-[11px] text-muted">{m.descricao}</p>}
+            {m.criadoPorNome && <p className="text-[11px] text-muted/70">Registrado por {m.criadoPorNome}</p>}
+          </div>
+          <p className={`text-sm font-medium ${TIPO_SOMA[m.tipo] ? "text-emerald-400" : "text-red-400"}`}>
+            {TIPO_SOMA[m.tipo] ? "+" : "−"} {fmtMoeda(m.valor)}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function NovaMovimentacaoForm({ clienteId, onSalvo }: { clienteId: string; onSalvo: () => void }) {
@@ -92,7 +117,7 @@ function NovaMovimentacaoForm({ clienteId, onSalvo }: { clienteId: string; onSal
         onChange={(e) => setTipo(e.target.value)}
         className="mb-3 h-10 w-full rounded-xl border border-border bg-base/60 px-3 text-sm text-text"
       >
-        {Object.entries(TIPO_LABEL).map(([v, l]) => (
+        {Object.entries(TIPO_LABEL).filter(([v]) => v !== "saldo_transportado").map(([v, l]) => (
           <option key={v} value={v}>
             {l} ({TIPO_SOMA[v] ? "soma ao saldo" : "reduz o saldo"})
           </option>
@@ -208,10 +233,43 @@ export function VerbaMovimentacoes({
 }) {
   const [formAberto, setFormAberto] = useState(false);
   const [editandoSaldoInicial, setEditandoSaldoInicial] = useState(false);
+  const controlaSaldo = saldo.formaPagamento !== "cartao_credito" && saldo.controlaSaldo !== false;
+
+  if (!controlaSaldo) {
+    return (
+      <div>
+        <PagamentoMidiaCliente key={clienteId} clienteId={clienteId} formaPagamento={saldo.formaPagamento || null} />
+        <p className="mb-4 rounded-xl border border-border bg-card/60 p-3 text-xs text-muted">Com cartão de crédito, acompanhe aqui o gasto dos anúncios. A cobrança é feita no cartão, por isso esse cliente não precisa de um saldo antecipado no aplicativo.</p>
+        <StatTile
+          icone={<TrendingDown size={12} style={{ color: "#E63946" }} />}
+          label="Gasto de todos os meses importados"
+          valor={fmtMoeda(saldo.gastoHistorico)}
+          index={0}
+        />
+        <section className="mt-4 rounded-2xl border border-border bg-card/60 p-4">
+          <h3 className="mb-2 text-sm font-medium text-text">Gastos por mês</h3>
+          {saldo.gastosPorMes.length === 0 ? <p className="text-xs text-muted">Nenhum gasto importado ainda.</p> : (
+            <div className="flex flex-col gap-2">
+              {saldo.gastosPorMes.map((m) => <p key={m.mes} className="flex items-center justify-between gap-3 text-xs text-muted"><span>{m.mes}</span><span className="font-medium text-text">{fmtMoeda(m.gasto)}</span></p>)}
+            </div>
+          )}
+        </section>
+        {(saldo.temVerbaCadastrada || movimentacoes.length > 0) && (
+          <details className="mt-4 rounded-2xl border border-border bg-card/60 p-4">
+            <summary className="cursor-pointer text-sm font-medium text-text">Ver histórico da verba anterior</summary>
+            <p className="mb-3 mt-2 text-xs text-muted">Os registros anteriores foram preservados. Com cartão, eles não representam saldo disponível nem pagamento da fatura.</p>
+            {saldo.temVerbaCadastrada && <p className="mb-3 text-xs text-muted">Saldo inicial registrado: {fmtMoeda(saldoInicial)}{inicioControle ? ` · controle a partir de ${dataBr(inicioControle)}` : ""}.{observacoesVerba ? ` ${observacoesVerba}` : ""}</p>}
+            <ExtratoMovimentacoes movimentacoes={movimentacoes} />
+          </details>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div>
-      <p className="mb-4 rounded-xl border border-border bg-card/60 p-3 text-xs text-muted">Cadastre aqui o dinheiro destinado aos anúncios do cliente. Essa verba é separada do contrato e da mensalidade da agência. Use “Cadastrar saldo inicial e mês” para começar o controle; depois registre os repasses em “Nova movimentação”.</p>
+      <PagamentoMidiaCliente key={clienteId} clienteId={clienteId} formaPagamento={saldo.formaPagamento || null} />
+      <p className="mb-4 rounded-xl border border-border bg-card/60 p-3 text-xs text-muted">Cadastre aqui os créditos confirmados para os anúncios do cliente. Essa verba é separada do contrato e da mensalidade da agência. Use “Cadastrar saldo inicial e mês” para começar o controle; depois registre os repasses em “Nova movimentação”. O saldo continua disponível entre os meses, sem precisar lançar outro transporte. A importação de um relatório registra o gasto dos anúncios, mas não confirma o pagamento de um Pix ou boleto.</p>
       <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
         <StatTile icone={<PiggyBank size={12} style={{ color: "#0D9488" }} />} label="Saldo inicial" valor={fmtMoeda(saldo.saldoInicial)} index={0} />
         <StatTile icone={<ArrowUpCircle size={12} style={{ color: "#22C55E" }} />} label="Aportes" valor={fmtMoeda(saldo.totalAportes)} index={1} />
@@ -268,28 +326,7 @@ export function VerbaMovimentacoes({
       )}
 
       <p className="mb-2 mt-5 text-sm font-medium text-text">Extrato</p>
-      {movimentacoes.length === 0 ? (
-        <p className="rounded-2xl border border-border bg-card/60 p-5 text-sm text-muted">
-          Nenhuma movimentação registrada ainda pra esse cliente.
-        </p>
-      ) : (
-        <div className="flex flex-col gap-2">
-          {movimentacoes.map((m) => (
-            <div key={m.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-card/60 px-3.5 py-2.5">
-              <div className="min-w-0">
-                <p className="text-xs font-medium text-text">
-                  {TIPO_LABEL[m.tipo] || m.tipo} · {dataBr(m.dataMovimento)}
-                </p>
-                {m.descricao && <p className="text-[11px] text-muted">{m.descricao}</p>}
-                {m.criadoPorNome && <p className="text-[11px] text-muted/70">Registrado por {m.criadoPorNome}</p>}
-              </div>
-              <p className={`text-sm font-medium ${TIPO_SOMA[m.tipo] ? "text-emerald-400" : "text-red-400"}`}>
-                {TIPO_SOMA[m.tipo] ? "+" : "−"} {fmtMoeda(m.valor)}
-              </p>
-            </div>
-          ))}
-        </div>
-      )}
+      <ExtratoMovimentacoes movimentacoes={movimentacoes} />
     </div>
   );
 }

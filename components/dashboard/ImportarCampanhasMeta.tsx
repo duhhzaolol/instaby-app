@@ -59,6 +59,8 @@ type Previa = {
 };
 
 type SaldoResumo = {
+  formaPagamento?: string | null;
+  controlaSaldo?: boolean;
   temVerbaCadastrada: boolean;
   saldoInicial: number;
   totalAportes: number;
@@ -131,14 +133,19 @@ export default function ImportarCampanhasMeta({
     setErro("");
     try {
       const { resp, json } = await requisicaoImportacaoMeta<{
-        previa: Previa; saldoAtual?: SaldoResumo; saldoProjetado?: number;
+        previa: Previa; saldoAtual?: SaldoResumo; saldoProjetado?: number | null;
+        formaPagamento?: string | null; controlaSaldo?: boolean;
       }>("/api/campanhas/importar-meta/preview", {
         clienteId, nomeArquivo, conteudoBase64: base64, resolucoesManuais: resolucoesAtuais,
       });
       if (id !== ultimaPrevia.current) return;
       if (!resp.ok || !json.previa) throw new Error(json.erro || "Não consegui ler esse arquivo.");
       setPrevia(json.previa);
-      setSaldoAtual(json.saldoAtual ?? null);
+      setSaldoAtual(json.saldoAtual ? {
+        ...json.saldoAtual,
+        formaPagamento: json.formaPagamento ?? json.saldoAtual.formaPagamento ?? null,
+        controlaSaldo: json.controlaSaldo ?? json.saldoAtual.controlaSaldo,
+      } : null);
       setSaldoProjetado(json.saldoProjetado ?? null);
     } catch (erro) {
       if (id !== ultimaPrevia.current) return;
@@ -327,7 +334,16 @@ export default function ImportarCampanhasMeta({
             )}
           </div>
 
-          {saldoAtual?.temVerbaCadastrada && saldoProjetado !== null && (
+          {saldoAtual?.controlaSaldo === false && (
+            <div className="mb-3 rounded-xl border border-border bg-base/40 p-3 text-xs">
+              <p className="font-medium text-text">Gasto registrado com pagamento por cartão</p>
+              <p className="mt-1 text-muted">
+                R$ {fmt(previa.gastoTotalArquivo)} em anúncios neste relatório. Esse valor acompanha o gasto
+                informado pela Meta; não representa o valor faturado ou pago no cartão.
+              </p>
+            </div>
+          )}
+          {saldoAtual?.controlaSaldo !== false && saldoAtual?.temVerbaCadastrada && saldoProjetado !== null && (
             <div
               className={`mb-3 rounded-xl border p-3 ${
                 saldoProjetado < 0 ? "border-red-500/30 bg-red-500/5" : "border-accent/30 bg-accent/5"
@@ -351,7 +367,7 @@ export default function ImportarCampanhasMeta({
               )}
             </div>
           )}
-          {saldoAtual && !saldoAtual.temVerbaCadastrada && (
+          {saldoAtual && saldoAtual.controlaSaldo !== false && !saldoAtual.temVerbaCadastrada && (
             <p className="mb-3 flex items-start gap-1.5 text-[11px] text-muted">
               <Info size={12} className="mt-0.5 shrink-0" />
               Esse cliente ainda não tem verba cadastrada — o impacto no saldo aparece aqui depois de registrar o

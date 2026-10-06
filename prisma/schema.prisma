@@ -165,6 +165,7 @@ model Cliente {
   cobrancaRecorrenteAtiva Boolean @default(false)
   cobrancaRecorrenteInicio String? // AAAA-MM, definido ao ativar a mensalidade
   cobrancaDiaVencimento Int @default(5)
+  formaPagamentoTrafego String? // cartao_credito | pix | boleto; somente a mídia, separado da mensalidade da agência
   exibirLogoPublico  Boolean   @default(false) // aparece na vitrine "empresas que confiam" das propostas
   createdAt          DateTime  @default(now())
 
@@ -1129,8 +1130,8 @@ model ResultadoCampanha {
 }
 
 // Verba de mídia por cliente (v151) — controle INTERNO da agência, não uma consulta
-// ao saldo da Meta. saldoInicial é ajustado manualmente na virada do mês, de propósito
-// (ver MovimentacaoVerba, tipo "saldo_transportado") — nada aqui reseta sozinho.
+// ao saldo da Meta. O saldo continua entre meses, sem precisar transportá-lo de novo.
+// Saldo inicial é o ponto de partida; nada aqui reseta sozinho na virada do mês.
 // Saldo restante nunca é guardado direto: é sempre CALCULADO como
 // saldoInicial + soma(movimentacoes.valor) − gastoAcumuladoCliente(clienteId)
 // (ver lib/trafego.ts), onde gastoAcumuladoCliente soma o gasto de TODAS as
