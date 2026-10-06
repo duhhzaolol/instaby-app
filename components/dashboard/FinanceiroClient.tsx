@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Plus, TrendingUp, TrendingDown, Wallet, AlertTriangle, MessageCircle, Landmark, Gem, ArrowRightLeft } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, Wallet, AlertTriangle, MessageCircle, Landmark, Gem, ArrowRightLeft, CreditCard } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -83,14 +83,14 @@ export default function FinanceiroClient({
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="flex items-center gap-1.5 text-lg font-medium text-text">
+          <div className="flex items-center gap-1.5 text-lg font-medium text-text">
             Financeiro
             <AjudaContextual
               titulo="Financeiro"
               texto="Visão geral de entradas, custos e lucro no período escolhido. O calendário mostra dia a dia o que entrou e saiu. Cobranças e despesas ficam abaixo, separadas por tipo."
               exemplo="Ex.: clique num dia do calendário pra ver todos os recebimentos e pagamentos daquele dia."
             />
-          </p>
+          </div>
           <p className="text-sm text-muted">Visão geral · a DRE está no menu ao lado</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -122,12 +122,20 @@ export default function FinanceiroClient({
       </div>
 
       <div className="mb-6">
-        <button
-          onClick={() => setFormRapidoAberto((v) => !v)}
-          className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-accent/30 bg-accent/5 py-3 text-sm font-medium text-accent hover:bg-accent/10"
-        >
-          <Plus size={15} /> Lançar despesa
-        </button>
+        <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+          <button
+            onClick={() => setFormRapidoAberto((v) => !v)}
+            className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-accent/30 bg-accent/5 py-3 text-sm font-medium text-accent hover:bg-accent/10"
+          >
+            <Plus size={15} /> Lançar despesa
+          </button>
+          <Link
+            href="/dashboard/financeiro/registrar-gasto"
+            className="flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-border bg-card/60 px-4 py-3 text-sm font-medium text-text hover:border-accent/40"
+          >
+            <CreditCard size={16} /> Gasto no débito
+          </Link>
+        </div>
         {formRapidoAberto && (
           <div className="mt-3">
             <NovaDespesaForm tipo="flexivel" clientes={clientes} onSalvo={() => setFormRapidoAberto(false)} />

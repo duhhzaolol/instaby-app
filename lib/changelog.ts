@@ -22,6 +22,16 @@ export type VersaoNovidades = {
 
 export const NOVIDADES: VersaoNovidades[] = [
   {
+    versao: 165,
+    resumo: "Cadastro rápido de gastos no débito e lembrete por aproximação com Apple Pay.",
+    itens: [
+      { tipo: "adicionado", texto: "No Financeiro, abra Gasto no débito para registrar valor e descrição em uma tela pensada para o celular. Data, cliente e classificação podem ser ajustados." },
+      { tipo: "adicionado", texto: "A tela explica como configurar o app Atalhos no iPhone para abrir o cadastro quando você aproxima um cartão da Carteira. A configuração é feita no próprio iPhone." },
+      { tipo: "melhorado", texto: "O gasto só entra no financeiro ao tocar em Salvar gasto. Fechar ou ignorar a tela não registra nada, para você dispensar compras pessoais." },
+      { tipo: "melhorado", texto: "O débito confirmado registra o pagamento na data da compra. Repetir a mesma tentativa depois de uma falha de conexão não cria uma segunda despesa." },
+    ],
+  },
+  {
     versao: 164,
     resumo: "Forma de pagamento dos anúncios por cliente, com cartão ou controle de saldo pré-pago.",
     itens: [
