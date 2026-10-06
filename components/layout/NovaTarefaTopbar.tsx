@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Plus, X } from "lucide-react";
 import { CATEGORIAS_TAREFA } from "@/lib/categoriaTarefaVisual";
 import { DatePicker } from "@/components/ui/DatePicker";
@@ -63,6 +64,8 @@ export function NovaTarefaTopbar({ clientes }: { clientes: Cliente[] }) {
   return (
     <>
       <button
+        type="button"
+        aria-label="Nova tarefa"
         onClick={() => setAberto(true)}
         className="flex h-9 items-center gap-1.5 rounded-xl bg-accent px-3.5 text-sm font-semibold text-white transition-colors hover:brightness-110"
       >
@@ -70,26 +73,27 @@ export function NovaTarefaTopbar({ clientes }: { clientes: Cliente[] }) {
         <span className="hidden sm:inline">Nova tarefa</span>
       </button>
 
-      <AnimatePresence>
-        {aberto && (
+      {aberto && typeof document !== "undefined" && createPortal(
           <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+            <button
+              type="button"
+              aria-label="Fechar nova tarefa pelo fundo"
+              data-testid="fundo-nova-tarefa"
               onClick={fechar}
-              className="fixed inset-0 z-40 bg-black/60"
+              className="fixed inset-0 z-40 h-full w-full bg-black/60"
             />
+            <div className="pointer-events-none fixed inset-0 z-50 flex flex-col overflow-y-auto p-4">
             <motion.div
+              role="dialog"
+              aria-labelledby="titulo-nova-tarefa"
               initial={{ opacity: 0, y: 12, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 12, scale: 0.98 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-card p-4 shadow-premium-lg"
+              className="pointer-events-auto my-auto w-full max-w-sm shrink-0 self-center rounded-2xl border border-border bg-card p-4 shadow-premium-lg"
             >
               <div className="mb-3 flex items-center justify-between">
-                <p className="text-sm font-medium text-text">Nova tarefa</p>
-                <button type="button" onClick={fechar} className="text-muted hover:text-text">
+                <p id="titulo-nova-tarefa" className="text-sm font-medium text-text">Nova tarefa</p>
+                <button type="button" aria-label="Fechar nova tarefa" onClick={fechar} className="text-muted hover:text-text">
                   <X size={16} />
                 </button>
               </div>
@@ -159,9 +163,10 @@ export function NovaTarefaTopbar({ clientes }: { clientes: Cliente[] }) {
                 </button>
               </form>
             </motion.div>
+            </div>
           </>
-        )}
-      </AnimatePresence>
+          , document.querySelector(".tema-painel") || document.body
+      )}
     </>
   );
 }

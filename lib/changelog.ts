@@ -27,6 +27,7 @@ export const NOVIDADES: VersaoNovidades[] = [
     itens: [
       { tipo: "corrigido", texto: "Depois de escolher uma página pelo menu do celular, os botões e filtros continuam respondendo. O fundo do menu sai imediatamente ao fechar." },
       { tipo: "melhorado", texto: "O menu também fecha ao mudar de página por outros caminhos. Abrir e fechar o menu têm identificação para leitura de tela." },
+      { tipo: "corrigido", texto: "A janela do botão vermelho Nova tarefa fica centralizada e cabe na tela do celular. Fechá-la também libera os toques imediatamente." },
     ],
   },
   {
