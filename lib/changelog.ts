@@ -22,6 +22,16 @@ export type VersaoNovidades = {
 
 export const NOVIDADES: VersaoNovidades[] = [
   {
+    versao: 172,
+    resumo: "Dados da agência em um cadastro único e condições personalizadas nos orçamentos.",
+    itens: [
+      { tipo: "adicionado", texto: "Configurações → Dados da agência reúne nome, celular, site, Instagram e envio de logo PNG ou JPEG. As informações são usadas nos orçamentos, no PDF, no contrato e no resumo de cobrança." },
+      { tipo: "adicionado", texto: "Ao criar ou personalizar um orçamento, registre pagamento, prazo de entrega e observações. Os campos são opcionais, ficam salvos na proposta e aparecem no link do cliente e no PDF." },
+      { tipo: "melhorado", texto: "O exemplo de 30% na reserva e 70% no dia do evento só é aplicado ao clicar. Trocar o modelo da apresentação preserva as condições, e propostas aceitas continuam protegidas contra edição." },
+      { tipo: "melhorado", texto: "O cadastro reaproveita o celular e o Instagram existentes. Logos são validados no envio, e os documentos continuam usando a logo padrão enquanto nenhuma outra for salva." },
+    ],
+  },
+  {
     versao: 171,
     resumo: "PDF de orçamento reorganizado como documento comercial para impressão.",
     itens: [

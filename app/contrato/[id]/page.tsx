@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { FileSignature, ShieldCheck, CalendarClock, RefreshCw } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { visualDaCategoria } from "@/lib/categoriaVisual";
+import { obterDadosAgencia } from "@/lib/dadosAgencia";
 
 const statusLabel: Record<string, string> = {
   rascunho: "Rascunho",
@@ -24,6 +25,11 @@ export default async function ContratoPublicoPage({ params }: { params: { id: st
   });
 
   if (!contrato) notFound();
+  const config = await prisma.configuracao.findUnique({
+    where: { id: "config" },
+    select: { nomeAgencia: true, siteAgencia: true, logoAgenciaUrl: true, whatsappAgencia: true, linkBioInstagram: true },
+  });
+  const agencia = obterDadosAgencia(config);
 
   // Monta os itens estruturados: prioriza o orçamento de origem, senão os serviços
   // contratados atuais do cliente — sempre com ícone/cor por categoria.
@@ -64,7 +70,7 @@ export default async function ContratoPublicoPage({ params }: { params: { id: st
     <div className="min-h-screen bg-[#0B0D12]">
       <div className="border-b border-white/[0.06] px-4 py-4">
         <div className="mx-auto flex max-w-3xl items-center justify-between">
-          <img src="/logo.png" alt="Instaby" className="h-6 w-auto" />
+          <img src={agencia.logoUrl} alt={agencia.nome} className="h-6 w-auto max-w-48 object-contain" />
           <div className="hidden items-center gap-2 sm:flex">
             <span className="text-xs text-[#9CA3AF]">Contrato de Prestação de Serviços</span>
             <span className="rounded-full border border-white/10 px-2.5 py-1 font-mono text-[10px] text-[#F9FAFB]">
@@ -92,7 +98,7 @@ export default async function ContratoPublicoPage({ params }: { params: { id: st
             <span className="inline-block h-[1.5px] w-5 bg-[#E63946]" />
             <span className="font-mono text-[11px] uppercase tracking-wide text-[#E63946]">contrato</span>
           </div>
-          <p className="text-4xl font-medium leading-tight text-[#F9FAFB]">Instaby Agência</p>
+          <p className="text-4xl font-medium leading-tight text-[#F9FAFB]">{agencia.nome}</p>
           <p className="mb-4 text-4xl font-medium leading-tight text-[#E63946]">& {contrato.cliente.nome}</p>
           <p className="max-w-md text-sm leading-relaxed text-[#9CA3AF]">
             Termos e serviços combinados entre as partes, descritos abaixo.

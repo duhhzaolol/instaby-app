@@ -1,19 +1,75 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { exigirPermissaoApi } from "@/lib/permissoes";
+import { CAMPOS_DADOS_AGENCIA, ErroDadosAgencia, normalizarDadosAgencia } from "@/lib/dadosAgencia";
+
+const selectDadosAgencia = {
+  nomeAgencia: true, whatsappAgencia: true, siteAgencia: true,
+  linkBioInstagram: true, logoAgenciaUrl: true,
+} as const;
+
+function semSegredos<T extends { googleDriveRefreshToken?: string | null }>(config: T) {
+  const { googleDriveRefreshToken: _token, ...dados } = config;
+  return dados;
+}
 
 export async function GET() {
   const config = await prisma.configuracao.findUnique({ where: { id: "config" } });
   return NextResponse.json(
-    config || { id: "config", whatsappAgencia: null, metaFaturamentoMensal: null, custoHoraPadrao: null, templateOnboarding: [] }
+    config ? semSegredos(config) : { id: "config", nomeAgencia: null, siteAgencia: null, logoAgenciaUrl: null, whatsappAgencia: null, metaFaturamentoMensal: null, custoHoraPadrao: null, templateOnboarding: [] }
   );
 }
 
 export async function PATCH(request: NextRequest) {
-  const body = await request.json();
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ erro: "Não foi possível ler os dados. Tente salvar novamente." }, { status: 400 });
+  }
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return NextResponse.json({ erro: "Envie os dados da configuração em um formato válido." }, { status: 400 });
+  }
+
+  const alteraAgencia = CAMPOS_DADOS_AGENCIA.some((campo) => Object.hasOwn(body, campo));
+  if (alteraAgencia) {
+    const { erro } = await exigirPermissaoApi("gerenciarConfiguracoes");
+    if (erro) return erro;
+    try {
+      Object.assign(body, normalizarDadosAgencia(body));
+    } catch (erro) {
+      if (erro instanceof ErroDadosAgencia) {
+        return NextResponse.json({ erro: erro.message, campo: erro.campo }, { status: 400 });
+      }
+      throw erro;
+    }
+  }
+
+  // O cadastro central só devolve os cinco campos públicos que ele usa.
+  const somenteAgencia = alteraAgencia && Object.keys(body).every((campo) =>
+    (CAMPOS_DADOS_AGENCIA as readonly string[]).includes(campo)
+  );
+  if (somenteAgencia) {
+    try {
+      const dados = normalizarDadosAgencia(body);
+      const config = await prisma.configuracao.upsert({
+        where: { id: "config" },
+        update: dados,
+        create: { id: "config", ...dados },
+        select: selectDadosAgencia,
+      });
+      return NextResponse.json(config);
+    } catch {
+      return NextResponse.json({ erro: "Não foi possível salvar os dados da agência. Tente novamente." }, { status: 500 });
+    }
+  }
 
   const config = await prisma.configuracao.upsert({
     where: { id: "config" },
     update: {
+      ...(body.nomeAgencia !== undefined && { nomeAgencia: body.nomeAgencia }),
+      ...(body.siteAgencia !== undefined && { siteAgencia: body.siteAgencia }),
+      ...(body.logoAgenciaUrl !== undefined && { logoAgenciaUrl: body.logoAgenciaUrl }),
       ...(body.whatsappAgencia !== undefined && { whatsappAgencia: body.whatsappAgencia }),
       ...(body.metaFaturamentoMensal !== undefined && { metaFaturamentoMensal: body.metaFaturamentoMensal }),
       ...(body.custoHoraPadrao !== undefined && { custoHoraPadrao: body.custoHoraPadrao }),
@@ -75,6 +131,9 @@ export async function PATCH(request: NextRequest) {
     },
     create: {
       id: "config",
+      nomeAgencia: body.nomeAgencia || null,
+      siteAgencia: body.siteAgencia || null,
+      logoAgenciaUrl: body.logoAgenciaUrl || null,
       whatsappAgencia: body.whatsappAgencia || null,
       metaFaturamentoMensal: body.metaFaturamentoMensal || null,
       custoHoraPadrao: body.custoHoraPadrao || null,
@@ -136,5 +195,5 @@ export async function PATCH(request: NextRequest) {
     },
   });
 
-  return NextResponse.json(config);
+  return NextResponse.json(semSegredos(config));
 }

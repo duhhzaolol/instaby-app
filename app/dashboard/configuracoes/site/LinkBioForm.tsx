@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Plus, Trash2, ArrowUp, ArrowDown, Pencil, X, Check, Link2 } from "lucide-react";
 import { Input, Textarea, Label } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -73,7 +74,6 @@ export default function LinkBioForm({
   imagemUrl: imagemUrlInicial,
   tagline: taglineInicial,
   tags: tagsInicial,
-  instagram: instagramInicial,
   youtube: youtubeInicial,
   tiktok: tiktokInicial,
   linkedin: linkedinInicial,
@@ -84,7 +84,6 @@ export default function LinkBioForm({
   imagemUrl: string | null;
   tagline: string;
   tags: string;
-  instagram: string;
   youtube: string;
   tiktok: string;
   linkedin: string;
@@ -105,7 +104,6 @@ export default function LinkBioForm({
   const [heroImagemUrl, setHeroImagemUrl] = useState<string | null>(imagemUrlInicial);
   const [tagline, setTagline] = useState(taglineInicial);
   const [tags, setTags] = useState(tagsInicial);
-  const [instagram, setInstagram] = useState(instagramInicial);
   const [youtube, setYoutube] = useState(youtubeInicial);
   const [tiktok, setTiktok] = useState(tiktokInicial);
   const [linkedin, setLinkedin] = useState(linkedinInicial);
@@ -173,7 +171,6 @@ export default function LinkBioForm({
         linkBioImagemUrl: heroImagemUrl || null,
         linkBioTagline: tagline || null,
         linkBioTags: tags || null,
-        linkBioInstagram: instagram || null,
         linkBioYoutube: youtube || null,
         linkBioTiktok: tiktok || null,
         linkBioLinkedin: linkedin || null,
@@ -226,11 +223,10 @@ export default function LinkBioForm({
           de links. Pra Instagram/YouTube/TikTok/LinkedIn aparecerem como card grande na lista de /link, cadastre
           como um link normal ali embaixo (o ícone certo é escolhido sozinho pelo título).
         </p>
+        <p className="mb-3 text-xs text-muted">
+          O Instagram é editado em <Link href="/dashboard/configuracoes#dados-agencia" className="text-accent-text underline underline-offset-2">Dados da agência</Link>.
+        </p>
         <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label>Instagram</Label>
-            <Input value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="https://instagram.com/..." className="mb-3" />
-          </div>
           <div>
             <Label>YouTube</Label>
             <Input value={youtube} onChange={(e) => setYoutube(e.target.value)} placeholder="https://youtube.com/..." className="mb-3" />

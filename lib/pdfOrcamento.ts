@@ -1,8 +1,9 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import fontkit from "@pdf-lib/fontkit";
-import { PDFDocument, PDFName, PDFPage, PDFString, rgb } from "pdf-lib";
+import { PDFDocument, PDFImage, PDFName, PDFPage, PDFString, rgb } from "pdf-lib";
 import type { DadosPdfOrcamento } from "./orcamentoDocumento";
+import { carregarLogoDocumento } from "./logoDocumento";
 
 const A4 = { width: 595.28, height: 841.89 };
 const MARGIN = 46;
@@ -65,7 +66,11 @@ export async function gerarPdfOrcamento(dados: DadosPdfOrcamento): Promise<Uint8
   pdf.registerFontkit(fontkit);
   const regular = await pdf.embedFont(regularBytes, { subset: true });
   const bold = await pdf.embedFont(boldBytes, { subset: true });
-  const logo = await pdf.embedPng(logoBytes);
+  const uploadedLogo = await carregarLogoDocumento(dados.agencia?.logoUrl);
+  let logo: PDFImage;
+  try {
+    logo = uploadedLogo ? uploadedLogo[0] === 137 ? await pdf.embedPng(uploadedLogo) : await pdf.embedJpg(uploadedLogo) : await pdf.embedPng(logoBytes);
+  } catch { logo = await pdf.embedPng(logoBytes); }
   const boldCharacters = new Set(bold.getCharacterSet());
   const characters = new Set(regular.getCharacterSet().filter((code) => boldCharacters.has(code)));
 
@@ -93,7 +98,7 @@ export async function gerarPdfOrcamento(dados: DadosPdfOrcamento): Promise<Uint8
     ? "Seleção personalizada"
     : ({ pendente: "Pendente", aceito: "Aceito", recusado: "Recusado" }[dados.status] ?? dados.status);
   pdf.setTitle(clean(`Orçamento ${dados.codigo} — ${dados.clienteNome}`));
-  pdf.setAuthor("Instaby");
+  pdf.setAuthor(clean(dados.agencia?.nome || "Instaby"));
   pdf.setSubject("Orçamento de serviços");
   pdf.setCreator("Instaby App");
   pdf.setProducer("Instaby App");
@@ -139,6 +144,13 @@ export async function gerarPdfOrcamento(dados: DadosPdfOrcamento): Promise<Uint8
   const descriptionX = MARGIN + SERVICE_WIDTH;
   const valueX = descriptionX + DESCRIPTION_WIDTH;
   const valueWidth = RIGHT - valueX;
+  const conditionBlocks = [
+    { label: "Pagamento", text: dados.apresentacao.condicoes?.pagamento },
+    { label: "Prazo de entrega", text: dados.apresentacao.condicoes?.prazoEntrega },
+    { label: "Observações", text: dados.apresentacao.condicoes?.observacoes },
+  ].filter(block => !!block.text?.trim()).map(block => ({ label: block.label, lines: lines(block.text!, regular, 9.5) }));
+  const conditionHeight = conditionBlocks.length ? 48 + conditionBlocks.reduce((sum, block) => sum + 18 + block.lines.length * 14 + 12, 0) : 0;
+  const closingReserve = conditionHeight + 88 < A4.height - MARGIN - 120 - BOTTOM ? conditionHeight + 88 : 88;
 
   function draw(text: string, x: number, baseline: number, size = BODY_SIZE, font = regular, color = INK) {
     if (text) page.drawText(text, { x, y: baseline, size, font, color });
@@ -154,7 +166,7 @@ export async function gerarPdfOrcamento(dados: DadosPdfOrcamento): Promise<Uint8
     page = pdf.addPage([A4.width, A4.height]);
     const top = A4.height - MARGIN;
     if (first) {
-      const logoWidth = 176;
+      const logoWidth = Math.min(176, 52 * logo.width / logo.height);
       const logoHeight = logoWidth * logo.height / logo.width;
       page.drawImage(logo, { x: (A4.width - logoWidth) / 2, y: top - logoHeight, width: logoWidth, height: logoHeight });
       center("Agência de marketing", top - logoHeight - 18, 9.5, regular, MUTED);
@@ -185,7 +197,7 @@ export async function gerarPdfOrcamento(dados: DadosPdfOrcamento): Promise<Uint8
       rule(y);
       y -= 27;
     } else {
-      const logoWidth = 96;
+      const logoWidth = Math.min(96, 30 * logo.width / logo.height);
       const logoHeight = logoWidth * logo.height / logo.width;
       page.drawImage(logo, { x: MARGIN, y: top - logoHeight, width: logoWidth, height: logoHeight });
       const label = "Orçamento de serviços - continuação";
@@ -201,9 +213,10 @@ export async function gerarPdfOrcamento(dados: DadosPdfOrcamento): Promise<Uint8
   addPage();
   const contactWidth = (WIDTH - 40) / 2;
   const clientX = MARGIN + contactWidth + 40;
-  draw("INSTABY", MARGIN, y - 10, 11, bold);
+  const agencyNameLines = lines(dados.agencia?.nome || "Instaby", bold, 11, contactWidth);
+  agencyNameLines.forEach((line, index) => draw(line, MARGIN, y - 10 - index * 15, 11, bold));
   draw("CLIENTE", clientX, y - 10, 11, bold);
-  y -= 30;
+  y -= Math.max(1, agencyNameLines.length) * 15 + 15;
   const agencyDetails = [
     dados.whatsappAgencia ? phoneLabel(dados.whatsappAgencia) : "",
     dados.agencia?.site?.trim() ?? "",
@@ -260,7 +273,7 @@ export async function gerarPdfOrcamento(dados: DadosPdfOrcamento): Promise<Uint8
     const isLast = index === dados.itens.length - 1;
     const openingHeight = fullHeight <= 180 ? fullHeight : Math.min(3, lineCount) * ROW_LEADING + PADDING * 2;
     const headerHeight = index === 0 ? 31 : 0;
-    const summarySpace = isLast && fullHeight <= 180 ? 88 : 0;
+    const summarySpace = isLast && fullHeight <= 180 ? closingReserve : 0;
     if (y - headerHeight - openingHeight - summarySpace < BOTTOM) {
       addPage();
       tableHeader();
@@ -273,7 +286,7 @@ export async function gerarPdfOrcamento(dados: DadosPdfOrcamento): Promise<Uint8
       let count = Math.min(capacity, remaining);
       // Keep the last service lines beside its amount and the final total.
       // A large description may span pages without leaving a total-only page.
-      if (isLast && remaining <= capacity && y - remaining * ROW_LEADING - PADDING * 2 - 88 < BOTTOM) {
+      if (isLast && remaining <= capacity && y - remaining * ROW_LEADING - PADDING * 2 - closingReserve < BOTTOM) {
         if (remaining <= 3) { addPage(); tableHeader(); continue; }
         count = remaining - 3;
       } else if (isLast && remaining > capacity && remaining - count < 3) {
@@ -307,6 +320,30 @@ export async function gerarPdfOrcamento(dados: DadosPdfOrcamento): Promise<Uint8
     }
   }
 
+  if (conditionBlocks.length) {
+    if (y - Math.min(conditionHeight + 88, 110) < BOTTOM) addPage();
+    y -= 25;
+    draw("CONDIÇÕES DA PROPOSTA", MARGIN, y - 11, 11, bold);
+    y -= 30;
+    conditionBlocks.forEach((block, blockIndex) => {
+      const lastBlock = blockIndex === conditionBlocks.length - 1;
+      if (y - 18 - Math.min(2, block.lines.length) * 14 - (lastBlock && block.lines.length <= 2 ? 88 : 0) < BOTTOM) addPage();
+      draw(block.label, MARGIN, y - 9.5, 9.5, bold);
+      y -= 18;
+      block.lines.forEach((line, index) => {
+        const remaining = block.lines.length - index;
+        const reserve = lastBlock && remaining <= 3 ? remaining * 14 + 12 + 88 : 14;
+        if (y - reserve < BOTTOM) {
+          addPage();
+          draw(block.label + " - continuação", MARGIN, y - 9.5, 9.5, bold);
+          y -= 23;
+        }
+        draw(line, MARGIN, y - 9.5, 9.5);
+        y -= 14;
+      });
+      y -= 12;
+    });
+  }
   if (y - 88 < BOTTOM) addPage();
   y -= 28;
   const totalLabel = dados.apresentacao.tipo === "mensal" ? "TOTAL MENSAL" : "TOTAL DO SERVIÇO";

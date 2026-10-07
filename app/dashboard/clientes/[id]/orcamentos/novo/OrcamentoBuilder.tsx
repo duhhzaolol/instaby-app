@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { EditorApresentacaoOrcamento } from "@/components/orcamentos/EditorApresentacaoOrcamento";
 import { TopoOrcamento } from "@/components/orcamentos/TopoOrcamento";
+import CondicoesOrcamento from "@/components/orcamentos/CondicoesOrcamento";
 import { apresentacaoPadrao, obterApresentacaoOrcamento, validarApresentacaoOrcamento } from "@/lib/apresentacaoOrcamento";
 import DeslocamentoCalc from "./DeslocamentoCalc";
 
@@ -29,9 +30,11 @@ export default function OrcamentoBuilder({
   pacotes,
   selecaoInicial,
   solicitacaoId,
+  agencia = { nome: "Instaby", logoUrl: "/logo.png" },
 }: {
   clienteId: string;
   clienteNome: string;
+  agencia?: { nome: string; logoUrl: string };
   servicos: Servico[];
   pacotes: Pacote[];
   selecaoInicial?: { servicoId: string; quantidade: number }[];
@@ -250,7 +253,7 @@ export default function OrcamentoBuilder({
 
         <div className="flex items-center justify-between border-t border-border pt-3">
           <span className="text-sm font-medium text-text">Total</span>
-          <span className="text-lg font-medium text-accent">R$ {total.toFixed(0)}</span>
+          <span className="text-lg font-medium text-accent">{total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
         </div>
 
         {erro && <p role="alert" className="mt-4 text-sm text-red-400">{erro}</p>}
@@ -268,7 +271,7 @@ export default function OrcamentoBuilder({
         <p className="mb-2 text-xs uppercase tracking-wide text-muted">Prévia em tempo real</p>
         <div className="min-w-0 rounded-2xl border border-white/[0.06] bg-[#09090B] p-5 sm:p-6">
           <div className="mb-4">
-            <img src="/logo.png" alt="Instaby" className="h-5 w-auto" />
+            <img src={agencia.logoUrl} alt={agencia.nome} className="h-5 w-auto max-w-48 object-contain" />
           </div>
 
           <TopoOrcamento apresentacao={apresentacaoAtual} compacto />
@@ -287,7 +290,7 @@ export default function OrcamentoBuilder({
                 <div key={servico.id} className="rounded-xl bg-[#111827] p-3.5">
                   <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
                     <p className="min-w-0 break-words text-sm font-medium text-[#F9FAFB]">{servico.nome}</p>
-                    <span className="shrink-0 text-sm font-medium text-[#E63946]">R$ {valor.toFixed(0)}</span>
+                    <span className="shrink-0 text-sm font-medium text-[#E63946]">{valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
                   </div>
                   {servico.descricao && (
                     <p className="mt-1 break-words text-xs leading-relaxed text-[#9CA3AF]">{servico.descricao}</p>
@@ -303,9 +306,10 @@ export default function OrcamentoBuilder({
           {itensSelecionados.length > 0 && (
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.06] pt-3">
               <span className="text-sm font-medium text-[#F9FAFB]">{apresentacaoAtual.tipo === "mensal" ? "Total mensal" : "Total do serviço"}</span>
-              <span className="text-lg font-medium text-[#E63946]">R$ {total.toFixed(0)}</span>
+              <span className="text-lg font-medium text-[#E63946]">{total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
             </div>
           )}
+          <CondicoesOrcamento condicoes={apresentacaoAtual.condicoes} variant="dark" className="mt-5" />
         </div>
       </div>
     </div>

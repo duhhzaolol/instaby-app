@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { exigirPermissao } from "@/lib/permissoes";
 import OrcamentoBuilder from "./OrcamentoBuilder";
+import { obterDadosAgencia } from "@/lib/dadosAgencia";
 
 // Falha de segurança corrigida de passagem (Etapa 3 v157, achada revisando este
 // mesmo arquivo pra somar o vínculo com Solicitação): esta página nunca teve
@@ -32,9 +33,10 @@ export default async function NovoOrcamentoPage({
   });
   if (!cliente) notFound();
 
-  const [servicos, pacotes] = await Promise.all([
+  const [servicos, pacotes, config] = await Promise.all([
     prisma.servico.findMany({ orderBy: [{ categoria: "asc" }, { nome: "asc" }] }),
     prisma.pacote.findMany({ include: { itens: true }, orderBy: { createdAt: "desc" } }),
+    prisma.configuracao.findUnique({ where: { id: "config" }, select: { nomeAgencia: true, logoAgenciaUrl: true } }),
   ]);
 
   // Etapa 3 (v157) — chegando do botão "Preparar orçamento" de uma solicitação
@@ -110,6 +112,7 @@ export default async function NovoOrcamentoPage({
                 }))
           }
           solicitacaoId={solicitacao?.id}
+          agencia={obterDadosAgencia(config)}
         />
       )}
     </div>

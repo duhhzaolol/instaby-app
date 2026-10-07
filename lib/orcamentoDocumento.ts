@@ -13,6 +13,8 @@ export type DadosPdfOrcamento = {
     endereco?: string | null;
   };
   agencia?: {
+    nome?: string;
+    logoUrl?: string;
     site?: string | null;
     instagram?: string | null;
   };

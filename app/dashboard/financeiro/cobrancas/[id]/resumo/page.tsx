@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getUsuarioAtual, podeVerCliente } from "@/lib/permissoes";
 import { calcularStatusEfetivo, LABEL_STATUS_EFETIVO } from "@/lib/statusFinanceiro";
 import { BotaoImprimirResumo } from "@/components/dashboard/BotaoImprimirResumo";
+import { obterDadosAgencia } from "@/lib/dadosAgencia";
 
 function fmt(v: number) {
   return v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -26,6 +27,7 @@ export default async function ResumoCobrancaPage({ params }: { params: { id: str
   if (!(await podeVerCliente(usuarioAtual, cobranca.clienteId))) notFound();
 
   const config = await prisma.configuracao.findUnique({ where: { id: "config" } });
+  const agencia = obterDadosAgencia(config);
 
   const totalPago = cobranca.pagamentos.reduce((s, p) => s + Number(p.valor), 0);
   const statusEfetivo = calcularStatusEfetivo({
@@ -54,10 +56,11 @@ export default async function ResumoCobrancaPage({ params }: { params: { id: str
         <div className="mb-8 flex items-center justify-between border-b border-border pb-6 print:border-black/20">
           <div className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="Instaby" className="h-8 w-auto print:hidden" />
+            <img src={agencia.logoUrl} alt={agencia.nome} className="h-8 w-auto max-w-36 object-contain print:grayscale" />
             <div>
-              <p className="text-base font-medium text-text print:text-black">Instaby Agência</p>
+              <p className="text-base font-medium text-text print:text-black">{agencia.nome}</p>
               <p className="text-xs text-muted print:text-black/60">Resumo de cobrança</p>
+              {(agencia.site || agencia.instagram) && <p className="mt-1 max-w-xs break-words text-xs text-muted print:text-black/60">{[agencia.site, agencia.instagram].filter(Boolean).join(" · ")}</p>}
             </div>
           </div>
           <div className="text-right">
@@ -138,9 +141,9 @@ export default async function ResumoCobrancaPage({ params }: { params: { id: str
           </div>
         )}
 
-        {config?.whatsappAgencia && (
+        {agencia.whatsapp && (
           <p className="mt-6 text-center text-xs text-muted print:text-black/50">
-            Dúvidas? Fale com a gente: {config.whatsappAgencia}
+            Dúvidas? Fale com a gente: {agencia.whatsapp}
           </p>
         )}
       </div>

@@ -11,8 +11,9 @@ import {
 } from "lucide-react";
 import { visualDaCategoria } from "@/lib/categoriaVisual";
 import AceitarButton from "./AceitarButton";
-import type { TipoProposta } from "@/lib/apresentacaoOrcamento";
+import type { CondicoesOrcamento as Condicoes, TipoProposta } from "@/lib/apresentacaoOrcamento";
 import { BaixarPdfOrcamento } from "@/components/orcamentos/BaixarPdfOrcamento";
+import CondicoesOrcamento from "@/components/orcamentos/CondicoesOrcamento";
 
 type Item = {
   id: string;
@@ -41,6 +42,7 @@ export default function OrcamentoInterativo({
   whatsappAgencia,
   depoimentos,
   itensIniciais,
+  condicoes,
 }: {
   slug: string;
   tipoProposta?: TipoProposta;
@@ -50,6 +52,7 @@ export default function OrcamentoInterativo({
   whatsappAgencia: string | null;
   depoimentos: { nomeCliente: string; texto: string }[];
   itensIniciais: Item[];
+  condicoes?: Condicoes;
 }) {
   const [itens, setItens] = useState(
     itensIniciais.map((i) => ({ ...i, valorUnitario: i.quantidade > 0 ? i.valor / i.quantidade : i.valor }))
@@ -228,6 +231,8 @@ export default function OrcamentoInterativo({
           )}
         </div>
       </div>
+
+      <CondicoesOrcamento condicoes={condicoes} variant="dark" className="mx-auto mt-6 max-w-4xl" />
 
       {/* CTA final */}
       <div className="mx-auto mt-6 max-w-4xl rounded-2xl border border-white/[0.06] bg-gradient-to-r from-[#111827] to-[#1a0e10] p-6 sm:p-8">

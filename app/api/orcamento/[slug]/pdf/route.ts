@@ -11,6 +11,7 @@ import {
   type DadosPdfOrcamento,
 } from "@/lib/orcamentoDocumento";
 import { gerarPdfOrcamento } from "@/lib/pdfOrcamento";
+import { obterDadosAgencia } from "@/lib/dadosAgencia";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -71,7 +72,7 @@ async function exportarPdf(request: NextRequest, slug: string, personalizar: boo
       }),
       prisma.configuracao.findUnique({
         where: { id: "config" },
-        select: { whatsappAgencia: true, linkBioInstagram: true },
+        select: { nomeAgencia: true, siteAgencia: true, logoAgenciaUrl: true, whatsappAgencia: true, linkBioInstagram: true },
       }),
     ]);
 
@@ -86,6 +87,7 @@ async function exportarPdf(request: NextRequest, slug: string, personalizar: boo
     );
     if (itens.length === 0) return erroSeguro("Esta proposta não possui serviços selecionados.", 400);
 
+    const agencia = obterDadosAgencia(configuracao);
     const dados: DadosPdfOrcamento = {
       ...obterMetadadosOrcamento(orcamento.id, orcamento.createdAt),
       status: orcamento.status,
@@ -96,13 +98,13 @@ async function exportarPdf(request: NextRequest, slug: string, personalizar: boo
         telefone: orcamento.cliente.whatsapp,
         endereco: orcamento.cliente.endereco,
       },
-      agencia: { instagram: configuracao?.linkBioInstagram ?? null },
+      agencia,
       apresentacao: obterApresentacaoOrcamento(
         orcamento.apresentacao,
         orcamento.cliente.nome,
         orcamento.itens.map((item) => item.servico.unidade),
       ),
-      whatsappAgencia: configuracao?.whatsappAgencia ?? null,
+      whatsappAgencia: agencia.whatsapp || null,
       urlPublica: obterUrlPublicaOrcamento(orcamento.slug),
       personalizado: selecao?.personalizado ?? false,
       itens,

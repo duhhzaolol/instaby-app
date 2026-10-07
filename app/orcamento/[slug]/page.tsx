@@ -5,6 +5,7 @@ import OrcamentoInterativo from "./OrcamentoInterativo";
 import { TopoOrcamento } from "@/components/orcamentos/TopoOrcamento";
 import { obterApresentacaoOrcamento } from "@/lib/apresentacaoOrcamento";
 import { obterMetadadosOrcamento } from "@/lib/orcamentoDocumento";
+import { obterDadosAgencia } from "@/lib/dadosAgencia";
 
 export const dynamic = "force-dynamic";
 
@@ -44,13 +45,14 @@ export default async function OrcamentoPublicoPage({
   const logosEmbaralhados = [...logos].sort(() => Math.random() - 0.5);
 
   const { validoAte, codigo } = obterMetadadosOrcamento(orcamento.id, orcamento.createdAt);
+  const agencia = obterDadosAgencia(config);
 
   return (
     <div className="min-h-screen bg-[#0B0D12]">
       {/* Topo */}
       <div className="border-b border-white/[0.06] px-4 py-4">
         <div className="mx-auto flex max-w-4xl items-center justify-between">
-          <img src="/logo.png" alt="Instaby" className="h-6 w-auto" />
+          <img src={agencia.logoUrl} alt={agencia.nome} className="h-6 w-auto max-w-48 object-contain" />
           <div className="hidden items-center gap-2 sm:flex">
             {apresentacao.selo && <span className="max-w-56 break-words text-xs text-[#9CA3AF]">{apresentacao.selo}</span>}
             <span className="rounded-full border border-white/10 px-2.5 py-1 font-mono text-[10px] text-[#F9FAFB]">
@@ -67,11 +69,12 @@ export default async function OrcamentoPublicoPage({
 
       <OrcamentoInterativo
         tipoProposta={apresentacao.tipo}
+        condicoes={apresentacao.condicoes}
         slug={orcamento.slug}
         status={orcamento.status}
         clienteNome={orcamento.cliente.nome}
         validoAte={validoAte}
-        whatsappAgencia={config?.whatsappAgencia || null}
+        whatsappAgencia={agencia.whatsapp || null}
         depoimentos={depoimentos.map((d) => ({ nomeCliente: d.nomeCliente, texto: d.texto }))}
         itensIniciais={orcamento.itens.map((item) => ({
           id: item.id,

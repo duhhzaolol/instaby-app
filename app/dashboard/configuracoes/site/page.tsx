@@ -184,7 +184,6 @@ export default async function SiteConfigPage() {
           imagemUrl={config?.linkBioImagemUrl || null}
           tagline={config?.linkBioTagline || ""}
           tags={config?.linkBioTags || ""}
-          instagram={config?.linkBioInstagram || ""}
           youtube={config?.linkBioYoutube || ""}
           tiktok={config?.linkBioTiktok || ""}
           linkedin={config?.linkBioLinkedin || ""}

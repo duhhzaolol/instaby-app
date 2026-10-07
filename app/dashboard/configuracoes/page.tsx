@@ -3,7 +3,7 @@ import { Globe, ChevronRight, Users } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getUsuarioAtual, permissoesDe } from "@/lib/permissoes";
 import DepoimentosForm from "./DepoimentosForm";
-import WhatsappAgenciaForm from "./WhatsappAgenciaForm";
+import DadosAgenciaForm from "./DadosAgenciaForm";
 import LogosClientesForm from "./LogosClientesForm";
 import MetaFaturamentoForm from "./MetaFaturamentoForm";
 import CustoHoraForm from "./CustoHoraForm";
@@ -33,6 +33,20 @@ export default async function ConfiguracoesPage() {
   return (
     <div className="flex flex-col gap-8">
       <p className="text-lg font-medium text-text">Configurações</p>
+
+      {pode?.gerenciarConfiguracoes && (
+        <section id="dados-agencia" aria-labelledby="dados-agencia-titulo" className="scroll-mt-6">
+          <h2 id="dados-agencia-titulo" className="mb-1 text-sm font-medium text-text">Dados da agência</h2>
+          <p className="mb-4 text-sm text-muted">Nome, contatos e logo usados nas propostas e nos PDFs.</p>
+          <DadosAgenciaForm dadosIniciais={{
+            nomeAgencia: config?.nomeAgencia,
+            whatsappAgencia: config?.whatsappAgencia,
+            siteAgencia: config?.siteAgencia,
+            linkBioInstagram: config?.linkBioInstagram,
+            logoAgenciaUrl: config?.logoAgenciaUrl,
+          }} />
+        </section>
+      )}
 
       {pode?.gerenciarConfiguracoes && (
         <Link
@@ -134,14 +148,6 @@ export default async function ConfiguracoesPage() {
                   : null
               }
             />
-          </div>
-
-          <div>
-            <p className="mb-1 text-sm font-medium text-text">WhatsApp da agência</p>
-            <p className="mb-4 text-sm text-muted">
-              Usado no botão "Falar com a gente" que aparece na proposta pública.
-            </p>
-            <WhatsappAgenciaForm whatsappAtual={config?.whatsappAgencia || ""} />
           </div>
 
           <div>

@@ -5,6 +5,7 @@ import { obterApresentacaoOrcamento } from "@/lib/apresentacaoOrcamento";
 import { exigirPermissao, podeVerCliente } from "@/lib/permissoes";
 import { prisma } from "@/lib/prisma";
 import EditarApresentacaoForm from "./EditarApresentacaoForm";
+import { obterDadosAgencia } from "@/lib/dadosAgencia";
 
 export default async function EditarOrcamentoPage({ params }: { params: { slug: string } }) {
   const usuario = await exigirPermissao("verOrcamentos");
@@ -13,6 +14,9 @@ export default async function EditarOrcamentoPage({ params }: { params: { slug: 
     include: { cliente: true, itens: { include: { servico: true } } },
   });
   if (!orcamento || !(await podeVerCliente(usuario, orcamento.clienteId))) notFound();
+  const config = await prisma.configuracao.findUnique({
+    where: { id: "config" }, select: { nomeAgencia: true, logoAgenciaUrl: true },
+  });
 
   const apresentacao = obterApresentacaoOrcamento(
     orcamento.apresentacao,
@@ -30,12 +34,13 @@ export default async function EditarOrcamentoPage({ params }: { params: { slug: 
       </Link>
       <h1 className="mb-1 text-lg font-medium text-text">Personalizar orçamento</h1>
       <p className="mb-5 text-sm text-muted">
-        Ajuste a abertura da proposta de {orcamento.cliente.nome}. Ao salvar, o endereço compartilhado continua o mesmo.
+        Ajuste a apresentação e as condições da proposta de {orcamento.cliente.nome}. Ao salvar, o endereço compartilhado continua o mesmo.
       </p>
       <EditarApresentacaoForm
         slug={orcamento.slug}
         clienteNome={orcamento.cliente.nome}
         apresentacaoInicial={apresentacao}
+        agencia={obterDadosAgencia(config)}
         aceito={orcamento.status === "aceito"}
         itens={orcamento.itens.map((item) => ({
           id: item.id,

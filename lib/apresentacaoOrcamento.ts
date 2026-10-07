@@ -1,5 +1,11 @@
 export type TipoProposta = "mensal" | "pontual";
 
+export type CondicoesOrcamento = {
+  pagamento: string;
+  prazoEntrega: string;
+  observacoes: string;
+};
+
 export type ApresentacaoOrcamento = {
   selo: string;
   titulo: string;
@@ -7,6 +13,7 @@ export type ApresentacaoOrcamento = {
   complemento: string;
   descricao: string;
   tipo: TipoProposta;
+  condicoes?: CondicoesOrcamento;
 };
 
 const limites = {
@@ -16,6 +23,14 @@ const limites = {
   complemento: 100,
   descricao: 1200,
 } as const;
+
+export const limitesCondicoesOrcamento = {
+  pagamento: 1200,
+  prazoEntrega: 600,
+  observacoes: 1500,
+} as const;
+
+const caracteresInvalidos = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]/;
 
 export function apresentacaoPadrao(
   nome: string,
@@ -45,7 +60,7 @@ export function validarApresentacaoOrcamento(
 
   const dados = valor as Record<string, unknown>;
   const campos = Object.keys(limites) as (keyof typeof limites)[];
-  if (Object.keys(dados).some((campo) => campo !== "tipo" && !Object.prototype.hasOwnProperty.call(limites, campo))) {
+  if (Object.keys(dados).some((campo) => campo !== "tipo" && campo !== "condicoes" && !Object.prototype.hasOwnProperty.call(limites, campo))) {
     return { erro: "A apresentação contém campos desconhecidos." };
   }
   if (dados.tipo !== "mensal" && dados.tipo !== "pontual") {
@@ -58,7 +73,7 @@ export function validarApresentacaoOrcamento(
     if (typeof texto !== "string") {
       return { erro: `O campo ${campo} deve ser um texto.` };
     }
-    if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]/.test(texto)) {
+    if (caracteresInvalidos.test(texto)) {
       return { erro: `O campo ${campo} contém caracteres inválidos.` };
     }
     const normalizado = texto.trim();
@@ -71,7 +86,36 @@ export function validarApresentacaoOrcamento(
     return { erro: "Preencha o título da proposta." };
   }
 
-  return { apresentacao: { ...textos, tipo: dados.tipo } };
+  let condicoes: CondicoesOrcamento | undefined;
+  if (Object.prototype.hasOwnProperty.call(dados, "condicoes")) {
+    if (!dados.condicoes || typeof dados.condicoes !== "object" || Array.isArray(dados.condicoes)) {
+      return { erro: "As condições do orçamento são inválidas." };
+    }
+
+    const valores = dados.condicoes as Record<string, unknown>;
+    if (Object.keys(valores).some((campo) => !Object.prototype.hasOwnProperty.call(limitesCondicoesOrcamento, campo))) {
+      return { erro: "As condições do orçamento contêm campos desconhecidos." };
+    }
+
+    const nomes = { pagamento: "pagamento", prazoEntrega: "prazo de entrega", observacoes: "observações" };
+    condicoes = {} as CondicoesOrcamento;
+    for (const campo of Object.keys(limitesCondicoesOrcamento) as (keyof CondicoesOrcamento)[]) {
+      const texto = valores[campo];
+      if (typeof texto !== "string") {
+        return { erro: `O campo ${nomes[campo]} deve ser um texto.` };
+      }
+      if (caracteresInvalidos.test(texto)) {
+        return { erro: `O campo ${nomes[campo]} contém caracteres inválidos.` };
+      }
+      const normalizado = texto.trim();
+      if (normalizado.length > limitesCondicoesOrcamento[campo]) {
+        return { erro: `O campo ${nomes[campo]} deve ter no máximo ${limitesCondicoesOrcamento[campo]} caracteres.` };
+      }
+      condicoes[campo] = normalizado;
+    }
+  }
+
+  return { apresentacao: { ...textos, tipo: dados.tipo, ...(condicoes ? { condicoes } : {}) } };
 }
 
 export function obterApresentacaoOrcamento(
