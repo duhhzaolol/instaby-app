@@ -22,6 +22,15 @@ export type VersaoNovidades = {
 
 export const NOVIDADES: VersaoNovidades[] = [
   {
+    versao: 171,
+    resumo: "PDF de orçamento reorganizado como documento comercial para impressão.",
+    itens: [
+      { tipo: "melhorado", texto: "Logo central, título Orçamento de serviços, emissão, validade, código e situação. Os dados comerciais da agência e do cliente aparecem lado a lado." },
+      { tipo: "melhorado", texto: "Serviços, descrições completas e valores organizados em tabela, com quantidades e total em destaque. O PDF usa apenas preto e cinza sobre fundo branco." },
+      { tipo: "melhorado", texto: "Frases promocionais e links para a proposta foram retirados do PDF. O documento termina com o total, mantendo apenas código e numeração no rodapé." },
+    ],
+  },
+  {
     versao: 170,
     resumo: "Orçamentos em PDF com a identidade da Instaby e formato próprio para impressão.",
     itens: [

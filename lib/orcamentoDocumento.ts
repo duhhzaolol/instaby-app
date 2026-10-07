@@ -7,6 +7,15 @@ export type DadosPdfOrcamento = {
   status: string;
   aceitoEm: string | null;
   clienteNome: string;
+  contatoCliente?: {
+    contatoNome?: string | null;
+    telefone?: string | null;
+    endereco?: string | null;
+  };
+  agencia?: {
+    site?: string | null;
+    instagram?: string | null;
+  };
   apresentacao: ApresentacaoOrcamento;
   whatsappAgencia: string | null;
   urlPublica: string;

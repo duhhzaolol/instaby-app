@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import fontkit from "@pdf-lib/fontkit";
-import { PDFDocument, PDFFont, PDFName, PDFPage, PDFString, rgb } from "pdf-lib";
+import { PDFDocument, PDFName, PDFPage, PDFString, rgb } from "pdf-lib";
 import type { DadosPdfOrcamento } from "./orcamentoDocumento";
 
 const A4 = { width: 595.28, height: 841.89 };
@@ -12,7 +12,6 @@ const INK = rgb(0.09, 0.09, 0.09);
 const MUTED = rgb(0.38, 0.38, 0.38);
 const RULE = rgb(0.79, 0.79, 0.79);
 const BODY_SIZE = 10.5;
-const BODY_LEADING = 15.5;
 
 let assets: Promise<Buffer[]> | undefined;
 function readAssets() {
@@ -45,6 +44,18 @@ function phoneLabel(value: string) {
   if (local.length === 11) return `+55 (${local.slice(0, 2)}) ${local.slice(2, 7)}-${local.slice(7)}`;
   if (local.length === 10) return `+55 (${local.slice(0, 2)}) ${local.slice(2, 6)}-${local.slice(6)}`;
   return value;
+}
+
+function instagramLabel(value: string) {
+  const text = value.trim();
+  try {
+    const url = new URL(text.startsWith("http") ? text : `https://${text}`);
+    const handle = url.pathname.split("/").filter(Boolean)[0];
+    if ((url.hostname === "instagram.com" || url.hostname === "www.instagram.com") && handle && /^[A-Za-z0-9._]{1,30}$/.test(handle)) {
+      return `@${handle}`;
+    }
+  } catch { /* A saved handle is already ready for print. */ }
+  return text;
 }
 
 /** Gera uma proposta própria para impressão; não altera o orçamento nem seu aceite. */
@@ -83,7 +94,7 @@ export async function gerarPdfOrcamento(dados: DadosPdfOrcamento): Promise<Uint8
     : ({ pendente: "Pendente", aceito: "Aceito", recusado: "Recusado" }[dados.status] ?? dados.status);
   pdf.setTitle(clean(`Orçamento ${dados.codigo} — ${dados.clienteNome}`));
   pdf.setAuthor("Instaby");
-  pdf.setSubject(clean(dados.apresentacao.titulo));
+  pdf.setSubject("Orçamento de serviços");
   pdf.setCreator("Instaby App");
   pdf.setProducer("Instaby App");
   pdf.catalog.set(PDFName.of("Lang"), PDFString.of("pt-BR"));
@@ -118,218 +129,202 @@ export async function gerarPdfOrcamento(dados: DadosPdfOrcamento): Promise<Uint8
     return result;
   }
 
-  let page: PDFPage;
+  let page!: PDFPage;
   let y = 0;
-  let pageBodyTop = 0;
+  const RIGHT = A4.width - MARGIN;
+  const ROW_LEADING = 14;
+  const PADDING = 10;
+  const SERVICE_WIDTH = 136;
+  const DESCRIPTION_WIDTH = 250;
+  const descriptionX = MARGIN + SERVICE_WIDTH;
+  const valueX = descriptionX + DESCRIPTION_WIDTH;
+  const valueWidth = RIGHT - valueX;
+
   function draw(text: string, x: number, baseline: number, size = BODY_SIZE, font = regular, color = INK) {
     if (text) page.drawText(text, { x, y: baseline, size, font, color });
   }
-  function rule(baseline: number) {
-    page.drawLine({ start: { x: MARGIN, y: baseline }, end: { x: A4.width - MARGIN, y: baseline }, thickness: 0.6, color: RULE });
+  function rule(baseline: number, color = RULE, thickness = 0.5) {
+    page.drawLine({ start: { x: MARGIN, y: baseline }, end: { x: RIGHT, y: baseline }, thickness, color });
+  }
+  function center(text: string, baseline: number, size: number, font = regular, color = INK) {
+    draw(text, (A4.width - font.widthOfTextAtSize(text, size)) / 2, baseline, size, font, color);
   }
   function addPage() {
     const first = pdf.getPageCount() === 0;
     page = pdf.addPage([A4.width, A4.height]);
     const top = A4.height - MARGIN;
-    const logoWidth = first ? 112 : 80;
-    const logoHeight = logoWidth * logo.height / logo.width;
-    page.drawImage(logo, { x: MARGIN, y: top - logoHeight, width: logoWidth, height: logoHeight });
-    const referenceLines = lines(code, bold, first ? 11 : 9.5, 245);
-    const refLeading = first ? 15 : 13;
-    const refTop = top - (first ? 9 : 8);
-    draw(first ? "ORÇAMENTO" : "ORÇAMENTO · CONTINUAÇÃO", A4.width - MARGIN - 245, refTop, 8.5, regular, MUTED);
-    referenceLines.forEach((line, index) => draw(line, A4.width - MARGIN - 245, refTop - 16 - index * refLeading, first ? 11 : 9.5, bold));
-    y = top - Math.max(logoHeight, 16 + referenceLines.length * refLeading) - 16;
-    rule(y);
-    y -= 22;
     if (first) {
+      const logoWidth = 176;
+      const logoHeight = logoWidth * logo.height / logo.width;
+      page.drawImage(logo, { x: (A4.width - logoWidth) / 2, y: top - logoHeight, width: logoWidth, height: logoHeight });
+      center("Agência de marketing", top - logoHeight - 18, 9.5, regular, MUTED);
+      center("Orçamento de serviços", top - logoHeight - 53, 23, bold);
+      y = top - logoHeight - 70;
+      const category = clean(dados.apresentacao.selo).trim();
+      if (category) {
+        const categoryLines = lines(category, regular, 13, WIDTH);
+        categoryLines.forEach(line => { y -= 18; center(line, y, 13); });
+      }
+      y -= 37;
       const columns = [
         { label: "EMISSÃO", value: dateLabel(dados.criadoEm) },
         { label: "VÁLIDO ATÉ", value: dateLabel(dados.validoAte) },
+        { label: "CÓDIGO", value: code },
         { label: "SITUAÇÃO", value: status },
       ];
-      const colWidth = WIDTH / 3;
+      const colWidth = WIDTH / columns.length;
       let height = 0;
       columns.forEach((column, index) => {
         const x = MARGIN + colWidth * index;
-        draw(column.label, x, y, 8.5, regular, MUTED);
-        const valueLines = lines(column.value, bold, 10, colWidth - 12);
-        valueLines.forEach((line, lineIndex) => draw(line, x, y - 16 - lineIndex * 14, 10, bold));
-        height = Math.max(height, valueLines.length * 14);
+        draw(column.label, x, y, 8, regular, MUTED);
+        const valueLines = lines(column.value, bold, 9.5, colWidth - 12);
+        valueLines.forEach((line, lineIndex) => draw(line, x, y - 16 - lineIndex * 13, 9.5, bold));
+        height = Math.max(height, valueLines.length * 13);
       });
-      y -= height + 37;
+      y -= height + 30;
+      rule(y);
+      y -= 27;
     } else {
-      y -= 3;
+      const logoWidth = 96;
+      const logoHeight = logoWidth * logo.height / logo.width;
+      page.drawImage(logo, { x: MARGIN, y: top - logoHeight, width: logoWidth, height: logoHeight });
+      const label = "Orçamento de serviços - continuação";
+      draw(label, RIGHT - regular.widthOfTextAtSize(label, 9), top - 9, 9, regular, MUTED);
+      const ref = lines(code, bold, 10, 280);
+      ref.forEach((line, index) => draw(line, RIGHT - bold.widthOfTextAtSize(line, 10), top - 25 - index * 14, 10, bold));
+      y = top - Math.max(logoHeight, 25 + ref.length * 14) - 19;
+      rule(y);
+      y -= 24;
     }
-    pageBodyTop = y;
-  }
-  function ensure(height: number) {
-    if (y - height < BOTTOM && y < pageBodyTop - 0.5) addPage();
-  }
-  function flow(textLines: string[], options: {
-    size?: number; leading?: number; font?: PDFFont; color?: ReturnType<typeof rgb>; x?: number;
-    continuation?: () => void; reserveTail?: number;
-  } = {}) {
-    const size = options.size ?? BODY_SIZE;
-    const leading = options.leading ?? BODY_LEADING;
-    textLines.forEach((line, index) => {
-      const remaining = textLines.length - index;
-      const reserve = options.reserveTail && remaining <= 3 ? remaining * leading + options.reserveTail : leading;
-      if (y - reserve < BOTTOM) {
-        addPage();
-        options.continuation?.();
-      }
-      draw(line, options.x ?? MARGIN, y - size, size, options.font ?? regular, options.color ?? INK);
-      y -= leading;
-    });
   }
 
   addPage();
-  const label = clean(dados.apresentacao.selo).trim();
-  if (label) {
-    flow(lines(label.toLocaleUpperCase("pt-BR"), bold, 9), { size: 9, leading: 13, font: bold, color: MUTED });
-    y -= 12;
-  }
-  draw("PREPARADO PARA", MARGIN, y - 8.5, 8.5, regular, MUTED);
-  y -= 18;
-  flow(lines(client, bold, 12), { size: 12, leading: 17, font: bold });
-  y -= 17;
-  const title = [dados.apresentacao.titulo, dados.apresentacao.destaque, dados.apresentacao.complemento].filter((part) => part.trim()).join(" ");
-  const titleLines = lines(title, bold, 23);
-  ensure(Math.min(titleLines.length * 30, 60) + (dados.apresentacao.descricao.trim() ? 12 + BODY_LEADING * 2 : 0));
-  flow(titleLines, { size: 23, leading: 30, font: bold });
-  if (dados.apresentacao.descricao.trim()) {
-    y -= 12;
-    flow(lines(dados.apresentacao.descricao), { color: MUTED });
-  }
-  const customNote = "Esta seleção personalizada não altera a proposta original e não confirma a contratação.";
-  const summaryNote = dados.personalizado
-    ? customNote
-    : dados.status === "aceito"
-      ? dados.aceitoEm ? `Proposta aceita em ${dateLabel(dados.aceitoEm)}.` : "Proposta aceita, conforme registrado no sistema."
-      : dados.status === "recusado"
-        ? "Proposta recusada, conforme registrado no sistema."
-        : "Consulte a proposta online para personalizar os serviços ou responder ao orçamento.";
-  const noteLines = lines(summaryNote, regular, 9.5);
-  const urlLines = lines(dados.urlPublica, regular, 9.5);
-  const contactLines = dados.whatsappAgencia ? lines(`WhatsApp da agência: ${phoneLabel(dados.whatsappAgencia)}`, regular, 9.5) : [];
-  // These are the exact cursor movements below, plus a small bottom clearance.
-  // Keeping the access link and contact in this reservation prevents a page
-  // containing only the link after an otherwise complete investment summary.
-  const summaryHeight = 28 + 45 + noteLines.length * 14 + 18 + 20
-    + urlLines.length * 14 + (contactLines.length ? 10 + contactLines.length * 14 : 0) + 8;
-  const preparedItems = dados.itens.map((item) => {
-    const itemWidth = WIDTH - 28;
-    const nameLines = lines(item.nome, bold, 12.5, itemWidth);
-    const descriptionLines = item.descricao.trim() ? lines(item.descricao, regular, BODY_SIZE, itemWidth) : [];
-    const quantity = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 4 }).format(item.quantidade);
-    const metaLines = lines(`Quantidade: ${quantity}${item.unidade ? ` · Unidade: ${item.unidade}` : ""}`, regular, 9.5, itemWidth - 150);
-    const metaHeight = metaLines.length * 14;
-    const afterDescriptionHeight = 10 + metaHeight + 15 + 22;
-    const itemHeight = nameLines.length * 18 + (descriptionLines.length ? 8 : 0)
-      + descriptionLines.length * BODY_LEADING + afterDescriptionHeight;
-    const openingHeight = Math.min(nameLines.length, 3) * 18
-      + (descriptionLines.length ? 8 + BODY_LEADING * Math.min(2, descriptionLines.length) : 10 + Math.min(metaHeight, 28));
-    return { item, nameLines, descriptionLines, metaLines, metaHeight, afterDescriptionHeight, itemHeight, openingHeight };
-  });
-
-  y -= 27;
-  const firstItem = preparedItems[0];
-  const firstBlockHeight = firstItem ? firstItem.itemHeight <= 180 ? firstItem.itemHeight : firstItem.openingHeight : 25;
-  ensure(23 + 18 + firstBlockHeight);
-  draw("ESCOPO E INVESTIMENTO", MARGIN, y - 10, 10, bold);
-  y -= 23;
-  rule(y);
-  y -= 18;
-
-  preparedItems.forEach(({ item, nameLines, descriptionLines, metaLines, metaHeight, afterDescriptionHeight, itemHeight, openingHeight }, index) => {
-    const number = String(index + 1).padStart(2, "0");
-    const isLast = index === dados.itens.length - 1;
-    // Only short service blocks stay together. A long service starts on the
-    // current page as soon as its heading and first description lines fit.
-    ensure(itemHeight <= 180 ? itemHeight : openingHeight);
-
-    draw(number, MARGIN, y - 12, 9.5, bold, MUTED);
-    flow(nameLines, {
-      size: 12.5, leading: 18, font: bold, x: MARGIN + 28,
-      reserveTail: descriptionLines.length ? 8 + BODY_LEADING * Math.min(2, descriptionLines.length) : 10 + Math.min(metaHeight, 28),
-    });
-    const continued = () => {
-      draw(`SERVIÇO ${number} · CONTINUAÇÃO`, MARGIN + 28, y - 9, 9, bold, MUTED);
-      y -= 24;
-    };
-    if (descriptionLines.length) {
-      y -= 8;
-      const reserveSummary = isLast && itemHeight > 180
-        && afterDescriptionHeight + summaryHeight + BODY_LEADING * 3 + 24 < pageBodyTop - BOTTOM;
-      flow(descriptionLines, {
-        x: MARGIN + 28, continuation: continued,
-        reserveTail: reserveSummary ? afterDescriptionHeight + summaryHeight : afterDescriptionHeight,
-      });
+  const contactWidth = (WIDTH - 40) / 2;
+  const clientX = MARGIN + contactWidth + 40;
+  draw("INSTABY", MARGIN, y - 10, 11, bold);
+  draw("CLIENTE", clientX, y - 10, 11, bold);
+  y -= 30;
+  const agencyDetails = [
+    dados.whatsappAgencia ? phoneLabel(dados.whatsappAgencia) : "",
+    dados.agencia?.site?.trim() ?? "",
+    dados.agencia?.instagram ? instagramLabel(dados.agencia.instagram) : "",
+  ].filter(Boolean);
+  const clientDetails = [
+    client,
+    dados.contatoCliente?.contatoNome?.trim() && dados.contatoCliente.contatoNome.trim() !== dados.clienteNome.trim()
+      ? dados.contatoCliente.contatoNome.trim() : "",
+    dados.contatoCliente?.telefone ? phoneLabel(dados.contatoCliente.telefone) : "",
+    dados.contatoCliente?.endereco?.trim() ?? "",
+  ].filter(Boolean);
+  const agencyLines = agencyDetails.flatMap(value => lines(value, regular, 9.5, contactWidth));
+  const clientLines = clientDetails.flatMap(value => lines(value, regular, 9.5, contactWidth));
+  const contactRows = Math.max(agencyLines.length, clientLines.length);
+  for (let index = 0; index < contactRows; index++) {
+    if (y - 15 < BOTTOM + 85) {
+      addPage();
+      draw("DADOS DO ORÇAMENTO - CONTINUAÇÃO", MARGIN, y - 9, 9, bold, MUTED);
+      y -= 25;
     }
-    y -= 10;
-    ensure(metaHeight + 15);
-    const amount = money(item.totalCentavos);
-    const amountSize = Math.min(11, 145 / Math.max(1, bold.widthOfTextAtSize(amount, 1)));
-    draw(amount, A4.width - MARGIN - bold.widthOfTextAtSize(amount, amountSize), y - 10.5, amountSize, bold);
-    flow(metaLines, { size: 9.5, leading: 14, color: MUTED, x: MARGIN + 28, continuation: continued });
+    draw(agencyLines[index] ?? "", MARGIN, y - 9.5, 9.5);
+    draw(clientLines[index] ?? "", clientX, y - 9.5, 9.5);
     y -= 15;
-    rule(y);
-    y -= 22;
-  });
+  }
+  // The two contact columns end together, even when one has more saved details.
+  y -= 32;
 
-  ensure(summaryHeight);
-  draw("INVESTIMENTO", MARGIN, y - 9, 9, bold, MUTED);
-  y -= 28;
-  const total = money(dados.itens.reduce((sum, item) => sum + item.totalCentavos, 0));
-  const totalSize = Math.min(24, 270 / Math.max(1, bold.widthOfTextAtSize(total, 1)));
-  draw(dados.apresentacao.tipo === "mensal" ? "Total mensal" : "Total do serviço", MARGIN, y - 17, 11, bold);
-  draw(total, A4.width - MARGIN - bold.widthOfTextAtSize(total, totalSize), y - totalSize, totalSize, bold);
-  y -= 45;
-  flow(noteLines, { size: 9.5, leading: 14, color: MUTED });
-  y -= 18;
-  ensure(28 + Math.min(urlLines.length, 2) * 14);
-  draw("ACESSAR A PROPOSTA", MARGIN, y - 9, 9, bold);
-  y -= 20;
-
-  function linkedLines(textLines: string[], href: string) {
-    let target: string | undefined;
-    try {
-      const url = new URL(href);
-      if (url.protocol === "https:" || url.protocol === "http:") target = url.href;
-    } catch { /* Keep invalid legacy URLs legible without an unsafe link. */ }
-    textLines.forEach((line) => {
-      ensure(14);
-      const baseline = y - 9.5;
-      draw(line, MARGIN, baseline, 9.5, regular, MUTED);
-      if (target && line) {
-        const annotation = pdf.context.obj({
-          Type: "Annot", Subtype: "Link", Rect: [MARGIN, baseline - 2, MARGIN + regular.widthOfTextAtSize(line, 9.5), baseline + 11],
-          Border: [0, 0, 0], A: { Type: "Action", S: "URI", URI: PDFString.of(target) },
-        });
-        page.node.addAnnot(pdf.context.register(annotation));
+  function tableHeader() {
+    rule(y, INK, 0.8);
+    draw("SERVIÇO", MARGIN + PADDING, y - 19, 9.5, bold);
+    draw("DESCRIÇÃO", descriptionX + PADDING, y - 19, 9.5, bold);
+    const label = "VALOR";
+    draw(label, RIGHT - PADDING - bold.widthOfTextAtSize(label, 9.5), y - 19, 9.5, bold);
+    y -= 31;
+    rule(y, INK, 0.6);
+  }
+  for (let index = 0; index < dados.itens.length; index++) {
+    const item = dados.itens[index];
+    const nameLines = lines(item.nome, bold, 10, SERVICE_WIDTH - PADDING * 2);
+    const quantity = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 4 }).format(item.quantidade);
+    const quantityLines = lines(
+      "Quantidade: " + quantity + (item.unidade ? " · " + item.unidade : ""),
+      regular, 8.5, SERVICE_WIDTH - PADDING * 2,
+    );
+    const serviceLines = [
+      ...nameLines.map(text => ({ text, font: bold, size: 10, color: INK })),
+      { text: "", font: regular, size: 8.5, color: MUTED },
+      ...quantityLines.map(text => ({ text, font: regular, size: 8.5, color: MUTED })),
+    ];
+    const descriptionLines = item.descricao.trim() ? lines(item.descricao, regular, 9.5, DESCRIPTION_WIDTH - PADDING * 2) : [];
+    const lineCount = Math.max(serviceLines.length, descriptionLines.length, 1);
+    const fullHeight = lineCount * ROW_LEADING + PADDING * 2;
+    const isLast = index === dados.itens.length - 1;
+    const openingHeight = fullHeight <= 180 ? fullHeight : Math.min(3, lineCount) * ROW_LEADING + PADDING * 2;
+    const headerHeight = index === 0 ? 31 : 0;
+    const summarySpace = isLast && fullHeight <= 180 ? 88 : 0;
+    if (y - headerHeight - openingHeight - summarySpace < BOTTOM) {
+      addPage();
+      tableHeader();
+    } else if (index === 0) tableHeader();
+    let offset = 0;
+    while (offset < lineCount) {
+      const capacity = Math.floor((y - BOTTOM - PADDING * 2) / ROW_LEADING);
+      if (capacity < 1) { addPage(); tableHeader(); continue; }
+      const remaining = lineCount - offset;
+      let count = Math.min(capacity, remaining);
+      // Keep the last service lines beside its amount and the final total.
+      // A large description may span pages without leaving a total-only page.
+      if (isLast && remaining <= capacity && y - remaining * ROW_LEADING - PADDING * 2 - 88 < BOTTOM) {
+        if (remaining <= 3) { addPage(); tableHeader(); continue; }
+        count = remaining - 3;
+      } else if (isLast && remaining > capacity && remaining - count < 3) {
+        count = Math.max(1, remaining - 3);
       }
-      y -= 14;
-    });
+      const rowTop = y;
+      const rowHeight = count * ROW_LEADING + PADDING * 2;
+      const finalPart = offset + count === lineCount;
+      for (let row = 0; row < count; row++) {
+        const baseline = rowTop - PADDING - 10 - row * ROW_LEADING;
+        const service = serviceLines[offset + row];
+        if (service) draw(service.text, MARGIN + PADDING, baseline, service.size, service.font, service.color);
+        draw(descriptionLines[offset + row] ?? "", descriptionX + PADDING, baseline, 9.5);
+      }
+      if (offset >= serviceLines.length) {
+        draw("Serviço " + (index + 1) + " (continuação)", MARGIN + PADDING, rowTop - PADDING - 10, 8, regular, MUTED);
+      }
+      if (finalPart) {
+        const amount = money(item.totalCentavos);
+        const amountSize = Math.min(10, (valueWidth - PADDING * 2) / Math.max(1, bold.widthOfTextAtSize(amount, 1)));
+        draw(amount, RIGHT - PADDING - bold.widthOfTextAtSize(amount, amountSize), rowTop - PADDING - 10, amountSize, bold);
+      }
+      // Hairline separators organize the table without filling large ink areas.
+      for (const x of [MARGIN, descriptionX, valueX, RIGHT]) {
+        page.drawLine({ start: { x, y: rowTop }, end: { x, y: rowTop - rowHeight }, thickness: 0.35, color: RULE });
+      }
+      y -= rowHeight;
+      rule(y);
+      offset += count;
+      if (!finalPart) { addPage(); tableHeader(); }
+    }
   }
-  linkedLines(urlLines, dados.urlPublica);
-  if (contactLines.length && dados.whatsappAgencia) {
-    y -= 10;
-    const phone = dados.whatsappAgencia.replace(/\D/g, "");
-    const international = phone.length === 10 || phone.length === 11 ? `55${phone}` : phone;
-    linkedLines(contactLines, international.length >= 10 ? `https://wa.me/${international}` : "");
-  }
+
+  if (y - 88 < BOTTOM) addPage();
+  y -= 28;
+  const totalLabel = dados.apresentacao.tipo === "mensal" ? "TOTAL MENSAL" : "TOTAL DO SERVIÇO";
+  draw(totalLabel, MARGIN, y - 19, 10, bold, MUTED);
+  const total = money(dados.itens.reduce((sum, item) => sum + item.totalCentavos, 0));
+  const totalSize = Math.min(28, 280 / Math.max(1, bold.widthOfTextAtSize(total, 1)));
+  draw(total, RIGHT - bold.widthOfTextAtSize(total, totalSize), y - totalSize, totalSize, bold);
 
   const pageCount = pdf.getPageCount();
   pdf.getPages().forEach((footerPage, index) => {
-    const pageNumber = `Página ${index + 1} de ${pageCount}`;
+    const pageNumber = "Página " + (index + 1) + " de " + pageCount;
     const footerWidth = WIDTH - regular.widthOfTextAtSize(pageNumber, 8.5) - 20;
     let footerCode = code.replace(/\n/g, " ");
     while (footerCode && regular.widthOfTextAtSize(footerCode, 8.5) > footerWidth) footerCode = Array.from(footerCode).slice(0, -1).join("");
-    if (footerCode !== code.replace(/\n/g, " ")) footerCode = `${footerCode.slice(0, -3)}...`;
-    footerPage.drawLine({ start: { x: MARGIN, y: 48 }, end: { x: A4.width - MARGIN, y: 48 }, thickness: 0.5, color: RULE });
+    if (footerCode !== code.replace(/\n/g, " ")) footerCode = footerCode.slice(0, -3) + "...";
+    footerPage.drawLine({ start: { x: MARGIN, y: 48 }, end: { x: RIGHT, y: 48 }, thickness: 0.5, color: RULE });
     footerPage.drawText(footerCode, { x: MARGIN, y: 32, size: 8.5, font: regular, color: MUTED });
-    footerPage.drawText(pageNumber, { x: A4.width - MARGIN - regular.widthOfTextAtSize(pageNumber, 8.5), y: 32, size: 8.5, font: regular, color: MUTED });
+    footerPage.drawText(pageNumber, { x: RIGHT - regular.widthOfTextAtSize(pageNumber, 8.5), y: 32, size: 8.5, font: regular, color: MUTED });
   });
   return pdf.save();
 }

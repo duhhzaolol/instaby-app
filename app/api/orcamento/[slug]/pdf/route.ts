@@ -54,7 +54,9 @@ async function exportarPdf(request: NextRequest, slug: string, personalizar: boo
           createdAt: true,
           dataAceite: true,
           apresentacao: true,
-          cliente: { select: { nome: true } },
+          cliente: {
+            select: { nome: true, contatoNome: true, whatsapp: true, endereco: true },
+          },
           itens: {
             select: {
               id: true,
@@ -67,7 +69,10 @@ async function exportarPdf(request: NextRequest, slug: string, personalizar: boo
           },
         },
       }),
-      prisma.configuracao.findUnique({ where: { id: "config" }, select: { whatsappAgencia: true } }),
+      prisma.configuracao.findUnique({
+        where: { id: "config" },
+        select: { whatsappAgencia: true, linkBioInstagram: true },
+      }),
     ]);
 
     if (!orcamento) return erroSeguro("Orçamento não encontrado.", 404);
@@ -86,6 +91,12 @@ async function exportarPdf(request: NextRequest, slug: string, personalizar: boo
       status: orcamento.status,
       aceitoEm: orcamento.dataAceite ? formatarDataDocumentoOrcamento(orcamento.dataAceite) : null,
       clienteNome: orcamento.cliente.nome,
+      contatoCliente: {
+        contatoNome: orcamento.cliente.contatoNome,
+        telefone: orcamento.cliente.whatsapp,
+        endereco: orcamento.cliente.endereco,
+      },
+      agencia: { instagram: configuracao?.linkBioInstagram ?? null },
       apresentacao: obterApresentacaoOrcamento(
         orcamento.apresentacao,
         orcamento.cliente.nome,
