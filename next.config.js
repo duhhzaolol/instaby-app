@@ -1,5 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    outputFileTracingIncludes: {
+      "/api/orcamento/*/pdf": ["./public/logo.png", "./public/fonts/Manrope-*.ttf"],
+    },
+  },
   // Cabeçalhos de segurança aplicados em toda resposta — reforçam o que o
   // navegador já faz por padrão, mas fecham brechas específicas: clickjacking
   // (alguém colocar seu painel dentro de um <iframe> escondido em outro site),

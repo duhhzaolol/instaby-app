@@ -22,6 +22,16 @@ export type VersaoNovidades = {
 
 export const NOVIDADES: VersaoNovidades[] = [
   {
+    versao: 170,
+    resumo: "Orçamentos em PDF com a identidade da Instaby e formato próprio para impressão.",
+    itens: [
+      { tipo: "adicionado", texto: "Baixe o PDF pela lista de orçamentos, pela personalização ou pelo link compartilhado com o cliente. O arquivo traz logo, código, emissão, validade, escopo completo, quantidades e valores com centavos." },
+      { tipo: "melhorado", texto: "O documento usa fundo branco, texto preto e cinza, pouca tinta, páginas numeradas e links para abrir a proposta e falar com a agência. Descrições longas continuam nas páginas seguintes." },
+      { tipo: "adicionado", texto: "No link público, o PDF acompanha as quantidades escolhidas e identifica uma seleção personalizada. Baixar não altera o orçamento nem confirma a contratação." },
+      { tipo: "corrigido", texto: "Propostas aceitas ou recusadas mantêm as quantidades registradas. A validade usa o horário de Brasília, e os valores da proposta pública mostram os centavos." },
+    ],
+  },
+  {
     versao: 169,
     resumo: "Painel mais sóbrio, com ícones uniformes e navegação mais clara.",
     itens: [

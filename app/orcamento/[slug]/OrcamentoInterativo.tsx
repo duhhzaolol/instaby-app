@@ -12,6 +12,7 @@ import {
 import { visualDaCategoria } from "@/lib/categoriaVisual";
 import AceitarButton from "./AceitarButton";
 import type { TipoProposta } from "@/lib/apresentacaoOrcamento";
+import { BaixarPdfOrcamento } from "@/components/orcamentos/BaixarPdfOrcamento";
 
 type Item = {
   id: string;
@@ -65,6 +66,7 @@ export default function OrcamentoInterativo({
   }
 
   const total = itens.reduce((soma, i) => soma + i.valor, 0);
+  const podePersonalizar = status === "pendente";
 
   const linkWhatsapp = whatsappAgencia
     ? `https://wa.me/${whatsappAgencia}?text=${encodeURIComponent(
@@ -82,11 +84,11 @@ export default function OrcamentoInterativo({
               <p className="text-sm font-medium text-[#F9FAFB]">O que está incluso</p>
               <p className="text-xs text-[#9CA3AF]">{tipoProposta === "mensal" ? "Serviços e entregas previstas para o mês." : "Serviços e entregas previstos nesta proposta."}</p>
             </div>
-            <p className="hidden text-right text-[10px] text-[#6B7280] sm:block">
+            {podePersonalizar && <p className="hidden text-right text-[10px] text-[#6B7280] sm:block">
               Ajuste as quantidades
               <br />
               se quiser personalizar
-            </p>
+            </p>}
           </div>
 
           <div className="flex flex-col gap-3">
@@ -95,7 +97,7 @@ export default function OrcamentoInterativo({
               return (
                 <div
                   key={item.id}
-                  className={`flex items-center gap-4 rounded-2xl border border-white/[0.06] bg-[#111827]/50 p-4 transition-opacity ${
+                  className={`grid grid-cols-[2.75rem_minmax(0,1fr)] items-start gap-3 rounded-2xl border border-white/[0.06] bg-[#111827]/50 p-4 transition-opacity sm:flex sm:items-center sm:gap-4 ${
                     item.quantidade === 0 ? "opacity-40" : ""
                   }`}
                 >
@@ -111,24 +113,30 @@ export default function OrcamentoInterativo({
                       <p className="mt-0.5 text-xs leading-relaxed text-[#9CA3AF]">{item.descricao}</p>
                     )}
                   </div>
-                  <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center sm:gap-4">
+                  <div className="col-span-2 flex items-center justify-between gap-4 sm:shrink-0 sm:justify-end">
                     <div className="flex items-center gap-2">
                       <button
+                        type="button"
+                        disabled={!podePersonalizar || item.quantidade === 0}
+                        aria-label={`Diminuir quantidade de ${item.nome}`}
                         onClick={() => mudarQuantidade(item.id, -1)}
-                        className="flex h-6 w-6 items-center justify-center rounded-full border border-white/10 text-[#F9FAFB] hover:bg-white/5"
+                        className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 text-[#F9FAFB] hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40 sm:h-9 sm:w-9"
                       >
                         <Minus size={11} />
                       </button>
                       <span className="w-5 text-center text-xs text-[#F9FAFB]">{item.quantidade}</span>
                       <button
+                        type="button"
+                        disabled={!podePersonalizar || item.quantidade >= 10000}
+                        aria-label={`Aumentar quantidade de ${item.nome}`}
                         onClick={() => mudarQuantidade(item.id, 1)}
-                        className="flex h-6 w-6 items-center justify-center rounded-full border border-white/10 text-[#F9FAFB] hover:bg-white/5"
+                        className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 text-[#F9FAFB] hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40 sm:h-9 sm:w-9"
                       >
                         <Plus size={11} />
                       </button>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium text-[#E63946]">R$ {item.valor.toFixed(0)}</p>
+                      <p className="text-sm font-medium text-[#E63946]">{item.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p>
                       {item.unidade && <p className="text-[10px] text-[#6B7280]">por {item.unidade}</p>}
                     </div>
                   </div>
@@ -166,17 +174,25 @@ export default function OrcamentoInterativo({
                 .map((item) => (
                   <div key={item.id} className="flex items-center justify-between text-xs">
                     <span className="truncate pr-2 text-[#9CA3AF]">{item.nome}</span>
-                    <span className="shrink-0 text-[#F9FAFB]">R$ {item.valor.toFixed(0)}</span>
+                    <span className="shrink-0 text-[#F9FAFB]">{item.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
                   </div>
                 ))}
             </div>
             <div className="mb-3 border-t border-white/[0.06] pt-3">
               <p className="text-xs text-[#9CA3AF]">{tipoProposta === "mensal" ? "Total mensal" : "Total do serviço"}</p>
-              <p className="text-2xl font-medium text-[#E63946]">R$ {total.toFixed(0)}</p>
+              <p className="text-2xl font-medium text-[#E63946]">{total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p>
             </div>
             <p className="rounded-lg bg-white/5 px-3 py-2 text-center text-[11px] text-[#9CA3AF]">
               Válido até {validoAte}
             </p>
+            <BaixarPdfOrcamento
+              slug={slug}
+              itens={podePersonalizar ? itens.map(({ id, quantidade }) => ({ id, quantidade })) : undefined}
+              disabled={!itens.some((item) => item.quantidade > 0)}
+              publico
+              className="mt-4"
+            />
+            <p className="mt-2 text-center text-xs leading-relaxed text-[#9CA3AF]">PDF para impressão com os serviços e valores desta seleção.</p>
           </div>
 
           <div className="rounded-2xl border border-white/[0.06] bg-[#111827]/70 p-5">

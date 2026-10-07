@@ -4,16 +4,9 @@ import { ShieldCheck } from "lucide-react";
 import OrcamentoInterativo from "./OrcamentoInterativo";
 import { TopoOrcamento } from "@/components/orcamentos/TopoOrcamento";
 import { obterApresentacaoOrcamento } from "@/lib/apresentacaoOrcamento";
+import { obterMetadadosOrcamento } from "@/lib/orcamentoDocumento";
 
 export const dynamic = "force-dynamic";
-
-function gerarCodigo(id: string, data: Date) {
-  return `PC-${data.getFullYear()}-${id.slice(0, 3).toUpperCase()}`;
-}
-
-function formatarData(d: Date) {
-  return d.toLocaleDateString("pt-BR");
-}
 
 export default async function OrcamentoPublicoPage({
   params,
@@ -50,9 +43,7 @@ export default async function OrcamentoPublicoPage({
 
   const logosEmbaralhados = [...logos].sort(() => Math.random() - 0.5);
 
-  const validoAte = new Date(orcamento.createdAt);
-  validoAte.setDate(validoAte.getDate() + 15);
-  const codigo = gerarCodigo(orcamento.id, orcamento.createdAt);
+  const { validoAte, codigo } = obterMetadadosOrcamento(orcamento.id, orcamento.createdAt);
 
   return (
     <div className="min-h-screen bg-[#0B0D12]">
@@ -66,7 +57,7 @@ export default async function OrcamentoPublicoPage({
               #{codigo}
             </span>
             <span className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] text-[#9CA3AF]">
-              Válido até {formatarData(validoAte)}
+              Válido até {validoAte}
             </span>
           </div>
         </div>
@@ -79,13 +70,13 @@ export default async function OrcamentoPublicoPage({
         slug={orcamento.slug}
         status={orcamento.status}
         clienteNome={orcamento.cliente.nome}
-        validoAte={formatarData(validoAte)}
+        validoAte={validoAte}
         whatsappAgencia={config?.whatsappAgencia || null}
         depoimentos={depoimentos.map((d) => ({ nomeCliente: d.nomeCliente, texto: d.texto }))}
         itensIniciais={orcamento.itens.map((item) => ({
           id: item.id,
-          nome: item.nomeServico || item.servico.nome,
-          descricao: item.descricaoServico || item.servico.descricao,
+          nome: item.nomeServico ?? item.servico.nome,
+          descricao: item.descricaoServico ?? item.servico.descricao,
           categoria: item.servico.categoria,
           unidade: item.servico.unidade,
           quantidade: item.quantidade,

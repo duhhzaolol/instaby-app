@@ -19,6 +19,7 @@ function apiRotaPublica(pathname: string, method: string) {
     return true; // rotas de manutenção, cada uma já exige ?secret= próprio
   }
   if (method === "GET" && /^\/api\/orcamento\/[^/]+$/.test(pathname)) return true; // cliente abrindo a proposta
+  if ((method === "GET" || method === "POST") && /^\/api\/orcamento\/[^/]+\/pdf$/.test(pathname)) return true; // PDF da proposta pública, sem alterar o orçamento
   if (method === "POST" && /^\/api\/orcamento\/[^/]+\/aceitar$/.test(pathname)) return true; // cliente aceitando
   if (method === "PATCH" && /^\/api\/relatorios\/[^/]+$/.test(pathname)) return true; // cliente comentando o relatório
   // A página de revisão usa o próprio link da tarefa. Somente comentar e

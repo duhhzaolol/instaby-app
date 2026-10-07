@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EditorApresentacaoOrcamento } from "@/components/orcamentos/EditorApresentacaoOrcamento";
 import { TopoOrcamento } from "@/components/orcamentos/TopoOrcamento";
+import { BaixarPdfOrcamento } from "@/components/orcamentos/BaixarPdfOrcamento";
 import { validarApresentacaoOrcamento, type ApresentacaoOrcamento } from "@/lib/apresentacaoOrcamento";
 
 type Item = { id: string; nome: string; descricao: string; quantidade: number; valor: number };
@@ -93,6 +94,8 @@ export default function EditarApresentacaoForm({
             </Button>
           </form>
         )}
+        <BaixarPdfOrcamento slug={slug} disabled={alterado || salvando} className="mt-4" />
+        {alterado && <p className="mt-2 text-xs text-muted">Salve os textos para incluí-los no PDF.</p>}
         <a
           href={`/orcamento/${slug}`}
           target="_blank"

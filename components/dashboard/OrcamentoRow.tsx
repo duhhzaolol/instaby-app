@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { BaixarPdfOrcamento } from "@/components/orcamentos/BaixarPdfOrcamento";
 
 const tone: Record<string, "green" | "red" | "gray"> = {
   aceito: "green",
@@ -59,6 +60,7 @@ export function OrcamentoRow({
         </p>
       </a>
       <div className="flex flex-wrap items-center gap-3">
+        <BaixarPdfOrcamento slug={slug} />
         {status !== "aceito" && (
           <Link href={`/dashboard/orcamentos/${slug}/editar`} className="text-xs font-medium text-accent hover:underline">
             Personalizar
