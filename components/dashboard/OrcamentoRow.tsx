@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -42,8 +43,8 @@ export function OrcamentoRow({
   }
 
   return (
-    <Card index={index} className="flex items-center justify-between px-4 py-3">
-      <a href={`/orcamento/${slug}`} target="_blank" className="min-w-0 flex-1">
+    <Card index={index} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+      <a href={`/orcamento/${slug}`} target="_blank" rel="noopener noreferrer" className="min-w-0 flex-1 basis-36">
         <p className="truncate text-sm text-text">{clienteNome ? clienteNome : `/orcamento/${slug}`}</p>
         <p className="text-xs text-muted">
           R$ {total.toFixed(0)}
@@ -57,10 +58,15 @@ export function OrcamentoRow({
           )}
         </p>
       </a>
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
+        {status !== "aceito" && (
+          <Link href={`/dashboard/orcamentos/${slug}/editar`} className="text-xs font-medium text-accent hover:underline">
+            Personalizar
+          </Link>
+        )}
         <Badge tone={tone[status]}>{label[status]}</Badge>
-        <button onClick={excluir} className="text-muted hover:text-red-400">
-          <Trash2 size={13} />
+        <button type="button" onClick={excluir} aria-label="Excluir orçamento" className="text-muted hover:text-red-400">
+          <Trash2 size={13} aria-hidden="true" />
         </button>
       </div>
     </Card>

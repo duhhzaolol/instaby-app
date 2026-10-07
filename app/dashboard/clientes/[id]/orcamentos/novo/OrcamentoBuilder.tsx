@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
+import { EditorApresentacaoOrcamento } from "@/components/orcamentos/EditorApresentacaoOrcamento";
+import { TopoOrcamento } from "@/components/orcamentos/TopoOrcamento";
+import { apresentacaoPadrao, obterApresentacaoOrcamento, validarApresentacaoOrcamento } from "@/lib/apresentacaoOrcamento";
 import DeslocamentoCalc from "./DeslocamentoCalc";
 
 type Servico = {
@@ -48,6 +51,9 @@ export default function OrcamentoBuilder({
     )
   );
   const [enviando, setEnviando] = useState(false);
+  const [erro, setErro] = useState("");
+  const [apresentacao, setApresentacao] = useState(() => apresentacaoPadrao(clienteNome));
+  const [tipoEscolhido, setTipoEscolhido] = useState(false);
 
   function aplicarPacote(pacote: Pacote) {
     setSelecionados((atual) => {
@@ -78,6 +84,12 @@ export default function OrcamentoBuilder({
     .filter(Boolean) as { servico: Servico; quantidade: number; valor: number }[];
 
   const total = itensSelecionados.reduce((soma, i) => soma + i.valor, 0);
+  const apresentacaoAtual = {
+    ...apresentacao,
+    tipo: tipoEscolhido
+      ? apresentacao.tipo
+      : obterApresentacaoOrcamento(undefined, clienteNome, itensSelecionados.map((item) => item.servico.unidade)).tipo,
+  };
 
   function alternar(servico: Servico) {
     setSelecionados((atual) => {
@@ -108,7 +120,14 @@ export default function OrcamentoBuilder({
   }
 
   async function gerar() {
+    if (enviando || itensSelecionados.length === 0) return;
+    const validacao = validarApresentacaoOrcamento(apresentacaoAtual);
+    if (validacao.erro !== undefined) {
+      setErro(validacao.erro);
+      return;
+    }
     setEnviando(true);
+    setErro("");
 
     const itens = itensSelecionados.map((i) => ({
       servicoId: i.servico.id,
@@ -116,24 +135,42 @@ export default function OrcamentoBuilder({
       valor: i.valor,
     }));
 
-    const resposta = await fetch(`/api/clientes/${clienteId}/orcamentos`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ itens, solicitacaoId }),
-    });
-
-    setEnviando(false);
-
-    if (resposta.ok) {
+    try {
+      const resposta = await fetch(`/api/clientes/${clienteId}/orcamentos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itens, solicitacaoId, apresentacao: validacao.apresentacao }),
+      });
+      if (!resposta.ok) {
+        const dados = await resposta.json().catch(() => null);
+        setErro(typeof dados?.erro === "string" ? dados.erro : "Não foi possível gerar o orçamento. Suas alterações foram mantidas; tente novamente.");
+        return;
+      }
       router.push(`/dashboard/clientes/${clienteId}?aba=orcamentos`);
       router.refresh();
+    } catch {
+      setErro("Não foi possível conectar para gerar o orçamento. Suas alterações foram mantidas; tente novamente.");
+    } finally {
+      setEnviando(false);
     }
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+    <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-2">
       {/* Edição */}
-      <Card hoverable={false} className="p-5">
+      <Card hoverable={false} className="min-w-0 p-5">
+        <div className="mb-5 border-b border-border pb-5">
+          <EditorApresentacaoOrcamento
+            apresentacao={apresentacaoAtual}
+            clienteNome={clienteNome}
+            disabled={enviando}
+            onChange={(valor, mudanca) => {
+              setApresentacao(valor);
+              if (mudanca?.tipoEscolhido) setTipoEscolhido(true);
+              setErro("");
+            }}
+          />
+        </div>
         {pacotes.length > 0 && (
           <div className="mb-5 border-b border-border pb-4">
             <p className="mb-2 text-xs uppercase tracking-wide text-muted">Aplicar pacote</p>
@@ -182,15 +219,16 @@ export default function OrcamentoBuilder({
           <div className="mb-4 flex flex-col gap-2">
             {itensSelecionados.map(({ servico, quantidade, valor }) => (
               <div key={servico.id} className="rounded-xl bg-card/60 p-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-text">{servico.nome}</p>
-                  <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="min-w-0 break-words text-sm text-text">{servico.nome}</p>
+                  <div className="flex shrink-0 items-center gap-2">
                     <input
                       type="number"
                       min={1}
                       value={quantidade}
                       onChange={(e) => mudarQuantidade(servico.id, parseInt(e.target.value) || 1)}
                       title="Quantidade"
+                      aria-label={`Quantidade de ${servico.nome}`}
                       className="h-8 w-14 rounded-lg border border-border bg-base px-2 text-center text-sm text-text"
                     />
                     <div className="w-28">
@@ -215,6 +253,7 @@ export default function OrcamentoBuilder({
           <span className="text-lg font-medium text-accent">R$ {total.toFixed(0)}</span>
         </div>
 
+        {erro && <p role="alert" className="mt-4 text-sm text-red-400">{erro}</p>}
         <Button
           onClick={gerar}
           disabled={enviando || itensSelecionados.length === 0}
@@ -225,17 +264,14 @@ export default function OrcamentoBuilder({
       </Card>
 
       {/* Preview ao vivo */}
-      <div className="lg:sticky lg:top-20 lg:self-start">
-        <p className="mb-2 text-xs uppercase tracking-wide text-muted">Preview em tempo real</p>
-        <div className="rounded-2xl border border-white/[0.06] bg-[#09090B] p-6">
+      <div className="min-w-0 lg:sticky lg:top-20 lg:self-start">
+        <p className="mb-2 text-xs uppercase tracking-wide text-muted">Prévia em tempo real</p>
+        <div className="min-w-0 rounded-2xl border border-white/[0.06] bg-[#09090B] p-5 sm:p-6">
           <div className="mb-4">
             <img src="/logo.png" alt="Instaby" className="h-5 w-auto" />
           </div>
 
-          <p className="text-2xl font-medium leading-tight text-[#F9FAFB]">gestão pensada</p>
-          <p className="mb-3 text-2xl font-medium leading-tight text-[#E63946]">
-            pra {clienteNome} crescer.
-          </p>
+          <TopoOrcamento apresentacao={apresentacaoAtual} compacto />
 
           <p className="mb-3 mt-6 font-mono text-[10px] uppercase tracking-wide text-[#9CA3AF]">
             o que está incluso
@@ -249,12 +285,12 @@ export default function OrcamentoBuilder({
             <div className="mb-5 flex flex-col gap-2">
               {itensSelecionados.map(({ servico, quantidade, valor }) => (
                 <div key={servico.id} className="rounded-xl bg-[#111827] p-3.5">
-                  <div className="flex items-start justify-between">
-                    <p className="text-sm font-medium text-[#F9FAFB]">{servico.nome}</p>
-                    <span className="text-sm font-medium text-[#E63946]">R$ {valor.toFixed(0)}</span>
+                  <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+                    <p className="min-w-0 break-words text-sm font-medium text-[#F9FAFB]">{servico.nome}</p>
+                    <span className="shrink-0 text-sm font-medium text-[#E63946]">R$ {valor.toFixed(0)}</span>
                   </div>
                   {servico.descricao && (
-                    <p className="mt-1 text-xs leading-relaxed text-[#9CA3AF]">{servico.descricao}</p>
+                    <p className="mt-1 break-words text-xs leading-relaxed text-[#9CA3AF]">{servico.descricao}</p>
                   )}
                   {quantidade > 1 && (
                     <p className="mt-1 text-xs text-[#9CA3AF]">Quantidade: {quantidade}</p>
@@ -265,8 +301,8 @@ export default function OrcamentoBuilder({
           )}
 
           {itensSelecionados.length > 0 && (
-            <div className="flex items-center justify-between border-t border-white/[0.06] pt-3">
-              <span className="text-sm font-medium text-[#F9FAFB]">Total mensal</span>
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.06] pt-3">
+              <span className="text-sm font-medium text-[#F9FAFB]">{apresentacaoAtual.tipo === "mensal" ? "Total mensal" : "Total do serviço"}</span>
               <span className="text-lg font-medium text-[#E63946]">R$ {total.toFixed(0)}</span>
             </div>
           )}

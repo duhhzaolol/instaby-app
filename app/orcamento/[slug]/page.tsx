@@ -2,6 +2,10 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { ShieldCheck } from "lucide-react";
 import OrcamentoInterativo from "./OrcamentoInterativo";
+import { TopoOrcamento } from "@/components/orcamentos/TopoOrcamento";
+import { obterApresentacaoOrcamento } from "@/lib/apresentacaoOrcamento";
+
+export const dynamic = "force-dynamic";
 
 function gerarCodigo(id: string, data: Date) {
   return `PC-${data.getFullYear()}-${id.slice(0, 3).toUpperCase()}`;
@@ -38,6 +42,12 @@ export default async function OrcamentoPublicoPage({
     prisma.orcamento.update({ where: { id: orcamento.id }, data: { visualizadoEm: new Date() } }).catch(() => {});
   }
 
+  const apresentacao = obterApresentacaoOrcamento(
+    orcamento.apresentacao,
+    orcamento.cliente.nome,
+    orcamento.itens.map((item) => item.servico.unidade),
+  );
+
   const logosEmbaralhados = [...logos].sort(() => Math.random() - 0.5);
 
   const validoAte = new Date(orcamento.createdAt);
@@ -51,7 +61,7 @@ export default async function OrcamentoPublicoPage({
         <div className="mx-auto flex max-w-4xl items-center justify-between">
           <img src="/logo.png" alt="Instaby" className="h-6 w-auto" />
           <div className="hidden items-center gap-2 sm:flex">
-            <span className="text-xs text-[#9CA3AF]">Proposta Comercial</span>
+            {apresentacao.selo && <span className="max-w-56 break-words text-xs text-[#9CA3AF]">{apresentacao.selo}</span>}
             <span className="rounded-full border border-white/10 px-2.5 py-1 font-mono text-[10px] text-[#F9FAFB]">
               #{codigo}
             </span>
@@ -62,46 +72,10 @@ export default async function OrcamentoPublicoPage({
         </div>
       </div>
 
-      {/* Hero centralizado */}
-      <div className="relative overflow-hidden border-b border-white/[0.06] bg-gradient-to-b from-[#0B0D12] via-[#151822] to-[#0B0D12] px-4 py-16">
-        {/* gráfico decorativo de fundo, bem sutil */}
-        <svg viewBox="0 0 800 300" className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.12]">
-          <defs>
-            <linearGradient id="linhaChart" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#E63946" stopOpacity="0.6" />
-              <stop offset="100%" stopColor="#E63946" stopOpacity="0" />
-            </linearGradient>
-          </defs>
-          <path
-            d="M0 220 L100 190 L200 205 L300 130 L400 160 L500 80 L600 110 L700 40 L800 60 L800 300 L0 300 Z"
-            fill="url(#linhaChart)"
-          />
-          <path
-            d="M0 220 L100 190 L200 205 L300 130 L400 160 L500 80 L600 110 L700 40 L800 60"
-            fill="none"
-            stroke="#E63946"
-            strokeWidth="2"
-          />
-        </svg>
-
-        <div className="relative mx-auto max-w-2xl text-center">
-          <div className="mb-4 flex items-center justify-center gap-2">
-            <span className="inline-block h-[1.5px] w-5 bg-[#E63946]" />
-            <span className="font-mono text-[11px] uppercase tracking-wide text-[#E63946]">proposta comercial</span>
-            <span className="inline-block h-[1.5px] w-5 bg-[#E63946]" />
-          </div>
-          <p className="text-3xl font-medium leading-tight text-[#F9FAFB] sm:text-4xl">gestão estratégica</p>
-          <p className="mb-4 text-3xl font-medium leading-tight sm:text-4xl">
-            <span className="text-[#E63946]">pra {orcamento.cliente.nome}</span>{" "}
-            <span className="text-[#F9FAFB]">crescer.</span>
-          </p>
-          <p className="mx-auto max-w-md text-sm leading-relaxed text-[#9CA3AF]">
-            Conteúdo, tráfego e produção trabalhando juntos, com clareza de valor em cada etapa.
-          </p>
-        </div>
-      </div>
+      <TopoOrcamento apresentacao={apresentacao} />
 
       <OrcamentoInterativo
+        tipoProposta={apresentacao.tipo}
         slug={orcamento.slug}
         status={orcamento.status}
         clienteNome={orcamento.cliente.nome}

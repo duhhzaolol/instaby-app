@@ -22,6 +22,16 @@ export type VersaoNovidades = {
 
 export const NOVIDADES: VersaoNovidades[] = [
   {
+    versao: 168,
+    resumo: "Abertura dos orçamentos personalizável para cada proposta.",
+    itens: [
+      { tipo: "adicionado", texto: "Edite o título, o destaque, o complemento, a descrição e o texto acima do título antes de gerar a proposta ou depois, pelo botão Personalizar. A prévia acompanha suas alterações." },
+      { tipo: "adicionado", texto: "Modelos de cobertura de evento e gestão mensal ajudam a começar. Cada orçamento guarda seus próprios textos e mantém o mesmo link ao salvar." },
+      { tipo: "corrigido", texto: "Propostas de serviço pontual mostram Total do serviço e deixam de falar em entregas para o mês. O tipo também pode ser escolhido na edição." },
+      { tipo: "melhorado", texto: "Propostas aceitas ficam preservadas. Falhas ao salvar mantêm suas alterações na tela para tentar novamente." },
+    ],
+  },
+  {
     versao: 167,
     resumo: "Menu do celular fecha sem bloquear os botões do aplicativo.",
     itens: [

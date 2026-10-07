@@ -932,6 +932,7 @@ model Orcamento {
   enviadoEm DateTime?
   visualizadoEm DateTime?
   dataAceite DateTime? // congela o momento exato do aceite — a proposta não muda mais depois disso
+  apresentacao Json? // textos e tipo de exibição próprios desta proposta
   createdAt DateTime @default(now())
 
   itens     ItemOrcamento[]

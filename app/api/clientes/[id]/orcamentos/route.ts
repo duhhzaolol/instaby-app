@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { gerarSlug } from "@/lib/slug";
-import { exigirPermissaoApi } from "@/lib/permissoes";
+import { exigirPermissaoApi, podeVerCliente } from "@/lib/permissoes";
+import { apresentacaoPadrao, validarApresentacaoOrcamento } from "@/lib/apresentacaoOrcamento";
 
 export async function GET(
   request: NextRequest,
@@ -22,13 +23,25 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { erro } = await exigirPermissaoApi("verOrcamentos");
+  const { usuario, erro } = await exigirPermissaoApi("verOrcamentos");
   if (erro) return erro;
+  if (!(await podeVerCliente(usuario, params.id))) {
+    return NextResponse.json({ erro: "Não autorizado" }, { status: 403 });
+  }
 
-  const body = await request.json();
+  const body = await request.json().catch(() => null);
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return NextResponse.json({ erro: "Dados inválidos." }, { status: 400 });
+  }
+  const validacao = Object.prototype.hasOwnProperty.call(body, "apresentacao")
+    ? validarApresentacaoOrcamento(body.apresentacao)
+    : undefined;
+  if (validacao?.erro) {
+    return NextResponse.json({ erro: validacao.erro }, { status: 400 });
+  }
   // body.itens = [{ servicoId, quantidade, valor }]
 
-  if (!body.itens || body.itens.length === 0) {
+  if (!Array.isArray(body.itens) || body.itens.length === 0) {
     return NextResponse.json({ erro: "Selecione ao menos um serviço" }, { status: 400 });
   }
 
@@ -48,6 +61,7 @@ export async function POST(
       slug: gerarSlug(cliente.nome),
       status: "pendente",
       enviadoEm: new Date(),
+      apresentacao: validacao?.apresentacao ?? apresentacaoPadrao(cliente.nome, servicos.map((servico) => servico.unidade)),
       itens: {
         create: body.itens.map((item: { servicoId: string; quantidade: number; valor: number }) => ({
           servicoId: item.servicoId,

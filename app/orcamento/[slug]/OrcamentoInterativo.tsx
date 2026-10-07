@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { visualDaCategoria } from "@/lib/categoriaVisual";
 import AceitarButton from "./AceitarButton";
+import type { TipoProposta } from "@/lib/apresentacaoOrcamento";
 
 type Item = {
   id: string;
@@ -32,6 +33,7 @@ const PORQUES = [
 
 export default function OrcamentoInterativo({
   slug,
+  tipoProposta = "mensal",
   status,
   clienteNome,
   validoAte,
@@ -40,6 +42,7 @@ export default function OrcamentoInterativo({
   itensIniciais,
 }: {
   slug: string;
+  tipoProposta?: TipoProposta;
   status: string;
   clienteNome: string;
   validoAte: string;
@@ -77,7 +80,7 @@ export default function OrcamentoInterativo({
           <div className="mb-4 flex items-center justify-between rounded-2xl border border-white/[0.06] bg-[#111827]/50 px-5 py-4">
             <div>
               <p className="text-sm font-medium text-[#F9FAFB]">O que está incluso</p>
-              <p className="text-xs text-[#9CA3AF]">Serviços e entregas previstas para o mês.</p>
+              <p className="text-xs text-[#9CA3AF]">{tipoProposta === "mensal" ? "Serviços e entregas previstas para o mês." : "Serviços e entregas previstos nesta proposta."}</p>
             </div>
             <p className="hidden text-right text-[10px] text-[#6B7280] sm:block">
               Ajuste as quantidades
@@ -168,7 +171,7 @@ export default function OrcamentoInterativo({
                 ))}
             </div>
             <div className="mb-3 border-t border-white/[0.06] pt-3">
-              <p className="text-xs text-[#9CA3AF]">Total mensal</p>
+              <p className="text-xs text-[#9CA3AF]">{tipoProposta === "mensal" ? "Total mensal" : "Total do serviço"}</p>
               <p className="text-2xl font-medium text-[#E63946]">R$ {total.toFixed(0)}</p>
             </div>
             <p className="rounded-lg bg-white/5 px-3 py-2 text-center text-[11px] text-[#9CA3AF]">
