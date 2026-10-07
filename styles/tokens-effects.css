@@ -22,3 +22,12 @@
   --scrim:rgba(0,0,0,.7);        /* modal backdrop */
   --scrim-drawer:rgba(0,0,0,.6); /* mobile sidebar backdrop */
 }
+
+/* O painel usa profundidade apenas em superfícies elevadas, como menus.
+   As páginas públicas preservam seus efeitos de marca. */
+.tema-painel{
+  --shadow-premium:0 3px 12px -6px rgba(0,0,0,.28);
+  --shadow-premium-lg:0 16px 40px -12px rgba(0,0,0,.48);
+  --shadow-glow:0 3px 12px -6px rgba(0,0,0,.28);
+  --focus-ring:0 0 0 2px rgb(var(--accent-text));
+}

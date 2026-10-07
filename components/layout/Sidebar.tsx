@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useId, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   LayoutGrid,
   Users,
@@ -20,10 +20,12 @@ import {
   LogOut,
   ChevronRight,
   Gauge,
+  type LucideIcon,
 } from "lucide-react";
 import { BotaoTema } from "@/components/ui/TemaAlternativo";
-import { IconeEstilizado } from "@/components/ui/IconeEstilizado";
 import { ABAS_FINANCEIRO, abasComercialVisiveis } from "@/lib/navSecoes";
+
+const focoMenu = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-text/70 focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar";
 
 // Confirma antes de sair — mesmo padrão de confirm() já usado nos "excluir"
 // espalhados pelo app, pra um clique errado no rodapé apertado não deslogar
@@ -76,7 +78,7 @@ function ItemMenu({
   contador,
   onClick,
 }: {
-  item: { label: string; href: string; icon: any };
+  item: { label: string; href: string; icon: LucideIcon };
   ativo: boolean;
   // Contador opcional ao lado do rótulo — "alerta" (vermelho, só aparece se
   // > 0, ex: tarefas atrasadas/cobranças vencidas) ou "neutro" (cinza, sempre
@@ -87,39 +89,31 @@ function ItemMenu({
   const Icon = item.icon;
   const mostrarContador = contador && (contador.tipo === "neutro" || contador.valor > 0);
   return (
-    <Link href={item.href} onClick={onClick} className="relative block">
-      {ativo && (
-        <motion.div
-          layoutId="sidebar-active"
-          transition={{ type: "spring", stiffness: 350, damping: 30 }}
-          className="absolute inset-0 rounded-xl border border-accent/20 bg-accent/10"
-        />
+    <Link
+      href={item.href}
+      onClick={onClick}
+      aria-current={ativo ? "page" : undefined}
+      className={`flex min-h-11 items-center gap-3 rounded-lg border px-3 py-2.5 text-sm transition-colors duration-150 motion-reduce:transition-none ${focoMenu} ${
+        ativo ? "border-accent/10 bg-accent/10 font-medium text-text" : "border-transparent text-muted hover:bg-hover hover:text-text"
+      }`}
+    >
+      <Icon size={19} strokeWidth={1.75} aria-hidden="true" className={`shrink-0 ${ativo ? "text-accent-text" : ""}`} />
+      <span className="flex-1">{item.label}</span>
+      {mostrarContador && (
+        <span
+          className={`fonte-valores rounded-full px-1.5 py-0.5 text-[11px] font-semibold leading-none ${
+            contador!.tipo === "alerta" ? "bg-danger/10 text-danger-text" : "bg-hover text-muted"
+          }`}
+        >
+          {contador!.valor}
+        </span>
       )}
-      <div
-        className={`relative z-10 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors duration-150 ${
-          ativo ? "font-medium text-accent" : "text-muted hover:bg-hover hover:text-text"
-        }`}
-      >
-        <IconeEstilizado icon={Icon} tamanho={28} />
-        <span className="flex-1">{item.label}</span>
-        {mostrarContador && (
-          <span
-            className={`fonte-valores rounded-full px-1.5 py-0.5 text-[11px] font-semibold leading-none ${
-              contador!.tipo === "alerta" ? "bg-accent/15 text-accent-text" : "bg-hover text-muted"
-            }`}
-          >
-            {contador!.valor}
-          </span>
-        )}
-      </div>
     </Link>
   );
 }
 
 // Item de dentro de um grupo expansível (Financeiro/Comercial) — mesma pegada
-// visual do ItemMenu normal (inclusive a pílula ativa compartilhada, pra
-// navegar entre qualquer item do menu, aninhado ou não, dar a mesma animação
-// de slide), só que menor/sem ícone, porque fica recuado dentro do grupo.
+// visual do ItemMenu normal, sem ícone porque fica recuado dentro do grupo.
 function ItemSubmenu({
   item,
   ativo,
@@ -130,21 +124,15 @@ function ItemSubmenu({
   onClick?: () => void;
 }) {
   return (
-    <Link href={item.href} onClick={onClick} className="relative block">
-      {ativo && (
-        <motion.div
-          layoutId="sidebar-active"
-          transition={{ type: "spring", stiffness: 350, damping: 30 }}
-          className="absolute inset-0 rounded-lg border border-accent/20 bg-accent/10"
-        />
-      )}
-      <div
-        className={`relative z-10 rounded-lg px-3 py-2 text-[13px] transition-colors duration-150 ${
-          ativo ? "font-medium text-accent" : "text-muted hover:bg-hover hover:text-text"
-        }`}
-      >
-        {item.label}
-      </div>
+    <Link
+      href={item.href}
+      onClick={onClick}
+      aria-current={ativo ? "page" : undefined}
+      className={`flex min-h-11 items-center rounded-lg px-3 py-2 text-[13px] transition-colors duration-150 motion-reduce:transition-none ${focoMenu} ${
+        ativo ? "bg-accent/10 font-medium text-accent-text" : "text-muted hover:bg-hover hover:text-text"
+      }`}
+    >
+      {item.label}
     </Link>
   );
 }
@@ -167,7 +155,7 @@ function ItemMenuExpansivel({
   onNavigate,
 }: {
   label: string;
-  icon: any;
+  icon: LucideIcon;
   subitens: { label: string; href: string }[];
   ativoSecao: boolean;
   itemAtivo: (href: string) => boolean;
@@ -175,6 +163,7 @@ function ItemMenuExpansivel({
   onNavigate?: () => void;
 }) {
   const [aberto, setAberto] = useState(ativoSecao);
+  const submenuId = useId();
 
   useEffect(() => {
     if (ativoSecao) setAberto(true);
@@ -186,44 +175,38 @@ function ItemMenuExpansivel({
     <div className="flex flex-col gap-0.5">
       <button
         type="button"
+        aria-expanded={aberto}
+        aria-controls={submenuId}
         onClick={() => setAberto((v) => !v)}
-        className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors duration-150 ${
+        className={`flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors duration-150 motion-reduce:transition-none ${focoMenu} ${
           ativoSecao ? "font-medium text-text" : "text-muted hover:bg-hover hover:text-text"
         }`}
       >
-        <IconeEstilizado icon={Icon} tamanho={28} />
+        <Icon size={19} strokeWidth={1.75} aria-hidden="true" className="shrink-0" />
         <span className="flex-1 text-left">{label}</span>
         {mostrarContador && (
           <span
             className={`fonte-valores rounded-full px-1.5 py-0.5 text-[11px] font-semibold leading-none ${
-              contador!.tipo === "alerta" ? "bg-accent/15 text-accent-text" : "bg-hover text-muted"
+              contador!.tipo === "alerta" ? "bg-danger/10 text-danger-text" : "bg-hover text-muted"
             }`}
           >
             {contador!.valor}
           </span>
         )}
         <ChevronRight
-          size={13}
-          className={`shrink-0 transition-transform duration-200 ${aberto ? "rotate-90 text-text" : "text-muted/60"}`}
+          size={16}
+          strokeWidth={1.75}
+          aria-hidden="true"
+          className={`shrink-0 transition-transform duration-150 motion-reduce:transition-none ${aberto ? "rotate-90 text-text" : "text-muted"}`}
         />
       </button>
-      <AnimatePresence initial={false}>
-        {aberto && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="overflow-hidden"
-          >
-            <div className="ml-[22px] flex flex-col gap-0.5 border-l border-border py-0.5 pl-3">
-              {subitens.map((s) => (
-                <ItemSubmenu key={s.href} item={s} ativo={itemAtivo(s.href)} onClick={onNavigate} />
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <div id={submenuId} hidden={!aberto}>
+        <div className="ml-[21px] flex flex-col gap-0.5 border-l border-border py-1 pl-3">
+          {subitens.map((s) => (
+            <ItemSubmenu key={s.href} item={s} ativo={itemAtivo(s.href)} onClick={onNavigate} />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -295,13 +278,13 @@ function ConteudoSidebar({
 
   return (
     <>
-      <Link href="/dashboard" onClick={onNavigate} className="mb-8 flex items-center gap-2 px-2">
+      <Link href="/dashboard" onClick={onNavigate} className={`mb-6 flex min-h-11 items-center gap-2 rounded-lg px-2 ${focoMenu}`}>
         <img src="/logo.png" alt="Instaby" className="h-6 w-auto" />
       </Link>
 
-      <nav className="flex flex-1 flex-col gap-6 overflow-y-auto">
+      <nav aria-label="Navegação principal" className="-mx-1 flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-1 pb-1">
         <div className="flex flex-col gap-1">
-          <p className="px-3 pb-1 text-[11px] uppercase tracking-wider text-muted/70">Geral</p>
+          <p className="px-3 pb-1 text-xs font-semibold text-muted">Geral</p>
           {menuGeralVisivel.map((item) => {
             const contador =
               item.chave === "tarefas"
@@ -323,7 +306,7 @@ function ConteudoSidebar({
 
         {temGestao && (
           <div className="flex flex-col gap-1">
-            <p className="px-3 pb-1 text-[11px] uppercase tracking-wider text-muted/70">Gestão</p>
+            <p className="px-3 pb-1 text-xs font-semibold text-muted">Gestão</p>
             {pode.verFinanceiro && (
               <ItemMenuExpansivel
                 label="Financeiro"
@@ -349,8 +332,8 @@ function ConteudoSidebar({
         )}
       </nav>
 
-      <div className="flex flex-col gap-2 rounded-xl border border-border bg-card px-3 py-2.5">
-        <Link href="/dashboard/perfil" onClick={onNavigate} className="flex items-center gap-2 rounded-lg -mx-1 -my-0.5 px-1 py-0.5 transition-colors hover:bg-hover" title="Configurações pessoais">
+      <div className="mt-5 flex shrink-0 flex-col gap-2 border-t border-border pt-4">
+        <Link href="/dashboard/perfil" onClick={onNavigate} className={`flex min-h-11 items-center gap-2.5 rounded-lg px-3 py-1.5 transition-colors duration-150 hover:bg-hover motion-reduce:transition-none ${focoMenu}`} title="Configurações pessoais">
           {fotoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={fotoUrl} alt={nome} className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-white/10" />
@@ -366,22 +349,25 @@ function ConteudoSidebar({
             <p className="truncate text-xs text-muted">{cargo}</p>
           </div>
         </Link>
-        <div className="flex items-center gap-1.5 border-t border-border pt-2">
+        <div className="flex items-center gap-1 px-1 [&>button]:h-11 [&>button]:w-11 [&>button]:rounded-lg [&>button]:border-transparent [&>button]:bg-transparent [&>button:hover]:bg-hover [&>button]:focus-visible:outline-none [&>button]:focus-visible:ring-2 [&>button]:focus-visible:ring-accent-text/70 [&>button]:motion-reduce:transition-none [&_svg]:h-[18px] [&_svg]:w-[18px] [&_svg]:stroke-[1.75]">
           <BotaoTema />
           <Link
             href="/dashboard/configuracoes"
             onClick={onNavigate}
             title="Configurações"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-inset text-muted transition-colors hover:bg-hover hover:text-text"
+            aria-label="Configurações"
+            aria-current={ativo("/dashboard/configuracoes") ? "page" : undefined}
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted transition-colors duration-150 hover:bg-hover hover:text-text motion-reduce:transition-none ${focoMenu}`}
           >
-            <Settings size={15} />
+            <Settings size={18} strokeWidth={1.75} aria-hidden="true" />
           </Link>
           <button
             onClick={sairDaConta}
             title="Sair da conta"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-inset text-muted transition-colors hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-400"
+            aria-label="Sair da conta"
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted transition-colors duration-150 hover:bg-hover hover:text-text motion-reduce:transition-none ${focoMenu}`}
           >
-            <LogOut size={15} />
+            <LogOut size={18} strokeWidth={1.75} aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -403,11 +389,61 @@ export function Sidebar({
   contadores: ContadoresMenu;
 }) {
   const [aberto, setAberto] = useState(false);
+  const botaoMenuRef = useRef<HTMLButtonElement>(null);
+  const menuMobileRef = useRef<HTMLElement>(null);
+  const reduzirMovimento = useReducedMotion();
   const pathname = usePathname();
 
   useEffect(() => {
     setAberto(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (!aberto) return;
+
+    const menu = menuMobileRef.current;
+    menu?.querySelector<HTMLButtonElement>("[data-fechar-menu]")?.focus({ preventScroll: true });
+
+    function aoTeclar(evento: KeyboardEvent) {
+      if (evento.key === "Escape") {
+        evento.preventDefault();
+        setAberto(false);
+        return;
+      }
+      if (evento.key !== "Tab" || !menu) return;
+
+      const focaveis = Array.from(menu.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )).filter((elemento) => elemento.getClientRects().length > 0);
+      const primeiro = focaveis[0];
+      const ultimo = focaveis[focaveis.length - 1];
+      if (!primeiro || !ultimo) {
+        evento.preventDefault();
+        menu.focus();
+      } else if (evento.shiftKey && (document.activeElement === primeiro || !menu.contains(document.activeElement))) {
+        evento.preventDefault();
+        ultimo.focus();
+      } else if (!evento.shiftKey && (document.activeElement === ultimo || !menu.contains(document.activeElement))) {
+        evento.preventDefault();
+        primeiro.focus();
+      }
+    }
+
+    // Ao cruzar para desktop, desmonta também o drawer que ficou oculto por CSS.
+    const telaDesktop = window.matchMedia("(min-width: 768px)");
+    function aoMudarLargura() {
+      if (telaDesktop.matches) setAberto(false);
+    }
+    document.addEventListener("keydown", aoTeclar);
+    telaDesktop.addEventListener("change", aoMudarLargura);
+    return () => {
+      document.removeEventListener("keydown", aoTeclar);
+      telaDesktop.removeEventListener("change", aoMudarLargura);
+      if (botaoMenuRef.current?.getClientRects().length) {
+        botaoMenuRef.current.focus({ preventScroll: true });
+      }
+    };
+  }, [aberto]);
 
   return (
     <>
@@ -418,14 +454,15 @@ export function Sidebar({
 
       {/* Botão mobile */}
       <button
+        ref={botaoMenuRef}
         type="button"
         aria-label="Abrir menu"
         aria-expanded={aberto}
         aria-controls="menu-mobile"
         onClick={() => setAberto(true)}
-        className="fixed left-4 top-4 z-30 flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-text md:hidden print:hidden"
+        className={`fixed left-3 top-2.5 z-30 flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-card text-text md:hidden print:hidden ${focoMenu}`}
       >
-        <Menu size={16} />
+        <Menu size={20} strokeWidth={1.75} aria-hidden="true" />
       </button>
 
       {/* Remove o fundo junto com o menu, sem aguardar uma animação de saída.
@@ -437,26 +474,33 @@ export function Sidebar({
               type="button"
               aria-label="Fechar menu"
               data-testid="fundo-menu-mobile"
-              initial={{ opacity: 0 }}
+              tabIndex={-1}
+              initial={reduzirMovimento ? false : { opacity: 0 }}
               animate={{ opacity: 1 }}
+              transition={{ duration: 0.15 }}
               onClick={() => setAberto(false)}
               className="fixed inset-0 z-40 h-full w-full bg-black/60 md:hidden"
             />
             <motion.aside
+              ref={menuMobileRef}
               id="menu-mobile"
+              role="dialog"
+              aria-modal="true"
               aria-label="Menu de navegação"
-              initial={{ x: -248 }}
+              tabIndex={-1}
+              initial={reduzirMovimento ? false : { x: -24 }}
               animate={{ x: 0 }}
-              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
               className="fixed inset-y-0 left-0 z-50 flex w-[248px] flex-col border-r border-border bg-sidebar px-4 py-6 md:hidden"
             >
               <button
                 type="button"
+                data-fechar-menu
                 aria-label="Fechar menu"
                 onClick={() => setAberto(false)}
-                className="absolute right-4 top-4 text-muted hover:text-text"
+                className={`absolute right-3 top-4 flex h-11 w-11 items-center justify-center rounded-lg text-muted hover:bg-hover hover:text-text ${focoMenu}`}
               >
-                <X size={16} />
+                <X size={20} strokeWidth={1.75} aria-hidden="true" />
               </button>
               <ConteudoSidebar
                 nome={nome}

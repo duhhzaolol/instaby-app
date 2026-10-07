@@ -112,9 +112,11 @@
   --border:rgba(255,255,255,.06);
   --text:244 245 247;   /* #F4F5F7 */
   --muted:163 169 181;  /* #A3A9B5 — secundário */
-  --micro:122 130 144;  /* #7A8290 — microtexto */
-  --accent:230 57 70;       /* #E63946 — vermelho da marca (igual já era) */
-  --accent-text:255 122 132; /* #FF7A84 — texto vermelho legível sobre fundo escuro */
+  --micro:154 163 178;  /* #9AA3B2 — apoio legível sem competir com títulos */
+  --accent:199 50 63;       /* #C7323F — ação, branco com contraste de 5,31:1 */
+  --accent-text:255 139 148; /* #FF8B94 — texto de destaque, separado do preenchimento */
+  --danger:239 68 68;
+  --danger-text:252 165 165;
   --success:34 197 94;      /* #22C55E */
   --success-text:74 222 128; /* #4ADE80 */
   --warning:245 158 11;     /* #F59E0B */
@@ -138,6 +140,8 @@
   --hover:66 66 70;
   --inset:40 40 42;
   --border:rgba(255,255,255,.08);
+  --muted:182 187 197;
+  --micro:166 172 184;
 }
 
 /* ---- Tema alternativo "cinza" ----

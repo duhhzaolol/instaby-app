@@ -32,6 +32,8 @@ const config: Config = {
         inset: "rgb(var(--inset) / <alpha-value>)",
         micro: "rgb(var(--micro) / <alpha-value>)",
         "accent-text": "rgb(var(--accent-text) / <alpha-value>)",
+        danger: "rgb(var(--danger) / <alpha-value>)",
+        "danger-text": "rgb(var(--danger-text) / <alpha-value>)",
         success: "rgb(var(--success) / <alpha-value>)",
         "success-text": "rgb(var(--success-text) / <alpha-value>)",
         warning: "rgb(var(--warning) / <alpha-value>)",
@@ -42,9 +44,9 @@ const config: Config = {
         "pessoa-trafego": "rgb(var(--pessoa-trafego) / <alpha-value>)",
       },
       boxShadow: {
-        premium: "0 8px 24px -8px rgba(0,0,0,0.5)",
-        "premium-lg": "0 20px 40px -12px rgba(0,0,0,0.6)",
-        glow: "0 0 0 1px rgba(230, 57, 70,0.15), 0 8px 24px -8px rgba(230, 57, 70,0.15)",
+        premium: "var(--shadow-premium)",
+        "premium-lg": "var(--shadow-premium-lg)",
+        glow: "var(--shadow-glow)",
       },
       transitionTimingFunction: {
         premium: "cubic-bezier(0.16, 1, 0.3, 1)",

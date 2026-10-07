@@ -22,6 +22,18 @@ export type VersaoNovidades = {
 
 export const NOVIDADES: VersaoNovidades[] = [
   {
+    versao: 169,
+    resumo: "Painel mais sóbrio, com ícones uniformes e navegação mais clara.",
+    itens: [
+      { tipo: "melhorado", texto: "O menu preserva seus atalhos e ganha ícones consistentes, sem brilho nos itens inativos. A página selecionada e os avisos de atraso têm destaques próprios." },
+      { tipo: "melhorado", texto: "Botões usam um vermelho mais sóbrio. Cartões aparecem diretamente, com menos sombras, e os textos menores ficam mais legíveis no tema cinza." },
+      { tipo: "corrigido", texto: "A busca fica disponível também em notebooks e no celular. A barra superior mostra nomes de páginas compreensíveis e mantém a data e a hora sem segundos." },
+      { tipo: "removido", texto: "O cronômetro saiu da barra superior para liberar espaço para os controles que você utiliza." },
+      { tipo: "melhorado", texto: "Controles do menu e da barra têm áreas de toque maiores. O menu e a criação rápida de tarefa podem ser fechados pelo teclado sem deixar uma camada bloqueando a tela." },
+      { tipo: "corrigido", texto: "Falhas ao criar uma tarefa são explicadas na própria janela e preservam o preenchimento para tentar novamente." },
+    ],
+  },
+  {
     versao: 168,
     resumo: "Abertura dos orçamentos personalizável para cada proposta.",
     itens: [

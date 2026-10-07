@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
+import { PreferenciasMovimento } from "@/components/layout/PreferenciasMovimento";
 import { PainelDetalheTarefaHost } from "@/components/dashboard/PainelDetalheTarefaHost";
 import { garantirRecorrentesDoMes } from "@/lib/garantirRecorrentes";
 import { getUsuarioAtual, permissoesDe, clienteIdsPermitidos } from "@/lib/permissoes";
@@ -60,6 +61,10 @@ export default async function DashboardLayout({
 
   return (
     <div className={`tema-painel ${manrope.variable} ${jetbrainsMono.variable} min-h-screen bg-base`}>
+      <PreferenciasMovimento>
+      <a href="#conteudo-principal" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-card focus:px-4 focus:py-3 focus:text-text">
+        Ir para o conteúdo
+      </a>
       <Sidebar
         nome={nome}
         cargo={cargo}
@@ -69,8 +74,8 @@ export default async function DashboardLayout({
       />
       <div className="md:pl-[248px] print:pl-0">
         <Header nomePrimeiro={primeiroNome} clientes={clientesParaMenu} />
-        <main className="px-6 py-8 print:px-0 print:py-0">{children}</main>
-        <footer className="mt-12 border-t border-border px-6 py-8 text-center text-xs text-muted/60 print:hidden">
+        <main id="conteudo-principal" tabIndex={-1} className="scroll-mt-32 px-4 py-6 outline-none sm:px-6 sm:py-8 print:px-0 print:py-0">{children}</main>
+        <footer className="mt-12 border-t border-border px-6 py-8 text-center text-xs text-muted print:hidden">
           <img src="/logo.png" alt="Instaby" className="mx-auto mb-2 h-4 w-auto opacity-40 grayscale" />
           Instaby App · painel interno da agência
         </footer>
@@ -80,6 +85,7 @@ export default async function DashboardLayout({
       <Suspense fallback={null}>
         <PainelDetalheTarefaHost />
       </Suspense>
+      </PreferenciasMovimento>
     </div>
   );
 }

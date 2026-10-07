@@ -52,8 +52,26 @@
      sistema de sempre. As variáveis --font-manrope/--font-jetbrains-mono vêm
      do next/font (lib/fonts.ts), aplicadas via className no layout de cada um. */
   .tema-painel {
+    color-scheme: dark;
+    accent-color: rgb(var(--accent));
+    caret-color: rgb(var(--accent-text));
     font-family: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
       "Helvetica Neue", Arial, sans-serif;
+  }
+
+  .tema-painel :is(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid rgb(var(--accent-text));
+    outline-offset: 3px;
+  }
+
+  .tema-painel :is(button, a, summary) {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgb(var(--accent) / .15);
+  }
+
+  .tema-painel ::selection {
+    background: rgb(var(--accent) / .4);
+    color: rgb(var(--text));
   }
 
   /* Pra valores em R$, horas, contagens e rótulos pequenos em maiúsculas —

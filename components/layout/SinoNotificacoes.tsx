@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { Bell, Check, Clock, Send, UserPlus, ExternalLink } from "lucide-react";
+import { Bell, Check, Clock, Send, UserPlus, ExternalLink, X } from "lucide-react";
 
 type Notificacao = {
   id: string;
@@ -71,7 +72,9 @@ export function SinoNotificacoes() {
   const [atribuindoId, setAtribuindoId] = useState<string | null>(null);
   const [adiandoId, setAdiandoId] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const painelRef = useRef<HTMLDivElement>(null);
+  const botaoRef = useRef<HTMLButtonElement>(null);
+  const fecharRef = useRef<HTMLButtonElement>(null);
 
   async function carregar() {
     try {
@@ -92,32 +95,54 @@ export function SinoNotificacoes() {
   }, []);
 
   useEffect(() => {
-    function aoClicarFora(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setAberto(false);
-        setRespondendoId(null);
-        setAtribuindoId(null);
-        setAdiandoId(null);
+    if (!aberto) return;
+    const painel = painelRef.current;
+    if (!painel) return;
+    const nativo = typeof painel.showPopover === "function";
+    function limparPaineis() {
+      setAberto(false);
+      setRespondendoId(null);
+      setAtribuindoId(null);
+      setAdiandoId(null);
+    }
+    function aoAlternar() {
+      if (nativo && !painel?.matches(":popover-open")) limparPaineis();
+    }
+    function aoClicarFora(e: PointerEvent) {
+      if (!painel?.contains(e.target as Node) && !botaoRef.current?.contains(e.target as Node)) limparPaineis();
+    }
+    function aoTeclar(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        limparPaineis();
+        botaoRef.current?.focus();
       }
     }
-    document.addEventListener("mousedown", aoClicarFora);
-    return () => document.removeEventListener("mousedown", aoClicarFora);
-  }, []);
+    painel.addEventListener("toggle", aoAlternar);
+    if (nativo) painel.showPopover();
+    fecharRef.current?.focus();
+    document.addEventListener("pointerdown", aoClicarFora);
+    document.addEventListener("keydown", aoTeclar, true);
+    return () => {
+      painel.removeEventListener("toggle", aoAlternar);
+      if (nativo && painel.matches(":popover-open")) painel.hidePopover();
+      document.removeEventListener("pointerdown", aoClicarFora);
+      document.removeEventListener("keydown", aoTeclar, true);
+    };
+  }, [aberto]);
 
   function alternarAberto() {
-    setAberto((v) => {
-      const novo = !v;
-      if (novo) {
-        carregar();
-        if (pessoas.length === 0) {
-          fetch("/api/usuarios")
-            .then((r) => (r.ok ? r.json() : []))
-            .then(setPessoas)
-            .catch(() => {});
-        }
+    if (!aberto) {
+      carregar();
+      if (pessoas.length === 0) {
+        fetch("/api/usuarios")
+          .then((r) => (r.ok ? r.json() : []))
+          .then(setPessoas)
+          .catch(() => {});
       }
-      return novo;
-    });
+    }
+    setAberto((v) => !v);
   }
 
   async function marcarLida(n: Notificacao, lida: boolean) {
@@ -194,43 +219,54 @@ export function SinoNotificacoes() {
     marcarLida(n, true);
   }
 
+  const popover = typeof HTMLElement !== "undefined" && "showPopover" in HTMLElement.prototype ? { popover: "auto" as const } : {};
   return (
-    <div ref={containerRef} className="relative">
+    <>
       <button
+        ref={botaoRef}
+        type="button"
         onClick={alternarAberto}
         title="Notificações"
-        className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-muted transition-colors hover:bg-hover hover:text-text"
+        aria-label={naoLidas ? `Notificações, ${naoLidas} não lidas` : "Notificações"}
+        aria-haspopup="dialog"
+        aria-expanded={aberto}
+        aria-controls={aberto ? "notificacoes-topbar" : undefined}
+        className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-hover hover:text-text"
       >
-        <Bell size={16} />
+        <Bell size={18} aria-hidden="true" />
         {naoLidas > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold text-white">
+          <span aria-hidden="true" className="absolute right-0.5 top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold text-white">
             {naoLidas > 9 ? "9+" : naoLidas}
           </span>
         )}
       </button>
 
-      {aberto && (
-        <div className="absolute right-0 top-11 z-30 max-h-[70vh] w-80 overflow-y-auto rounded-xl border border-border bg-card p-1.5 shadow-premium-lg sm:w-96">
+      {aberto && createPortal(
+        <div ref={painelRef} id="notificacoes-topbar" role="dialog" aria-labelledby="titulo-notificacoes" {...popover} className="fixed inset-x-4 bottom-auto top-36 z-50 m-0 max-h-[calc(100dvh-10rem)] overflow-y-auto overscroll-contain rounded-xl border border-border bg-card p-4 text-text shadow-premium-lg lg:left-auto lg:right-6 lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:w-96">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <h2 id="titulo-notificacoes" className="text-sm font-semibold">Notificações</h2>
+            <button ref={fecharRef} type="button" aria-label="Fechar notificações" onClick={() => { setAberto(false); botaoRef.current?.focus(); }} className="-mr-2 flex h-11 w-11 items-center justify-center rounded-lg text-muted hover:bg-hover hover:text-text"><X size={18} aria-hidden="true" /></button>
+          </div>
           {notificacoes.length === 0 ? (
             <p className="px-3 py-6 text-center text-xs text-muted">Nenhuma notificação por aqui.</p>
           ) : (
-            <div className="flex flex-col gap-0.5">
+            <div className="flex flex-col divide-y divide-border">
               {notificacoes.map((n) => {
                 const acao = acaoPrincipal(n.tipo);
                 return (
                   <div
                     key={n.id}
-                    className={`rounded-lg px-2.5 py-2 transition-colors ${n.lidaEm ? "opacity-60" : ""} hover:bg-hover`}
+                    className="py-3"
                   >
-                    <button onClick={() => abrir(n)} className="block w-full text-left">
-                      <p className="flex items-start justify-between gap-2 text-xs font-medium text-text">
+                    <button type="button" onClick={() => abrir(n)} className="block min-h-11 w-full rounded-lg text-left transition-colors hover:bg-hover">
+                      <p className="flex items-start justify-between gap-2 text-sm font-medium text-text">
                         <span className="min-w-0 flex-1">
-                          {n.titulo}
+                          {!n.lidaEm && <span aria-label="Não lida" className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-accent" />}{n.titulo}
                           {n.contador > 1 && <span className="ml-1 text-muted">· {n.contador}x</span>}
                         </span>
                         <span className="shrink-0 text-[10px] font-normal text-muted">{tempoRelativo(n.atualizadoEm)}</span>
                       </p>
-                      {n.corpo && <p className="mt-0.5 line-clamp-2 text-[11px] text-muted">{n.corpo}</p>}
+                      {n.corpo && <p className="mt-1 line-clamp-2 text-xs text-muted">{n.corpo}</p>}
                     </button>
 
                     <div className="mt-1.5 flex flex-wrap items-center gap-1">
@@ -241,31 +277,31 @@ export function SinoNotificacoes() {
                               ? setRespondendoId((id) => (id === n.id ? null : n.id))
                               : abrir(n)
                           }
-                          className="flex items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-[10px] text-muted hover:border-accent/40 hover:text-text"
+                          className="flex min-h-11 items-center gap-1.5 rounded-lg px-2.5 text-xs text-muted transition-colors hover:bg-hover hover:text-text"
                         >
-                          <acao.icone size={10} /> {acao.label}
+                          <acao.icone size={13} aria-hidden="true" /> {acao.label}
                         </button>
                       )}
                       {n.tarefaId && (
                         <button
                           onClick={() => setAtribuindoId((id) => (id === n.id ? null : n.id))}
-                          className="flex items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-[10px] text-muted hover:border-accent/40 hover:text-text"
+                          className="flex min-h-11 items-center gap-1.5 rounded-lg px-2.5 text-xs text-muted transition-colors hover:bg-hover hover:text-text"
                         >
-                          <UserPlus size={10} /> Atribuir
+                          <UserPlus size={13} aria-hidden="true" /> Atribuir
                         </button>
                       )}
                       <button
                         onClick={() => setAdiandoId((id) => (id === n.id ? null : n.id))}
-                        className="flex items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-[10px] text-muted hover:border-accent/40 hover:text-text"
+                        className="flex min-h-11 items-center gap-1.5 rounded-lg px-2.5 text-xs text-muted transition-colors hover:bg-hover hover:text-text"
                       >
-                        <Clock size={10} /> Adiar
+                        <Clock size={13} aria-hidden="true" /> Adiar
                       </button>
                       <button
                         onClick={() => marcarLida(n, !n.lidaEm)}
                         title={n.lidaEm ? "Marcar como não lida" : "Marcar como lida"}
-                        className="ml-auto flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] text-muted hover:text-text"
+                        className="ml-auto flex min-h-11 items-center gap-1.5 rounded-lg px-2.5 text-xs text-muted transition-colors hover:bg-hover hover:text-text"
                       >
-                        <Check size={10} /> {n.lidaEm ? "Não lida" : "Lida"}
+                        <Check size={13} aria-hidden="true" /> {n.lidaEm ? "Não lida" : "Lida"}
                       </button>
                     </div>
 
@@ -279,23 +315,28 @@ export function SinoNotificacoes() {
                       >
                         {n.tipo === "comentario_relatorio" && (
                           <p className="mb-1 text-[10px] text-muted">
-                            Isso vira o comentário da agência nesse relatório (substitui o anterior, se já tinha).
+                            Esta resposta substitui o comentário anterior da agência no relatório.
                           </p>
                         )}
+                        <label htmlFor={`resposta-${n.id}`} className="mb-1.5 block text-xs font-medium text-muted">Resposta</label>
                         <div className="flex items-center gap-1.5">
                         <input
+                          id={`resposta-${n.id}`}
+                          name="resposta"
+                          autoComplete="off"
                           autoFocus
                           value={textoResposta}
                           onChange={(e) => setTextoResposta(e.target.value)}
-                          placeholder="Responder..."
-                          className="h-7 w-full flex-1 rounded-md border border-border bg-base px-2 text-[11px] text-text outline-none focus:border-accent/50"
+                          placeholder="Escreva sua resposta…"
+                          className="h-11 min-w-0 flex-1 rounded-lg border border-border bg-inset px-3 text-base text-text placeholder:text-muted"
                         />
                         <button
                           type="submit"
+                          aria-label="Enviar resposta"
                           disabled={enviando || !textoResposta.trim()}
-                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-accent text-white disabled:opacity-40"
+                          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-accent text-white transition-colors hover:brightness-110 disabled:opacity-50"
                         >
-                          <Send size={11} />
+                          <Send size={16} aria-hidden="true" />
                         </button>
                         </div>
                       </form>
@@ -304,13 +345,14 @@ export function SinoNotificacoes() {
                     {atribuindoId === n.id && (
                       <div className="mt-1.5 flex items-center gap-1.5">
                         <select
+                          aria-label="Responsável pela tarefa"
                           onChange={(e) => e.target.value && atribuir(n, e.target.value)}
                           disabled={enviando}
                           defaultValue=""
-                          className="h-7 w-full flex-1 rounded-md border border-border bg-base px-1.5 text-[11px] text-text"
+                          className="h-11 min-w-0 flex-1 rounded-lg border border-border bg-inset px-3 text-base text-text"
                         >
                           <option value="" disabled>
-                            Atribuir pra...
+                            Selecionar responsável
                           </option>
                           {pessoas.map((p) => (
                             <option key={p.id} value={p.id}>
@@ -327,7 +369,7 @@ export function SinoNotificacoes() {
                           <button
                             key={p.label}
                             onClick={() => adiar(n, p.ate)}
-                            className="rounded-md border border-border px-1.5 py-0.5 text-[10px] text-muted hover:border-accent/40 hover:text-text"
+                            className="min-h-11 rounded-lg border border-border px-2.5 text-xs text-muted transition-colors hover:bg-hover hover:text-text"
                           >
                             {p.label}
                           </button>
@@ -339,8 +381,8 @@ export function SinoNotificacoes() {
               })}
             </div>
           )}
-        </div>
+        </div>, document.querySelector(".tema-painel") || document.body
       )}
-    </div>
+    </>
   );
 }
