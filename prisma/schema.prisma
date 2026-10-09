@@ -218,6 +218,43 @@ model Cliente {
   // comentário de relatório, tarefa bloqueada de um conteúdo dele etc.
   notificacoes Notificacao[]
   cronogramas CronogramaCliente[]
+  acessos    AcessoCliente[]
+}
+
+// O conteúdo sensível só existe cifrado; não separar login/senha em colunas abertas.
+model AcessoCliente {
+  id              String   @id @default(uuid())
+  clienteId       String
+  cliente         Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  plataforma      String
+  conteudoCifrado  String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([clienteId, updatedAt])
+}
+
+// Sem vínculo por FK: a trilha continua existindo após excluir um acesso/cliente.
+// Nunca gravar senha, login, endereço, observações ou conteúdo cifrado neste registro.
+model EventoAcessoCliente {
+  id        String   @id @default(uuid())
+  autorId   String
+  clienteId String
+  acessoId  String?
+  acao      String
+  createdAt DateTime @default(now())
+
+  @@index([clienteId, createdAt])
+  @@index([autorId, createdAt])
+}
+
+// Contador persistente, separado do login normal. A revisão permite reserva
+// atômica de tentativas mesmo com requisições paralelas em várias instâncias.
+model ControleDesbloqueioAcessos {
+  usuarioId    String   @id
+  tentativas   Int      @default(0)
+  janelaInicio DateTime @default(now())
+  revisao      Int      @default(0)
 }
 
 // Relatório de performance por rede e por período — dado lançado manualmente (Fase 1).

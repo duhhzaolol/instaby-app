@@ -15,6 +15,8 @@ import { RecorrenciaClienteFinanceiro } from "@/components/dashboard/Recorrencia
 import { movimentosFinanceiros, saldoEmPeriodo } from "@/lib/movimentosFinanceiros";
 import { faixaPeriodo } from "@/lib/periodoFinanceiro";
 import LinksClienteTab from "./LinksClienteTab";
+import AcessosClienteTab from "./AcessosClienteTab";
+import NavegacaoCliente from "./NavegacaoCliente";
 import OnboardingTab from "./OnboardingTab";
 import SolicitacoesTab from "./SolicitacoesTab";
 import { EntregasTab } from "./EntregasTab";
@@ -85,6 +87,7 @@ export default async function ClienteDetalhePage({
     { valor: "visao_geral", label: "Visão Geral" },
     { valor: "contatos", label: "Contatos" },
     { valor: "links", label: "Links" },
+    { valor: "acessos", label: "Acessos" },
     { valor: "onboarding", label: "Onboarding" },
     { valor: "solicitacoes", label: "Solicitações" },
     { valor: "tarefas", label: "Tarefas" },
@@ -100,6 +103,7 @@ export default async function ClienteDetalhePage({
     { valor: "arquivos", label: "Arquivos" },
   ];
   const abas = abasBase.filter((a) => {
+    if (a.valor === "acessos") return usuarioAtual.master;
     if (a.valor === "horas") return true; // universal — todo mundo pode lançar/ver as próprias horas
     if (a.valor === "financeiro") return pode.verFinanceiro;
     if (a.valor === "orcamentos") return pode.verOrcamentos;
@@ -324,13 +328,13 @@ export default async function ClienteDetalhePage({
         <ArrowLeft size={13} /> Clientes
       </Link>
 
-      <div className="mb-6 flex items-start justify-between">
-        <div className="flex items-start gap-3">
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
           {cliente.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={cliente.logoUrl} alt={cliente.nome} className="h-12 w-12 rounded-xl object-cover" />
+            <img src={cliente.logoUrl} alt={cliente.nome} className="h-12 w-12 shrink-0 rounded-xl object-cover" />
           ) : (
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10 text-sm font-semibold text-accent">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-sm font-semibold text-accent">
               {cliente.nome
                 .split(" ")
                 .map((p) => p[0])
@@ -339,8 +343,8 @@ export default async function ClienteDetalhePage({
                 .toUpperCase()}
             </div>
           )}
-          <div>
-            <p className="text-lg font-medium text-text">{cliente.nome}</p>
+          <div className="min-w-0">
+            <p className="break-words text-lg font-medium text-text">{cliente.nome}</p>
             <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
               {cliente.whatsapp && (
                 <p className="flex items-center gap-1 text-xs text-muted">
@@ -374,7 +378,7 @@ export default async function ClienteDetalhePage({
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {/* Mensalidade é R$ — nunca aparece pra quem não tem verFinanceiro (ex: Editor),
               mesmo que essa pessoa possa abrir esse cliente por causa de Horas/Arquivos/Links. */}
           {pode.verFinanceiro && (
@@ -382,28 +386,16 @@ export default async function ClienteDetalhePage({
           )}
           <Link
             href={`/dashboard/clientes/${cliente.id}/editar`}
-            className="flex items-center gap-1.5 rounded-lg border border-border bg-card/60 px-3 py-1.5 text-xs text-text hover:bg-hover"
+            className="flex min-h-11 items-center gap-1.5 rounded-lg border border-border bg-card/60 px-3 py-1.5 text-xs text-text hover:bg-hover"
           >
             <Pencil size={12} /> Editar
           </Link>
         </div>
       </div>
 
-      <div className="mb-6 flex gap-1 border-b border-border">
-        {abas.map((a) => (
-          <Link
-            key={a.valor}
-            href={`/dashboard/clientes/${cliente.id}?aba=${a.valor}`}
-            className={`px-3 py-2.5 text-sm transition-colors ${
-              aba === a.valor
-                ? "border-b-2 border-accent font-medium text-text"
-                : "text-muted hover:text-text"
-            }`}
-          >
-            {a.label}
-          </Link>
-        ))}
-      </div>
+      <NavegacaoCliente clienteId={cliente.id} abaAtual={aba} abas={abas} />
+
+      {aba === "acessos" && usuarioAtual.master && <AcessosClienteTab key={cliente.id} clienteId={cliente.id} />}
 
       {aba === "visao_geral" && (
         <VisaoGeralClienteTab

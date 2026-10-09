@@ -22,6 +22,15 @@ export type VersaoNovidades = {
 
 export const NOVIDADES: VersaoNovidades[] = [
   {
+    versao: 173,
+    resumo: "Clientes com navegação organizada e uma área protegida para logins e senhas.",
+    itens: [
+      { tipo: "melhorado", texto: "As seções do cliente ficam reunidas em seis áreas, com opções que se ajustam ao espaço. No celular, uma lista organizada substitui as abas que escapavam para o lado." },
+      { tipo: "adicionado", texto: "Dados do cliente → Acessos permite guardar várias contas com plataforma, endereço, usuário, senha, responsável e observações. Inicialmente, somente o administrador principal pode consultar e editar." },
+      { tipo: "adicionado", texto: "Sua senha do Instaby libera a consulta por até dez minutos. As senhas dos clientes ficam protegidas e só aparecem ao clicar em visualizar ou copiar; também é possível bloquear ao terminar." },
+    ],
+  },
+  {
     versao: 172,
     resumo: "Dados da agência em um cadastro único e condições personalizadas nos orçamentos.",
     itens: [
