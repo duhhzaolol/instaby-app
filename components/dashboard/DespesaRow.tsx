@@ -21,6 +21,7 @@ export type DespesaRowData = {
   data: string;
   cliente?: string | null;
   recorrente?: boolean;
+  origemRecorrenteId?: string | null;
   categoriaFinanceira?: string | null;
   categoria?: string | null;
   status?: string | null;
@@ -41,6 +42,7 @@ export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index:
   const [data, setData] = useState(diaFinanceiro(despesa.data));
   const [categoriaFinanceira, setCategoriaFinanceira] = useState(despesa.categoriaFinanceira || "");
   const [categoria, setCategoria] = useState(despesa.categoria || "");
+  const [recorrente, setRecorrente] = useState(!!despesa.recorrente);
   const [status, setStatus] = useState(despesa.status || "pago");
   const [vencimento, setVencimento] = useState(despesa.vencimento ? diaFinanceiro(despesa.vencimento) : "");
   const [dataPagamento, setDataPagamento] = useState(diaFinanceiro(new Date(), false));
@@ -73,6 +75,7 @@ export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index:
     if (await enviar({ descricao, valor, data, categoriaFinanceira: categoriaFinanceira || null, categoria: categoria || null, status,
       vencimento: vencimento || null,
       ...(status === "pago" && despesa.status !== "pago" && { dataPagamento: dataPagamento || null }),
+      ...(!despesa.origemRecorrenteId && { recorrente }),
     })) setEditando(false);
   }
 
@@ -137,7 +140,10 @@ export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index:
               </option>
             ))}
           </select>
-          {status === "pendente" && <DatePicker value={vencimento} onChange={setVencimento} placeholder="Vencimento" />}
+          {(status === "pendente" || (recorrente && !despesa.origemRecorrenteId)) && <div>
+            <label className="mb-1 block text-[10px] text-muted">{recorrente ? "Vencimento mensal" : "Vencimento"}</label>
+            <DatePicker value={vencimento} onChange={setVencimento} placeholder="Escolher vencimento" />
+          </div>}
         </div>
         <p className="mb-2 text-[11px] text-muted">
           "Atrasado" não se escolhe mais aqui — calculado sozinho quando o vencimento passa e ainda tem saldo.
@@ -154,6 +160,11 @@ export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index:
           <label className="mb-1 block text-[10px] text-muted">Data do pagamento do saldo</label>
           <DatePicker value={dataPagamento} onChange={setDataPagamento} placeholder="Hoje se não informado" limpavel />
         </div>}
+        {!despesa.origemRecorrenteId && <label className="mb-3 flex min-h-11 cursor-pointer items-center gap-2 text-sm text-text">
+          <input type="checkbox" checked={recorrente} disabled={salvando} onChange={e => setRecorrente(e.target.checked)} className="h-4 w-4 accent-accent" />
+          Repetir esta conta todo mês
+        </label>}
+        {despesa.origemRecorrenteId && <p className="mb-3 text-xs text-muted">Conta gerada pela recorrência. Para mudar os próximos meses, edite a conta original.</p>}
         <div className="flex gap-2">
           <Button size="sm" onClick={salvar} disabled={salvando} className="flex-1">
             {salvando ? "Salvando..." : "Salvar"}
@@ -168,9 +179,9 @@ export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index:
 
   return (
     <Card index={index} hoverable={false} className="p-0">
-      <div className="flex items-center justify-between px-4 py-3">
-        <div className="min-w-0">
-          <p className="flex items-center gap-1.5 text-sm text-text">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3">
+        <div className="min-w-0 flex-1 basis-48">
+          <p className="flex items-start gap-1.5 break-words text-sm text-text">
             {despesa.descricao}
             {despesa.recorrente && (
               <span title="Recorrente — repete todo mês sozinha">
@@ -212,10 +223,10 @@ export function DespesaRow({ despesa, index }: { despesa: DespesaRowData; index:
             </button>
           )}
           {statusEfetivo !== "pago" && statusEfetivo !== "cancelado" && <button disabled={salvando} title="Pagar o saldo restante hoje" onClick={marcarPago} className="text-xs font-medium text-accent hover:underline">Tudo pago</button>}
-          <button onClick={() => setEditando(true)} className="text-muted hover:text-text">
+          <button aria-label={`Editar ${despesa.descricao}`} onClick={() => setEditando(true)} className="inline-flex min-h-10 min-w-10 items-center justify-center text-muted hover:text-text">
             <Pencil size={13} />
           </button>
-          {statusEfetivo !== "pago" && totalPago <= 0 && <button disabled={salvando} title="Excluir despesa sem pagamentos" onClick={excluir} className="text-muted hover:text-red-400">
+          {statusEfetivo !== "pago" && totalPago <= 0 && <button aria-label={`Excluir ${despesa.descricao}`} disabled={salvando} title="Excluir despesa sem pagamentos" onClick={excluir} className="inline-flex min-h-10 min-w-10 items-center justify-center text-muted hover:text-red-400">
             <Trash2 size={13} />
           </button>}
         </div>

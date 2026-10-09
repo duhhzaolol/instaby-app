@@ -2,7 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { montarCicloDeTarefas } from "@/lib/templatesTarefas";
 import { sincronizarMensalidadeCliente, vencimentoMensal } from "@/lib/mensalidades";
 import { chaveDiaSaoPaulo } from "@/lib/dataHora";
-import { diaFinanceiro } from "@/lib/datasFinanceiro";
+import { diaFinanceiro, mesFinanceiro } from "@/lib/datasFinanceiro";
+import { categoriaFinanceiraDaDespesa, tipoDaDespesa } from "@/lib/classificacaoDespesa";
 
 // Evita rodar a checagem de recorrentes em toda navegação (isso rodava só na página
 // Financeiro antes, e ficou pesado quando movido pro layout do dashboard). Com esse
@@ -11,29 +12,40 @@ import { diaFinanceiro } from "@/lib/datasFinanceiro";
 let ultimaChecagem = 0;
 let checagemEmAndamento: Promise<void> | null = null;
 const INTERVALO_MS = 10 * 60 * 1000;
+const despesasEmAndamento = new Map<string, Promise<void>>();
 
 /**
  * Garante que toda despesa marcada como recorrente tenha uma cópia lançada
  * no mês atual (nasce sempre "pendente" — só vira "pago" quando for baixada de verdade).
  */
-export async function garantirDespesasRecorrentesDoMes() {
-  const mes = chaveDiaSaoPaulo(new Date()).slice(0, 7);
-  const modelos = await prisma.despesa.findMany({ where: { recorrente: true }, select: { id: true } });
+export function garantirDespesasRecorrentesDoMes(agora = new Date()): Promise<void> {
+  const mes = chaveDiaSaoPaulo(agora).slice(0, 7);
+  const emAndamento = despesasEmAndamento.get(mes);
+  if (emAndamento) return emAndamento;
+  // Layout e página compartilham só a execução corrente. Após concluir, uma
+  // visita já pode encontrar novos modelos, sem esperar o cache de dez minutos.
+  const checagem = gerarDespesasRecorrentesDoMes(mes);
+  despesasEmAndamento.set(mes, checagem);
+  const liberar = () => { if (despesasEmAndamento.get(mes) === checagem) despesasEmAndamento.delete(mes); };
+  checagem.then(liberar, liberar);
+  return checagem;
+}
+
+async function gerarDespesasRecorrentesDoMes(mes: string): Promise<void> {
+  const modelos = await prisma.despesa.findMany({ where: { recorrente: true, status: { not: "cancelado" } }, select: { id: true } });
   for (const item of modelos) {
     await prisma.$transaction(async tx => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`despesa-recorrente:${item.id}`}))`;
       const modelo = await tx.despesa.findUnique({ where: { id: item.id } });
       if (!modelo || !modelo.recorrente || modelo.status === "cancelado") return;
-      const chaveMes = (data: Date) => data.getUTCHours() === 0 && data.getUTCMinutes() === 0 && data.getUTCSeconds() === 0 && data.getUTCMilliseconds() === 0
-        ? data.toISOString().slice(0, 7) : chaveDiaSaoPaulo(data).slice(0, 7);
-      if (chaveMes(modelo.data) > mes) return;
+      if (mesFinanceiro(modelo.data) > mes) return;
       const lancamentos = await tx.despesa.findMany({ where: { OR: [{ id: modelo.id }, { origemRecorrenteId: modelo.id }] } });
-      if (lancamentos.some(d => chaveMes(d.data) === mes)) return;
+      if (lancamentos.some(d => mesFinanceiro(d.data) === mes)) return;
       const dataBase = modelo.vencimento || modelo.data;
       const dia = Number(diaFinanceiro(dataBase).slice(8));
       await tx.despesa.create({ data: {
-        descricao: modelo.descricao, valor: modelo.valor, tipo: modelo.tipo,
-        categoriaFinanceira: modelo.categoriaFinanceira, categoria: modelo.categoria,
+        descricao: modelo.descricao, valor: modelo.valor, tipo: tipoDaDespesa(modelo),
+        categoriaFinanceira: categoriaFinanceiraDaDespesa(modelo), categoria: modelo.categoria,
         subcategoria: modelo.subcategoria, clienteId: modelo.clienteId,
         recorrente: false, origemRecorrenteId: modelo.id, status: "pendente",
         vencimento: vencimentoMensal(mes, dia), data: new Date(`${mes}-01T00:00:00-03:00`),

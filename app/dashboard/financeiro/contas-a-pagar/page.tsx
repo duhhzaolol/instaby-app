@@ -13,6 +13,11 @@ import {
 } from "@/components/dashboard/DespesaRow";
 import { NovaContaPagarForm } from "@/components/dashboard/NovaContaPagarForm";
 import { FiltrosContasAPagar } from "@/components/dashboard/FiltrosContasAPagar";
+import { PrevisaoContasRecorrentes } from "@/components/dashboard/PrevisaoContasRecorrentes";
+import { garantirDespesasRecorrentesDoMes } from "@/lib/garantirRecorrentes";
+import { preverDespesasRecorrentes, proximoMesFinanceiro } from "@/lib/previsaoDespesasRecorrentes";
+import { exigirPermissao } from "@/lib/permissoes";
+import { categoriaFinanceiraDaDespesa } from "@/lib/classificacaoDespesa";
 import { calcularStatusEfetivo } from "@/lib/statusFinanceiro";
 import {
   diaFinanceiro,
@@ -41,6 +46,10 @@ export default async function ContasAPagarPage({
 }: {
   searchParams: { aba?: string; categoria?: string; periodo?: string };
 }) {
+  await exigirPermissao("verFinanceiro");
+  // A página e o layout podem carregar em paralelo. Aguardar aqui garante que
+  // as contas do mês já existam antes da consulta que será mostrada na tela.
+  await garantirDespesasRecorrentesDoMes();
   const aba = ABAS.some((a) => a.valor === searchParams.aba)
     ? searchParams.aba!
     : "abertas";
@@ -67,6 +76,14 @@ export default async function ContasAPagarPage({
       orderBy: { nome: "asc" },
     }),
   ]);
+  const proximoMes = proximoMesFinanceiro();
+  const previsoes = preverDespesasRecorrentes(despesas, proximoMes).filter(d => {
+    if (filtroCategoria === "sem_classificacao") {
+      const fonte = despesas.find(registro => registro.id === (d.lancamentoId || d.modeloId));
+      return !fonte?.categoriaFinanceira;
+    }
+    return !filtroCategoria || d.categoriaFinanceira === filtroCategoria;
+  });
   const registros = despesas.map((d) => {
     const totalPago =
       d.pagamentos.reduce((s, p) => s + Math.round(Number(p.valor) * 100), 0) /
@@ -88,6 +105,7 @@ export default async function ContasAPagarPage({
       totalPago,
       statusEfetivo,
       saldo,
+      categoriaFinanceira: categoriaFinanceiraDaDespesa(d),
       mes: mesFinanceiro(d.data),
       vencimento: d.vencimento ? diaFinanceiro(d.vencimento) : null,
     };
@@ -98,7 +116,7 @@ export default async function ContasAPagarPage({
     if (
       filtroCategoria &&
       filtroCategoria !== "sem_classificacao" &&
-      r.d.categoriaFinanceira !== filtroCategoria
+      r.categoriaFinanceira !== filtroCategoria
     )
       return false;
     if (filtroPeriodo === "mes_atual" && r.mes !== mesAtual) return false;
@@ -210,7 +228,7 @@ export default async function ContasAPagarPage({
         <p className="text-sm text-muted">Nenhuma despesa com estes filtros.</p>
       ) : (
         <div className="flex flex-col gap-2">
-          {todasRelevantes.map(({ d, totalPago }, i) => {
+          {todasRelevantes.map(({ d, totalPago, categoriaFinanceira }, i) => {
             const item: DespesaRowData = {
               id: d.id,
               descricao: d.descricao,
@@ -218,15 +236,19 @@ export default async function ContasAPagarPage({
               data: d.data.toISOString(),
               cliente: d.cliente?.nome || null,
               recorrente: d.recorrente || !!d.origemRecorrenteId,
-              categoriaFinanceira: d.categoriaFinanceira,
+              origemRecorrenteId: d.origemRecorrenteId,
+              categoriaFinanceira,
               categoria: d.categoria,
               status: d.status,
               vencimento: d.vencimento?.toISOString() || null,
               totalPago,
             };
-            return <DespesaRow key={d.id} despesa={item} index={i} />;
+            return <div key={d.id} id={`despesa-${d.id}`} className="scroll-mt-36"><DespesaRow despesa={item} index={i} /></div>;
           })}
         </div>
+      )}
+      {["abertas", "pendente", "todas"].includes(aba) && filtroPeriodo !== "mes_anterior" && (
+        <PrevisaoContasRecorrentes mes={proximoMes} contas={previsoes} />
       )}
     </div>
   );

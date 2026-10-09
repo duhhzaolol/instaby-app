@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { exigirPermissaoApi } from "@/lib/permissoes";
 import { centavosFinanceiros, dataFinanceira, dataFinanceiraValida, STATUS_FINANCEIROS } from "@/lib/datasFinanceiro";
 import { criarLancamentoFinanceiro, ErroFinanceiro } from "@/lib/lancamentosFinanceiros";
+import { tipoDaDespesa } from "@/lib/classificacaoDespesa";
 
 export async function GET() {
   const { erro } = await exigirPermissaoApi("verFinanceiro");
@@ -18,8 +19,8 @@ export async function POST(request: NextRequest) {
   const centavos = centavosFinanceiros(body.valor);
   if (typeof body.descricao !== "string" || !body.descricao.trim() || centavos === null) return NextResponse.json({ erro: "Informe descrição e valor válido, não negativo e com até duas casas decimais." }, { status: 400 });
   const status = body.status || "pago";
-  const tipo = body.tipo || "flexivel";
-  if (!STATUS_FINANCEIROS.includes(status) || !["fixa", "flexivel"].includes(tipo)) return NextResponse.json({ erro: "Status ou tipo inválido." }, { status: 400 });
+  if (!STATUS_FINANCEIROS.includes(status) || (body.tipo && !["fixa", "flexivel"].includes(body.tipo))) return NextResponse.json({ erro: "Status ou tipo inválido." }, { status: 400 });
+  const tipo = tipoDaDespesa(body);
   if (["data", "vencimento", "dataPagamento"].some(c => !dataFinanceiraValida(body[c]))) return NextResponse.json({ erro: "Data inválida." }, { status: 400 });
   const data = dataFinanceira(body.data) || new Date();
   try {

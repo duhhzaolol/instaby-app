@@ -1,3 +1,5 @@
+import { categoriaFinanceiraDaDespesa, tipoDaDespesa } from "@/lib/classificacaoDespesa";
+
 // O caixa acompanha as baixas reais. Status e competência da obrigação não
 // substituem a data em que cada parcela entrou ou saiu.
 type DataFinanceira = Date | string | null | undefined;
@@ -39,7 +41,7 @@ function movimentos(item: CobrancaFinanceira | DespesaFinanceira, tipo: Moviment
     origemId: item.id, tipo, clienteId: item.clienteId,
     clienteNome: item.cliente?.nome || null, clienteCor: item.cliente?.cor || null,
     descricao: cobranca?.categoria || despesa?.descricao || 'Recebimento',
-    ...(despesa && { categoriaFinanceira: despesa.categoriaFinanceira, tipoDespesa: despesa.tipo }),
+    ...(despesa && { categoriaFinanceira: categoriaFinanceiraDaDespesa(despesa), tipoDespesa: tipoDaDespesa(despesa) }),
   };
   if (item.pagamentos?.length) {
     // Cancelar a obrigação não estorna uma baixa real anterior.

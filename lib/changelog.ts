@@ -22,6 +22,17 @@ export type VersaoNovidades = {
 
 export const NOVIDADES: VersaoNovidades[] = [
   {
+    versao: 175,
+    resumo: "Financeiro separa o que já foi pago das contas previstas e mostra as recorrências do próximo mês.",
+    itens: [
+      { tipo: "corrigido", texto: "Aluguel, internet e outras despesas fixas aparecem em Custos operacionais, inclusive nos cadastros antigos que estavam sendo tratados como flexíveis." },
+      { tipo: "melhorado", texto: "No Resumo, os custos do mês mostram total previsto, já pago e falta pagar até o último dia. O caixa continua considerando somente recebimentos e pagamentos reais." },
+      { tipo: "adicionado", texto: "A pagar mostra as contas recorrentes do próximo mês, com vencimentos e valor a reservar. Essa previsão não desconta o saldo nem duplica os lançamentos." },
+      { tipo: "melhorado", texto: "É possível marcar ou desmarcar Repetir esta conta todo mês ao editar a conta original, inclusive se ela já foi paga, e escolher o vencimento mensal." },
+      { tipo: "melhorado", texto: "Resultado financeiro abre em Recebido e pago. A DRE por competência fica em uma opção separada e informa claramente os valores ainda em aberto." },
+    ],
+  },
+  {
     versao: 174,
     resumo: "Ideias no Planejamento, trabalho na Produção e uma Agenda mais simples.",
     itens: [

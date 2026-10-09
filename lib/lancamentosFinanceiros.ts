@@ -79,6 +79,9 @@ export async function registrarPagamentoFinanceiro(tipo: TipoLancamento, id: str
 export async function editarLancamentoFinanceiro(tipo: TipoLancamento, id: string, dados: Record<string, unknown>) {
   return transacaoFinanceira(async tx => {
     const existente = await encontrar(tx, tipo, id);
+    if (tipo === "despesa" && dados.recorrente === true && "origemRecorrenteId" in existente && existente.origemRecorrenteId) {
+      throw new ErroFinanceiro(409, "Esta conta já foi gerada por uma recorrência. Edite a conta original para mudar os próximos meses.");
+    }
     const totalPago = pagoEmCentavos(existente);
     if (tipo === "cobranca" && "recorrenciaChave" in existente && existente.recorrenciaChave) {
       const competenciaFinal = competenciaCobranca({ ...existente, ...dados } as any);

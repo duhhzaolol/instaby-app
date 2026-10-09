@@ -15,6 +15,10 @@ import { DespesaRow, DespesaRowData } from "@/components/dashboard/DespesaRow";
 import { CATEGORIAS_FINANCEIRAS, STATUS_DESPESA, visualDaCategoriaFinanceira } from "@/lib/categoriasFinanceiras";
 import { CalendarioFinanceiro } from "@/components/dashboard/CalendarioFinanceiro";
 import { AjudaContextual } from "@/components/ui/AjudaContextual";
+import { tipoDaDespesa } from "@/lib/classificacaoDespesa";
+
+type TotaisCustos = { total: number; pago: number; emAberto: number };
+const dinheiro = (valor: number) => valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 type Cliente = { id: string; nome: string };
 type CobrancaPendente = {
@@ -48,6 +52,7 @@ export default function FinanceiroClient({
   mesAtual,
   anoAtual,
   caixa,
+  custosResumo,
 }: {
   periodo: string;
   resumo: { entradas: number; despesasFixas: number; despesasFlexiveis: number; lucro: number };
@@ -61,7 +66,8 @@ export default function FinanceiroClient({
   movimentosMes: { dia: number; tipo: "entrada" | "saida"; valor: number; descricao: string; cliente: string | null }[];
   mesAtual: number;
   anoAtual: number;
-  caixa?: { saldoAtual: number; resultadoDoMes: number; variacaoCaixaMes: number; patrimonioTotal: number };
+  caixa?: { saldoAtual: number; contasAteFimMes: number; variacaoCaixaMes: number; patrimonioTotal: number };
+  custosResumo: { periodo: string; operacionais: TotaisCustos; flexiveis: TotaisCustos; proximoMes: string; previsaoOperacional: number; contasPrevistas: number };
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -87,11 +93,11 @@ export default function FinanceiroClient({
             Financeiro
             <AjudaContextual
               titulo="Financeiro"
-              texto="Visão geral de entradas, custos e lucro no período escolhido. O calendário mostra dia a dia o que entrou e saiu. Cobranças e despesas ficam abaixo, separadas por tipo."
+              texto="O caixa mostra recebimentos e pagamentos reais. Abaixo, custos operacionais e flexíveis mostram também o que ainda falta pagar. No mês atual, as listas incluem as contas até o fim do mês."
               exemplo="Ex.: clique num dia do calendário pra ver todos os recebimentos e pagamentos daquele dia."
             />
           </div>
-          <p className="text-sm text-muted">Visão geral · a DRE está no menu ao lado</p>
+          <p className="text-sm text-muted">Recebimentos, pagamentos e contas para se organizar.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {PERIODOS_FINANCEIRO.map((p) => (
@@ -156,15 +162,15 @@ export default function FinanceiroClient({
 
       {caixa && (
         <div className="mb-6">
-          <p className="mb-1 flex items-center gap-1.5 text-sm font-medium text-text">
+          <div className="mb-1 flex items-center gap-1.5 text-sm font-medium text-text">
             Panorama financeiro
             <AjudaContextual
               titulo="Panorama financeiro"
-              texto="Saldo atual e Patrimônio são acumulados desde sempre. Resultado do mês vem da DRE (lucro/prejuízo da operação). Variação de caixa é quanto o dinheiro realmente entrou ou saiu no mês, incluindo compras de equipamento — por isso pode ser diferente do resultado da DRE."
+              texto="Saldo atual considera todos os recebimentos e pagamentos registrados. Contas a pagar no mês mostra o saldo das despesas com vencimento neste mês, mesmo depois de hoje. Variação de caixa inclui todas as saídas, inclusive equipamentos e retiradas."
               exemplo="Ex.: lucro de R$ 5.000 na DRE + compra de câmera de R$ 4.000 à vista = variação de caixa de R$ 1.000 no mês."
             />
-          </p>
-          <p className="mb-3 text-xs text-muted">Saldo e patrimônio são acumulados; resultado e variação são do mês atual.</p>
+          </div>
+          <p className="mb-3 text-xs text-muted">Saldo e patrimônio são acumulados; contas a pagar e variação são do mês atual.</p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
             <Card index={0} className="p-4">
               <div className="mb-3 flex items-center justify-between">
@@ -180,18 +186,15 @@ export default function FinanceiroClient({
             </Card>
             <Card index={1} className="p-4">
               <div className="mb-3 flex items-center justify-between">
-                <p className="text-xs text-muted">Resultado do mês</p>
+                <p className="text-xs text-muted">Contas a pagar no mês</p>
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent/10 text-accent">
-                  {caixa.resultadoDoMes >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                  <TrendingDown size={14} />
                 </div>
               </div>
-              <p className={`text-2xl font-medium ${caixa.resultadoDoMes >= 0 ? "text-text" : "text-red-400"}`}>
-                <CountUp decimals={2}
-                  value={Math.abs(caixa.resultadoDoMes)}
-                  prefix={caixa.resultadoDoMes >= 0 ? "+R$ " : "−R$ "}
-                />
+              <p className="text-2xl font-medium text-text">
+                <CountUp decimals={2} value={caixa.contasAteFimMes} prefix="R$ " />
               </p>
-              <p className="mt-1 text-[11px] text-muted">Lucro apresentado pela DRE.</p>
+              <Link href="/dashboard/financeiro/contas-a-pagar" className="mt-1 block text-[11px] text-accent hover:underline">Saldo ainda em aberto até o fim do mês →</Link>
             </Card>
             <Card index={2} className="p-4">
               <div className="mb-3 flex items-center justify-between">
@@ -226,14 +229,12 @@ export default function FinanceiroClient({
         </div>
       )}
 
-      <p className="mb-2 text-xs text-muted">
-        Só considera o que já foi recebido/pago de fato — pode ser diferente da soma das listas aqui embaixo, que
-        mostram também cobrança e despesa ainda pendente ou atrasada.
-      </p>
+      <h2 className="mb-1 text-sm font-medium text-text">Recebido e pago no período</h2>
+      <p className="mb-3 text-xs text-muted">Somente baixas reais. Equipamentos e retiradas aparecem na variação de caixa, sem entrar nos custos da operação.</p>
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-4">
         <Card index={0} className="p-4">
           <div className="mb-3 flex items-center justify-between">
-            <p className="text-xs text-muted">Entradas</p>
+            <p className="text-xs text-muted">Recebido</p>
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
               <TrendingUp size={14} />
             </div>
@@ -244,7 +245,7 @@ export default function FinanceiroClient({
         </Card>
         <Card index={1} className="p-4">
           <div className="mb-3 flex items-center justify-between">
-            <p className="text-xs text-muted">Custos fixos</p>
+            <p className="text-xs text-muted">Operacionais pagos</p>
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-500/10 text-orange-400">
               <TrendingDown size={14} />
             </div>
@@ -255,7 +256,7 @@ export default function FinanceiroClient({
         </Card>
         <Card index={2} className="p-4">
           <div className="mb-3 flex items-center justify-between">
-            <p className="text-xs text-muted">Custos flexíveis</p>
+            <p className="text-xs text-muted">Flexíveis e outros pagos</p>
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-500/10 text-red-400">
               <TrendingDown size={14} />
             </div>
@@ -266,7 +267,7 @@ export default function FinanceiroClient({
         </Card>
         <Card index={3} className="p-4">
           <div className="mb-3 flex items-center justify-between">
-            <p className="text-xs text-muted">Lucro</p>
+            <p className="text-xs text-muted">Resultado da operação em caixa</p>
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent/10 text-accent">
               <Wallet size={14} />
             </div>
@@ -281,7 +282,7 @@ export default function FinanceiroClient({
         <Card index={4} hoverable={false} className="mb-6 p-5">
           <p className="mb-1 text-sm font-medium text-text">Resumo por cliente</p>
           <p className="mb-4 text-xs text-muted">
-            O que entrou, o que saiu com despesas dele, e o lucro — no período selecionado.
+            Recebimentos menos custos pagos de cada cliente, no período selecionado.
           </p>
           <div className="flex flex-col gap-2">
             {resumoPorCliente.map((c) => (
@@ -372,7 +373,14 @@ export default function FinanceiroClient({
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+      <div className="mb-3 mt-8 flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h2 className="text-base font-medium text-text">Contas e custos do período</h2>
+          <p className="mt-1 text-xs text-muted">{custosResumo.periodo} · inclui contas pagas e em aberto, mesmo com vencimento futuro.</p>
+        </div>
+        <Link href="/dashboard/financeiro/contas-a-pagar" className="text-xs font-medium text-accent hover:underline">Ver todas as contas a pagar →</Link>
+      </div>
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
         <Card index={7} hoverable={false} className="p-5">
           <div className="mb-4 flex items-center justify-between">
             <div>
@@ -389,8 +397,9 @@ export default function FinanceiroClient({
           {formAberto === "fixa" && (
             <NovaDespesaForm tipo="fixa" clientes={clientes} onSalvo={() => setFormAberto(null)} />
           )}
+          <TotaisDoCusto totais={custosResumo.operacionais} />
           <div className="flex flex-col gap-2">
-            {custosFixos.length === 0 && <p className="text-sm text-muted">Nenhum custo fixo lançado ainda.</p>}
+            {custosFixos.length === 0 && <p className="text-sm text-muted">Nenhum custo operacional neste período. Use Novo para cadastrar uma conta mensal.</p>}
             {custosFixos.map((d, i) => (
               <DespesaRow key={d.id} despesa={d} index={i} />
             ))}
@@ -401,7 +410,7 @@ export default function FinanceiroClient({
           <div className="mb-4 flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-text">Custos flexíveis</p>
-              <p className="text-xs text-muted">Retiradas avulsas — material, equipamento, comida...</p>
+              <p className="text-xs text-muted">Papel, compras eventuais, custos diretos, taxas e impostos.</p>
             </div>
             <button
               onClick={() => setFormAberto(formAberto === "flexivel" ? null : "flexivel")}
@@ -413,6 +422,7 @@ export default function FinanceiroClient({
           {formAberto === "flexivel" && (
             <NovaDespesaForm tipo="flexivel" clientes={clientes} onSalvo={() => setFormAberto(null)} />
           )}
+          <TotaisDoCusto totais={custosResumo.flexiveis} />
           <div className="flex flex-col gap-2">
             {custosFlexiveis.length === 0 && <p className="text-sm text-muted">Nenhum custo flexível lançado ainda.</p>}
             {custosFlexiveis.map((d, i) => (
@@ -421,8 +431,22 @@ export default function FinanceiroClient({
           </div>
         </Card>
       </div>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border px-5 py-4">
+        <div>
+          <h2 className="text-sm font-medium text-text">Custos operacionais de {custosResumo.proximoMes}</h2>
+          <p className="mt-1 text-xs text-muted">{custosResumo.contasPrevistas > 0 ? `${custosResumo.contasPrevistas} conta(s) recorrente(s) · reserve ${dinheiro(custosResumo.previsaoOperacional)}.` : "Nenhuma conta recorrente em aberto prevista."} A previsão não desconta seu saldo.</p>
+        </div>
+        <Link href="/dashboard/financeiro/contas-a-pagar#proximo-mes" className="text-xs font-medium text-accent hover:underline">Ver vencimentos do próximo mês →</Link>
+      </div>
     </div>
   );
+}
+
+function TotaisDoCusto({ totais }: { totais: TotaisCustos }) {
+  return <dl className="mb-4 grid grid-cols-1 gap-3 border-y border-border py-3 sm:grid-cols-3">
+    {[["Total previsto", totais.total], ["Já pago", totais.pago], ["Falta pagar", totais.emAberto]].map(([label, valor]) =>
+      <div key={label}><dt className="text-xs text-muted">{label}</dt><dd className="mt-1 text-sm font-medium tabular-nums text-text">{dinheiro(Number(valor))}</dd></div>)}
+  </dl>;
 }
 
 function NovaDespesaForm({
@@ -450,38 +474,42 @@ function NovaDespesaForm({
   const [vencimento, setVencimento] = useState("");
   const [dataPagamento, setDataPagamento] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const [erro, setErro] = useState("");
   const [adicionarAoPatrimonio, setAdicionarAoPatrimonio] = useState(false);
 
   const infoCategoria = visualDaCategoriaFinanceira(categoriaFinanceira);
   const ehInvestimento = categoriaFinanceira === "investimento";
+  const tipoEfetivo = tipoDaDespesa({ categoriaFinanceira, tipo });
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setEnviando(true);
-
+    setErro("");
+    try {
     const resposta = await fetch("/api/despesas", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         descricao,
         valor,
-        clienteId: tipo === "fixa" ? null : clienteId || null,
+        clienteId: clienteId || null,
         data,
-        tipo,
+        tipo: tipoEfetivo,
         categoriaFinanceira,
         categoria: categoria || null,
         status,
         vencimento: vencimento || null,
         dataPagamento: status === "pago" ? dataPagamento || data : null,
-        recorrente: tipo === "fixa" ? recorrente : false,
+        recorrente: tipoEfetivo === "fixa" && recorrente,
         adicionarAoPatrimonio: ehInvestimento && adicionarAoPatrimonio,
       }),
     });
 
-    setEnviando(false);
-    if (!resposta.ok) { const body = await resposta.json().catch(() => ({})); alert(body.erro || "Não foi possível salvar a despesa."); return; }
+    if (!resposta.ok) { const body = await resposta.json().catch(() => ({})); setErro(body.erro || "Não foi possível salvar a despesa. Seus dados foram mantidos."); return; }
     onSalvo();
     router.refresh();
+    } catch { setErro("Não consegui salvar. Confira sua conexão e tente novamente."); }
+    finally { setEnviando(false); }
   }
 
   return (
@@ -584,10 +612,10 @@ function NovaDespesaForm({
           <span>Adicionar este item ao patrimônio da empresa?</span>
         </label>
       )}
-      {tipo === "fixa" ? (
+      {tipoEfetivo === "fixa" ? (
         <label className="mb-3 flex items-center gap-2 rounded-lg border border-accent/20 bg-accent/5 px-3 py-2.5 text-xs text-text">
           <input type="checkbox" checked={recorrente} onChange={(e) => setRecorrente(e.target.checked)} />
-          Ativar cobrança recorrente — aparece sozinha todo mês, sem precisar preencher de novo
+          Repetir esta conta todo mês, no mesmo dia do vencimento ou da competência
         </label>
       ) : (
         <select
@@ -603,6 +631,7 @@ function NovaDespesaForm({
           ))}
         </select>
       )}
+      {erro && <p role="alert" className="mb-3 text-xs text-red-400">{erro}</p>}
       <Button type="submit" size="sm" disabled={enviando || valor <= 0} className="w-full">
         {enviando ? "Salvando..." : "Salvar"}
       </Button>
