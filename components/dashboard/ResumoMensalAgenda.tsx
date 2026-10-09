@@ -4,7 +4,7 @@ import {
   type TarefaCronograma,
 } from "@/lib/cronogramaAgenda";
 import { linkAgenda, type FiltrosAgenda } from "@/lib/agenda";
-import { chaveDiaSaoPaulo } from "@/lib/dataHora";
+import { diaTrabalho, ehPlanejamento } from "@/lib/organizacaoTarefas";
 
 type TarefaResumo = TarefaCronograma & {
   cliente: { id: string; nome: string; cor: string | null } | null;
@@ -38,8 +38,8 @@ export function ResumoMensalAgenda({
       nome: c.nome,
       tarefas: c.tarefas.filter(
         (t) =>
-          t.prazo &&
-          chaveDiaSaoPaulo(new Date(t.prazo)).slice(0, 7) === mesChave,
+          !ehPlanejamento(t) && t.prazo &&
+          diaTrabalho(t.prazo).slice(0, 7) === mesChave,
       ).length,
       ...resumirCronograma(c.tarefas, mesChave),
     }))

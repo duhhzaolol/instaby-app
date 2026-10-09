@@ -22,6 +22,18 @@ export type VersaoNovidades = {
 
 export const NOVIDADES: VersaoNovidades[] = [
   {
+    versao: 174,
+    resumo: "Ideias no Planejamento, trabalho na Produção e uma Agenda mais simples.",
+    itens: [
+      { tipo: "adicionado", texto: "Planejamento reúne as ideias e o cronograma de cada cliente. Colocar em produção aproveita o mesmo conteúdo, mantendo roteiro, comentários, arquivos e datas." },
+      { tipo: "melhorado", texto: "Produção abre em lista da semana, incluindo as atrasadas. Próximas semanas, itens sem prazo, concluídas e Kanban continuam disponíveis." },
+      { tipo: "melhorado", texto: "Agenda destaca Postagens e Trabalho, com filtros extras recolhidos. A Lista do mês e a impressão continuam disponíveis; o horário de postagem é opcional." },
+      { tipo: "melhorado", texto: "Os detalhes abrem em uma janela maior com roteiro, datas, responsável e comentários. Revisão do cliente tem uma aba própria; configurações, Drive e dependências ficam recolhidos." },
+      { tipo: "corrigido", texto: "Ideias não entram nos avisos de produção atrasada ou sem responsável. Postagens planejadas que passaram do dia sem publicação têm um aviso separado." },
+      { tipo: "melhorado", texto: "Seus conteúdos existentes não mudam de lugar sozinhos. Use Mover para planejamento nos que ainda não começaram, sem apagar as informações cadastradas." },
+    ],
+  },
+  {
     versao: 173,
     resumo: "Clientes com navegação organizada e uma área protegida para logins e senhas.",
     itens: [

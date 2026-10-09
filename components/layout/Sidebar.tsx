@@ -62,8 +62,8 @@ export type ContadoresMenu = {
 // pago, Horas.
 const menuGeral = [
   { chave: "inicio", label: "Início", href: "/dashboard", icon: LayoutGrid },
-  { chave: "tarefas", label: "Tarefas", href: "/dashboard/tarefas", icon: Clapperboard },
   { chave: "agenda", label: "Agenda", href: "/dashboard/agenda", icon: Calendar },
+  { chave: "tarefas", label: "Produção", href: "/dashboard/tarefas", icon: Clapperboard },
   { chave: "clientes", label: "Clientes", href: "/dashboard/clientes", icon: Users },
   { chave: "trafego", label: "Tráfego pago", href: "/dashboard/trafego", icon: Megaphone },
   { chave: "horas", label: "Horas", href: "/dashboard/horas", icon: Clock },

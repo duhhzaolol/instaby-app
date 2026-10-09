@@ -4,6 +4,7 @@ import { getUsuarioAtual, clienteIdsPermitidos, podeVerCliente } from "@/lib/per
 import { garantirPastaTarefa } from "@/lib/google";
 import { CATEGORIAS_COM_PASTA_DRIVE } from "@/lib/categoriaTarefaVisual";
 import { dataIsoValida, dataIsoParaDate } from "@/lib/midiaRevisao";
+import { ehPlanejamento, tipoTrabalhoValido } from "@/lib/organizacaoTarefas";
 
 export async function GET() {
   const usuario = await getUsuarioAtual();
@@ -24,11 +25,19 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json();
 
+  if (body.tipo !== undefined && !tipoTrabalhoValido(body.tipo)) {
+    return NextResponse.json({ erro: "Escolha Planejamento ou Produção." }, { status: 400 });
+  }
+
   if (!body.titulo) {
     return NextResponse.json({ erro: "Título é obrigatório" }, { status: 400 });
   }
   if (body.clienteId && !(await podeVerCliente(usuario, body.clienteId))) {
     return NextResponse.json({ erro: "Não autorizado" }, { status: 403 });
+  }
+  if (body.responsavelId) {
+    const responsavel = await prisma.usuario.findUnique({ where: { id: body.responsavelId }, select: { ativo: true } });
+    if (!responsavel?.ativo) return NextResponse.json({ erro: "Essa pessoa não existe ou não está mais ativa." }, { status: 400 });
   }
   for (const [campo, label] of [["prazo", "Prazo de produção"], ["publicacaoSugeridaEm", "Dia planejado de postagem"]]) {
     if (body[campo] !== undefined && body[campo] !== null && body[campo] !== "" && !dataIsoValida(body[campo])) {
@@ -43,6 +52,7 @@ export async function POST(request: NextRequest) {
       categoria: body.categoria || null,
       descricao: body.descricao || null,
       prioridade: body.prioridade || "media",
+      responsavelId: body.responsavelId || null,
       clienteId: body.clienteId || null,
       link: body.link || null,
       prazo: body.prazo ? dataIsoParaDate(body.prazo) : null,
@@ -67,7 +77,7 @@ export async function POST(request: NextRequest) {
   // semana) se for categoria de mídia com prazo e cliente definidos. Best-effort —
   // se o Drive falhar, a tarefa já foi criada normalmente, só fica sem pasta
   // vinculada (tenta de novo numa próxima edição, ver PATCH de /api/tarefas/[id]).
-  if (tarefa.clienteId && tarefa.prazo && CATEGORIAS_COM_PASTA_DRIVE.includes((tarefa.categoria || "") as any)) {
+  if (!ehPlanejamento(tarefa) && tarefa.clienteId && tarefa.prazo && CATEGORIAS_COM_PASTA_DRIVE.includes((tarefa.categoria || "") as any)) {
     try {
       const driveFolderId = await garantirPastaTarefa(tarefa.id);
       if (driveFolderId) (tarefa as any).driveFolderId = driveFolderId;

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { abrirDetalheTarefa } from "@/lib/abrirDetalheTarefa";
 import { ArrowUpRight, CalendarDays, Plus } from "lucide-react";
 import type { EventoAgenda } from "@/components/dashboard/AgendaGrid";
 import type { ClienteAgenda } from "@/components/dashboard/FiltroClienteAgenda";
@@ -27,7 +27,6 @@ export function AgendaLista({
   clienteIdAtual?: string;
   baseData?: "trabalho" | "postagem";
 }) {
-  const router = useRouter();
   const [criando, setCriando] = useState(false);
   useEffect(() => {
     function fechar(e: KeyboardEvent) {
@@ -51,7 +50,7 @@ export function AgendaLista({
     const hora = horarioEventoAgenda(e);
     const producao = dataHoraAgenda(e.prazo);
     const planejada = dataHoraAgenda(e.postagemPlanejada);
-    const publicado = dataHoraAgenda(e.publicadoEm);
+    const publicado = dataHoraAgenda(e.publicadoEm, false);
     const dia = `${e.data.slice(8, 10)}/${e.data.slice(5, 7)}`;
     return (
       <>
@@ -124,7 +123,7 @@ export function AgendaLista({
           onClick={() => setCriando(true)}
           className="flex min-h-10 items-center gap-1.5 rounded-xl bg-accent px-3 text-sm font-medium text-white"
         >
-          <Plus size={15} /> Nova tarefa na agenda
+          <Plus size={15} /> {baseData === "postagem" ? "Planejar conteúdo" : "Novo trabalho"}
         </button>
       </div>
       <div className="space-y-2" aria-label="Cronograma do mês em lista">
@@ -159,7 +158,7 @@ export function AgendaLista({
               key={`${e.origem}-${e.id}`}
               className={estilo}
               aria-label={`Abrir tarefa: ${e.texto}${e.clienteNome ? ` · ${e.clienteNome}` : ""}`}
-              onClick={() => router.push(e.href, { scroll: false })}
+              onClick={() => abrirDetalheTarefa(e.id)}
             >
               {conteudo(e)}
             </button>
@@ -184,6 +183,7 @@ export function AgendaLista({
                 : "Escolha o prazo de produção. O dia de postagem pode ser definido separadamente."}
             </p>
             <NovaTarefaGlobalForm
+              tipoInicial={baseData === "postagem" ? "ideia" : "tarefa"}
               key={clienteIdAtual}
               clientes={clientes}
               abertoInicial

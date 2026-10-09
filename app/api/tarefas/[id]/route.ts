@@ -13,6 +13,7 @@ import { STATUS_VALIDOS, statusFechaCronometro, statusLabel } from "@/lib/tarefa
 import { STATUS_CONTEUDO_VALIDOS, statusConteudoLabel } from "@/lib/revisaoConteudo";
 import { criarNotificacao } from "@/lib/notificacoes";
 import { dataIsoValida, dataIsoParaDate, dataHoraPublicacao } from "@/lib/midiaRevisao";
+import { ehPlanejamento, podeVoltarAoPlanejamento, tipoTrabalhoValido } from "@/lib/organizacaoTarefas";
 
 // Detalhe completo — alimenta o painel lateral (Etapa 1 v152): checklist,
 // comentários internos, histórico de alterações e o cronômetro em aberto (se
@@ -20,6 +21,30 @@ import { dataIsoValida, dataIsoParaDate, dataHoraPublicacao } from "@/lib/midiaR
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   const usuario = await getUsuarioAtual();
   if (!usuario) return NextResponse.json({ erro: "Não autenticado" }, { status: 401 });
+
+  // O primeiro painel precisa de roteiro, datas e comentários, sem esperar por
+  // versões, histórico, dependências ou consultas de horas. O GET tradicional
+  // continua disponível quando o usuário abre essas informações adicionais.
+  if (request.nextUrl.searchParams.get("resumo") === "1") {
+    const resumo = await prisma.tarefa.findUnique({
+      where: { id: params.id },
+      include: {
+        cliente: { select: { id: true, nome: true, cor: true, driveLogotiposFolderId: true } },
+        responsavel: { select: { id: true, nome: true, fotoUrl: true } },
+        bloqueioResponsavel: { select: { id: true, nome: true, fotoUrl: true } },
+        checklist: { orderBy: { ordem: "asc" } },
+        comentarios: { orderBy: { createdAt: "asc" }, include: { usuario: { select: { nome: true, fotoUrl: true } } } },
+      },
+    });
+    if (!resumo) return NextResponse.json({ erro: "Não encontrada" }, { status: 404 });
+    if (resumo.clienteId && !(await podeVerCliente(usuario, resumo.clienteId))) {
+      return NextResponse.json({ erro: "Não autorizado" }, { status: 403 });
+    }
+    return NextResponse.json({
+      ...resumo, historico: [], versoes: [], dependeDe: [], bloqueiaDe: [],
+      rotinaGerada: null, registroTempoAberto: null, dadosComplementaresPendentes: true,
+    }, { headers: { "Cache-Control": "no-store" } });
+  }
 
   const tarefa = await prisma.tarefa.findUnique({
     where: { id: params.id },
@@ -91,6 +116,28 @@ export async function PATCH(
   }
 
   const body = await request.json();
+  if (body.tipo !== undefined && !tipoTrabalhoValido(body.tipo)) {
+    return NextResponse.json({ erro: "Escolha Planejamento ou Produção." }, { status: 400 });
+  }
+  const tipoFinal = body.tipo !== undefined ? body.tipo : existente.tipo;
+  if (tipoFinal === "ideia" &&
+    ((body.status !== undefined && body.status !== "a_fazer") || body.statusConteudo || body.publicadoEm || body.linkPublicacao)) {
+    return NextResponse.json({ erro: "Coloque este conteúdo em produção antes de iniciar o trabalho ou registrar uma publicação." }, { status: 409 });
+  }
+  if (body.tipo === "ideia" && !ehPlanejamento(existente)) {
+    const [versoes, registrosTempo, passosFeitos, jaTrabalhada] = await Promise.all([
+      prisma.versaoConteudo.count({ where: { tarefaId: existente.id } }),
+      prisma.registroTempo.count({ where: { tarefaId: existente.id } }),
+      prisma.checklistItemTarefa.count({ where: { tarefaId: existente.id, feito: true } }),
+      prisma.historicoTarefa.findFirst({
+        where: { tarefaId: existente.id, campo: "status", valorNovo: { in: ["Em andamento", "Bloqueada", "Feito", "em_andamento", "bloqueada", "feito"] } },
+        select: { id: true },
+      }),
+    ]);
+    if (!podeVoltarAoPlanejamento({ ...existente, versoes, registrosTempo, passosFeitos, jaTrabalhada: !!jaTrabalhada })) {
+      return NextResponse.json({ erro: "Este trabalho já foi iniciado. Mantenha-o na Produção para preservar seu acompanhamento." }, { status: 409 });
+    }
+  }
   for (const [campo, label] of [["prazo", "Prazo de produção"], ["publicacaoSugeridaEm", "Dia planejado de postagem"], ["publicadoEm", "Data de publicação"]]) {
     if (body[campo] !== undefined && body[campo] !== null && body[campo] !== "" && !dataIsoValida(body[campo])) {
       return NextResponse.json({ erro: `${label} inválido.` }, { status: 400 });
@@ -299,6 +346,10 @@ export async function PATCH(
   type LinhaHistorico = { campo: string; valorAntigo: string | null; valorNovo: string | null };
   const historico: LinhaHistorico[] = [];
 
+  if (body.tipo !== undefined && body.tipo !== existente.tipo) {
+    historico.push({ campo: "Organização", valorAntigo: ehPlanejamento(existente) ? "Planejamento" : "Produção", valorNovo: body.tipo === "ideia" ? "Planejamento" : "Produção" });
+  }
+
   if (body.titulo !== undefined && body.titulo !== existente.titulo) {
     historico.push({ campo: "titulo", valorAntigo: existente.titulo, valorNovo: body.titulo });
   }
@@ -387,6 +438,7 @@ export async function PATCH(
   const tarefa = await prisma.tarefa.update({
     where: { id: params.id },
     data: {
+      ...(body.tipo !== undefined && { tipo: body.tipo }),
       ...(statusPedido !== undefined && { status: statusPedido }),
       ...(body.titulo !== undefined && { titulo: body.titulo }),
       ...(body.descricao !== undefined && { descricao: body.descricao }),
@@ -465,7 +517,7 @@ export async function PATCH(
 
   // Categoria/prazo podem ter sido definidos só agora (tarefa criada sem prazo e
   // completada depois, por exemplo) — se ainda não tinha pasta, tenta criar.
-  if (!tarefa.driveFolderId && tarefa.clienteId && tarefa.prazo && CATEGORIAS_COM_PASTA_DRIVE.includes((tarefa.categoria || "") as any)) {
+  if (!ehPlanejamento(tarefa) && !tarefa.driveFolderId && tarefa.clienteId && tarefa.prazo && CATEGORIAS_COM_PASTA_DRIVE.includes((tarefa.categoria || "") as any)) {
     try {
       const driveFolderId = await garantirPastaTarefa(tarefa.id);
       if (driveFolderId) (tarefa as any).driveFolderId = driveFolderId;

@@ -1,10 +1,11 @@
+import { diaTrabalho } from "@/lib/organizacaoTarefas";
+
 export function urgenciaPrazo(prazo: string | Date | null | undefined): { cor: string; label: string } | null {
   if (!prazo) return null;
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-  const dia = new Date(prazo);
-  dia.setHours(0, 0, 0, 0);
-  const diffDias = Math.round((dia.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+  const dia = diaTrabalho(prazo);
+  if (!dia) return null;
+  const hoje = diaTrabalho(new Date(), false);
+  const diffDias = Math.round((Date.parse(`${dia}T12:00:00Z`) - Date.parse(`${hoje}T12:00:00Z`)) / 86400000);
 
   if (diffDias < 0) return { cor: "#EF4444", label: "vencido" };
   if (diffDias === 0) return { cor: "#F97316", label: "vence hoje" };

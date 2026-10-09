@@ -25,7 +25,8 @@ import { Card } from "@/components/ui/Card";
 import { StatTile } from "@/components/ui/StatTile";
 import { CountUp } from "@/components/ui/CountUp";
 import { QuickCommandCenter } from "@/components/dashboard/QuickCommandCenter";
-import QuadroTarefas from "@/components/dashboard/QuadroTarefas";
+import { abrirDetalheTarefa } from "@/lib/abrirDetalheTarefa";
+import { diaTrabalho, filtrarTrabalho, tarefaAtrasada } from "@/lib/organizacaoTarefas";
 import type { TarefaRowData } from "@/components/dashboard/TarefaRow";
 import { EquipeAgora, type PessoaAgora } from "@/components/dashboard/EquipeAgora";
 import { visualDaCategoriaTarefa } from "@/lib/categoriaTarefaVisual";
@@ -175,6 +176,8 @@ export default function DashboardClient({
   caixa7Dias: DiaCaixa[];
 }) {
   const { oculto, alternar } = useOcultarValores();
+  const producaoSemana = filtrarTrabalho(tarefas, "semana")
+    .sort((a, b) => diaTrabalho(a.prazo).localeCompare(diaTrabalho(b.prazo)));
 
   const cards = [
     {
@@ -472,7 +475,19 @@ export default function DashboardClient({
         <StatTile icone={<CheckCircle2 size={12} style={{ color: "#22C55E" }} />} label="Feitas essa semana" valor={tarefasPorStatus.feitasSemana} />
       </div>
 
-      <QuadroTarefas tarefas={tarefas} />
+      <section className="mb-6 border-y border-border py-5" aria-labelledby="producao-semana-titulo">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 id="producao-semana-titulo" className="text-base font-medium text-text">Produção nesta semana</h2>
+          <div className="flex flex-wrap gap-3"><Link href="/dashboard/agenda" className="inline-flex min-h-11 items-center text-sm text-accent-text hover:underline">Abrir agenda</Link><Link href="/dashboard/tarefas" className="inline-flex min-h-11 items-center text-sm text-muted hover:text-text">Ver produção</Link></div>
+        </div>
+        {producaoSemana.length === 0 ? <p className="py-3 text-sm text-muted">Nenhum trabalho com prazo para os próximos sete dias. As ideias continuam no Planejamento.</p> : <div className="divide-y divide-border">
+          {producaoSemana.slice(0, 8).map(t => {
+            const dia = diaTrabalho(t.prazo);
+            return <button type="button" key={t.id} onClick={() => abrirDetalheTarefa(t.id)} className="flex min-h-14 w-full items-center justify-between gap-4 rounded-lg px-2 py-3 text-left hover:bg-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"><span className="min-w-0"><span className="block break-words text-sm font-medium text-text">{t.titulo}</span><span className="mt-1 block text-xs text-muted">{t.clienteNome || "Trabalho interno"} · {t.status === "bloqueada" ? "Bloqueado" : t.status === "em_andamento" ? "Em andamento" : "A produzir"}</span></span><span className={`shrink-0 text-sm ${tarefaAtrasada(t) ? "text-danger-text" : "text-muted"}`}>{dia.slice(8, 10)}/{dia.slice(5, 7)}{tarefaAtrasada(t) ? " · atrasado" : ""}</span></button>;
+          })}
+          {producaoSemana.length > 8 && <Link href="/dashboard/tarefas?periodo=semana" className="inline-flex min-h-11 items-center text-sm text-muted hover:text-text">Ver os {producaoSemana.length} trabalhos da semana</Link>}
+        </div>}
+      </section>
 
       {variacaoFaturamento !== null && (
         <div className="mb-6 overflow-hidden rounded-2xl border border-accent/20 bg-gradient-to-br from-accent/10 via-card to-card p-5">

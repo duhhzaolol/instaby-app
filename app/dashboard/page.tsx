@@ -16,6 +16,7 @@ import type { PessoaAgora } from "@/components/dashboard/EquipeAgora";
 import { getUsuarioAtual, permissoesDe, clienteIdsPermitidos, type Usuario } from "@/lib/permissoes";
 import { totalizarResultados, calcularRitmoVerba } from "@/lib/agregarResultadosCampanha";
 import { redirect } from "next/navigation";
+import { diaTrabalho, filtrarTrabalho, inicioDiaTrabalho } from "@/lib/organizacaoTarefas";
 
 function inicioMes() {
   const d = new Date();
@@ -33,8 +34,7 @@ function inicioMesesAtras(n: number) {
 }
 
 function inicioHoje() {
-  const d = new Date();
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  return inicioDiaTrabalho();
 }
 
 function fimHoje() {
@@ -118,7 +118,7 @@ async function InicioDono() {
     contratosRecentes,
     orcamentosRecentes,
     faturamentoMesAnteriorAgg,
-    tarefasAtrasadas,
+    tarefasParaAlertas,
     cobrancasVencidas,
     contratosAssinados,
     despesasSemClassificacao,
@@ -132,7 +132,6 @@ async function InicioDono() {
     tarefasEmAndamentoCount,
     tarefasFeitasSemana,
     propostasSemResposta,
-    tarefasSemResponsavel,
     cobrancasProximosDias,
     despesasProximosDias,
   ] = await Promise.all([
@@ -140,11 +139,15 @@ async function InicioDono() {
     prisma.cliente.count({ where: { status: "lead" } }),
     Promise.resolve({ _sum: { valor: entradasMes.reduce((s, c) => s + c.valor, 0) } }),
     Promise.resolve({ _sum: { valor: contasAbertas.reduce((s, c) => s + saldoDe(c), 0) }, _count: contasAbertas.length }),
-    prisma.tarefa.count({ where: { status: { in: ["a_fazer", "em_andamento"] } } }),
+    prisma.tarefa.count({ where: { tipo: { not: "ideia" }, status: { in: ["a_fazer", "em_andamento"] } } }),
     prisma.tarefa.findMany({
-      include: { cliente: { select: { nome: true, cor: true } } },
-      orderBy: { createdAt: "desc" },
-      take: 100,
+      where: { tipo: { not: "ideia" }, status: { not: "feito" }, prazo: { lt: diasNoFuturo(7) } },
+      select: {
+        id: true, titulo: true, tipo: true, status: true, prazo: true, categoria: true,
+        descricao: true, prioridade: true, clienteId: true, responsavelId: true,
+        cliente: { select: { nome: true, cor: true } },
+      },
+      orderBy: { prazo: "asc" },
     }),
     prisma.cliente.findMany({
       where: { status: { not: "inativo" } },
@@ -157,19 +160,19 @@ async function InicioDono() {
         id: true,
         nome: true,
         cor: true,
-        _count: { select: { tarefas: true } },
-        tarefas: { where: { status: { not: "feito" } }, select: { id: true } },
+        _count: { select: { tarefas: { where: { tipo: { not: "ideia" } } } } },
+        tarefas: { where: { tipo: { not: "ideia" }, status: { not: "feito" } }, select: { id: true } },
       },
       orderBy: { nome: "asc" },
       take: 6,
     }),
     prisma.tarefa.findMany({
-      where: { prazo: { gte: inicioHoje(), lt: fimHoje() } },
+      where: { tipo: { not: "ideia" }, prazo: { gte: new Date(inicioHoje().getTime() - 3 * 3600000), lt: fimHoje() } },
       include: { cliente: { select: { nome: true, cor: true } } },
       orderBy: { prazo: "asc" },
     }),
     prisma.tarefa.findMany({
-      where: { prazo: { gte: fimHoje(), lt: fimAmanha() }, status: { not: "feito" } },
+      where: { tipo: { not: "ideia" }, prazo: { gte: new Date(fimHoje().getTime() - 3 * 3600000), lt: fimAmanha() }, status: { not: "feito" } },
       include: { cliente: { select: { nome: true, cor: true } } },
       orderBy: { prazo: "asc" },
     }),
@@ -189,7 +192,13 @@ async function InicioDono() {
       take: 3,
     }),
     Promise.resolve({ _sum: { valor: recebimentos.filter(c => c.createdAt >= periodoAnterior.desde && c.createdAt <= periodoAnterior.ate).reduce((s, c) => s + c.valor, 0) } }),
-    prisma.tarefa.count({ where: { status: { not: "feito" }, prazo: { lt: new Date() } } }),
+    prisma.tarefa.findMany({
+      where: { OR: [
+        { tipo: { not: "ideia" }, status: { not: "feito" } },
+        { publicacaoSugeridaEm: { not: null }, publicadoEm: null, OR: [{ statusConteudo: null }, { statusConteudo: { not: "publicado" } }] },
+      ] },
+      select: { tipo: true, status: true, prazo: true, responsavelId: true, publicacaoSugeridaEm: true, publicadoEm: true, statusConteudo: true },
+    }),
     Promise.resolve(contasAbertas.filter(c => c.vencimento && diaFinanceiro(c.vencimento) < diaFinanceiro(new Date(), false)).length),
     prisma.contrato.findMany({
       where: { status: "assinado" },
@@ -214,11 +223,10 @@ async function InicioDono() {
       where: { usuarioId: { not: null }, inicio: { gte: inicioSemana() } },
       select: { usuarioId: true, inicio: true, fim: true },
     }),
-    prisma.tarefa.count({ where: { status: "a_fazer" } }),
-    prisma.tarefa.count({ where: { status: "em_andamento" } }),
-    prisma.tarefa.count({ where: { status: "feito", concluidaEm: { gte: inicioSemana() } } }),
+    prisma.tarefa.count({ where: { tipo: { not: "ideia" }, status: "a_fazer" } }),
+    prisma.tarefa.count({ where: { tipo: { not: "ideia" }, status: "em_andamento" } }),
+    prisma.tarefa.count({ where: { tipo: { not: "ideia" }, status: "feito", concluidaEm: { gte: inicioSemana() } } }),
     prisma.orcamento.count({ where: { status: "pendente", enviadoEm: { not: null } } }),
-    prisma.tarefa.count({ where: { status: { not: "feito" }, responsavelId: null } }),
     Promise.resolve(contasAbertas.filter(c => c.vencimento && inicioDiaFinanceiro(c.vencimento) >= hojeCaixa && inicioDiaFinanceiro(c.vencimento) < fimCaixa).map(c => ({ valor: saldoDe(c), vencimento: inicioDiaFinanceiro(c.vencimento!) }))),
     Promise.resolve(contasPagar.filter(c => saldoDe(c) > 0 && c.vencimento && inicioDiaFinanceiro(c.vencimento) >= hojeCaixa && inicioDiaFinanceiro(c.vencimento) < fimCaixa).map(c => ({ valor: saldoDe(c), vencimento: inicioDiaFinanceiro(c.vencimento!) }))),
   ]);
@@ -236,10 +244,15 @@ async function InicioDono() {
   }).length;
 
   const oportunidadesSemProximaAcao = oportunidadesAbertas.filter((o) => !o.proximaAcao || !o.dataProximaAcao).length;
+  const agora = new Date();
+  const tarefasAtrasadas = filtrarTrabalho(tarefasParaAlertas, "atrasadas", agora).length;
+  const tarefasSemResponsavel = filtrarTrabalho(tarefasParaAlertas, "sem_responsavel", agora).length;
+  const postagensPendentes = filtrarTrabalho(tarefasParaAlertas, "postagens_pendentes", agora).length;
 
   const alertas = [
-    { label: "Tarefas atrasadas", contagem: tarefasAtrasadas, href: "/dashboard/tarefas", cor: "#EF4444" },
-    { label: "Tarefas sem responsável", contagem: tarefasSemResponsavel, href: "/dashboard/tarefas", cor: "#F59E0B" },
+    { label: "Produção atrasada", contagem: tarefasAtrasadas, href: "/dashboard/tarefas?area=producao&filtro=atrasadas", cor: "#EF4444" },
+    { label: "Produção sem responsável", contagem: tarefasSemResponsavel, href: "/dashboard/tarefas?area=producao&filtro=sem_responsavel", cor: "#F59E0B" },
+    { label: "Postagens pendentes", contagem: postagensPendentes, href: "/dashboard/tarefas?filtro=postagens_pendentes", cor: "#F59E0B" },
     { label: "Cobranças vencidas", contagem: cobrancasVencidas, href: "/dashboard/financeiro/contas-a-receber", cor: "#EF4444" },
     { label: "Propostas enviadas sem resposta", contagem: propostasSemResposta, href: "/dashboard/orcamentos", cor: "#F59E0B" },
     { label: "Contrato(s) renovando em breve", contagem: contratosRenovando, href: "/dashboard/contratos", cor: "#F59E0B" },
@@ -391,7 +404,7 @@ async function InicioDono() {
         totalTarefas: c._count.tarefas,
         pendentes: c.tarefas.length,
       }))}
-      tarefasHoje={tarefasHoje.map((t) => ({
+      tarefasHoje={tarefasHoje.filter(t => diaTrabalho(t.prazo) === diaTrabalho(agora, false)).map((t) => ({
         id: t.id,
         titulo: t.titulo,
         categoria: t.categoria,
@@ -399,7 +412,7 @@ async function InicioDono() {
         clienteNome: t.cliente?.nome || null,
         clienteCor: t.cliente?.cor || null,
       }))}
-      tarefasAmanha={tarefasAmanha.map((t) => ({
+      tarefasAmanha={tarefasAmanha.filter(t => diaTrabalho(t.prazo) === diaTrabalho(fimHoje(), false)).map((t) => ({
         id: t.id,
         titulo: t.titulo,
         categoria: t.categoria,
@@ -439,6 +452,7 @@ async function InicioEditorPage({ usuario }: { usuario: Usuario }) {
     // pra qualquer editor pegar) OU já é dela — nunca a fila de outro editor.
     prisma.tarefa.findMany({
       where: {
+        tipo: { not: "ideia" },
         status: { not: "feito" },
         AND: [{ OR: [{ responsavelId: null }, { responsavelId: usuarioId }] }, filtroClienteTarefa],
       },
@@ -447,13 +461,14 @@ async function InicioEditorPage({ usuario }: { usuario: Usuario }) {
     }),
     // "Pronto" do quadro: só o que essa pessoa concluiu (histórico pessoal).
     prisma.tarefa.findMany({
-      where: { status: "feito", responsavelId: usuarioId, ...filtroClienteTarefa },
+      where: { tipo: { not: "ideia" }, status: "feito", responsavelId: usuarioId, ...filtroClienteTarefa },
       include: incluirTarefa,
       orderBy: { concluidaEm: "desc" },
       take: 20,
     }),
     prisma.tarefa.findMany({
       where: {
+        tipo: { not: "ideia" },
         categoria: { in: ["gravacao", "reel", "fotos"] },
         status: { not: "feito" },
         prazo: { gte: inicioHoje() },
@@ -560,6 +575,7 @@ async function InicioTrafegoPage({ usuario }: { usuario: Usuario }) {
     }),
     prisma.tarefa.findMany({
       where: {
+        tipo: { not: "ideia" },
         categoria: { in: ["arte", "reel", "fotos", "gravacao"] },
         status: { not: "feito" },
         cliente: { campanhas: { some: { status: "ativa" } }, ...(idsPermitidos ? { id: { in: idsPermitidos } } : {}) },
@@ -572,6 +588,7 @@ async function InicioTrafegoPage({ usuario }: { usuario: Usuario }) {
     // mesma lógica do quadro do Editor: "a fazer" mistura sem-dono com as dela.
     prisma.tarefa.findMany({
       where: {
+        tipo: { not: "ideia" },
         status: { not: "feito" },
         AND: [{ OR: [{ responsavelId: null }, { responsavelId: usuarioId }] }, filtroClienteTarefa],
       },
@@ -579,7 +596,7 @@ async function InicioTrafegoPage({ usuario }: { usuario: Usuario }) {
       orderBy: { createdAt: "desc" },
     }),
     prisma.tarefa.findMany({
-      where: { status: "feito", responsavelId: usuarioId, ...filtroClienteTarefa },
+      where: { tipo: { not: "ideia" }, status: "feito", responsavelId: usuarioId, ...filtroClienteTarefa },
       include: { cliente: { select: { nome: true, cor: true } }, checklist: { orderBy: { ordem: "asc" } } },
       orderBy: { concluidaEm: "desc" },
       take: 20,

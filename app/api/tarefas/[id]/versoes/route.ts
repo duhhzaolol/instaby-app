@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getUsuarioAtual, podeVerCliente } from "@/lib/permissoes";
 import { CATEGORIAS_COM_REVISAO } from "@/lib/categoriaTarefaVisual";
 import { statusConteudoLabel } from "@/lib/revisaoConteudo";
+import { ehPlanejamento } from "@/lib/organizacaoTarefas";
 
 // Cria uma versão NOVA de material pra revisão (Etapa 2 v153) — sempre uma linha
 // adicional, nunca edita uma já existente (vídeo/imagem/legenda ficam congelados
@@ -18,6 +19,9 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   if (!tarefa) return NextResponse.json({ erro: "Não encontrada" }, { status: 404 });
   if (tarefa.clienteId && !(await podeVerCliente(usuario, tarefa.clienteId))) {
     return NextResponse.json({ erro: "Não autorizado" }, { status: 403 });
+  }
+  if (ehPlanejamento(tarefa)) {
+    return NextResponse.json({ erro: "Coloque este conteúdo em produção antes de enviar uma versão para revisão." }, { status: 409 });
   }
   if (!CATEGORIAS_COM_REVISAO.includes((tarefa.categoria || "") as any)) {
     return NextResponse.json({ erro: "Essa categoria de tarefa não usa o fluxo de revisão de conteúdo." }, { status: 400 });

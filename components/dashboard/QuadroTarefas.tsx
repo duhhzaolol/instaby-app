@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Circle, PlayCircle, CheckCircle2, Lock, Trash2, Clock } from "lucide-react";
 import { visualDaCategoriaTarefa } from "@/lib/categoriaTarefaVisual";
 import { urgenciaPrazo } from "@/lib/urgenciaPrazo";
 import { formatarDuracao } from "@/lib/formatarDuracao";
+import { abrirDetalheTarefa } from "@/lib/abrirDetalheTarefa";
 
 export type TarefaQuadro = {
   id: string;
@@ -121,7 +122,6 @@ export default function QuadroTarefas({
   linkVerTudo?: string | null;
 }) {
   const router = useRouter();
-  const pathname = usePathname();
   const [itens, setItens] = useState(tarefas);
   const [arrastandoId, setArrastandoId] = useState<string | null>(null);
   const [colunaSobre, setColunaSobre] = useState<string | null>(null);
@@ -140,9 +140,7 @@ export default function QuadroTarefas({
   // esse hook exige um <Suspense> acima dele em toda página que o usa, e esse
   // quadro é renderizado em várias — ler a URL na hora do clique evita isso.
   function abrirPainel(id: string) {
-    const params = new URLSearchParams(window.location.search);
-    params.set("tarefa", id);
-    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    abrirDetalheTarefa(id);
   }
 
   async function aplicarStatus(id: string, status: string) {

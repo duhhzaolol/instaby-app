@@ -1,7 +1,9 @@
 "use client";
 
+import { abrirDetalheTarefa } from "@/lib/abrirDetalheTarefa";
+
 import { useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Trash2, ChevronDown, Clock, HardDrive, ExternalLink, CheckCircle2, AlertCircle, PanelRight } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { visualDaCategoriaTarefa, PRIORIDADES, CATEGORIAS_QUE_PRECISAM_VIDEO_BRUTO } from "@/lib/categoriaTarefaVisual";
@@ -39,7 +41,6 @@ export function TarefaRow({
   clienteCor?: string | null;
 }) {
   const router = useRouter();
-  const pathname = usePathname();
   const [excluindo, setExcluindo] = useState(false);
   const [detalheAberto, setDetalheAberto] = useState(false);
   const [descricao, setDescricao] = useState(tarefa.descricao || "");
@@ -74,9 +75,7 @@ export function TarefaRow({
   // Painel lateral de detalhes (Etapa 1 v152) — aberto pelo botão dedicado (ver
   // abaixo); é lá que ficam comentários, histórico e o formulário de bloqueio.
   function abrirPainel() {
-    const params = new URLSearchParams(window.location.search);
-    params.set("tarefa", tarefa.id);
-    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    abrirDetalheTarefa(tarefa.id);
   }
 
   async function mudarStatus(status: string) {

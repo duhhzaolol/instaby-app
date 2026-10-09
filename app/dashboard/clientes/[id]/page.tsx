@@ -1,8 +1,8 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Phone, Plus, Pencil, Building2, MapPin, User, FolderOpen, CalendarClock, CalendarDays } from "lucide-react";
+import { ArrowLeft, Phone, Plus, Pencil, Building2, MapPin, User, FolderOpen, CalendarClock } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import NovaTarefaForm from "./NovaTarefaForm";
 import AplicarTemplateForm from "./AplicarTemplateForm";
 import ContratosTab from "./ContratosTab";
 import FinanceiroTab from "./FinanceiroTab";
@@ -23,7 +23,7 @@ import { EntregasTab } from "./EntregasTab";
 import { CronogramaCliente } from "@/components/dashboard/CronogramaCliente";
 import { periodoAgenda } from "@/lib/agenda";
 import ArquivosTab from "./ArquivosTab";
-import { TarefaRow } from "@/components/dashboard/TarefaRow";
+import PlanejamentoProducao from "@/components/dashboard/PlanejamentoProducao";
 import { OrcamentoRow } from "@/components/dashboard/OrcamentoRow";
 import TrafegoClient from "@/components/dashboard/TrafegoClient";
 import { PagamentoMidiaCliente } from "@/components/dashboard/trafego/PagamentoMidiaCliente";
@@ -51,7 +51,7 @@ export default async function ClienteDetalhePage({
     prisma.cliente.findUnique({
       where: { id: params.id },
       include: {
-        tarefas: { orderBy: { createdAt: "desc" } },
+        tarefas: { include: { responsavel: { select: { nome: true } } }, orderBy: { createdAt: "desc" } },
         orcamentos: { include: { itens: true }, orderBy: { createdAt: "desc" } },
         contratos: { orderBy: { createdAt: "desc" } },
         cobrancas: { orderBy: { createdAt: "desc" }, include: { pagamentos: true } },
@@ -497,37 +497,30 @@ export default async function ClienteDetalhePage({
 
       {aba === "tarefas" && (
         <div>
-          <Link
-            href={`/dashboard/agenda?cliente=${cliente.id}&visao=tarefas`}
-            className="mb-3 flex items-center justify-center gap-1.5 rounded-xl border border-border bg-card/60 py-2.5 text-sm text-text transition-colors hover:bg-hover"
-          >
-            <CalendarDays size={14} /> Ver cronograma desse cliente na Agenda
-          </Link>
-          <div className="flex flex-col gap-2">
-            {cliente.tarefas.length === 0 && (
-              <p className="text-sm text-muted">Nenhuma tarefa ainda.</p>
-            )}
-            {cliente.tarefas.map((t, i) => (
-              <TarefaRow
-                key={t.id}
-                index={i}
-                tarefa={{
-                  id: t.id,
-                  titulo: t.titulo,
-                  tipo: t.tipo,
-                  status: t.status,
-                  prazo: t.prazo?.toISOString() || null,
-                  categoria: t.categoria,
-                  descricao: t.descricao,
-                  prioridade: t.prioridade,
-                  clienteId: cliente.id,
-                  driveFolderId: t.driveFolderId,
-                }}
-              />
-            ))}
-          </div>
-          <NovaTarefaForm clienteId={cliente.id} />
-          <AplicarTemplateForm clienteId={cliente.id} />
+          <Suspense fallback={<p role="status" className="py-6 text-sm text-muted">Carregando planejamento e produção...</p>}>
+            <PlanejamentoProducao
+              clienteFixo={cliente.id}
+              clientes={[{ id: cliente.id, nome: cliente.nome, cor: cliente.cor }]}
+              tarefas={cliente.tarefas.map(t => ({
+                id: t.id,
+                titulo: t.titulo,
+                tipo: t.tipo,
+                status: t.status,
+                categoria: t.categoria,
+                prazo: t.prazo?.toISOString() || null,
+                clienteId: cliente.id,
+                clienteNome: cliente.nome,
+                clienteCor: cliente.cor,
+                responsavelId: t.responsavelId,
+                responsavelNome: t.responsavel?.nome || null,
+                publicacaoSugeridaEm: t.publicacaoSugeridaEm?.toISOString() || null,
+                statusConteudo: t.statusConteudo,
+                publicadoEm: t.publicadoEm?.toISOString() || null,
+                concluidaEm: t.concluidaEm?.toISOString() || null,
+              }))}
+            />
+          </Suspense>
+          <div className="mt-6 border-t border-border pt-4"><AplicarTemplateForm clienteId={cliente.id} /></div>
         </div>
       )}
 

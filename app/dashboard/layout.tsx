@@ -9,6 +9,7 @@ import { getUsuarioAtual, permissoesDe, clienteIdsPermitidos } from "@/lib/permi
 import { prisma } from "@/lib/prisma";
 import { calcularStatusEfetivo } from "@/lib/statusFinanceiro";
 import { manrope, jetbrainsMono } from "@/lib/fonts";
+import { tarefaAtrasada } from "@/lib/organizacaoTarefas";
 
 export default async function DashboardLayout({
   children,
@@ -45,9 +46,10 @@ export default async function DashboardLayout({
   // Contadores do menu lateral (redesign v144, Parte 1) e lista de clientes
   // usada nos seletores do cronômetro e do "Nova tarefa" da barra do topo.
   const [tarefasAtrasadas, clientesAtivos, cobrancasVencidas, clientesParaMenu] = await Promise.all([
-    prisma.tarefa.count({
-      where: { status: { not: "feito" }, prazo: { lt: new Date() }, ...filtroTarefaCliente },
-    }),
+    prisma.tarefa.findMany({
+      where: { tipo: { not: "ideia" }, status: { not: "feito" }, prazo: { not: null }, ...filtroTarefaCliente },
+      select: { tipo: true, status: true, prazo: true },
+    }).then(tarefas => tarefas.filter(t => tarefaAtrasada(t)).length),
     prisma.cliente.count({ where: { status: "ativo", ...filtroClienteId } }),
     pode.verFinanceiro
       ? prisma.cobranca.findMany({ where: { status: { notIn: ["pago", "cancelado"] }, ...(idsPermitidos ? { clienteId: { in: idsPermitidos } } : {}) }, include: { pagamentos: true } }).then(cobrancas => cobrancas.filter(c => calcularStatusEfetivo({ status: c.status, valor: Number(c.valor), totalPago: c.pagamentos.reduce((s, p) => s + Number(p.valor), 0), vencimento: c.vencimento }) === "atrasado").length)

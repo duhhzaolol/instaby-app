@@ -1,8 +1,9 @@
-import { chaveDiaSaoPaulo } from "@/lib/dataHora";
+import { diaTrabalho, ehPlanejamento } from "@/lib/organizacaoTarefas";
 
 type DataCronograma = Date | string | null;
 export type TarefaCronograma = {
   id: string;
+  tipo?: string | null;
   categoria: string | null;
   status: string;
   prazo: DataCronograma;
@@ -29,6 +30,7 @@ export function etapaDaTarefa(t: TarefaCronograma): {
 } {
   if (t.statusConteudo === "publicado")
     return { label: "Publicado", cor: "#34D399" };
+  if (ehPlanejamento(t)) return { label: "Planejamento", cor: "#94A3B8" };
   if (t.statusConteudo === "agendado")
     return { label: "Agendado", cor: "#38BDF8" };
   const ultima = t.versoes?.[0];
@@ -47,18 +49,16 @@ export function etapaDaTarefa(t: TarefaCronograma): {
   if (t.status === "feito")
     return { label: "Produção concluída", cor: "#A3E635" };
   if (
-    t.statusConteudo === "producao" ||
-    t.categoria === "reel" ||
-    t.categoria === "arte"
+    t.statusConteudo === "producao"
   )
     return { label: "Em produção", cor: "#A78BFA" };
   return t.status === "em_andamento"
     ? { label: "Em andamento", cor: "#60A5FA" }
-    : { label: "A fazer", cor: "#9CA3AF" };
+    : { label: t.categoria === "reel" || t.categoria === "arte" ? "A produzir" : "A fazer", cor: "#9CA3AF" };
 }
 
-function noMes(valor: DataCronograma, mes: string) {
-  return !!valor && chaveDiaSaoPaulo(new Date(valor)).slice(0, 7) === mes;
+function noMes(valor: DataCronograma, mes: string, legado = true) {
+  return !!valor && diaTrabalho(valor, legado).slice(0, 7) === mes;
 }
 
 export function resumirCronograma(tarefas: TarefaCronograma[], mes: string) {
@@ -66,12 +66,12 @@ export function resumirCronograma(tarefas: TarefaCronograma[], mes: string) {
   return {
     planejados: planejadas.length,
     publicados: tarefas.filter(
-      (t) => t.statusConteudo === "publicado" && noMes(t.publicadoEm, mes),
+      (t) => t.statusConteudo === "publicado" && noMes(t.publicadoEm, mes, false),
     ).length,
     pendentes: planejadas.filter((t) => t.statusConteudo !== "publicado")
       .length,
     concluidas: tarefas.filter(
-      (t) => t.status === "feito" && noMes(t.prazo, mes),
+      (t) => !ehPlanejamento(t) && t.status === "feito" && noMes(t.prazo, mes),
     ).length,
   };
 }

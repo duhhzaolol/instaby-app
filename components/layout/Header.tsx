@@ -24,7 +24,7 @@ function saudacao() {
 }
 
 const rotulos: Record<string, string> = {
-  clientes: "Clientes", tarefas: "Tarefas", agenda: "Agenda", horas: "Horas",
+  clientes: "Clientes", tarefas: "Planejamento e produção", agenda: "Agenda", horas: "Horas",
   capacidade: "Capacidade", trafego: "Tráfego pago", servicos: "Serviços",
   pacotes: "Pacotes", oportunidades: "Oportunidades", orcamentos: "Orçamentos",
   contratos: "Contratos", financeiro: "Financeiro", perfil: "Perfil",

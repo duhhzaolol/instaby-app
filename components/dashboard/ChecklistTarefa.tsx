@@ -10,7 +10,7 @@ export type ChecklistItemData = { id: string; titulo: string; feito: boolean };
 // agora" do Início do Editor, feito pra ser reaproveitado no painel lateral de
 // tarefa que a Parte 3 vai construir (mesma API por baixo: /api/tarefas/[id]/checklist
 // pra criar, /api/checklist/[id] pra marcar/apagar).
-export function ChecklistTarefa({ tarefaId, itens }: { tarefaId: string; itens: ChecklistItemData[] }) {
+export function ChecklistTarefa({ tarefaId, itens, onChange }: { tarefaId: string; itens: ChecklistItemData[]; onChange?: () => void | Promise<void> }) {
   const router = useRouter();
   const [novo, setNovo] = useState("");
   const [adicionando, setAdicionando] = useState(false);
@@ -31,6 +31,7 @@ export function ChecklistTarefa({ tarefaId, itens }: { tarefaId: string; itens: 
       return;
     }
     setNovo("");
+    await onChange?.();
     router.refresh();
   }
 
@@ -44,6 +45,7 @@ export function ChecklistTarefa({ tarefaId, itens }: { tarefaId: string; itens: 
       alert("Não consegui atualizar esse item.");
       return;
     }
+    await onChange?.();
     router.refresh();
   }
 
@@ -53,6 +55,7 @@ export function ChecklistTarefa({ tarefaId, itens }: { tarefaId: string; itens: 
       alert("Não consegui remover esse item.");
       return;
     }
+    await onChange?.();
     router.refresh();
   }
 
@@ -61,8 +64,9 @@ export function ChecklistTarefa({ tarefaId, itens }: { tarefaId: string; itens: 
       {itens.map((item) => (
         <div key={item.id} className="group flex items-center gap-2 rounded-lg px-1.5 py-1 hover:bg-hover">
           <button
+            aria-label={`${item.feito ? "Desmarcar" : "Concluir"} passo: ${item.titulo}`}
             onClick={() => alternar(item)}
-            className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border transition-colors ${
               item.feito ? "border-emerald-500 bg-emerald-500 text-white" : "border-border text-transparent"
             }`}
           >
@@ -70,8 +74,9 @@ export function ChecklistTarefa({ tarefaId, itens }: { tarefaId: string; itens: 
           </button>
           <p className={`flex-1 text-sm ${item.feito ? "text-muted line-through" : "text-text"}`}>{item.titulo}</p>
           <button
+            aria-label={`Remover passo: ${item.titulo}`}
             onClick={() => remover(item.id)}
-            className="shrink-0 text-muted opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-hover hover:text-red-400"
           >
             <X size={12} />
           </button>
@@ -85,7 +90,8 @@ export function ChecklistTarefa({ tarefaId, itens }: { tarefaId: string; itens: 
           onChange={(e) => setNovo(e.target.value)}
           placeholder="Adicionar passo..."
           disabled={adicionando}
-          className="h-7 w-full min-w-0 flex-1 bg-transparent text-sm text-text outline-none placeholder:text-muted/60"
+          aria-label="Novo passo da tarefa"
+          className="min-h-11 w-full min-w-0 flex-1 bg-transparent text-sm text-text outline-none placeholder:text-muted focus-visible:ring-2 focus-visible:ring-accent/40"
         />
       </form>
     </div>

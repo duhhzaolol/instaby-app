@@ -35,10 +35,14 @@ export function horarioEventoAgenda(e: EventoAgenda) {
   return e.hora === "00:00" ? null : e.hora || null;
 }
 
-export function dataHoraAgenda(valor?: string | null): string | null {
+export function dataHoraAgenda(valor?: string | null, preservarDiaCivil = true): string | null {
   if (!valor) return null;
   const data = new Date(valor);
   if (!Number.isFinite(data.getTime())) return null;
+  const iso = data.toISOString();
+  if (preservarDiaCivil && iso.endsWith("T00:00:00.000Z")) {
+    return `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
+  }
   const partes = new Intl.DateTimeFormat("pt-BR", {
     timeZone: "America/Sao_Paulo",
     year: "numeric",

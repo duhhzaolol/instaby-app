@@ -11,6 +11,7 @@ import {
 import { DatePicker } from "@/components/ui/DatePicker";
 import { AvatarPessoa } from "@/components/ui/AvatarPessoa";
 import { NovaTarefaGlobalForm } from "@/components/dashboard/NovaTarefaGlobalForm";
+import { abrirDetalheTarefa } from "@/lib/abrirDetalheTarefa";
 import type { ClienteAgenda } from "@/components/dashboard/FiltroClienteAgenda";
 import {
   EtapaAgenda,
@@ -87,7 +88,7 @@ export function AgendaGrid({
   function abrir(e: EventoAgenda) {
     setDiaAberto(null);
     if (e.origem === "tarefa") {
-      router.push(e.href, { scroll: false });
+      abrirDetalheTarefa(e.id);
       return;
     }
     setEditandoHora(e);
@@ -150,7 +151,7 @@ export function AgendaGrid({
           onClick={() => criarNoDia("")}
           className="flex min-h-10 items-center gap-1.5 rounded-xl bg-accent px-3 text-sm font-medium text-white"
         >
-          <Plus size={15} /> Nova tarefa na agenda
+          <Plus size={15} /> {baseData === "postagem" ? "Planejar conteúdo" : "Novo trabalho"}
         </button>
       </div>
       <div className="overflow-x-auto rounded-2xl border border-border">
@@ -373,6 +374,7 @@ export function AgendaGrid({
             className="max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-base p-3 sm:p-5"
           >
             <NovaTarefaGlobalForm
+              tipoInicial={baseData === "postagem" ? "ideia" : "tarefa"}
               key={`${clienteIdAtual}-${novaData}`}
               clientes={clientes}
               abertoInicial

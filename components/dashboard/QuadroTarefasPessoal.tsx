@@ -1,7 +1,9 @@
 "use client";
 
+import { abrirDetalheTarefa } from "@/lib/abrirDetalheTarefa";
+
 import { useEffect, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { HardDrive, Play, Inbox, Check, Lock, Clock, ChevronDown } from "lucide-react";
 import { COLUNAS, LIMITE_FEITO, TarefaQuadro } from "@/components/dashboard/QuadroTarefas";
 import { visualDaCategoriaTarefa } from "@/lib/categoriaTarefaVisual";
@@ -162,7 +164,6 @@ function CartaoPessoal({
 
 export default function QuadroTarefasPessoal({ usuarioId, tarefas }: { usuarioId: string; tarefas: TarefaPessoal[] }) {
   const router = useRouter();
-  const pathname = usePathname();
   const [itens, setItens] = useState(tarefas);
   const [arrastandoId, setArrastandoId] = useState<string | null>(null);
   const [colunaSobre, setColunaSobre] = useState<string | null>(null);
@@ -196,9 +197,7 @@ export default function QuadroTarefasPessoal({ usuarioId, tarefas }: { usuarioId
   // (lê window.location.search na hora do clique, sem useSearchParams, pra não
   // exigir <Suspense> em toda página que renderiza esse quadro pessoal).
   function abrirPainel(id: string) {
-    const params = new URLSearchParams(window.location.search);
-    params.set("tarefa", id);
-    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    abrirDetalheTarefa(id);
   }
 
   async function claim(tarefa: TarefaPessoal) {

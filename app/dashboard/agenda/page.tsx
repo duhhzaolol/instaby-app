@@ -22,6 +22,7 @@ import { getUsuarioAtual, clienteIdsPermitidos, permissoesDe } from "@/lib/permi
 import { urgenciaPrazo } from "@/lib/urgenciaPrazo";
 import { chaveDiaSaoPaulo } from "@/lib/dataHora";
 import { linkAgenda, periodoAgenda, type FiltrosAgenda } from "@/lib/agenda";
+import { diaTrabalho, ehPlanejamento } from "@/lib/organizacaoTarefas";
 import {
   dataDaAgenda,
   etapaDaTarefa,
@@ -60,12 +61,12 @@ export default async function AgendaPage({
   const hoje = new Date();
   const periodo = periodoAgenda(searchParams.mes, hoje);
   const clienteFiltro = searchParams.cliente || "";
-  const soTarefas = searchParams.visao === "tarefas";
+  const soTarefas = searchParams.visao !== "tudo";
   const emLista = searchParams.formato === "lista";
   const baseData: BaseDataAgenda =
-    searchParams.datas === "postagem" || searchParams.datas === "publicado"
+    searchParams.datas === "trabalho" || searchParams.datas === "publicado"
       ? searchParams.datas
-      : "trabalho";
+      : searchParams.visao === "tarefas" && !searchParams.datas ? "trabalho" : "postagem";
   const soPendentes =
     baseData !== "publicado" && searchParams.status === "pendentes";
   const tiposAtivos = new Set(
@@ -94,6 +95,8 @@ export default async function AgendaPage({
     : {};
   const filtroCliente = clienteFiltro ? { clienteId: clienteFiltro } : {};
   const datas = { gte: periodo.inicioConsulta, lt: periodo.fimConsulta };
+  // A data civil dos cadastros antigos era gravada à meia-noite UTC.
+  const datasPlanejadas = { ...datas, gte: new Date(datas.gte.getTime() - 3 * 3600000) };
   const [tarefas, registrosTempo, clientes] = await Promise.all([
     prisma.tarefa.findMany({
       where: {
@@ -102,8 +105,8 @@ export default async function AgendaPage({
           filtroCliente,
           {
             OR: [
-              { prazo: datas },
-              { publicacaoSugeridaEm: datas },
+              { prazo: datasPlanejadas },
+              { publicacaoSugeridaEm: datasPlanejadas },
               { statusConteudo: "publicado", publicadoEm: datas },
             ],
           },
@@ -148,15 +151,16 @@ export default async function AgendaPage({
   let totalTarefas = 0;
   let totalHoras = 0;
   for (const t of tarefas) {
+    if (baseData === "trabalho" && ehPlanejamento(t)) continue;
     const dataEscolhida = dataDaAgenda(t, baseData);
-    if (!dataEscolhida || (soPendentes && t.status === "feito")) continue;
+    if (!dataEscolhida || (soPendentes && (baseData === "postagem" ? t.statusConteudo === "publicado" || !!t.publicadoEm : t.status === "feito"))) continue;
     const tipoAtividade = tipoDaTarefaAgenda(
       t.categoria,
       t.titulo,
       !!t.cliente,
     );
     if (!tiposAtivos.has(tipoAtividade)) continue;
-    const chave = chaveDiaSaoPaulo(new Date(dataEscolhida));
+    const chave = diaTrabalho(dataEscolhida, baseData !== "publicado");
     if (!periodo.dias.includes(chave)) continue;
     if (chave.startsWith(periodo.mesChave)) totalTarefas++;
     (eventosPorDia[chave] ||= []).push({
@@ -182,7 +186,7 @@ export default async function AgendaPage({
       href: linkAgenda(filtros, { tarefa: t.id }),
       data: chave,
       hora:
-        horaBR(new Date(dataEscolhida)) !== "00:00"
+        !(baseData !== "publicado" && new Date(dataEscolhida).toISOString().endsWith("T00:00:00.000Z")) && horaBR(new Date(dataEscolhida)) !== "00:00"
           ? horaBR(new Date(dataEscolhida))
           : null,
       urgencia:
@@ -235,12 +239,12 @@ export default async function AgendaPage({
             Agenda{" "}
             <AjudaContextual
               titulo="Agenda e cronograma"
-              texto="Organize as tarefas por dia e cliente. Todos os clientes aparecem por padrão; use a lista para ver um deles. Clique na tarefa para abrir os detalhes, editar e comentar."
-              exemplo="Selecione SKYFIT, escolha um dia e crie um Reel ou uma arte. O horário é opcional."
+              texto="Em Postagens, monte o cronograma do cliente. Em Trabalho, acompanhe os prazos da produção. Clique num conteúdo para abrir o roteiro, editar ou comentar."
+              exemplo="Planeje um Reel para dia 22 e defina dia 19 como prazo para deixá-lo pronto. O horário é opcional."
             />
           </p>
           <p className="text-sm text-muted">
-            Produção, postagens e resultados do mês por cliente
+            Seu cronograma de postagens e os prazos de trabalho
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -270,31 +274,7 @@ export default async function AgendaPage({
             Compartilhar cronograma
           </Link>
         )}
-        <div className="flex flex-wrap items-center gap-1.5 text-xs">
-          {baseData === "trabalho" &&
-            [
-              { visao: "tudo", label: "Tarefas e horas" },
-              { visao: "tarefas", label: "Só tarefas" },
-            ].map((v) => (
-              <Link
-                key={v.visao}
-                href={linkAgenda(filtros, { visao: v.visao })}
-                className={`rounded-lg border px-3 py-2 ${filtros.visao === v.visao ? "border-accent/40 bg-accent/10 text-text" : "border-border text-muted hover:text-text"}`}
-              >
-                {v.label}
-              </Link>
-            ))}
-          {baseData !== "publicado" && (
-            <Link
-              href={linkAgenda(filtros, {
-                status: soPendentes ? "todas" : "pendentes",
-              })}
-              className="rounded-lg border border-border px-3 py-2 text-muted hover:text-text"
-            >
-              {soPendentes ? "Só tarefas pendentes" : "Todas as tarefas"}
-            </Link>
-          )}
-        </div>
+        <Link href={`/dashboard/tarefas?area=planejamento${clienteFiltro ? `&cliente=${encodeURIComponent(clienteFiltro)}` : ""}`} className="inline-flex min-h-11 items-center px-3 text-sm text-muted hover:text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent">Ideias e planejamento</Link>
       </div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div
@@ -302,19 +282,19 @@ export default async function AgendaPage({
           aria-label="Escolher data do cronograma"
         >
           {[
-            { valor: "trabalho", label: "Prazos de produção" },
-            { valor: "postagem", label: "Postagens planejadas" },
-            { valor: "publicado", label: "Publicados" },
+            { valor: "postagem", label: "Postagens" },
+            { valor: "trabalho", label: "Trabalho" },
           ].map((d) => (
             <Link
               key={d.valor}
               aria-current={baseData === d.valor ? "page" : undefined}
               href={linkAgenda(filtros, { datas: d.valor })}
-              className={`rounded-lg border px-3 py-2 ${baseData === d.valor ? "border-accent/40 bg-accent/10 text-text" : "border-border text-muted hover:text-text"}`}
+              className={`inline-flex min-h-11 items-center rounded-lg border px-4 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent ${baseData === d.valor ? "border-border bg-accent/10 font-medium text-text" : "border-border text-muted hover:text-text"}`}
             >
               {d.label}
             </Link>
           ))}
+          <Link aria-current={baseData === "publicado" ? "page" : undefined} href={linkAgenda(filtros, { datas: "publicado" })} className={`inline-flex min-h-11 items-center px-3 text-sm hover:text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent ${baseData === "publicado" ? "font-medium text-text underline underline-offset-4" : "text-muted"}`}>Histórico de publicados</Link>
         </div>
         <div className="flex gap-1.5 text-xs" aria-label="Formato da agenda">
           {[
@@ -361,7 +341,13 @@ export default async function AgendaPage({
         clienteNome={clientes.find((c) => c.id === clienteFiltro)?.nome}
         filtros={filtros}
       />
-      <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
+      <details className="mb-4 border-b border-border pb-3">
+        <summary className="w-fit cursor-pointer rounded-lg px-2 py-2.5 text-sm text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent">Filtros{soPendentes || !soTarefas || tiposAtivos.size !== TIPOS_ATIVIDADE_AGENDA.length ? " · personalizados" : ""}</summary>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+          {baseData === "trabalho" && [{ visao: "tarefas", label: "Somente trabalho" }, { visao: "tudo", label: "Incluir horas registradas" }].map(v => <Link key={v.visao} href={linkAgenda(filtros, { visao: v.visao })} className={`inline-flex min-h-11 items-center rounded-lg border border-border px-3 ${filtros.visao === v.visao ? "bg-card text-text" : "text-muted hover:text-text"}`}>{v.label}</Link>)}
+          {baseData !== "publicado" && <Link href={linkAgenda(filtros, { status: soPendentes ? "todas" : "pendentes" })} className="inline-flex min-h-11 items-center rounded-lg border border-border px-3 text-muted hover:text-text">{soPendentes ? "Mostrar também concluídos" : "Mostrar somente pendentes"}</Link>}
+        </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
         {TIPOS_ATIVIDADE_AGENDA.map((tipo) => {
           const ativo = tiposAtivos.has(tipo.valor);
           const novos = new Set(tiposAtivos);
@@ -372,7 +358,7 @@ export default async function AgendaPage({
               key={tipo.valor}
               aria-label={`${ativo ? "Ocultar" : "Mostrar"} ${tipo.label}`}
               href={linkAgenda(filtros, { tipos: Array.from(novos).join(",") })}
-              className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 ${ativo ? "border-border bg-card/60 text-text" : "border-border/50 text-muted/50"}`}
+              className={`flex min-h-11 items-center gap-1.5 rounded-lg border px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent ${ativo ? "border-border bg-card/60 text-text" : "border-border text-muted"}`}
             >
               <Icon size={11} style={{ color: ativo ? tipo.cor : undefined }} />
               {tipo.label}
@@ -380,6 +366,7 @@ export default async function AgendaPage({
           );
         })}
       </div>
+      </details>
       <p className="mb-3 text-xs text-muted">
         {baseData === "trabalho"
           ? "Aqui aparece o prazo para terminar o trabalho. O dia de postagem é separado e pode ser definido nos detalhes."
